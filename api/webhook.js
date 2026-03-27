@@ -47,3 +47,63 @@ export default async function handler(req, res) {
     }
     // Try GitHub
     try {
+      const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
+        headers: { "Authorization": `Bearer ${TOKEN}`, "Accept": "application/vnd.github+json", "User-Agent": "TradeFlowAI" }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const content = JSON.parse(Buffer.from(d.content, "base64").toString("utf-8"));
+        memCache = content;
+        return res.status(200).json({ ok: true, source: "github", ...content });
+      }
+    } catch {}
+    return res.status(200).json({ ok: false, error: "Nessun dato disponibile. Configura l'alert su TradingView." });
+  }
+
+  // POST — receive webhook from TradingView
+  if (req.method === "POST") {
+    try {
+      let body = req.body;
+      // TradingView sends plain text sometimes
+      if (typeof body === "string") {
+        try { body = JSON.parse(body); } catch {
+          return res.status(400).json({ ok: false, error: "JSON non valido" });
+        }
+      }
+
+      // Expected fields from TradingView alert:
+      // cci, macd, signal (macd signal), adx, di_plus, di_minus, price, tf, symbol
+      const now = new Date().toISOString();
+      const data = {
+        timestamp: now,
+        symbol:   body.symbol   || "XAUUSD",
+        tf:       body.tf       || body.timeframe || "1h",
+        price:    parseFloat(body.price   || body.close || 0),
+        cci:      parseFloat(body.cci     || 0),
+        macd:     parseFloat(body.macd    || 0),
+        signal:   parseFloat(body.signal  || body.macd_signal || 0),
+        adx:      parseFloat(body.adx     || 0),
+        di_plus:  parseFloat(body.di_plus || body.dip || 0),
+        di_minus: parseFloat(body.di_minus|| body.dim || 0),
+        histogram:parseFloat(body.histogram || 0),
+        source:   "tradingview_webhook"
+      };
+
+      // Save to memory cache immediately
+      memCache = data;
+
+      // Save to GitHub async (don't wait)
+      if (TOKEN) {
+        getFileSha().then(sha => saveToGitHub(data, sha)).catch(e => console.log("GitHub save failed:", e.message));
+      }
+
+      console.log(`Webhook received: TF=${data.tf} Price=${data.price} CCI=${data.cci} MACD=${data.macd}/${data.signal} ADX=${data.adx}`);
+      return res.status(200).json({ ok: true, received: data });
+
+    } catch (err) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+
+  return res.status(405).json({ error: "Method not allowed" });
+}

@@ -1,13 +1,44 @@
 {
   "rewrites": [
-    { "source": "/api/chat",       "destination": "/api/chat.js" },
-    { "source": "/api/price",      "destination": "/api/price.js" },
-    { "source": "/api/market",     "destination": "/api/market.js" },
-    { "source": "/api/myfxbook",   "destination": "/api/myfxbook.js" },
-    { "source": "/api/kb",         "destination": "/api/kb.js" },
-    { "source": "/api/indicators", "destination": "/api/indicators.js" },
-    { "source": "/api/report",     "destination": "/api/report.js" },
-    { "source": "/api/webhook",    "destination": "/api/webhook.js" },
-    { "source": "/(.*)",           "destination": "/public/index.html" }
+    {
+      "source": "/api/chat",
+      "destination": "/api/chat.js"
+    },
+    {
+      "source": "/api/price",
+      "destination": "/api/price.js"
+    },
+    {
+      "source": "/api/market",
+      "destination": "/api/market.js"
+    },
+    {
+      "source": "/api/myfxbook",
+      "destination": "/api/myfxbook.js"
+    },
+    {
+      "source": "/api/kb",
+      "destination": "/api/kb.js"
+    },
+    {
+      "source": "/api/indicators",
+      "destination": "/api/indicators.js"
+    },
+    {
+      "source": "/api/report",
+      "destination": "/api/report.js"
+    },
+    {
+      "source": "/api/webhook",
+      "destination": "/api/webhook.js"
+    },
+    {
+      "source": "/api/cot-update",
+      "destination": "/api/cot-update.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/index.html"
+    }
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "reportDate": "2026-03-18",
+  "netLong": 165,
+  "ncLong": 198400,
+  "ncShort": 33200,
+  "weekChange": -8,
+  "weekChangePct": -4.6,
+  "signal": "ELEVATED_LONG",
+  "interpretation": "Large spec net long 165K — posizionamento rialzista sostenuto",
+  "source": "seed",
+  "cached": "2026-03-18T00:00:00Z",
+  "note": "Aggiorna via POST /api/cot-update ogni venerdì"
+}

@@ -1002,6 +1002,7 @@ async function loadSlowData(){
       }catch(e){console.log('Direct sentiment failed:',e.message);}
     }
   });
+  loadCotData();
   fetchJSON('/api/market?type=calendar', 7000).then(cd=>{
     if(cd?.ok){dashContext.calendar=cd.events;updateCalendar(cd.events);}
     else updateCalendar([]);
@@ -1036,6 +1037,60 @@ function updatePriceStrip(prices){
   }
 }
 
+function updateMacroCards(prices){
+  // US10Y Yield
+  const u = prices.US10Y_CONTEXT;
+  if(u){
+    const el=document.getElementById('us10y-val');
+    const sig=document.getElementById('us10y-signal');
+    const lbl=document.getElementById('us10y-label');
+    if(el) el.textContent=u.yield+'%';
+    if(sig){
+      const isUp=u.change>0.05, isDown=u.change<-0.05;
+      sig.textContent=isUp?'↑ XAU ↓':isDown?'↓ XAU ↑':'→';
+      sig.style.color=isUp?'var(--red)':isDown?'var(--green)':'var(--dim)';
+    }
+    if(lbl) lbl.textContent=u.label;
+  }
+  // Gold/Silver Ratio
+  const g = prices.GOLD_SILVER_RATIO;
+  if(g){
+    const el=document.getElementById('gsr-val');
+    const sig=document.getElementById('gsr-signal');
+    const lbl=document.getElementById('gsr-label');
+    if(el) el.textContent=g.ratio;
+    if(sig){
+      const col=g.signal==='STRESS_FINANZIARIO'?'var(--red)':g.signal==='RISK_OFF'?'var(--yellow)':g.signal==='RISK_ON'?'var(--green)':'var(--dim)';
+      sig.textContent=g.signal.replace('_',' ');
+      sig.style.color=col;
+    }
+    if(lbl) lbl.textContent=g.label;
+  }
+}
+
+// Load COT data separately (weekly, cached)
+async function loadCotData(){
+  try{
+    const d=await fetchJSON('/api/market?type=cot', 5000);
+    if(d?.ok&&d.netLong!=null){
+      const el=document.getElementById('cot-net');
+      const sig=document.getElementById('cot-signal');
+      const lbl=document.getElementById('cot-label');
+      if(el){
+        const net=parseInt(d.netLong);
+        el.textContent=(net>0?'+':'')+net.toLocaleString()+'K';
+        el.style.color=net>200?'var(--red)':net<50?'var(--green)':'var(--dim)';
+      }
+      if(sig){
+        const extremeLong=d.netLong>200, extremeShort=d.netLong<50;
+        sig.textContent=extremeLong?'TOP RISK':extremeShort?'BOTTOM?':'NEUTRO';
+        sig.style.color=extremeLong?'var(--red)':extremeShort?'var(--green)':'var(--dim)';
+      }
+      if(lbl&&d.reportDate) lbl.textContent='Report: '+d.reportDate+(d.netLong>200?' · Speculatori eccessivi':'');
+    }
+  }catch(e){console.log('COT:',e.message);}
+}
+
 function updateCorrelation(prices){
   const c=prices.CORRELATION;if(!c)return;
   // Store globally so confidence score uses same value
@@ -1056,7 +1111,12 @@ function updateConfidence(prices, sentimentData){
   const min=now.getUTCMinutes();
   const totalMins=hour*60+min;
 
-  // ── FACTOR 1: DXY Correlation (peso 20%) — usa stesso valore della correlation card ──
+  // ── FACTOR 1: DXY + US10Y Correlation (peso 17%) ─────────────────────────────────────
+  // US10Y yield context: rendimenti reali = driver macro primario oro
+  const u10y=dashContext.prices?.US10Y_CONTEXT;
+  if(u10y&&u10y.change>0.05){dxyScore=Math.max(10,dxyScore-15);} // rising yields → bearish XAU
+  else if(u10y&&u10y.change<-0.05){dxyScore=Math.min(90,dxyScore+15);} // falling yields → bullish XAU
+  // ── DXY Correlation ──────────────────────────────────────
   let dxyScore=50, dxyLabel='DXY neutro', dxySub='', dxyCol='var(--dim)';
   // Prefer stored correlation (same as top card) to avoid inconsistency
   const corrData = dashContext.correlation || prices?.CORRELATION;

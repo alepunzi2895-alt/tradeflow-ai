@@ -61,12 +61,13 @@ export default async function handler(req, res) {
     if (type === "prices") {
       // Symbols: XAU, DXY, EURUSD, GBPUSD, USDJPY, OIL
       const symbolMap = [
-        { key:"XAU",    sym:"GC=F"        },
+        { key:"XAU",    sym:"XAUUSD=X"    }, // spot gold, closer to FP Markets price
         { key:"DXY",    sym:"DX-Y.NYB"    },
         { key:"EURUSD", sym:"EURUSD=X"    },
         { key:"GBPUSD", sym:"GBPUSD=X"    },
         { key:"USDJPY", sym:"USDJPY=X"    },
         { key:"OIL",    sym:"CL=F"        },
+        { key:"SILVER", sym:"SI=F"         },
         { key:"US10Y",  sym:"^TNX"        }, // US 10Y Treasury Yield
         { key:"SILVER", sym:"SI=F"        }, // Silver Futures
       ];

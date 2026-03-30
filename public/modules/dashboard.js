@@ -115,6 +115,7 @@ function buildDerivedPrices(prices){
 
 function applyPrices(prices, source){
   if(!prices || !prices.XAU) return;
+  if(!document.getElementById('p-xau')) return; // DOM not ready yet
   marketData = prices;
   dashContext.prices = prices;
   updatePriceStrip(prices);
@@ -134,29 +135,22 @@ function applyPrices(prices, source){
 let _tvFails = 0;
 
 async function loadPrices(){
-  // PRIMARY: TradingView via server proxy (FPMARKETS:XAUUSD — real broker price)
-  try{
-    const d = await fetchJSON('/api/tvprice', 5000);
-    if(d?.ok && d.prices?.XAU){
-      _tvFails = 0;
-      applyPrices(buildDerivedPrices(d.prices), 'tv');
-      return;
-    }
-    _tvFails++;
-    console.log('TV proxy failed attempt #'+_tvFails);
-  }catch(e){
-    _tvFails++;
-    console.log('TV proxy error:', e.message);
-  }
-
-  // FALLBACK: Yahoo Finance (15min delay, GC=F futures)
+  // Yahoo Finance SPOT (XAUUSD=X) — closest to FP Markets price, no CORS issues
   try{
     const full = await fetchJSON('/api/market?type=prices', 7000);
     if(full?.ok && full.prices?.XAU){
       applyPrices(buildDerivedPrices(full.prices), 'yahoo');
-      _tvFails = 0;
+      return;
     }
-  }catch(e){ console.log('Yahoo fallback:', e.message); }
+  }catch(e){ console.log('Prices error:', e.message); }
+  // Retry /api/price for just XAU if full fetch fails
+  try{
+    const p = await fetchJSON('/api/price', 4000);
+    if(p?.price){
+      const prices = { XAU: { price: String(p.price), change: parseFloat(p.changePct||0), high: p.high, low: p.low }};
+      applyPrices(buildDerivedPrices(prices), 'yahoo');
+    }
+  }catch(e){}
 }
 
 // Slow refresh: sentiment + calendar (called every 30s)

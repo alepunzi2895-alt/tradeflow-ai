@@ -339,7 +339,7 @@ function updateConfidence(prices, sentimentData){
   const corrData = dashContext.correlation || prices?.CORRELATION;
   if(corrData){
     const status=corrData.status;
-    const xc=x?.change||0;
+    const xc=(x||xLive)?.change||0;
     if(status==='NORMALE'&&xc>0){dxyScore=80;dxyLabel='DXY ↓ XAU ↑';dxySub='Correlazione inversa bullish';dxyCol='var(--green)';}
     else if(status==='NORMALE'&&xc<0){dxyScore=20;dxyLabel='DXY ↑ XAU ↓';dxySub='Correlazione inversa bearish';dxyCol='var(--red)';}
     else if(status==='DIVERGENZA'){dxyScore=35;dxyLabel='Divergenza DXY/XAU';dxySub='⚠ Possibile manipolazione';dxyCol='var(--yellow)';}
@@ -355,12 +355,23 @@ function updateConfidence(prices, sentimentData){
   }
   // US10Y adjustment: rising yields = bearish for gold
   const u10yAdj=dashContext.prices?.US10Y_CONTEXT;
-  if(u10yAdj&&u10yAdj.change>0.05){dxyScore=Math.max(10,dxyScore-15);}
-  else if(u10yAdj&&u10yAdj.change<-0.05){dxyScore=Math.min(90,dxyScore+15);}
+  if(u10yAdj&&u10yAdj.change>0.05){
+    dxyScore=Math.max(10,dxyScore-15);
+    dxyLabel='Rendimenti ↑ — pressione XAU';
+    dxySub=`US10Y +${u10yAdj.change}% → bearish gold`;
+    dxyCol='var(--red)';
+  } else if(u10yAdj&&u10yAdj.change<-0.05){
+    dxyScore=Math.min(90,dxyScore+15);
+    dxyLabel='Rendimenti ↓ — supporto XAU';
+    dxySub=`US10Y ${u10yAdj.change}% → bullish gold`;
+    dxyCol='var(--green)';
+  }
 
   // ── FACTOR 2: Momentum XAU (peso 25%) ─────────────────
+  // Use dashContext.prices as fallback if prices.XAU not populated
+  const xLive = x || dashContext.prices?.XAU;
   let momScore=50, momLabel='Momentum laterale', momSub='', momCol='var(--dim)';
-  if(x){
+  if(xLive){const x=xLive;
     const chg=parseFloat(x.change);
     const price=parseFloat(x.price);
     const spread=x.high&&x.low?(parseFloat(x.high)-parseFloat(x.low)):0;
@@ -422,10 +433,11 @@ function updateConfidence(prices, sentimentData){
   // ── FACTOR 5: Multi-pair Confluence (peso 12%) ──────────
   let multiScore=50, multiLabel='Segnali misti', multiSub='Nessuna confluenza chiara', multiCol='var(--dim)';
   if(prices.EURUSD&&prices.GBPUSD){
-    const ec=parseFloat(prices.EURUSD.change), gc2=parseFloat(prices.GBPUSD.change);
-    const xc=x?parseFloat(x.change):0;
-    const eurBull=ec>0.2, gbpBull=gc2>0.2, xauBull=xc>0.3;
-    const eurBear=ec<-0.2, gbpBear=gc2<-0.2, xauBear=xc<-0.3;
+    const ec=parseFloat(prices.EURUSD.change||dashContext.prices?.EURUSD?.change||0);
+    const gc2=parseFloat(prices.GBPUSD.change||dashContext.prices?.GBPUSD?.change||0);
+    const xc=parseFloat((x||dashContext.prices?.XAU)?.change||0);
+    const eurBull=ec>0.08, gbpBull=gc2>0.08, xauBull=xc>0.2;
+    const eurBear=ec<-0.08, gbpBear=gc2<-0.08, xauBear=xc<-0.2;
     if(xauBull&&eurBull&&gbpBull){multiScore=80;multiLabel='Confluenza BUY';multiSub='EUR+GBP+XAU bullish';multiCol='var(--green)';}
     else if(xauBear&&eurBear&&gbpBear){multiScore=20;multiLabel='Confluenza SELL';multiSub='EUR+GBP+XAU bearish';multiCol='var(--red)';}
     else if(xauBull&&(eurBull||gbpBull)){multiScore=65;multiLabel='Parziale BUY';multiSub='XAU bullish, conferma parziale';multiCol='var(--yellow)';}
@@ -434,9 +446,10 @@ function updateConfidence(prices, sentimentData){
 
   // ── FACTOR 6: Volatilità (peso 8%) ──────────────────────
   let volScore=50, volLabel='Volatilità nella norma', volSub='', volCol='var(--dim)';
-  if(x&&x.high&&x.low){
-    const range=parseFloat(x.high)-parseFloat(x.low);
-    const rangePct=x.price?(range/parseFloat(x.price)*100):0;
+  const xv=x||xLive||dashContext.prices?.XAU;
+  if(xv&&xv.high&&xv.low){
+    const range=parseFloat(xv.high)-parseFloat(xv.low);
+    const rangePct=xv.price?(range/parseFloat(xv.price)*100):0;
     if(rangePct>1.5){volScore=25;volLabel=`Range ampio $${range.toFixed(0)}`;volSub='Alta volatilità — rischio elevato';volCol='var(--yellow)';}
     else if(rangePct>0.8){volScore=60;volLabel=`Range normale $${range.toFixed(0)}`;volSub='Volatilità nella norma';volCol='var(--green)';}
     else{volScore=75;volLabel=`Range stretto $${range.toFixed(0)}`;volSub='Bassa volatilità — setup puliti possibili';volCol='var(--green)';}

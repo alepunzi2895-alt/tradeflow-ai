@@ -49,7 +49,7 @@ async function fetchTVPrices(){
   const tid = setTimeout(()=>ctrl.abort(), 6000);
   const r = await fetch('https://scanner.tradingview.com/global/scan', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // No Content-Type header to avoid CORS preflight
     body: JSON.stringify(body),
     signal: ctrl.signal
   });
@@ -166,6 +166,41 @@ async function loadPrices(){
 }
 
 // Slow refresh: sentiment + calendar (called every 30s)
+// Sentiment-only refresh (called every 3s)
+async function loadSentimentOnly(){
+  try{
+    // Try direct browser fetch from MyFxBook
+    const r = await fetch('https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=XAUUSD');
+    if(r.ok){
+      const d = await r.json();
+      const sym = d.symbols?.find(s=>s.name==='XAUUSD') || d.symbols?.[0];
+      if(sym?.longPercentage != null){
+        const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
+        const sent = {
+          longPct:lp, shortPct:sp,
+          signal: lp>60?'RETAIL_LONG_HEAVY':sp>60?'RETAIL_SHORT_HEAVY':'MIXED',
+          contrarian: lp>65?'BEARISH_BIAS':sp>65?'BULLISH_BIAS':'NEUTRAL',
+          note: lp>65?'⚠️ Retail '+Math.round(lp)+'% long — smart money SHORT':
+                sp>65?'⚠️ Retail '+Math.round(sp)+'% short — squeeze possibile':''
+        };
+        dashContext.sentiment = sent;
+        updateSentiment(sent, 'myfxbook_direct');
+        if(marketData) updateConfidence(marketData, sent);
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fallback: server
+  try{
+    const sd = await fetchJSON('/api/market?type=sentiment', 4000);
+    if(sd?.ok && sd.xauusd){
+      dashContext.sentiment = sd.xauusd;
+      updateSentiment(sd.xauusd, sd.source);
+      if(marketData) updateConfidence(marketData, sd.xauusd);
+    }
+  } catch(e) { console.log('Sentiment:', e.message); }
+}
+
 async function loadSlowData(){
   // Run in parallel, don't await each other
   const mfxSess = mfxSession?.session ? '&session='+encodeURIComponent(mfxSession.session) : '';
@@ -312,10 +347,6 @@ function updateConfidence(prices, sentimentData){
   const totalMins=hour*60+min;
 
   // ── FACTOR 1: DXY + US10Y Correlation (peso 17%) ─────────────────────────────────────
-  // US10Y yield context: rendimenti reali = driver macro primario oro
-  const u10y=dashContext.prices?.US10Y_CONTEXT;
-  if(u10y&&u10y.change>0.05){dxyScore=Math.max(10,dxyScore-15);} // rising yields → bearish XAU
-  else if(u10y&&u10y.change<-0.05){dxyScore=Math.min(90,dxyScore+15);} // falling yields → bullish XAU
   // ── DXY Correlation ──────────────────────────────────────
   let dxyScore=50, dxyLabel='DXY neutro', dxySub='', dxyCol='var(--dim)';
   // Prefer stored correlation (same as top card) to avoid inconsistency
@@ -336,6 +367,10 @@ function updateConfidence(prices, sentimentData){
     else if(div){dxyScore=35;dxyLabel='Divergenza DXY/XAU';dxySub='⚠ Possibile manipolazione';dxyCol='var(--yellow)';}
     else{dxyScore=50;dxyLabel='Correlazione debole';dxySub='Mercato indeciso';dxyCol='var(--dim)';}
   }
+  // US10Y adjustment: rising yields = bearish for gold
+  const u10yAdj=dashContext.prices?.US10Y_CONTEXT;
+  if(u10yAdj&&u10yAdj.change>0.05){dxyScore=Math.max(10,dxyScore-15);}
+  else if(u10yAdj&&u10yAdj.change<-0.05){dxyScore=Math.min(90,dxyScore+15);}
 
   // ── FACTOR 2: Momentum XAU (peso 25%) ─────────────────
   let momScore=50, momLabel='Momentum laterale', momSub='', momCol='var(--dim)';

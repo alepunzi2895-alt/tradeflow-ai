@@ -37,6 +37,18 @@
       "destination": "/api/cot-update.js"
     },
     {
+      "source": "/styles.css",
+      "destination": "/public/styles.css"
+    },
+    {
+      "source": "/app.js",
+      "destination": "/public/app.js"
+    },
+    {
+      "source": "/modules/:file",
+      "destination": "/public/modules/:file"
+    },
+    {
       "source": "/(.*)",
       "destination": "/public/index.html"
     }

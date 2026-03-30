@@ -1,4 +1,13 @@
 // TradeFlow AI — modules/mfkk.js
+// Safe value setter: prevents browser scroll-to-focus behavior
+function _setNoScroll(id, v){
+  const el = document.getElementById(id);
+  if(!el || v==null || isNaN(v)) return;
+  // Temporarily prevent scroll by making element position fixed in scroll hierarchy
+  el.setAttribute('tabindex', '-1');
+  el.setAttribute('aria-hidden', 'true'); 
+  el.value = v;
+}
 
 // ── MFKK STRATEGY SCORE ──────────────────────────────────
 let mfkkDir = 'buy'; // 'buy' or 'sell'
@@ -133,7 +142,7 @@ async function loadIndicatorCandles(){
       if(mfkkCandles.length>50){
         const vals=computeFromCandles(mfkkCandles, mfkkTF);
         if(vals){
-          const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&!isNaN(v))el.value=v;};
+          const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&!isNaN(v)){el.blur();el.value=v;}};
           set('mfkk-cci',     vals.cci?.value??vals.cci);
           set('mfkk-macd-fast',vals.macd?.macd??vals.macd);
           set('mfkk-macd-slow',vals.macd?.signal??vals.signal);
@@ -145,7 +154,7 @@ async function loadIndicatorCandles(){
         }
       } else {
         // Fallback: use server pre-computed values
-        const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&!isNaN(v))el.value=v;};
+        const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&!isNaN(v)){el.blur();el.value=v;}};
         set('mfkk-cci',d.cci?.value);
         set('mfkk-macd-fast',d.macd?.macd);
         set('mfkk-macd-slow',d.macd?.signal);
@@ -185,7 +194,7 @@ function recalcIndicators(){
   const vals=computeFromCandles(candles, mfkkTF);
   if(!vals) return;
 
-  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&!isNaN(v))el.value=v;};
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null&&!isNaN(v)){el.blur();el.value=v;}};
   const cv=vals.cci?.value??vals.cci;
   const mv=vals.macd?.macd??vals.macd;
   const sv=vals.macd?.signal??vals.signal;

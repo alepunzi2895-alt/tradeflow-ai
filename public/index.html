@@ -146,8 +146,8 @@
 
           <!-- Direction selector -->
           <div class="mfkk-dir-btns">
-            <button class="mfkk-dir on-buy" id="mfkk-buy" onclick="setMfkkDir('buy')">▲ BUY</button>
-            <button class="mfkk-dir" id="mfkk-sell" onclick="setMfkkDir('sell')">▼ SELL</button>
+            <button class="mfkk-dir on-buy" id="mfkk-buy" tabindex="-1" onclick="setMfkkDir('buy')">▲ BUY</button>
+            <button class="mfkk-dir" id="mfkk-sell" tabindex="-1" onclick="setMfkkDir('sell')">▼ SELL</button>
           </div>
 
           <!-- Score ring + signal -->
@@ -174,7 +174,7 @@
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:6px">
                   <div class="mfkk-lbl">CCI_S</div>
-                  <input class="mfkk-inp" id="mfkk-cci" type="number" placeholder="auto" step="1" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-cci" type="number" placeholder="auto" step="1" oninput="calcMfkk()">
                   <div class="mfkk-bar-wrap">
                     <div class="mfkk-bar-track"><div class="mfkk-bar-fill" id="mfkk-cci-bar" style="width:0%;background:var(--dim)"></div></div>
                     <div class="mfkk-pct" id="mfkk-cci-pct" style="color:var(--dim)">—</div>
@@ -190,9 +190,9 @@
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:4px">
                   <div class="mfkk-lbl">MACD</div>
-                  <input class="mfkk-inp" id="mfkk-macd-fast" type="number" placeholder="MACD" step="0.01" style="width:0;flex:.6" oninput="calcMfkk()">
-                  <input class="mfkk-inp" id="mfkk-macd-slow" type="number" placeholder="Signal" step="0.01" style="width:0;flex:.6" oninput="calcMfkk()">
-                  <input class="mfkk-inp" id="mfkk-macd-hist" type="number" placeholder="Hist" step="0.01" style="width:0;flex:.5" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-macd-fast" type="number" placeholder="MACD" step="0.01" style="width:0;flex:.6" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-macd-slow" type="number" placeholder="Signal" step="0.01" style="width:0;flex:.6" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-macd-hist" type="number" placeholder="Hist" step="0.01" style="width:0;flex:.5" oninput="calcMfkk()">
                   <div class="mfkk-bar-wrap">
                     <div class="mfkk-bar-track"><div class="mfkk-bar-fill" id="mfkk-macd-bar" style="width:0%;background:var(--dim)"></div></div>
                     <div class="mfkk-pct" id="mfkk-macd-pct" style="color:var(--dim)">—</div>
@@ -208,9 +208,9 @@
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:5px">
                   <div class="mfkk-lbl">ADX</div>
-                  <input class="mfkk-inp" id="mfkk-adx" type="number" placeholder="ADX" step="0.1" style="width:0;flex:.8" oninput="calcMfkk()">
-                  <input class="mfkk-inp" id="mfkk-diplus" type="number" placeholder="DI+" step="0.1" style="width:0;flex:.7" oninput="calcMfkk()">
-                  <input class="mfkk-inp" id="mfkk-diminus" type="number" placeholder="DI-" step="0.1" style="width:0;flex:.7" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-adx" type="number" placeholder="ADX" step="0.1" style="width:0;flex:.8" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-diplus" type="number" placeholder="DI+" step="0.1" style="width:0;flex:.7" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-diminus" type="number" placeholder="DI-" step="0.1" style="width:0;flex:.7" oninput="calcMfkk()">
                   <div class="mfkk-bar-wrap">
                     <div class="mfkk-bar-track"><div class="mfkk-bar-fill" id="mfkk-adx-bar" style="width:0%;background:var(--dim)"></div></div>
                     <div class="mfkk-pct" id="mfkk-adx-pct" style="color:var(--dim)">—</div>

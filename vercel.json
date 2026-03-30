@@ -49,6 +49,10 @@
       "destination": "/public/modules/:file"
     },
     {
+      "source": "/api/tvprice",
+      "destination": "/api/tvprice.js"
+    },
+    {
       "source": "/(.*)",
       "destination": "/public/index.html"
     }

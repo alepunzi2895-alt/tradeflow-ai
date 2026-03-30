@@ -35,10 +35,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* CONTENT */
 #cont{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .tp{display:none;flex:1;flex-direction:column;overflow:hidden;}
-.tp.on{display:flex;}
+.tp.on{display:flex;flex:1;min-height:0;}
 
 /* ── DASHBOARD ── */
-.dp{flex:1;overflow-y:auto;padding:12px;}
+.dp{flex:1;min-height:0;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch;}
 
 /* Live price strip */
 .price-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch;}

@@ -114,6 +114,7 @@ function buildDerivedPrices(prices){
 }
 
 function applyPrices(prices, source){
+  if(!prices || !prices.XAU) return;
   marketData = prices;
   dashContext.prices = prices;
   updatePriceStrip(prices);
@@ -133,36 +134,29 @@ function applyPrices(prices, source){
 let _tvFails = 0;
 
 async function loadPrices(){
-  // PRIMARY: TradingView Scanner (real-time, browser-side)
-  // Skip TV temporarily if it's been failing
-  if(_tvFails < 3){
-    try{
-      const prices = await fetchTVPrices();
-      if(prices?.XAU){
-        _tvFails = 0;
-        applyPrices(buildDerivedPrices(prices), 'tv');
-        // Also update recalcIndicators candles with live price
-        return;
-      }
-    }catch(e){
-      _tvFails++;
-      console.log('TV Scanner fail #'+_tvFails+':', e.message);
+  // PRIMARY: TradingView via server proxy (FPMARKETS:XAUUSD — real broker price)
+  try{
+    const d = await fetchJSON('/api/tvprice', 5000);
+    if(d?.ok && d.prices?.XAU){
+      _tvFails = 0;
+      applyPrices(buildDerivedPrices(d.prices), 'tv');
+      return;
     }
-  } else {
-    // TV failed 3+ times, retry every 5 cycles (~15s)
     _tvFails++;
-    if(_tvFails > 8) _tvFails = 0; // reset and retry
+    console.log('TV proxy failed attempt #'+_tvFails);
+  }catch(e){
+    _tvFails++;
+    console.log('TV proxy error:', e.message);
   }
 
-  // FALLBACK: Yahoo Finance via server
+  // FALLBACK: Yahoo Finance (15min delay, GC=F futures)
   try{
     const full = await fetchJSON('/api/market?type=prices', 7000);
     if(full?.ok && full.prices?.XAU){
-      const prices = buildDerivedPrices(full.prices);
-      applyPrices(prices, 'yahoo');
-      _tvFails = 0; // reset on success via Yahoo
+      applyPrices(buildDerivedPrices(full.prices), 'yahoo');
+      _tvFails = 0;
     }
-  }catch(e){ console.log('Yahoo:', e.message); }
+  }catch(e){ console.log('Yahoo fallback:', e.message); }
 }
 
 // Slow refresh: sentiment + calendar (called every 30s)
@@ -223,6 +217,7 @@ async function loadSlowData(){
 }
 
 function updatePriceStrip(prices){
+  if(!prices) return;
   const map={XAU:'xau',DXY:'dxy',EURUSD:'eur',GBPUSD:'gbp',OIL:'oil'};
   Object.entries(map).forEach(([key,id])=>{
     const d=prices[key];if(!d)return;
@@ -713,5 +708,6 @@ function renderCalEvents(){
 }
 
 function updateHeader(prices){
+  if(!prices) return;
   // Already handled in updatePriceStrip
 }

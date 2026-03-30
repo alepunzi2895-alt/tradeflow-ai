@@ -107,7 +107,11 @@ function switchTab(tab){
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
   document.querySelector(`[data-tab="${tab}"]`).classList.add('on');
-  document.getElementById(`tp-${tab}`).classList.add('on');
+  const panel=document.getElementById(`tp-${tab}`);
+  panel.classList.add('on');
+  // Reset scroll to top on tab switch
+  const dp=panel.querySelector('.dp,.jp,.kbp,.mfxp');
+  if(dp) dp.scrollTop=0;
   if(tab==='journal')renderJournal();
   if(tab==='kb')renderKb();
   if(tab==='myfx')renderMyfx();
@@ -174,6 +178,8 @@ window.onerror = function(msg, src, line, col, err) {
 try{ renderPlaceholders(); }catch(e){ console.error('renderPlaceholders:', e); }
 // Stagger loads to avoid hammering APIs simultaneously
 setTimeout(loadPrices, 100);
+setTimeout(()=>{ try{updateConfidence({XAU:{price:'0',change:0}},{});} catch(e){} }, 50);
+setTimeout(loadCotData, 5000);
 setTimeout(loadSlowData, 1500);
 setTimeout(loadIndicators, 3000);
 // Confidence score with session data immediately (no API needed)

@@ -303,7 +303,7 @@ function updateCorrelation(prices){
 }
 
 function updateConfidence(prices, sentimentData){
-  if(!prices||!prices.XAU) return;
+  if(!prices) prices={};
   if(!prices) return; // safety guard
   const x=prices?.XAU, d=prices?.DXY, e=prices?.EURUSD, g=prices?.GBPUSD;
   const now=new Date();

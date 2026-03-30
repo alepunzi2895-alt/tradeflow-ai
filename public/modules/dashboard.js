@@ -135,22 +135,37 @@ function applyPrices(prices, source){
 let _tvFails = 0;
 
 async function loadPrices(){
-  // Yahoo Finance SPOT (XAUUSD=X) — closest to FP Markets price, no CORS issues
   try{
-    const full = await fetchJSON('/api/market?type=prices', 7000);
-    if(full?.ok && full.prices?.XAU){
-      applyPrices(buildDerivedPrices(full.prices), 'yahoo');
-      return;
+    // Try price.js first (dedicated, faster)
+    const pd=await fetchJSON('/api/price', 5000);
+    if(pd?.price){
+      // We have XAU — build minimal prices object
+      const xauPrice=parseFloat(pd.price);
+      const xauChg=parseFloat(pd.changePct)||0;
+      if(!marketData)marketData={};
+      marketData.XAU={price:pd.price, change:xauChg, high:pd.high, low:pd.low};
+      dashContext.prices=marketData;
+      // Update just XAU immediately
+      const conv=convertPrice(pd.price);
+      const pxau=document.getElementById('p-xau');
+      if(pxau)pxau.textContent=conv.sym+conv.val;
+      const cxau=document.getElementById('c-xau');
+      if(cxau){cxau.textContent=(xauChg>=0?'+':'')+xauChg+'%';cxau.style.color=xauChg>=0?'var(--green)':'var(--red)';}
+      const bxau=document.getElementById('bxau');
+      if(bxau){bxau.style.display='';bxau.textContent='XAU '+conv.sym+conv.val;bxau.className='hbadge '+(xauChg>=0?'hg':'hr');}
     }
-  }catch(e){ console.log('Prices error:', e.message); }
-  // Retry /api/price for just XAU if full fetch fails
-  try{
-    const p = await fetchJSON('/api/price', 4000);
-    if(p?.price){
-      const prices = { XAU: { price: String(p.price), change: parseFloat(p.changePct||0), high: p.high, low: p.low }};
-      applyPrices(buildDerivedPrices(prices), 'yahoo');
-    }
-  }catch(e){}
+    // Then try full market data in background
+    fetchJSON('/api/market?type=prices', 7000).then(full=>{
+      if(full?.ok&&full.prices&&Object.keys(full.prices).length>2){
+        marketData=full.prices;
+        dashContext.prices=full.prices;
+        updatePriceStrip(full.prices);
+        updateCorrelation(full.prices);
+        updateConfidence(full.prices, dashContext.sentiment||null);
+        updateHeader(full.prices);
+      }
+    });
+  }catch(e){console.log('Prices:',e.message);}
 }
 
 // Slow refresh: sentiment + calendar (called every 30s)

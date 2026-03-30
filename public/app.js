@@ -168,6 +168,9 @@ if(history.length>0){
   addBubble('assistant','**TradeFlow AI — Online** 🚀\n\n**Dashboard:** prezzi live, DXY correlation, confidence score, calendario economico, sentiment retail.\n\n**Analisi:** screenshot TradingView/MT5, manipulation score, coach psicologico integrato.\n\n**Journal:** import CSV, screenshot storico, MyFxBook.\n\nPremi 📷 per analizzare un grafico.');
 }
 
+// Prevent browser scroll restoration
+if('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
 // Guard: wrap all init in try/catch so one error never blocks everything
 window.onerror = function(msg, src, line, col, err) {
   console.error('JS Error:', msg, 'line:', line);
@@ -177,6 +180,9 @@ window.onerror = function(msg, src, line, col, err) {
 // Render UI immediately with placeholders (never block)
 try{ renderPlaceholders(); }catch(e){ console.error('renderPlaceholders:', e); }
 // Stagger loads to avoid hammering APIs simultaneously
+// Force scroll to top on load
+document.querySelectorAll('.dp,.jp,.kbp,.mfxp').forEach(el=>{ el.scrollTop=0; });
+
 setTimeout(loadPrices, 100);
 setTimeout(()=>{ try{updateConfidence({XAU:{price:'0',change:0}},{});} catch(e){} }, 50);
 setTimeout(loadCotData, 5000);

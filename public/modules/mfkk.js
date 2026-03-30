@@ -33,7 +33,16 @@ let mfkkCandles = [];   // H1 OHLCV cache
 let mfkkLastFetch = 0;  // timestamp of last candle fetch
 
 // Math helpers
-function _ema(src,p){const k=2/(p+1);let v=src[0];const o=[v];for(let i=1;i<src.length;i++){v=src[i]*k+v*(1-k);o.push(v);}return o;}
+function _ema(src,p){
+  const k=2/(p+1);
+  // Seed with SMA of first p values — matches TradingView EMA initialization
+  let seed=0; for(let i=0;i<Math.min(p,src.length);i++) seed+=src[i];
+  seed/=Math.min(p,src.length);
+  let v=seed;
+  const o=new Array(Math.min(p-1,src.length)).fill(seed);
+  for(let i=Math.min(p-1,src.length);i<src.length;i++){v=src[i]*k+v*(1-k);o.push(v);}
+  return o;
+}
 function _sma(src,p){const o=new Array(src.length).fill(null);for(let i=p-1;i<src.length;i++){let s=0;for(let j=0;j<p;j++)s+=(src[i-j]||0);o[i]=s/p;}return o;}
 function _hi(a,p,i){let m=-Infinity;for(let j=Math.max(0,i-p+1);j<=i;j++)if(a[j]!=null)m=Math.max(m,a[j]);return m;}
 function _lo(a,p,i){let m=Infinity; for(let j=Math.max(0,i-p+1);j<=i;j++)if(a[j]!=null)m=Math.min(m,a[j]);return m;}
@@ -102,8 +111,10 @@ function computeFromCandles(candles, tf){
   const TR=new Array(n).fill(0),DMP=new Array(n).fill(0),DMM=new Array(n).fill(0);
   for(let i=1;i<n;i++){
     TR[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));
-    DMP[i]=H[i]-H[i-1]>L[i-1]-L[i]?Math.max(H[i]-H[i-1],0):0;
-    DMM[i]=L[i-1]-L[i]>H[i]-H[i-1]?Math.max(L[i-1]-L[i],0):0;
+    // +DM: upMove > downMove AND upMove > 0
+    const upMove=H[i]-H[i-1], downMove=L[i-1]-L[i];
+    DMP[i]=(upMove>downMove&&upMove>0)?upMove:0;
+    DMM[i]=(downMove>upMove&&downMove>0)?downMove:0;
   }
   const sTR=[TR[0]],sDMP=[DMP[0]],sDMM=[DMM[0]];
   for(let i=1;i<n;i++){
@@ -114,7 +125,11 @@ function computeFromCandles(candles, tf){
   const DIP=sTR.map((v,i)=>v>0?sDMP[i]/v*100:0);
   const DIM=sTR.map((v,i)=>v>0?sDMM[i]/v*100:0);
   const DX=DIP.map((v,i)=>{const s=v+DIM[i];return s>0?Math.abs(v-DIM[i])/s*100:0;});
-  const ADX=_sma(DX,10);
+  // ADX uses Wilder smoothing (RMA), not SMA — matches TradingView
+  const ADX_P=10;
+  const adxArr=[DX[0]];
+  for(let i=1;i<DX.length;i++) adxArr.push(adxArr[i-1]*(ADX_P-1)/ADX_P + DX[i]/ADX_P);
+  const ADX=adxArr;
 
   return {
     cci:{value:cciVal,signal:cciSig,zone:cciVal>75?'overbought':cciVal<25?'oversold':'neutral'},

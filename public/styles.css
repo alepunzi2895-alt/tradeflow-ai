@@ -4,7 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 :root{--g:#c8a96e;--g2:#8b5e1a;--g3:#f0d080;--bg:#070809;--bg2:#0d0f12;--card:#101318;--card2:#151820;--border:#1e222a;--border2:#252b35;--text:#d0d4dc;--dim:#5a6070;--green:#00e676;--red:#ff4757;--yellow:#ffca28;--blue:#4a9eff;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overscroll-behavior:none;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;overscroll-behavior:none;}
 #app{display:flex;flex-direction:column;height:100dvh;max-width:500px;margin:0 auto;position:relative;}
 
 /* HEADER */

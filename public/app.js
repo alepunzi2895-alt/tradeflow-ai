@@ -178,7 +178,18 @@ window.onerror = function(msg, src, line, col, err) {
 };
 
 // Render UI immediately with placeholders (never block)
-try{ renderPlaceholders(); }catch(e){ console.error('renderPlaceholders:', e); }
+try{ 
+  renderPlaceholders();
+  // Prevent scroll during initial load (input focus can trigger scroll)
+  const dpEl = document.getElementById('dash-panel');
+  if(dpEl){
+    dpEl.scrollTop = 0;
+    // Lock scroll to top for first 3 seconds
+    let lockScroll = true;
+    setTimeout(()=>{ lockScroll = false; }, 3000);
+    dpEl.addEventListener('scroll', ()=>{ if(lockScroll) dpEl.scrollTop = 0; }, { passive: true });
+  }
+}catch(e){ console.error('renderPlaceholders:', e); }
 // Stagger loads to avoid hammering APIs simultaneously
 // Force scroll to top on load
 document.querySelectorAll('.dp,.jp,.kbp,.mfxp').forEach(el=>{ el.scrollTop=0; });
@@ -187,6 +198,13 @@ setTimeout(loadPrices, 100);
 setTimeout(()=>{ try{updateConfidence({XAU:{price:'0',change:0}},{});} catch(e){} }, 50);
 setTimeout(loadCotData, 5000);
 setTimeout(loadSlowData, 1500);
+// Delayed scroll reset — fires after all initial renders complete
+setTimeout(()=>{
+  document.querySelectorAll('.dp,.jp,.kbp,.mfxp').forEach(el=>{ el.scrollTop=0; });
+}, 500);
+setTimeout(()=>{
+  document.querySelectorAll('.dp,.jp,.kbp,.mfxp').forEach(el=>{ el.scrollTop=0; });
+}, 1500);
 setTimeout(loadIndicators, 3000);
 // Confidence score with session data immediately (no API needed)
 try{updateConfidence({},{});}catch(e){}

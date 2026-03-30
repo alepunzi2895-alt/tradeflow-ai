@@ -66,7 +66,7 @@ export default async function handler(req, res) {
         { key:"EURUSD", sym:"EURUSD=X"    },
         { key:"GBPUSD", sym:"GBPUSD=X"    },
         { key:"OIL",    sym:"CL=F"        },
-        { key:"SILVER", sym:"SI=F"        }, // Silver for Gold/Silver Ratio
+        { key:"SILVER", sym:"XAGUSD=X"    }, // Silver spot for Gold/Silver Ratio
         { key:"US10Y",  sym:"^TNX"        }, // US 10Y Treasury Yield
       ];
 

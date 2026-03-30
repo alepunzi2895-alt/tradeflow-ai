@@ -257,7 +257,7 @@ function updateConfidence(prices, sentimentData){
   // ── FACTOR 1: DXY Correlation (peso 20%) — usa stesso valore della correlation card ──
   let dxyScore=50, dxyLabel='DXY neutro', dxySub='', dxyCol='var(--dim)';
   // Prefer stored correlation (same as top card) to avoid inconsistency
-  const corrData = dashContext.correlation || prices?.CORRELATION;
+  const corrData = prices?.CORRELATION || dashContext.correlation; // prefer fresh prices
   if(corrData){
     const status=corrData.status;
     const xc=x?.change||0;
@@ -265,8 +265,9 @@ function updateConfidence(prices, sentimentData){
     else if(status==='NORMALE'&&xc<0){dxyScore=20;dxyLabel='DXY ↑ XAU ↓';dxySub='Correlazione inversa bearish';dxyCol='var(--red)';}
     else if(status==='DIVERGENZA'){dxyScore=35;dxyLabel='Divergenza DXY/XAU';dxySub='⚠ Possibile manipolazione';dxyCol='var(--yellow)';}
     else{dxyScore=50;dxyLabel='Correlazione debole';dxySub='Mercato indeciso';dxyCol='var(--dim)';}
-  } else if(x&&d){
-    const xc=x.change, dc=d.change;
+  } else if(x&&(d||dashContext.prices?.DXY)){
+    const d2=d||dashContext.prices?.DXY;
+    const xc=parseFloat(x.change||0), dc=parseFloat((d2||d)?.change||0);
     const corr=(xc>0&&dc<0)||(xc<0&&dc>0);
     const div=!corr&&(Math.abs(xc)>0.3||Math.abs(dc)>0.2);
     if(corr&&xc>0){dxyScore=80;dxyLabel='DXY ↓ XAU ↑';dxySub='Correlazione inversa bullish';dxyCol='var(--green)';}
@@ -278,7 +279,7 @@ function updateConfidence(prices, sentimentData){
   // ── FACTOR 2: Momentum XAU (peso 25%) ─────────────────
   let momScore=50, momLabel='Momentum laterale', momSub='', momCol='var(--dim)';
   if(x){
-    const chg=parseFloat(x.change);
+    const chg=parseFloat(x.change)||0;
     const price=parseFloat(x.price);
     const spread=x.high&&x.low?(parseFloat(x.high)-parseFloat(x.low)):0;
     if(chg>0.8){momScore=85;momLabel=`Momentum forte ↑ +${chg}%`;momSub='Trend intraday bullish';momCol='var(--green)';}

@@ -4,7 +4,7 @@ export default async function handler(req, res) {
 
   try {
     // Yahoo Finance - no API key needed
-    const url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1m&range=1d";
+    const url = "https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD=X?interval=1m&range=1d";
     const response = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0" }
     });

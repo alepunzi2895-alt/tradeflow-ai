@@ -168,32 +168,12 @@ async function loadPrices(){
 // Slow refresh: sentiment + calendar (called every 30s)
 // Sentiment-only refresh (called every 3s)
 async function loadSentimentOnly(){
+  // Server proxy avoids CORS — MFX blocks direct browser requests too
   try{
-    // Try direct browser fetch from MyFxBook
-    const r = await fetch('https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=XAUUSD');
-    if(r.ok){
-      const d = await r.json();
-      const sym = d.symbols?.find(s=>s.name==='XAUUSD') || d.symbols?.[0];
-      if(sym?.longPercentage != null){
-        const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
-        const sent = {
-          longPct:lp, shortPct:sp,
-          signal: lp>60?'RETAIL_LONG_HEAVY':sp>60?'RETAIL_SHORT_HEAVY':'MIXED',
-          contrarian: lp>65?'BEARISH_BIAS':sp>65?'BULLISH_BIAS':'NEUTRAL',
-          note: lp>65?'⚠️ Retail '+Math.round(lp)+'% long — smart money SHORT':
-                sp>65?'⚠️ Retail '+Math.round(sp)+'% short — squeeze possibile':''
-        };
-        dashContext.sentiment = sent;
-        updateSentiment(sent, 'myfxbook_direct');
-        if(marketData) updateConfidence(marketData, sent);
-        return;
-      }
-    }
-  } catch(e) {}
-  // Fallback: server
-  try{
-    const sd = await fetchJSON('/api/market?type=sentiment', 4000);
-    if(sd?.ok && sd.xauusd){
+    const mfxSess = typeof mfxSession !== 'undefined' && mfxSession?.session
+      ? '&session=' + encodeURIComponent(mfxSession.session) : '';
+    const sd = await fetchJSON('/api/market?type=sentiment'+mfxSess, 5000);
+    if(sd?.ok && sd.xauusd && sd.xauusd.longPct != null){
       dashContext.sentiment = sd.xauusd;
       updateSentiment(sd.xauusd, sd.source);
       if(marketData) updateConfidence(marketData, sd.xauusd);
@@ -271,6 +251,7 @@ function updatePriceStrip(prices){
 }
 
 function updateMacroCards(prices){
+  if(!prices) return;
   // US10Y Yield
   const u = prices.US10Y_CONTEXT;
   if(u){
@@ -325,6 +306,7 @@ async function loadCotData(){
 }
 
 function updateCorrelation(prices){
+  if(!prices) return;
   const c=prices.CORRELATION;if(!c)return;
   // Store globally so confidence score uses same value
   dashContext.correlation=c;
@@ -560,6 +542,13 @@ function updateConfidence(prices, sentimentData){
         fl.appendChild(div);
       });
     }
+    // Quality badge computation (if not set above)
+    const quality = total>=75?'🎯 Setup istituzionale — alta probabilità':
+                    total>=60?'✅ Confluenza positiva — setup operabile':
+                    total>=40?'⚡ Indicatori misti — attendi conferme':
+                    '⛔ Segnale debole — no trade';
+    const qualityBg = total>=75?'#00e67610':total>=60?'#00e67608':total>=40?'#ffca2810':'#ff475710';
+    const qualityCol = total>=75?'var(--green)':total>=60?'var(--green)':total>=40?'var(--yellow)':'var(--red)';
     const qel=document.getElementById('conf-quality');
     if(qel){
       if(quality){
@@ -576,6 +565,7 @@ function updateConfidence(prices, sentimentData){
 }
 
 function updateSentiment(s, source){
+  if(!s) return;
   const srcEl=document.getElementById('sent-source');
   if(!s||s.longPct==null){
     document.getElementById('sent-note').style.display='none';

@@ -145,52 +145,53 @@ function computeFromCandles(candles, tf){
   };
 }
 
-// Browser-side fetch of H1 candles for CCI_S (bypasses Vercel IP blocking)
+// Fetch candles via server proxy (bypasses both CORS and IP blocks)
 async function fetchBrowserCandles(){
   try{
-    // Yahoo Finance XAUUSD=X (spot gold) - CORS-enabled, no IP blocking for browsers
-    // range=60d ensures 120+ H1 candles needed for CCI(50)+Stoch(50)+SMA(8)+SMA(8) warmup
-    const url = 'https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD%3DX?interval=1h&range=60d';
-    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if(!r.ok) throw new Error('Yahoo HTTP '+r.status);
+    // Try our server proxy first (it handles Yahoo + TV history fallback)
+    const url = '/api/candles?range=60d&interval=1h';
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Candle proxy HTTP '+r.status);
     const d = await r.json();
-    const rs = d?.chart?.result?.[0];
-    if(!rs?.timestamp) throw new Error('No timestamp data');
-    const q = rs.indicators?.quote?.[0]||{};
-    const candles = [];
-    for(let i=0;i<rs.timestamp.length;i++){
-      if(q.close[i]!=null&&q.high[i]!=null&&q.low[i]!=null)
-        candles.push({t:rs.timestamp[i],h:q.high[i],l:q.low[i],c:q.close[i]});
-    }
-    if(candles.length < 30) throw new Error('Too few candles: '+candles.length);
-    console.log('Browser candles OK:', candles.length, 'last=$'+candles.at(-1)?.c?.toFixed(2));
-    return candles;
+    if(!d?.ok || !d.candles?.length) throw new Error('No candles from proxy');
+    console.log('Server candle proxy OK:', d.count, 'candles from', d.source);
+    return d.candles;
   }catch(e){
-    console.log('fetchBrowserCandles:', e.message);
+    console.log('fetchBrowserCandles proxy:', e.message);
+    // Fallback: try the indicators API which also returns candle_data
+    try{
+      const d = await fetchJSON('/api/indicators?tf=1h', 12000);
+      if(d?.ok && d.candle_data?.length > 50){
+        console.log('Candles from indicators API:', d.candle_data.length);
+        return d.candle_data;
+      }
+    }catch(e2){ console.log('Candle fallback:', e2.message); }
     return [];
   }
 }
 
-// Fetch MACD/ADX from TV Scanner via /api/indicators (server-side, no candles needed)
+
+// Fetch all indicators from /api/indicators (MACD from TV Scanner + ADX/CCI from candles)
 async function fetchServerIndicators(){
   try{
     const d = await fetchJSON('/api/indicators?tf='+mfkkTF, 12000);
-    if(d?.ok && d.macd && d.adx){
-      mfkkServerMacd = d.macd;
-      mfkkServerAdx  = d.adx;
-      console.log('Server indicators: MACD='+d.macd.macd?.toFixed(2)+' ADX='+d.adx.adx?.toFixed(2)+' ['+d.source+']');
+    if(d?.ok){
+      if(d.macd) mfkkServerMacd = d.macd;
+      if(d.adx)  mfkkServerAdx  = d.adx;
+      console.log('Server indicators: MACD='+(d.macd?.macd?.toFixed(2)??'N/A')+' ADX='+(d.adx?.adx?.toFixed(2)??'N/A')+' CCI='+(d.cci?.value??'N/A')+' ['+d.macd_source+']');
     }
     return d;
   }catch(e){ console.log('fetchServerIndicators:', e.message); return null; }
 }
 
-// Main loader: runs in parallel, combines browser candles + server MACD/ADX
+
+// Main loader: fetches candles + server indicators, populates all MFKK fields
 async function loadIndicatorCandles(){
   try{
     mfkkLastFetch = Date.now();
     const telEl = document.getElementById('mfkk-time');
 
-    // Run in parallel: browser candles (for CCI_S) + server TV Scanner (for MACD/ADX)
+    // Run in parallel: candle proxy (for CCI_S live recalc) + server indicators (MACD+ADX+CCI)
     const [candles, serverData] = await Promise.all([
       fetchBrowserCandles(),
       fetchServerIndicators()
@@ -198,26 +199,31 @@ async function loadIndicatorCandles(){
 
     const set = (id,v) => _setVal(id,v);
 
-    if(candles.length >= 120){
-      mfkkCandles = candles;
-      // Compute CCI_S from browser candles
-      const vals = computeFromCandles(candles, mfkkTF);
+    // Store candles for live recalc
+    if(candles.length > 0) mfkkCandles = candles;
+
+    // CCI_S: prefer server-computed (from same candle data), fallback to browser computation
+    if(serverData?.cci?.value != null){
+      set('mfkk-cci', serverData.cci.value);
+      console.log('CCI_S from server:', serverData.cci.value);
+    } else if(mfkkCandles.length >= 120){
+      const vals = computeFromCandles(mfkkCandles, mfkkTF);
       if(vals){
         const cciVal = vals.cci?.value ?? vals.cci;
         set('mfkk-cci', cciVal);
         console.log('CCI_S from browser candles:', cciVal);
       }
-    } else if(candles.length > 0){
-      mfkkCandles = candles; // Store even if < 120 for partial use
     }
 
-    // Use TV Scanner values for MACD and ADX (exact TV values)
+    // MACD: from TV Scanner (exact TradingView values)
     if(mfkkServerMacd){
       set('mfkk-macd-fast', mfkkServerMacd.macd);
       set('mfkk-macd-slow', mfkkServerMacd.signal);
       set('mfkk-macd-hist', mfkkServerMacd.histogram);
     }
-    if(mfkkServerAdx){
+
+    // ADX(10): prefer server-computed (exact Pine Script formula)
+    if(mfkkServerAdx?.adx != null){
       set('mfkk-adx',     mfkkServerAdx.adx);
       set('mfkk-diplus',  mfkkServerAdx.di_plus);
       set('mfkk-diminus', mfkkServerAdx.di_minus);
@@ -231,13 +237,14 @@ async function loadIndicatorCandles(){
       telEl.textContent = '$'+price+' · '+now+' ('+mfkkTF.toUpperCase()+') ⟳';
     }
 
-    if(candles.length >= 120 || mfkkServerMacd){
+    if(serverData?.ok || mfkkCandles.length >= 120){
       dashContext.indicatorBase = serverData;
       dashContext.indicators = serverData;
       setTimeout(autoSelectBestDir, 50);
     }
   }catch(e){ console.log('loadIndicatorCandles:', e.message); }
 }
+
 
 
 // Recalculate CCI_S every 5s: inject live price into last candle

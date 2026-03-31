@@ -443,33 +443,52 @@ function calcMfkk(){
   const col=score>=75?'var(--green)':score>=55?'var(--yellow)':score>=40?'var(--yellow)':'var(--red)';
   const dirLabel=isBuy?'BUY':'SELL';
   let bias='', desc='';
-  if(score>=80&&allThree&&strong>=3){bias=dirLabel+' FORTE';desc='Tutti e 3 gli indicatori allineati — segnale ad alta probabilità';}
-  else if(score>=70&&strong>=2){bias=dirLabel+' VALIDO';desc='2/3 indicatori confermano — buona confluenza';}
-  else if(score>=55){bias=dirLabel+' PARZIALE';desc='Segnale parziale — attendi ulteriori conferme';}
-  else if(score>=40){bias='NEUTRO';desc='Indicatori misti — evita entries adesso';}
-  else{bias='CONTRO '+dirLabel;desc='Segnale contro la direzione — no trade';}
+  
+  if(score>=80&&allThree&&strong>=3){
+    bias=dirLabel+' ESTREMO';
+    desc='Trend avanzato — potenziale esaurimento o ritracciamento in arrivo (Rischio alto)';
+  } else if(score>=75&&allThree){
+    bias=dirLabel+' OTTIMALE';
+    desc='Setup ideale H1 confermato dai test — TP largo consigliato ($25)';
+  } else if(score>=70&&strong>=2){
+    bias=dirLabel+' VALIDO';
+    desc='2/3 indicatori confermano — setup moderato per ingressi attenti';
+  } else if(score>=55){
+    bias=dirLabel+' PARZIALE';
+    desc='Segnale parziale — attendi ulteriori conferme';
+  } else if(score>=40){
+    bias='NEUTRO';
+    desc='Indicatori misti — evita entries adesso';
+  } else{
+    bias='CONTRO '+dirLabel;
+    desc='Segnale contro la direzione predominante — no trade';
+  }
 
   // Render
   const DASH=163.4;
   const circ=document.getElementById('mfkk-circle');
-  if(circ){circ.style.strokeDashoffset=DASH*(1-score/100);circ.style.stroke=col;}
+  if(circ){circ.style.strokeDashoffset=DASH*(1-score/100);circ.style.stroke=score>=80?'var(--yellow)':col;}
   const num=document.getElementById('mfkk-num');
-  if(num){num.textContent=score;num.style.color=col;}
+  if(num){num.textContent=score;num.style.color=score>=80?'var(--yellow)':col;}
   const bel=document.getElementById('mfkk-bias');
-  if(bel){bel.textContent=bias;bel.style.color=col;}
+  if(bel){bel.textContent=bias;bel.style.color=score>=80?'var(--yellow)':col;}
   const del=document.getElementById('mfkk-desc');
   if(del)del.textContent=desc;
+  
   const qel=document.getElementById('mfkk-quality');
   if(qel){
-    if(score>=80&&allThree&&strong>=3){
+    if(score>=80&&allThree){
+      qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
+      qel.textContent='⚠️ Rischio Ipercomprato/Ipervenduto: Trend over-esteso su H1';
+    } else if(score>=75&&allThree){
       qel.style.cssText='display:block;background:#00e67615;border:1px solid #00e67630;color:var(--green)';
-      qel.textContent='CONFLUENZA PERFETTA — Tutti gli indicatori allineati';
+      qel.textContent='🎯 SETUP PULITO (Edge Storico) — TP: $25 | SL: $15';
     } else if(weak>=2){
       qel.style.cssText='display:block;background:#ff475715;border:1px solid #ff475730;color:var(--red)';
-      qel.textContent='SEGNALE DEBOLE — Aspetta allineamento indicatori';
+      qel.textContent='❌ SEGNALE DEBOLE — Aspetta migliore allineamento (score < 75 = range laterale)';
     } else if(score>=70&&!allThree){
       qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
-      qel.textContent='Dati parziali — inserisci tutti e 3 per score completo';
+      qel.textContent='⏳ Dati parziali — inserisci tutti e 3 per score completo';
     } else {
       qel.style.display='none';
     }

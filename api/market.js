@@ -43,18 +43,38 @@ export default async function handler(req, res) {
   }
 
   // Helper: fetch all prices from TradingView Scanner
+  // Multiple ticker alternatives per symbol — tries all, picks first valid
   async function tvScannerPrices(){
-    const SYMS = {
-      XAU:    'FPMARKETS:XAUUSD',
-      DXY:    'TVC:DXY',
-      EURUSD: 'FPMARKETS:EURUSD',
-      GBPUSD: 'FPMARKETS:GBPUSD',
-      OIL:    'TVC:USOIL',
-      US10Y:  'TVC:US10Y',
-      SILVER: 'FPMARKETS:XAGUSD',
+    const MULTI_TICKERS = [
+      // XAU alternatives
+      'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD',
+      'CAPITALCOM:GOLD', 'EASYMARKETS:XAUUSD', 'TVC:GOLD',
+      'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD',
+      // SILVER alternatives
+      'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD',
+      'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'TVC:SILVER',
+      'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD',
+      // Other symbols (mostly stable)
+      'TVC:DXY', 'TVC:USOIL', 'TVC:US10Y',
+      'OANDA:EURUSD', 'OANDA:GBPUSD',
+      'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
+    ];
+
+    // Label which tickers belong to which key
+    const TICKER_KEY = {
+      'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU',
+      'CAPITALCOM:GOLD':'XAU','EASYMARKETS:XAUUSD':'XAU','TVC:GOLD':'XAU',
+      'FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
+      'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER',
+      'CAPITALCOM:SILVER':'SILVER','EASYMARKETS:XAGUSD':'SILVER','TVC:SILVER':'SILVER',
+      'FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
+      'TVC:DXY':'DXY','TVC:USOIL':'OIL','TVC:US10Y':'US10Y',
+      'OANDA:EURUSD':'EURUSD','OANDA:GBPUSD':'GBPUSD',
+      'FPMARKETS:EURUSD':'EURUSD','FPMARKETS:GBPUSD':'GBPUSD',
     };
+
     const body = {
-      symbols: { tickers: Object.values(SYMS), query: { types: [] } },
+      symbols: { tickers: MULTI_TICKERS, query: { types: [] } },
       columns: ['close', 'change', 'high', 'low']
     };
     const r = await fetchWithTimeout('https://scanner.tradingview.com/global/scan', {
@@ -70,11 +90,12 @@ export default async function handler(req, res) {
     if (!r.ok) throw new Error('TV Scanner HTTP ' + r.status);
     const d = await r.json();
     if (!d.data?.length) throw new Error('TV Scanner empty response');
-    const REV = Object.fromEntries(Object.entries(SYMS).map(([k,v])=>[v,k]));
+
     const prices = {};
     for (const item of d.data) {
-      const key = REV[item.s];
+      const key = TICKER_KEY[item.s];
       if (!key || !item.d) continue;
+      if (prices[key]) continue; // already found a valid source for this key
       const [close, chgPct, high, low] = item.d;
       if (close == null || isNaN(+close)) continue;
       const dec = key==='XAU'||key==='OIL'||key==='SILVER' ? 2
@@ -84,8 +105,10 @@ export default async function handler(req, res) {
         change: +(chgPct || 0).toFixed(2),
         high: high != null ? (+high).toFixed(dec) : null,
         low: low != null ? (+low).toFixed(dec) : null,
+        _source: item.s,
       };
     }
+    console.log('TV Scanner found:', Object.keys(prices).map(k=>k+':'+prices[k]._source).join(', '));
     return prices;
   }
 

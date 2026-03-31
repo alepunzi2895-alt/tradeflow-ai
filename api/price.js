@@ -17,10 +17,16 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── SOURCE 1: TradingView Scanner (primary — no auth needed) ──
+  // ── SOURCE 1: TradingView Scanner (primary) ──
+  // Try multiple tickers — FPMARKETS may be down, try OANDA, FOREXCOM, TVC, CAPITALCOM
   try {
+    const xauTickers = [
+      'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD',
+      'CAPITALCOM:GOLD', 'EASYMARKETS:XAUUSD', 'FPMARKETS:XAUUSD',
+      'TVC:GOLD', 'FX:XAUUSD', 'SAXO:XAUUSD'
+    ];
     const body = {
-      symbols: { tickers: ['FPMARKETS:XAUUSD'], query: { types: [] } },
+      symbols: { tickers: xauTickers, query: { types: [] } },
       columns: ['close', 'change', 'high', 'low']
     };
     const r = await fetchT('https://scanner.tradingview.com/global/scan', {
@@ -36,21 +42,20 @@ export default async function handler(req, res) {
 
     if (r.ok) {
       const d = await r.json();
-      const item = d.data?.find(x => x.s === 'FPMARKETS:XAUUSD');
-      if (item?.d) {
+      // Find first valid XAU ticker
+      const item = d.data?.find(x => x.d && x.d[0] != null && !isNaN(+x.d[0]));
+      if (item) {
         const [close, chgPct, high, low] = item.d;
-        if (close != null && !isNaN(+close)) {
-          console.log('price.js: TV Scanner OK, XAU=' + (+close).toFixed(2));
-          return res.status(200).json({
-            price: (+close).toFixed(2),
-            change: (chgPct != null ? (+chgPct).toFixed(2) : "0.00"),
-            changePct: (chgPct != null ? (+chgPct).toFixed(2) : "0.00"),
-            high: high != null ? (+high).toFixed(2) : null,
-            low: low != null ? (+low).toFixed(2) : null,
-            source: 'tradingview',
-            timestamp: new Date().toISOString(),
-          });
-        }
+        console.log('price.js: TV Scanner OK via', item.s, 'XAU=' + (+close).toFixed(2));
+        return res.status(200).json({
+          price: (+close).toFixed(2),
+          change: (chgPct != null ? (+chgPct).toFixed(2) : "0.00"),
+          changePct: (chgPct != null ? (+chgPct).toFixed(2) : "0.00"),
+          high: high != null ? (+high).toFixed(2) : null,
+          low: low != null ? (+low).toFixed(2) : null,
+          source: 'tradingview_' + item.s,
+          timestamp: new Date().toISOString(),
+        });
       }
     }
   } catch (e) {
@@ -85,7 +90,7 @@ export default async function handler(req, res) {
     console.log('price.js Yahoo failed:', e.message);
   }
 
-  // ── SOURCE 3: Yahoo Finance v8 query2 (last resort) ──
+  // ── SOURCE 3: Yahoo v8 query2 (last resort) ──
   try {
     const url2 = "https://query2.finance.yahoo.com/v8/finance/chart/XAUUSD=X?interval=1m&range=1d";
     const r2 = await fetchT(url2, { headers: { "User-Agent": "Mozilla/5.0" } }, 5000);

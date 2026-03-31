@@ -1,19 +1,37 @@
 // Server-side proxy for TradingView Scanner
-// Avoids CORS issues — TV Scanner is called from Vercel server, not browser
+// Uses multiple ticker alternatives per symbol — picks first valid one
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-cache, max-age=0");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const SYMS = {
-    XAU:    'FPMARKETS:XAUUSD',
-    DXY:    'TVC:DXY',
-    EURUSD: 'FPMARKETS:EURUSD',
-    GBPUSD: 'FPMARKETS:GBPUSD',
-    OIL:    'TVC:USOIL',
-    US10Y:  'TVC:US10Y',
-    SILVER: 'FPMARKETS:XAGUSD',
+  const MULTI_TICKERS = [
+    // XAU alternatives (by priority)
+    'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD',
+    'CAPITALCOM:GOLD', 'EASYMARKETS:XAUUSD', 'TVC:GOLD',
+    'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD',
+    // SILVER alternatives
+    'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD',
+    'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'TVC:SILVER',
+    'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD',
+    // Other symbols (mostly stable on TVC)
+    'TVC:DXY', 'TVC:USOIL', 'TVC:US10Y',
+    'OANDA:EURUSD', 'OANDA:GBPUSD',
+    'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
+  ];
+
+  // Map each ticker to a canonical key
+  const TICKER_KEY = {
+    'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU',
+    'CAPITALCOM:GOLD':'XAU','EASYMARKETS:XAUUSD':'XAU','TVC:GOLD':'XAU',
+    'FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
+    'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER',
+    'CAPITALCOM:SILVER':'SILVER','EASYMARKETS:XAGUSD':'SILVER','TVC:SILVER':'SILVER',
+    'FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
+    'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'TVC:US10Y':'US10Y',
+    'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD',
+    'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
   };
 
   try {
@@ -21,7 +39,7 @@ export default async function handler(req, res) {
     const tid = setTimeout(() => ctrl.abort(), 8000);
 
     const body = {
-      symbols: { tickers: Object.values(SYMS), query: { types: [] } },
+      symbols: { tickers: MULTI_TICKERS, query: { types: [] } },
       columns: ['close', 'change', 'high', 'low']
     };
 
@@ -48,12 +66,11 @@ export default async function handler(req, res) {
       return res.status(503).json({ ok: false, error: 'TV Scanner empty' });
     }
 
-    // Build reverse map
-    const REV = Object.fromEntries(Object.entries(SYMS).map(([k,v]) => [v, k]));
     const prices = {};
     for (const item of d.data) {
-      const key = REV[item.s];
+      const key = TICKER_KEY[item.s];
       if (!key || !item.d) continue;
+      if (prices[key]) continue; // already have a valid source for this key
       const [close, chgPct, high, low] = item.d;
       if (close == null || isNaN(+close)) continue;
       const dec = key==='XAU'||key==='OIL'||key==='SILVER' ? 2
@@ -63,14 +80,17 @@ export default async function handler(req, res) {
         change: +(chgPct || 0).toFixed(2),
         high:   high != null ? (+high).toFixed(dec) : null,
         low:    low  != null ? (+low).toFixed(dec)  : null,
+        _source: item.s,
       };
     }
 
     if (!prices.XAU) {
-      return res.status(503).json({ ok: false, error: 'No XAU in response' });
+      console.log('TV Scanner: no XAU found. Got keys:', Object.keys(prices).join(','));
+      return res.status(503).json({ ok: false, error: 'No XAU in response', got: Object.keys(prices) });
     }
 
-    console.log('TV prices OK: XAU=' + prices.XAU.price);
+    console.log('TV prices OK: XAU=' + prices.XAU.price + ' via ' + prices.XAU._source +
+                ' SILVER=' + (prices.SILVER?.price || 'missing'));
     return res.status(200).json({ ok: true, prices, source: 'tradingview', timestamp: new Date().toISOString() });
 
   } catch (e) {

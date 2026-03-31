@@ -147,10 +147,11 @@ async function fetchT(url, opts={}, ms=8000) {
 
 ## 7. BACKTESTING & SCORING EDGE (H1 XAU/USD)
 
-Il backtest simulato su 1 anno (5700+ candele H1) ha evidenziato le seguenti logiche per filtrare i segnali "puliti" dalla dashboard MFKK:
-1. **Sweet Spot "STRICT"**: I setup migliori si trovano con uno Score tra `75 e 79`. 
-2. **Esaurimento Trend (>80)**: Confluenze perfette (score >= 80) tendono a entrare troppo tardi, quando l'asset è in ipercomprato/ipervenduto estremo e rischia inversioni/ritracciamenti. Considerare segnali >80 come avvisi di possibile "exhaustion".
-3. **Risk/Reward WIDE**: Operando su Gold H1, la volatilità richiede stop loss più ampi (es. SL $15, TP $25) rispetto a configurazioni "tight" ($7) che verrebbero costantemente cacciate dagli spike fisiologici del mercato.
+Il backtest simulato su **2 anni massimi** (limite Yahoo Finance per candele H1, ~10.600 candele) ha evidenziato le seguenti logiche definitive per il calcolo MFKK:
+1. **Ribilanciamento Pesi (ADX Dominante)**: I test dimostrano che l'affidabilità su H1 sale drasticamente (dal 42.8% al 47.5% WR con massimizzazione del P&L) se l'ADX ha un peso dominante. **I pesi attuali ottimizzati sono: ADX 70%, MACD 15%, CCI 15%**. L'ADX filtra i "falsi segnali" laterali che MACD/CCI tendono a dare.
+2. **Sweet Spot "STRICT"**: I setup migliori si trovano con uno Score tra `75 e 79`. 
+3. **Esaurimento Trend (>80)**: Confluenze perfette (score >= 80) tendono a entrare troppo tardi, quando l'asset è in ipercomprato/ipervenduto estremo e rischia inversioni/ritracciamenti. Considerare segnali >80 come avvisi di possibile "exhaustion".
+4. **Risk/Reward WIDE**: Operando su Gold H1, la volatilità richiede stop loss più ampi (es. SL $15, TP $25) rispetto a configurazioni "tight" ($7) che verrebbero costantemente cacciate dagli spike fisiologici del mercato.
 
 ---
 

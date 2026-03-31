@@ -28,7 +28,7 @@ function renderPlaceholders(){
 
 async function loadPrices(){
   try{
-    // Try price.js first (dedicated, faster)
+    // Try price.js first (dedicated, faster — now uses TV Scanner primary)
     const pd=await fetchJSON('/api/price', 5000);
     if(pd?.price){
       // We have XAU — build minimal prices object
@@ -45,8 +45,36 @@ async function loadPrices(){
       if(cxau){cxau.textContent=(xauChg>=0?'+':'')+xauChg+'%';cxau.style.color=xauChg>=0?'var(--green)':'var(--red)';}
       const bxau=document.getElementById('bxau');
       if(bxau){bxau.style.display='';bxau.textContent='XAU '+conv.sym+conv.val;bxau.className='hbadge '+(xauChg>=0?'hg':'hr');}
+    } else {
+      // price.js failed — try tvprice as XAU quick fallback
+      const tv=await fetchJSON('/api/tvprice', 6000);
+      if(tv?.ok&&tv.prices?.XAU){
+        const xd=tv.prices.XAU;
+        if(!marketData)marketData={};
+        marketData.XAU=xd;
+        dashContext.prices=marketData;
+        const conv=convertPrice(xd.price);
+        const pxau=document.getElementById('p-xau');
+        if(pxau)pxau.textContent=conv.sym+conv.val;
+        const cxau=document.getElementById('c-xau');
+        const xauChg=xd.change||0;
+        if(cxau){cxau.textContent=(xauChg>=0?'+':'')+xauChg+'%';cxau.style.color=xauChg>=0?'var(--green)':'var(--red)';}
+        const bxau=document.getElementById('bxau');
+        if(bxau){bxau.style.display='';bxau.textContent='XAU '+conv.sym+conv.val;bxau.className='hbadge '+(xauChg>=0?'hg':'hr');}
+        // TV Scanner returns all symbols — use them for full update too
+        if(Object.keys(tv.prices).length>2){
+          const prices=buildDerivedPrices(tv.prices);
+          marketData=prices; dashContext.prices=prices;
+          updatePriceStrip(prices);
+          updateCorrelation(prices);
+          updateMacroCards(prices);
+          updateConfidence(prices, dashContext.sentiment||null);
+          updateHeader(prices);
+          return; // Already have full data from tvprice
+        }
+      }
     }
-    // Then try full market data in background
+    // Then try full market data in background (now uses TV Scanner primary + Yahoo fallback)
     fetchJSON('/api/market?type=prices', 7000).then(full=>{
       if(full?.ok&&full.prices&&Object.keys(full.prices).length>2){
         const prices=buildDerivedPrices(full.prices);
@@ -56,6 +84,19 @@ async function loadPrices(){
         updateMacroCards(prices);
         updateConfidence(prices, dashContext.sentiment||null);
         updateHeader(prices);
+      } else {
+        // market.js also failed — try tvprice as last resort for all symbols
+        fetchJSON('/api/tvprice', 6000).then(tv=>{
+          if(tv?.ok&&tv.prices&&Object.keys(tv.prices).length>2){
+            const prices=buildDerivedPrices(tv.prices);
+            marketData=prices; dashContext.prices=prices;
+            updatePriceStrip(prices);
+            updateCorrelation(prices);
+            updateMacroCards(prices);
+            updateConfidence(prices, dashContext.sentiment||null);
+            updateHeader(prices);
+          }
+        });
       }
     });
   }catch(e){console.log('Prices:',e.message);}

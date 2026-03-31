@@ -42,52 +42,144 @@ export default async function handler(req, res) {
     };
   }
 
+  // Helper: fetch all prices from TradingView Scanner
+  async function tvScannerPrices(){
+    const SYMS = {
+      XAU:    'FPMARKETS:XAUUSD',
+      DXY:    'TVC:DXY',
+      EURUSD: 'FPMARKETS:EURUSD',
+      GBPUSD: 'FPMARKETS:GBPUSD',
+      OIL:    'TVC:USOIL',
+      US10Y:  'TVC:US10Y',
+      SILVER: 'FPMARKETS:XAGUSD',
+    };
+    const body = {
+      symbols: { tickers: Object.values(SYMS), query: { types: [] } },
+      columns: ['close', 'change', 'high', 'low']
+    };
+    const r = await fetchWithTimeout('https://scanner.tradingview.com/global/scan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Origin': 'https://www.tradingview.com',
+        'Referer': 'https://www.tradingview.com/'
+      },
+      body: JSON.stringify(body)
+    }, 8000);
+    if (!r.ok) throw new Error('TV Scanner HTTP ' + r.status);
+    const d = await r.json();
+    if (!d.data?.length) throw new Error('TV Scanner empty response');
+    const REV = Object.fromEntries(Object.entries(SYMS).map(([k,v])=>[v,k]));
+    const prices = {};
+    for (const item of d.data) {
+      const key = REV[item.s];
+      if (!key || !item.d) continue;
+      const [close, chgPct, high, low] = item.d;
+      if (close == null || isNaN(+close)) continue;
+      const dec = key==='XAU'||key==='OIL'||key==='SILVER' ? 2
+                : key==='DXY'||key==='US10Y' ? 3 : 5;
+      prices[key] = {
+        price: (+close).toFixed(dec),
+        change: +(chgPct || 0).toFixed(2),
+        high: high != null ? (+high).toFixed(dec) : null,
+        low: low != null ? (+low).toFixed(dec) : null,
+      };
+    }
+    return prices;
+  }
+
   try {
     // ── FX RATE ────────────────────────────────────────────
     if (type === "fx") {
       const cur = currency || "EUR";
-      // Map to Yahoo symbols
       const syms = { EUR:"EURUSD=X", GBP:"GBPUSD=X", CHF:"CHF=X", JPY:"JPY=X" };
       const sym = syms[cur] || `${cur}=X`;
       try {
         const q = await yahooQuote(sym);
         return res.status(200).json({ ok:true, currency:cur, rate:q.price, timestamp:new Date().toISOString() });
       } catch(e) {
+        // FX fallback: try TradingView for EUR/GBP
+        try {
+          const tvMap = { EUR:'FPMARKETS:EURUSD', GBP:'FPMARKETS:GBPUSD' };
+          const tvTicker = tvMap[cur];
+          if (tvTicker) {
+            const body = {
+              symbols: { tickers: [tvTicker], query: { types: [] } },
+              columns: ['close']
+            };
+            const r = await fetchWithTimeout('https://scanner.tradingview.com/global/scan', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Origin': 'https://www.tradingview.com',
+                'Referer': 'https://www.tradingview.com/'
+              },
+              body: JSON.stringify(body)
+            }, 6000);
+            if (r.ok) {
+              const d = await r.json();
+              const item = d.data?.find(x => x.s === tvTicker);
+              if (item?.d?.[0]) {
+                return res.status(200).json({ ok:true, currency:cur, rate:item.d[0], timestamp:new Date().toISOString() });
+              }
+            }
+          }
+        } catch(e2) { console.log('FX TV fallback:', e2.message); }
         return res.status(200).json({ ok:false, currency:cur, rate:null, error:e.message });
       }
     }
 
     // ── PRICES ─────────────────────────────────────────────
     if (type === "prices") {
-      // Symbols: XAU, DXY, EURUSD, GBPUSD, USDJPY, OIL
       const symbolMap = [
-        { key:"XAU",    sym:"XAUUSD=X"    }, // spot gold
+        { key:"XAU",    sym:"XAUUSD=X"    },
         { key:"DXY",    sym:"DX-Y.NYB"    },
         { key:"EURUSD", sym:"EURUSD=X"    },
         { key:"GBPUSD", sym:"GBPUSD=X"    },
         { key:"OIL",    sym:"CL=F"        },
-        { key:"SILVER", sym:"XAGUSD=X"    }, // Silver spot for Gold/Silver Ratio
-        { key:"US10Y",  sym:"^TNX"        }, // US 10Y Treasury Yield
+        { key:"SILVER", sym:"XAGUSD=X"    },
+        { key:"US10Y",  sym:"^TNX"        },
       ];
 
-      const results = await Promise.allSettled(
-        symbolMap.map(s => yahooQuote(s.sym).then(q => ({ key:s.sym, data:q })))
-      );
+      // Strategy: Try TradingView Scanner first (more reliable), then fill gaps with Yahoo
+      let prices = {};
+      let tvSource = false;
 
-      const prices = {};
-      symbolMap.forEach((s, i) => {
-        const r = results[i];
-        if (r.status === "fulfilled" && r.value?.data) {
-          const d = r.value.data;
-          const decimals = s.key==="USDJPY" ? 3 : s.key==="XAU"||s.key==="OIL"||s.key==="SILVER" ? 2 : s.key==="US10Y" ? 3 : 5;
-          prices[s.key] = {
-            price: d.price.toFixed(decimals),
-            change: d.change,
-            high: d.high?.toFixed(decimals),
-            low: d.low?.toFixed(decimals),
-          };
+      // ── TradingView Scanner (primary) ──
+      try {
+        const tvPrices = await tvScannerPrices();
+        if (tvPrices && Object.keys(tvPrices).length >= 3) {
+          prices = { ...tvPrices };
+          tvSource = true;
+          console.log('market.js prices: TV Scanner OK, keys:', Object.keys(tvPrices).join(','));
         }
-      });
+      } catch(e) {
+        console.log('market.js TV Scanner failed:', e.message);
+      }
+
+      // ── Yahoo Finance (fallback / fill gaps) ──
+      const missingKeys = symbolMap.filter(s => !prices[s.key]).map(s => s);
+      if (missingKeys.length > 0) {
+        console.log('market.js: filling gaps from Yahoo for:', missingKeys.map(s=>s.key).join(','));
+        const results = await Promise.allSettled(
+          missingKeys.map(s => yahooQuote(s.sym).then(q => ({ key: s.key, data: q })))
+        );
+        missingKeys.forEach((s, i) => {
+          const r = results[i];
+          if (r.status === "fulfilled" && r.value?.data) {
+            const d = r.value.data;
+            const decimals = s.key==="USDJPY" ? 3 : s.key==="XAU"||s.key==="OIL"||s.key==="SILVER" ? 2 : s.key==="US10Y"||s.key==="DXY" ? 3 : 5;
+            prices[s.key] = {
+              price: d.price.toFixed(decimals),
+              change: d.change,
+              high: d.high?.toFixed(decimals),
+              low: d.low?.toFixed(decimals),
+            };
+          }
+        });
+      }
 
       // US10Y context (yield → gold relationship)
       if (prices.US10Y) {
@@ -131,14 +223,15 @@ export default async function handler(req, res) {
         };
       }
 
-      return res.status(200).json({ ok:true, prices, timestamp:new Date().toISOString() });
+      const source = tvSource ? 'tradingview' : 'yahoo';
+      console.log('market.js prices response:', Object.keys(prices).filter(k=>!k.includes('_')).join(','), 'source:', source);
+      return res.status(200).json({ ok:true, prices, source, timestamp:new Date().toISOString() });
     }
 
     // ── CALENDAR ──────────────────────────────────────────
     if (type === "calendar") {
       let events = [];
 
-      // Try ForexFactory this week
       for(const url of [
         "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
         "https://nfs.faireconomy.media/ff_calendar_nextweek.json"
@@ -216,9 +309,6 @@ export default async function handler(req, res) {
       }catch(e){console.log("MFX public:",e.message);}
 
       // Source 3: Synthetic from XAU 5-day momentum
-      // Retail traders typically chase: they buy dips and sell rallies
-      // So: XAU down 5d → retail likely over-long (contrarian = bullish signal)
-      //     XAU up 5d   → retail likely over-short (contrarian = bearish signal)
       try{
         const pr=await fetchWithTimeout(
           "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=7d",
@@ -246,19 +336,8 @@ export default async function handler(req, res) {
     }
 
     // ── COT REPORT (CFTC) ─────────────────────────────────
-    // Latest Commitment of Traders: Large Speculators net position on Gold
     if (type === "cot") {
       try{
-        // CFTC publishes weekly CSV — Gold COMEX code: 088691
-        // Alternative: use a proxy that parses COT (quandl deprecated, use cotdata)
-        // We use a parsed version from barchart or investing.com approach
-        // Primary: fetch from CFTC legacy CSV
-        const cotUrl = "https://www.cftc.gov/dea/futures/other_sf.htm";
-        // The CSV is at: https://www.cftc.gov/sites/default/files/files/dea/history/fut_disagg_txt_2025.zip
-        // Too complex to parse in serverless — use Yahoo Finance TNX + calculated signal instead
-        
-        // Practical approach: derive COT signal from price action + open interest
-        // Real COT: fetch from cached GitHub file updated weekly
         const cotGH = await fetchWithTimeout(
           `https://raw.githubusercontent.com/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/main/data/cot_data.json`,
           {headers:{"Authorization":`Bearer ${process.env.GITHUB_TOKEN}`}}, 5000
@@ -269,7 +348,6 @@ export default async function handler(req, res) {
         }
       }catch(e){console.log("COT fetch failed:", e.message);}
       
-      // Fallback: return null with instructions
       return res.status(200).json({
         ok:false,
         message:"COT data not yet seeded. POST to /api/cot-update to seed.",

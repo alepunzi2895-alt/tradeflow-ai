@@ -267,6 +267,7 @@ function buildDerivedPrices(prices){
 
 function updateMacroCards(prices){
   if(!prices) return;
+  const active = window.activeAsset || 'XAU';
   const u=prices.US10Y_CONTEXT;
   if(u){
     const el=document.getElementById('us10y-val');

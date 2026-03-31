@@ -34,13 +34,11 @@ let mfkkLastFetch = 0;  // timestamp of last candle fetch
 
 // Math helpers
 function _ema(src,p){
+  // TradingView ta.ema(): first value as seed (not SMA)
   const k=2/(p+1);
-  // Seed with SMA of first p values — matches TradingView EMA initialization
-  let seed=0; for(let i=0;i<Math.min(p,src.length);i++) seed+=src[i];
-  seed/=Math.min(p,src.length);
-  let v=seed;
-  const o=new Array(Math.min(p-1,src.length)).fill(seed);
-  for(let i=Math.min(p-1,src.length);i<src.length;i++){v=src[i]*k+v*(1-k);o.push(v);}
+  let v=src[0];
+  const o=[v];
+  for(let i=1;i<src.length;i++){v=src[i]*k+v*(1-k);o.push(v);}
   return o;
 }
 function _sma(src,p){const o=new Array(src.length).fill(null);for(let i=p-1;i<src.length;i++){let s=0;for(let j=0;j<p;j++)s+=(src[i-j]||0);o[i]=s/p;}return o;}
@@ -65,26 +63,36 @@ function computeFromCandles(candles, tf){
 
   const H=c4.map(x=>x.h), L=c4.map(x=>x.l), C=c4.map(x=>x.c), n=C.length;
 
-  // CCI_S Pine Script: source=close, CCI Period=50, Stoch Period=50, K=8, D=8, OB=75, OS=25
+  // CCI_S: CCI(close,50) → stoch(cci,cci,cci,50) → SMA(K,8) → SMA(D,8) — exact Pine Script v4
   const CCI_P=50, STOCH_P=50, SK=8, SD=8;
   const cci=new Array(n).fill(null);
   for(let i=CCI_P-1;i<n;i++){
-    const sl=C.slice(i-CCI_P+1,i+1); // use CLOSE as source
+    const sl=C.slice(i-CCI_P+1,i+1);
     const mn=sl.reduce((a,b)=>a+b,0)/CCI_P;
     const md=sl.reduce((a,b)=>a+Math.abs(b-mn),0)/CCI_P;
     cci[i]=md===0?0:(C[i]-mn)/(0.015*md);
   }
-  // Stoch of CCI: stoch(cci,cci,cci,50)
+  // stoch(cci,cci,cci,50) — pine: 100*(src-lowest)/(highest-lowest)
   const stk=new Array(n).fill(null);
   for(let i=CCI_P+STOCH_P-2;i<n;i++){
     if(cci[i]==null)continue;
     const lv=_lo(cci,STOCH_P,i), hv=_hi(cci,STOCH_P,i);
     stk[i]=(hv-lv)===0?50:((cci[i]-lv)/(hv-lv))*100;
   }
-  // SMA(stoch_k, 8) then SMA(result, 8) = D line
-  const stk_k=_sma(stk.map(v=>v??50),SK);
-  const stk_d=_sma(stk_k.map(v=>v??50),SD);
-  const cciVal=+stk_d[n-1].toFixed(2);
+  // SMA(stoch,8) — propagate null like Pine Script (no 50-fill)
+  const stk_k=new Array(n).fill(null);
+  for(let i=SK-1;i<n;i++){
+    const sl=stk.slice(i-SK+1,i+1);
+    if(sl.some(v=>v==null))continue;
+    stk_k[i]=sl.reduce((a,b)=>a+b,0)/SK;
+  }
+  const stk_d=new Array(n).fill(null);
+  for(let i=SD-1;i<n;i++){
+    const sl=stk_k.slice(i-SD+1,i+1);
+    if(sl.some(v=>v==null))continue;
+    stk_d[i]=sl.reduce((a,b)=>a+b,0)/SD;
+  }
+  const cciVal=+(stk_d[n-1]??50).toFixed(2);
   const cciPrev=stk_d[n-2];
   let cciSig='neutral';
   if(cciPrev!=null){
@@ -94,11 +102,10 @@ function computeFromCandles(candles, tf){
     else if(cciPrev<25&&cciVal>=25)cciSig='exit_buy';
   }
 
-  // MACD: fast=27, slow=20, signal=5 (matching TradingView CCI_S/MACD settings)
-  const MACD_FAST=27, MACD_SLOW=20, MACD_SIG=5;
-  const eFast=_ema(C,MACD_FAST),eSlow=_ema(C,MACD_SLOW);
-  const ml=eFast.map((v,i)=>v-eSlow[i]);
-  const sg=_ema(ml,MACD_SIG);
+  // MACD(12,26,9) EMA — standard Pine Script v6 default parameters
+  const e12=_ema(C,12), e26=_ema(C,26);
+  const ml=e12.map((v,i)=>v-e26[i]);
+  const sg=_ema(ml,9);
   const hist=ml.map((v,i)=>v-sg[i]);
   const macdVal=+ml[n-1].toFixed(4), sigVal=+sg[n-1].toFixed(4);
   const histVal=+hist[n-1].toFixed(4), histPrev=+(hist[n-2]||0).toFixed(4);
@@ -106,8 +113,8 @@ function computeFromCandles(candles, tf){
   if((ml[n-2]||0)<=(sg[n-2]||0)&&macdVal>sigVal)cross='cross_buy';
   else if((ml[n-2]||0)>=(sg[n-2]||0)&&macdVal<sigVal)cross='cross_sell';
 
-  // ADX Wilder period=9 (matching TradingView ADX and DI v4 settings)
-  const ADX_P=9;
+  // ADX: Wilder smoothing for TR/DM, then SMA(DX,len) — exact Pine Script "ADX and DI for v4"
+  const ADX_P=10; // Per=10 as set in user's TradingView indicator settings
   const TR=new Array(n).fill(0),DMP=new Array(n).fill(0),DMM=new Array(n).fill(0);
   for(let i=1;i<n;i++){
     TR[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));
@@ -115,19 +122,18 @@ function computeFromCandles(candles, tf){
     DMP[i]=(upMove>downMove&&upMove>0)?upMove:0;
     DMM[i]=(downMove>upMove&&downMove>0)?downMove:0;
   }
-  const sTR=[TR[0]],sDMP=[DMP[0]],sDMM=[DMM[0]];
+  // Wilder smoothing: X = X[1] - X[1]/len + value (nz() starts at 0)
+  const sTR=new Array(n).fill(0),sDMP=new Array(n).fill(0),sDMM=new Array(n).fill(0);
   for(let i=1;i<n;i++){
-    sTR.push(sTR[i-1]-sTR[i-1]/ADX_P+TR[i]);
-    sDMP.push(sDMP[i-1]-sDMP[i-1]/ADX_P+DMP[i]);
-    sDMM.push(sDMM[i-1]-sDMM[i-1]/ADX_P+DMM[i]);
+    sTR[i]=sTR[i-1]-sTR[i-1]/ADX_P+TR[i];
+    sDMP[i]=sDMP[i-1]-sDMP[i-1]/ADX_P+DMP[i];
+    sDMM[i]=sDMM[i-1]-sDMM[i-1]/ADX_P+DMM[i];
   }
   const DIP=sTR.map((v,i)=>v>0?sDMP[i]/v*100:0);
   const DIM=sTR.map((v,i)=>v>0?sDMM[i]/v*100:0);
   const DX=DIP.map((v,i)=>{const s=v+DIM[i];return s>0?Math.abs(v-DIM[i])/s*100:0;});
-  // ADX: Wilder smoothing (RMA)
-  const adxArr=[DX[0]];
-  for(let i=1;i<DX.length;i++) adxArr.push(adxArr[i-1]*(ADX_P-1)/ADX_P + DX[i]/ADX_P);
-  const ADX=adxArr;
+  // ADX = SMA(DX, len) — Pine Script uses simple moving average here, NOT Wilder RMA!
+  const ADX=_sma(DX, ADX_P);
 
   return {
     cci:{value:cciVal,signal:cciSig,zone:cciVal>75?'overbought':cciVal<25?'oversold':'neutral'},

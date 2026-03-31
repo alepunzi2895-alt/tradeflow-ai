@@ -11,14 +11,16 @@ export default async function handler(req, res) {
     catch(e) { clearTimeout(tid); throw e; }
   }
 
-  // TV Scanner: exact MACD(12,26,9) and ADX(10) values from OANDA:XAUUSD H1
+  // TV Scanner: exact MACD(12,26,9) and ADX values from OANDA:XAUUSD H1
+  // NOTE: ADX[10]|60 (custom period) is NOT supported by TV Scanner — returns null
+  // Using ADX|60 (default period 14). For exact period-10 match, compute client-side.
   const tickers = ['OANDA:XAUUSD','FOREXCOM:XAUUSD','PEPPERSTONE:XAUUSD'];
   const body = {
     symbols: { tickers, query: { types: [] } },
     columns: [
       'close|60', 'change|60',
       'MACD.macd|60', 'MACD.signal|60', 'MACD.hist|60',
-      'ADX[10]|60', 'plus_di[10]|60', 'minus_di[10]|60'
+      'ADX|60', 'plus_di|60', 'minus_di|60'
     ]
   };
 
@@ -40,8 +42,10 @@ export default async function handler(req, res) {
     if(!item) return res.status(503).json({ ok: false, error: 'TV Scanner no valid data' });
 
     const [close, change, macdLine, macdSig, macdHist, adx, diPlus, diMinus] = item.d;
+    if(macdLine==null) return res.status(503).json({ ok: false, error: 'MACD values null from TV Scanner' });
 
-    console.log(`TV Scanner OK: ${item.s} MACD=${(+macdLine).toFixed(2)} Signal=${(+macdSig).toFixed(2)} ADX=${(+adx).toFixed(2)} DI+=${(+diPlus).toFixed(2)} DI-=${(+diMinus).toFixed(2)}`);
+    console.log(`TV Scanner OK: ${item.s} MACD=${(+macdLine).toFixed(2)} Signal=${(+macdSig).toFixed(2)} ADX=${adx!=null?(+adx).toFixed(2):'null'} DI+=${diPlus!=null?(+diPlus).toFixed(2):'null'}`);
+
 
     return res.status(200).json({
       ok: true,
@@ -57,14 +61,15 @@ export default async function handler(req, res) {
         cross: (+macdLine) > (+macdSig) ? 'above' : 'below',
         diff: +((+macdLine)-(+macdSig)).toFixed(4)
       },
-      // ADX(10) exact values from TradingView OANDA:XAUUSD H1
+      // ADX(14 from scanner, user uses 10 — exact period computed client-side in mfkk.js)
       adx: {
-        adx:      +(+adx).toFixed(2),
-        di_plus:  +(+diPlus).toFixed(2),
-        di_minus: +(+diMinus).toFixed(2),
+        adx:      adx!=null    ? +(+adx).toFixed(2)    : null,
+        di_plus:  diPlus!=null ? +(+diPlus).toFixed(2) : null,
+        di_minus: diMinus!=null? +(+diMinus).toFixed(2): null,
         threshold: 10,
-        trending: (+adx) > 10,
-        strong:   (+adx) > 25
+        trending: adx!=null && (+adx) > 10,
+        strong:   adx!=null && (+adx) > 25,
+        note: 'period_14_from_scanner'
       }
       // NOTE: cci is not returned here — computed client-side from browser-fetched candles
     });

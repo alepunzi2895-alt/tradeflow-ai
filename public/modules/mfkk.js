@@ -149,7 +149,8 @@ function computeFromCandles(candles, tf){
 async function fetchBrowserCandles(){
   try{
     // Yahoo Finance XAUUSD=X (spot gold) - CORS-enabled, no IP blocking for browsers
-    const url = 'https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD%3DX?interval=1h&range=14d';
+    // range=60d ensures 120+ H1 candles needed for CCI(50)+Stoch(50)+SMA(8)+SMA(8) warmup
+    const url = 'https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD%3DX?interval=1h&range=60d';
     const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if(!r.ok) throw new Error('Yahoo HTTP '+r.status);
     const d = await r.json();

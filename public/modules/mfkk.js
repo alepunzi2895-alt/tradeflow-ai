@@ -61,22 +61,20 @@ function computeFromCandles(candles, tf){
     }
     c4=[...map.values()].sort((a,b)=>a.t-b.t);
   }
-  if(c4.length<40)return null;
+  if(c4.length<120)return null; // need at least 120 candles for CCI(50)+Stoch(50)+SMA(8)+SMA(8) warmup
 
   const H=c4.map(x=>x.h), L=c4.map(x=>x.l), C=c4.map(x=>x.c), n=C.length;
 
-  // CCI_S exact Pine Script: source=close (NOT typical price!)
-  // Pine: cci(close, 28) → uses close as source, not (H+L+C)/3
-  // CCI formula: (close - sma(close,28)) / (0.015 * mean_dev(close,28))
-  const CCI_P=28, STOCH_P=28, SK=8, SD=8;
+  // CCI_S Pine Script: source=close, CCI Period=50, Stoch Period=50, K=8, D=8, OB=75, OS=25
+  const CCI_P=50, STOCH_P=50, SK=8, SD=8;
   const cci=new Array(n).fill(null);
   for(let i=CCI_P-1;i<n;i++){
-    const sl=C.slice(i-CCI_P+1,i+1); // use CLOSE only
+    const sl=C.slice(i-CCI_P+1,i+1); // use CLOSE as source
     const mn=sl.reduce((a,b)=>a+b,0)/CCI_P;
     const md=sl.reduce((a,b)=>a+Math.abs(b-mn),0)/CCI_P;
     cci[i]=md===0?0:(C[i]-mn)/(0.015*md);
   }
-  // Stoch of CCI: stoch(cci,cci,cci,28)
+  // Stoch of CCI: stoch(cci,cci,cci,50)
   const stk=new Array(n).fill(null);
   for(let i=CCI_P+STOCH_P-2;i<n;i++){
     if(cci[i]==null)continue;
@@ -96,10 +94,11 @@ function computeFromCandles(candles, tf){
     else if(cciPrev<25&&cciVal>=25)cciSig='exit_buy';
   }
 
-  // MACD 12,26,9 EMA
-  const e12=_ema(C,12),e26=_ema(C,26);
-  const ml=e12.map((v,i)=>v-e26[i]);
-  const sg=_ema(ml,9);
+  // MACD: fast=27, slow=20, signal=5 (matching TradingView CCI_S/MACD settings)
+  const MACD_FAST=27, MACD_SLOW=20, MACD_SIG=5;
+  const eFast=_ema(C,MACD_FAST),eSlow=_ema(C,MACD_SLOW);
+  const ml=eFast.map((v,i)=>v-eSlow[i]);
+  const sg=_ema(ml,MACD_SIG);
   const hist=ml.map((v,i)=>v-sg[i]);
   const macdVal=+ml[n-1].toFixed(4), sigVal=+sg[n-1].toFixed(4);
   const histVal=+hist[n-1].toFixed(4), histPrev=+(hist[n-2]||0).toFixed(4);
@@ -107,26 +106,25 @@ function computeFromCandles(candles, tf){
   if((ml[n-2]||0)<=(sg[n-2]||0)&&macdVal>sigVal)cross='cross_buy';
   else if((ml[n-2]||0)>=(sg[n-2]||0)&&macdVal<sigVal)cross='cross_sell';
 
-  // ADX Wilder period=10
+  // ADX Wilder period=9 (matching TradingView ADX and DI v4 settings)
+  const ADX_P=9;
   const TR=new Array(n).fill(0),DMP=new Array(n).fill(0),DMM=new Array(n).fill(0);
   for(let i=1;i<n;i++){
     TR[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));
-    // +DM: upMove > downMove AND upMove > 0
     const upMove=H[i]-H[i-1], downMove=L[i-1]-L[i];
     DMP[i]=(upMove>downMove&&upMove>0)?upMove:0;
     DMM[i]=(downMove>upMove&&downMove>0)?downMove:0;
   }
   const sTR=[TR[0]],sDMP=[DMP[0]],sDMM=[DMM[0]];
   for(let i=1;i<n;i++){
-    sTR.push(sTR[i-1]-sTR[i-1]/10+TR[i]);
-    sDMP.push(sDMP[i-1]-sDMP[i-1]/10+DMP[i]);
-    sDMM.push(sDMM[i-1]-sDMM[i-1]/10+DMM[i]);
+    sTR.push(sTR[i-1]-sTR[i-1]/ADX_P+TR[i]);
+    sDMP.push(sDMP[i-1]-sDMP[i-1]/ADX_P+DMP[i]);
+    sDMM.push(sDMM[i-1]-sDMM[i-1]/ADX_P+DMM[i]);
   }
   const DIP=sTR.map((v,i)=>v>0?sDMP[i]/v*100:0);
   const DIM=sTR.map((v,i)=>v>0?sDMM[i]/v*100:0);
   const DX=DIP.map((v,i)=>{const s=v+DIM[i];return s>0?Math.abs(v-DIM[i])/s*100:0;});
-  // ADX uses Wilder smoothing (RMA), not SMA — matches TradingView
-  const ADX_P=10;
+  // ADX: Wilder smoothing (RMA)
   const adxArr=[DX[0]];
   for(let i=1;i<DX.length;i++) adxArr.push(adxArr[i-1]*(ADX_P-1)/ADX_P + DX[i]/ADX_P);
   const ADX=adxArr;

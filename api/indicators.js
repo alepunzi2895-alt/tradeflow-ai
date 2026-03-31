@@ -4,8 +4,8 @@ export default async function handler(req, res) {
 
   const tf = (req.query?.tf || '1h').toLowerCase();
   const interval = tf === '1d' ? '1d' : '1h';
-  // 3 days = ~72 H1 candles — enough for CCI(28)+MACD(26)+ADX(10) with warmup
-  const range = tf === '1d' ? '60d' : '7d'; // 7d = ~168 H1 candles, enough for CCI(28)+Stoch(28)+SMA(8)+SMA(8)=72 warmup
+  // 14d = ~336 H1 candles — enough for CCI(50)+Stoch(50)+SMA(8)+SMA(8) = ~116 warmup bars
+  const range = tf === '1d' ? '60d' : '14d';
 
   const SYMBOLS = ['XAUUSD=X', 'GC=F', 'GLD']; // XAUUSD spot first (closer to broker prices)
 
@@ -62,9 +62,9 @@ export default async function handler(req, res) {
     const hi=(a,p,i)=>{let m=-Infinity;for(let j=Math.max(0,i-p+1);j<=i;j++)if(a[j]!=null)m=Math.max(m,a[j]);return m;};
     const lo=(a,p,i)=>{let m=Infinity; for(let j=Math.max(0,i-p+1);j<=i;j++)if(a[j]!=null)m=Math.min(m,a[j]);return m;};
 
-    // CCI_S exact Pine Script: source=close (NOT typical price)
-    const CP=28, SP=28, SK=8, SD=8;
-    // cci(close,28): use close as source, not (H+L+C)/3
+    // CCI_S Pine Script: source=close, CCI Period=50, Stoch Period=50, K=8, D=8, OB=75, OS=25
+    const CP=50, SP=50, SK=8, SD=8;
+    // cci(close,50): use close as source, not (H+L+C)/3
     const cci=new Array(n).fill(null);
     for(let i=CP-1;i<n;i++){const sl=C.slice(i-CP+1,i+1);const mn=sl.reduce((a,b)=>a+b,0)/CP;const md=sl.reduce((a,b)=>a+Math.abs(b-mn),0)/CP;cci[i]=md===0?0:(C[i]-mn)/(0.015*md);}
     const stk=new Array(n).fill(null);
@@ -78,18 +78,18 @@ export default async function handler(req, res) {
     else if(cp>75&&cv<=75)cciSig='exit_sell';
     else if(cp<25&&cv>=25)cciSig='exit_buy';
 
-    // MACD
-    const e12=ema(C,Math.min(12,n-1)),e26=ema(C,Math.min(26,n-1));
-    const ml=e12.map((v,i)=>v-e26[i]);
-    const sg=ema(ml,Math.min(9,n-1));
+    // MACD: fast=27, slow=20, signal=5 (matching TradingView settings)
+    const e_fast=ema(C,Math.min(27,n-1)),e_slow=ema(C,Math.min(20,n-1));
+    const ml=e_fast.map((v,i)=>v-e_slow[i]);
+    const sg=ema(ml,Math.min(5,n-1));
     const hist=ml.map((v,i)=>v-sg[i]);
     const mv=ml[n-1],sv=sg[n-1],hv=hist[n-1],hp=hist[n-2]||0;
     let cross=mv>sv?'above':'below';
     if((ml[n-2]||0)<=(sg[n-2]||0)&&mv>sv)cross='cross_buy';
     else if((ml[n-2]||0)>=(sg[n-2]||0)&&mv<sv)cross='cross_sell';
 
-    // ADX
-    const AP=10;
+    // ADX: Wilder period=9 (matching TradingView ADX and DI v4)
+    const AP=9;
     const TR=new Array(n).fill(0),DMP=new Array(n).fill(0),DMM=new Array(n).fill(0);
     for(let i=1;i<n;i++){TR[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));DMP[i]=H[i]-H[i-1]>L[i-1]-L[i]?Math.max(H[i]-H[i-1],0):0;DMM[i]=L[i-1]-L[i]>H[i]-H[i-1]?Math.max(L[i-1]-L[i],0):0;}
     const sTR=new Array(n).fill(0),sDMP=new Array(n).fill(0),sDMM=new Array(n).fill(0);
@@ -100,8 +100,9 @@ export default async function handler(req, res) {
     const DX=DIP.map((v,i)=>{const s=v+DIM[i];return s>0?Math.abs(v-DIM[i])/s*100:0;});
     const ADX=sma(DX,AP);
 
-    // Always include recent candle data for client-side live recalc
-    const candle_data = candles.slice(-150).map(x=>({t:x.t,h:+x.h.toFixed(2),l:+x.l.toFixed(2),c:+x.c.toFixed(2)}));
+    // Always include recent candle data for client-side live recalc (250 bars needed for CCI50+Stoch50 warmup)
+    const candle_data = candles.slice(-250).map(x=>({t:x.t,h:+x.h.toFixed(2),l:+x.l.toFixed(2),c:+x.c.toFixed(2)}));
+
 
     return res.status(200).json({
       ok:true, timeframe:tf,

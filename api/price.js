@@ -20,13 +20,19 @@ export default async function handler(req, res) {
   // ── SOURCE 1: TradingView Scanner (primary) ──
   // Try multiple tickers — FPMARKETS may be down, try OANDA, FOREXCOM, TVC, CAPITALCOM
   try {
-    const xauTickers = [
+    const asset = (req.query.asset || 'XAU').toUpperCase();
+    const isXag = asset === 'XAG';
+    const tickers = isXag ? [
+      'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD',
+      'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'FPMARKETS:XAGUSD',
+      'TVC:SILVER', 'FX:XAGUSD', 'SAXO:XAGUSD'
+    ] : [
       'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD',
       'CAPITALCOM:GOLD', 'EASYMARKETS:XAUUSD', 'FPMARKETS:XAUUSD',
       'TVC:GOLD', 'FX:XAUUSD', 'SAXO:XAUUSD'
     ];
     const body = {
-      symbols: { tickers: xauTickers, query: { types: [] } },
+      symbols: { tickers: tickers, query: { types: [] } },
       columns: ['close', 'change', 'high', 'low']
     };
     const r = await fetchT('https://scanner.tradingview.com/global/scan', {
@@ -46,7 +52,7 @@ export default async function handler(req, res) {
       const item = d.data?.find(x => x.d && x.d[0] != null && !isNaN(+x.d[0]));
       if (item) {
         const [close, chgPct, high, low] = item.d;
-        console.log('price.js: TV Scanner OK via', item.s, 'XAU=' + (+close).toFixed(2));
+        console.log(`price.js: TV Scanner OK via ${item.s} ${asset}=${(+close).toFixed(2)}`);
         return res.status(200).json({
           price: (+close).toFixed(2),
           change: (chgPct != null ? (+chgPct).toFixed(2) : "0.00"),
@@ -64,7 +70,8 @@ export default async function handler(req, res) {
 
   // ── SOURCE 2: Yahoo Finance v8 (fallback) ──
   try {
-    const url = "https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD=X?interval=1m&range=1d";
+    const asset = (req.query.asset || 'XAU').toUpperCase();
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${asset}USD=X?interval=1m&range=1d`;
     const response = await fetchT(url, {
       headers: { "User-Agent": "Mozilla/5.0" }
     }, 5000);
@@ -75,7 +82,7 @@ export default async function handler(req, res) {
       const prevClose = quote.chartPreviousClose || quote.previousClose;
       const change = price - prevClose;
       const changePct = ((change / prevClose) * 100).toFixed(2);
-      console.log('price.js: Yahoo OK, XAU=' + price.toFixed(2));
+      console.log(`price.js: Yahoo OK, ${asset}=` + price.toFixed(2));
       return res.status(200).json({
         price: price.toFixed(2),
         change: change.toFixed(2),
@@ -92,7 +99,8 @@ export default async function handler(req, res) {
 
   // ── SOURCE 3: Yahoo v8 query2 (last resort) ──
   try {
-    const url2 = "https://query2.finance.yahoo.com/v8/finance/chart/XAUUSD=X?interval=1m&range=1d";
+    const asset = (req.query.asset || 'XAU').toUpperCase();
+    const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${asset}USD=X?interval=1m&range=1d`;
     const r2 = await fetchT(url2, { headers: { "User-Agent": "Mozilla/5.0" } }, 5000);
     const d2 = await r2.json();
     const q2 = d2?.chart?.result?.[0]?.meta;

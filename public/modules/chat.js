@@ -63,16 +63,17 @@ async function send(){
 
 // ── QUICK CHIPS ────────────────────────────────────────
 const QUICK=[
-  {i:'📊',l:'Bias H4',t:'Bias XAU/USD H4 con prezzo live. Struttura + manipulation score.'},
-  {i:'🔗',l:'DXY',t:'Analisi correlazione DXY/XAU live. Come impatta il dollaro sull\'oro oggi?'},
-  {i:'🎯',l:'Setup H1',t:'Setup XAU/USD H1 con entry, SL, TP1 1.5R, TP2 3R e manipulation score.'},
-  {i:'📰',l:'News',t:'News macro ad alto impatto oggi su XAU/USD. Orari, previsioni, strategia.'},
-  {i:'😰',l:'Revenge',t:'Ho preso un SL e voglio rientrare subito. Protocollo anti-revenge.'},
-  {i:'🧘',l:'Pre-trade',t:'Protocollo pre-trade 3 minuti per stato mentale ottimale.'},
+  {i:'📊',l:'Bias H4',t:() => `Bias ${window.activeAsset||'XAU'}/USD H4 con prezzo live. Struttura + manipulation score.`},
+  {i:'🔗',l:'DXY',t:() => `Analisi correlazione DXY/${window.activeAsset||'XAU'} live. Come impatta il dollaro?`},
+  {i:'🎯',l:'Setup H1',t:() => `Setup ${window.activeAsset||'XAU'}/USD H1 con entry, SL, TP1 1.5R, TP2 3R e manipulation score.`},
+  {i:'📰',l:'News',t:() => `News macro ad alto impatto oggi su ${window.activeAsset||'XAU'}/USD. Orari, previsioni, strategia.`},
+  {i:'😰',l:'Revenge',t:() => 'Ho preso un SL e voglio rientrare subito. Protocollo anti-revenge.'},
+  {i:'🧘',l:'Pre-trade',t:() => 'Protocollo pre-trade 3 minuti per stato mentale ottimale.'},
 ];
 function initChips(){
   const c=document.getElementById('qi');
-  QUICK.forEach(q=>{const b=document.createElement('button');b.className='chip';b.textContent=`${q.i} ${q.l}`;b.onclick=()=>{document.getElementById('minput').value=q.t;document.getElementById('minput').focus();switchTab('analysis');};c.appendChild(b);});
+  if(c) c.innerHTML = '';
+  QUICK.forEach(q=>{const b=document.createElement('button');b.className='chip';b.textContent=`${q.i} ${q.l}`;b.onclick=()=>{document.getElementById('minput').value=q.t();document.getElementById('minput').focus();switchTab('analysis');};c?.appendChild(b);});
 }
 
 // ── IMAGE ──────────────────────────────────────────────
@@ -90,5 +91,5 @@ window.addEventListener('paste',async e=>{const it=Array.from(e.clipboardData?.i
 document.getElementById('bnews').onclick=()=>{
   newsMode=!newsMode;
   document.getElementById('bnews').classList.toggle('news-on',newsMode);
-  if(newsMode)addBubble('assistant','📰 **Modalità News attiva** — Le analisi includeranno il contesto macro e gli eventi ad alto impatto del giorno su XAU/USD.');
+  if(newsMode)addBubble('assistant',`📰 **Modalità News attiva** — Le analisi includeranno il contesto macro e gli eventi ad alto impatto del giorno su ${window.activeAsset||'XAU'}/USD.`);
 };

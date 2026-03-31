@@ -67,11 +67,15 @@ html, body {
 .logo-sub { font-size: 9px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; }
 
 .hright { display: flex; gap: 6px; align-items: center; }
-.hbadge { font-size: 9px; border-radius: 6px; padding: 3px 7px; font-family: monospace; white-space: nowrap; font-weight: 600; }
+.hbadge { font-size: 9px; border-radius: 6px; padding: 3px 7px; font-family: monospace; white-space: nowrap; font-weight: 600; opacity: 0.6; transition: all 0.2s; }
+.hbadge:hover { opacity: 0.8; }
+.hbadge.active-badge { opacity: 1; border-color: var(--g) !important; box-shadow: 0 0 8px rgba(200,169,110,0.3); }
 .hg { color: var(--green); background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.2); }
 .hr { color: var(--red); background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.2); }
 .hy { color: var(--yellow); background: rgba(255,202,40,0.1); border: 1px solid rgba(255,202,40,0.2); }
 .hw { color: #ff8a80; background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.2); }
+.active-badge { border-color: var(--g) !important; box-shadow: 0 0 6px rgba(200,169,110,0.4); opacity: 1; filter: brightness(1.2); }
+.hbadge { opacity: 0.6; transition: all 0.2s; }
 
 #btn-set {
   background: var(--card2);

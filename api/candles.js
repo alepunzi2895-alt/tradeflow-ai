@@ -15,8 +15,9 @@ export default async function handler(req, res) {
     catch(e) { clearTimeout(tid); throw e; }
   }
 
-  // Try multiple Yahoo symbols for spot gold
-  const symbols = ['XAUUSD=X', 'GC=F'];
+  // Try multiple Yahoo symbols based on requested asset
+  const asset = (req.query?.asset || 'XAU').toUpperCase();
+  const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F'] : ['XAUUSD=X', 'GC=F'];
   
   for (const sym of symbols) {
     try {
@@ -79,7 +80,8 @@ export default async function handler(req, res) {
     const tvRes = interval === '1d' ? 'D' : '60';
     const from = now - count * (tvRes === 'D' ? 86400 : 3600) - 86400;
     
-    for (const sym of ['OANDA:XAUUSD', 'FOREXCOM:XAUUSD']) {
+    const tvSymbols = asset === 'XAG' ? ['OANDA:XAGUSD', 'FOREXCOM:XAGUSD'] : ['OANDA:XAUUSD', 'FOREXCOM:XAUUSD'];
+    for (const sym of tvSymbols) {
       try {
         const url = `https://data.tradingview.com/history?symbol=${encodeURIComponent(sym)}&resolution=${tvRes}&from=${from}&to=${now}&countback=${count}`;
         const r = await fetchT(url, {

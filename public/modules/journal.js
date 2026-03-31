@@ -89,7 +89,7 @@ async function generateReport(period){
     const r=await fetch('/api/report',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'report',entries,profile:P,period,memory:mem})
+      body:JSON.stringify({type:'report',entries,profile:P,period,memory:mem,asset:window.activeAsset||'XAU'})
     });
     const d=await r.json();
     if(!d.ok)throw new Error(d.error||'Errore report');
@@ -112,7 +112,7 @@ async function generateProgress(){
     const r=await fetch('/api/report',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'progress',entries:entries.slice(0,30),profile:P,period:'all',memory:mem})
+      body:JSON.stringify({type:'progress',entries:entries.slice(0,30),profile:P,period:'all',memory:mem,asset:window.activeAsset||'XAU'})
     });
     const d=await r.json();
     if(!d.ok)throw new Error(d.error||'Errore');
@@ -129,7 +129,7 @@ async function coachSingleTrade(entry){
     const r=await fetch('/api/report',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'coaching',entries:[entry],profile:P,period:'single'})
+      body:JSON.stringify({type:'coaching',entries:[entry],profile:P,period:'single',asset:window.activeAsset||'XAU'})
     });
     const d=await r.json();
     if(!d.ok)return null;
@@ -218,7 +218,7 @@ async function importMfxToJournal(accountId){
       const closePrice=parseFloat(t.closePrice||t.close_price||t.closeRate||0);
       const pnl=parseFloat(t.profit||t.pnl||0);
       const lots=parseFloat(t.size||t.lots||t.volume||0);
-      const sym=t.symbol||t.instrument||'XAUUSD';
+      const sym=t.symbol||t.instrument||((window.activeAsset||'XAU')+'USD');
 
       // Compute SL/TP if available
       const sl=parseFloat(t.tp||t.stopLoss||0)||'';
@@ -272,7 +272,7 @@ document.getElementById('btn-analyze').onclick=async()=>{
     const mem=analysisMemory.entries?.slice(0,3).map(e=>`[${e.date?.slice(0,10)}] ${e.text}`).join('\n')||'';
     const memCtx=mem?`\nMEMORIA ANALISI PRECEDENTE:\n${mem}`:'';
     const sum=entries.slice(0,25).map(e=>`${e.date}|${e.dir}|E:${e.entry} SL:${e.sl}|${e.result||'?'}|${e.pnl}$|${e.emo}|${e.err}`).join('\n');
-    const reply=await api([{role:'user',content:`Analizza operatività XAU/USD di ${P.name}:\n${sum}\n${memCtx}\nStatistiche, aree di sviluppo (non errori), 3 azioni concrete, Score Disciplina X/10.`}],
+    const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nStatistiche, aree di sviluppo (non errori), 3 azioni concrete, Score Disciplina X/10.`}],
       `Sei TradeFlow AI Coach. Italiano. Tono costruttivo. Aree noto sviluppo: ${P.errors.join(',')}.`);
     showAiResult(reply);autoLearn(reply);
   }catch(e){alert('Errore: '+e.message);}

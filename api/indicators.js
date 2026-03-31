@@ -5,6 +5,7 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-cache, max-age=0");
 
   const tf = (req.query?.tf || '1h').toLowerCase();
+  const asset = (req.query?.asset || 'XAU').toUpperCase();
 
   async function fetchT(url, opts = {}, ms = 8000) {
     const ctrl = new AbortController();
@@ -27,7 +28,7 @@ export default async function handler(req, res) {
   // ── TV Scanner: MACD(12,26,9) from OANDA:XAUUSD H1 ────────────────────────
   async function fetchTVScanner() {
     const resolution = tf === '1d' ? '' : '|60';
-    const tickers = ['OANDA:XAUUSD','FOREXCOM:XAUUSD','PEPPERSTONE:XAUUSD'];
+    const tickers = asset === 'XAG' ? ['OANDA:XAGUSD','FOREXCOM:XAGUSD','PEPPERSTONE:XAGUSD'] : ['OANDA:XAUUSD','FOREXCOM:XAUUSD','PEPPERSTONE:XAUUSD'];
     const body = {
       symbols: { tickers, query: { types: [] } },
       columns: [
@@ -64,7 +65,7 @@ export default async function handler(req, res) {
       const baseUrl = req.headers?.host ? `https://${req.headers.host}` : '';
       
       // Fetch from Yahoo directly (server-side, no CORS issue)
-      const symbols = ['XAUUSD=X', 'GC=F'];
+      const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F'] : ['XAUUSD=X', 'GC=F'];
       for (const sym of symbols) {
         try {
           const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
@@ -91,7 +92,8 @@ export default async function handler(req, res) {
       const now = Math.floor(Date.now() / 1000);
       const tvRes = tf === '1d' ? 'D' : '60';
       const from = now - 500 * (tvRes === 'D' ? 86400 : 3600);
-      for (const sym of ['OANDA:XAUUSD', 'FOREXCOM:XAUUSD']) {
+      const tvSymbols = asset === 'XAG' ? ['OANDA:XAGUSD', 'FOREXCOM:XAGUSD'] : ['OANDA:XAUUSD', 'FOREXCOM:XAUUSD'];
+      for (const sym of tvSymbols) {
         try {
           const url = `https://data.tradingview.com/history?symbol=${encodeURIComponent(sym)}&resolution=${tvRes}&from=${from}&to=${now}&countback=500`;
           const r = await fetchT(url, {

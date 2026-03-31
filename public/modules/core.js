@@ -95,22 +95,23 @@ async function api(messages,system){
 function buildSys(){
   const e=P.errors?.length?P.errors.join(', '):'nessuno';
   const k=P.knowledge?.length?'\nKNOWLEDGE BASE PERSONALE:\n'+P.knowledge.slice(-3).join('\n---\n'):'';
-  const news=newsMode?'\nModalità NEWS attiva: includi analisi impatto macro del giorno su XAU/USD.':'';
+  const active = window.activeAsset || 'XAU';
+  const news=newsMode?`\nModalità NEWS attiva: includi analisi impatto macro del giorno su ${active}/USD.`:'';
 
   // ── LIVE MARKET CONTEXT (critico — non ignorare) ───────
   let mktCtx='';
-  if(dashContext.prices?.XAU){
-    const x=dashContext.prices.XAU;
+  if(dashContext.prices?.[active]){
+    const x=dashContext.prices[active];
     const d=dashContext.prices.DXY;
     const eu=dashContext.prices.EURUSD;
     mktCtx=`
 
 ⚠️ DATI DI MERCATO IN TEMPO REALE — USA QUESTI, NON QUELLI DEL TRAINING:
-• XAU/USD PREZZO ATTUALE: $${x.price} (${x.change>=0?'+':''}${x.change}% oggi, Max: $${x.high||'N/D'}, Min: $${x.low||'N/D'})
+• ${active}/USD PREZZO ATTUALE: $${x.price} (${x.change>=0?'+':''}${x.change}% oggi, Max: $${x.high||'N/D'}, Min: $${x.low||'N/D'})
 • DXY: ${d?.price||'N/D'} (${d?.change>=0?'+':''}${d?.change||0}%)
 • EUR/USD: ${eu?.price||'N/D'}
-• Correlazione DXY/XAU: ${dashContext.prices.CORRELATION?.status||'N/D'} — ${dashContext.prices.CORRELATION?.signal||''}
-NOTA CRITICA: Il prezzo XAU/USD è ATTUALMENTE $${x.price}. Se vedi un grafico con prezzi diversi, sono storici. Basa SEMPRE l'analisi sul prezzo live $${x.price}.`;
+• Correlazione DXY/${active}: ${dashContext.prices.CORRELATION?.status||'N/D'} — ${dashContext.prices.CORRELATION?.signal||''}
+NOTA CRITICA: Il prezzo ${active}/USD è ATTUALMENTE $${x.price}. Se vedi un grafico con prezzi diversi, sono storici. Basa SEMPRE l'analisi sul prezzo live $${x.price}.`;
   }
 
   // ── CONFIDENCE SCORE CONTEXT ───────────────────────────
@@ -168,11 +169,11 @@ STRATEGIA PRE-NEWS: riduci size o evita nuove entries 30 min prima di eventi ad 
     mfkkCtx=`\nMFKK STRATEGY SCORE: ${m.score}/100 — ${m.bias} (${m.dir})\nConfluenze: CCI ${m.cciScore}/100 · MACD ${m.macdScore}/100 · ADX ${m.adxScore}/100${m.allThree&&m.strongSignals>=3?' — TUTTI E 3 ALLINEATI':''}\nUsa questo score nella valutazione: score>80=segnale forte, 60-80=buono, <60=attendi.`;
   }
 
-  return `Sei TradeFlow AI, assistente trading istituzionale XAU/USD e forex. Rispondi SEMPRE in italiano. Brutalmente onesto, operativo.
+  return `Sei TradeFlow AI, assistente trading istituzionale ${active}/USD e forex. Rispondi SEMPRE in italiano. Brutalmente onesto, operativo.
 Profilo: ${P.name} | Rischio: ${P.risk}%/trade | Max DD: ${P.dd}% | TP1: ${P.tp1}R | TP2: ${P.tp2}R | Errori noti: ${e}${mktCtx}${confCtx}${mfkkCtx}${memCtx}${newsCtx}${k}${news}
 
 REGOLE FONDAMENTALI:
-1. XAU/USD vale ATTUALMENTE $${dashContext.prices?.XAU?.price||'~4400'} — non $2000, non $1900. Usa SEMPRE il prezzo live sopra.
+1. ${active}/USD vale ATTUALMENTE $${dashContext.prices?.[active]?.price||'~4400'} — non $2000, non $1900. Usa SEMPRE il prezzo live sopra.
 2. Per screenshot MT5: leggi SOLO trade reali (buy/sell su strumenti finanziari). IGNORA: Balance, Credit, Deposit, Withdrawal, Bonus, EXP, SC-CC.
 3. Per TradingView: struttura, setup, manipulation score 1-10 (1=pulito, 10=manipolato), peso trade.
 4. Integra SEMPRE il Confluence Score attuale nel giudizio finale.

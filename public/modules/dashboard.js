@@ -28,23 +28,32 @@ function renderPlaceholders(){
 
 async function loadPrices(){
   try{
-    // Try price.js first (dedicated, faster — now uses TV Scanner primary)
-    const pd=await fetchJSON('/api/price', 5000);
+    // Try price.js first (dedicated, faster)
+    const active = window.activeAsset || 'XAU';
+    const pd=await fetchJSON(`/api/price?asset=${active}`, 5000);
     if(pd?.price){
-      // We have XAU — build minimal prices object
-      const xauPrice=parseFloat(pd.price);
-      const xauChg=parseFloat(pd.changePct)||0;
+      // We have asset price — build minimal prices object
+      const assetPrice=parseFloat(pd.price);
+      const assetChg=parseFloat(pd.changePct)||0;
       if(!marketData)marketData={};
-      marketData.XAU={price:pd.price, change:xauChg, high:pd.high, low:pd.low};
+      marketData[active]={price:pd.price, change:assetChg, high:pd.high, low:pd.low};
       dashContext.prices=marketData;
-      // Update just XAU immediately
+      // Update just main asset immediately
       const conv=convertPrice(pd.price);
       const pxau=document.getElementById('p-xau');
       if(pxau)pxau.textContent=conv.sym+conv.val;
       const cxau=document.getElementById('c-xau');
-      if(cxau){cxau.textContent=(xauChg>=0?'+':'')+xauChg+'%';cxau.style.color=xauChg>=0?'var(--green)':'var(--red)';}
+      if(cxau){cxau.textContent=(assetChg>=0?'+':'')+assetChg+'%';cxau.style.color=assetChg>=0?'var(--green)':'var(--red)';}
       const bxau=document.getElementById('bxau');
-      if(bxau){bxau.style.display='';bxau.textContent='XAU '+conv.sym+conv.val;bxau.className='hbadge '+(xauChg>=0?'hg':'hr');}
+      if(bxau){bxau.style.display='';bxau.textContent=`${active} `+conv.sym+conv.val;bxau.className='hbadge '+(assetChg>=0?'hg':'hr');}
+      
+      // Update labels dynamically
+      const lblAsset=document.getElementById('lbl-asset');
+      if(lblAsset)lblAsset.textContent = `${active}/USD`;
+      const lblSent=document.getElementById('lbl-sent-title');
+      if(lblSent)lblSent.textContent = `RETAIL SENTIMENT · ${active}/USD`;
+      const lblMfkk=document.getElementById('lbl-mfkk-title');
+      if(lblMfkk)lblMfkk.textContent = `MFKK STRATEGY SCORE · ${active}/USD H1`;
     } else {
       // price.js failed — try tvprice as XAU quick fallback
       const tv=await fetchJSON('/api/tvprice', 6000);
@@ -106,10 +115,11 @@ async function loadPrices(){
 async function loadSentimentOnly(){
   try{
     // Try direct browser fetch first (more reliable, no server CORS issues)
-    const r=await fetch('https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=XAUUSD');
+    const assetStr = `${window.activeAsset||'XAU'}USD`;
+    const r=await fetch(`https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=${assetStr}`);
     if(r.ok){
       const d=await r.json();
-      const sym=d.symbols?.find(s=>s.name==='XAUUSD')||d.symbols?.[0];
+      const sym=d.symbols?.find(s=>s.name===assetStr)||d.symbols?.[0];
       if(sym?.longPercentage!=null){
         const lp=parseFloat(sym.longPercentage), sp=parseFloat(sym.shortPercentage);
         const sent={
@@ -148,12 +158,13 @@ async function loadSlowData(){
     } else {
       // Server blocked — fetch MyFxBook directly from browser (no CORS issue)
       try{
-        const r=await fetch('https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=XAUUSD',{
+        const assetStr = `${window.activeAsset||'XAU'}USD`;
+        const r=await fetch(`https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=${assetStr}`,{
           headers:{'Accept':'application/json'}
         });
         if(r.ok){
           const d=await r.json();
-          const sym=d.symbols?.find(s=>s.name==='XAUUSD')||d.symbols?.[0];
+          const sym=d.symbols?.find(s=>s.name===assetStr)||d.symbols?.[0];
           if(sym?.longPercentage!=null){
             const lp=parseFloat(sym.longPercentage), sp=parseFloat(sym.shortPercentage);
             const sent={
@@ -178,7 +189,9 @@ async function loadSlowData(){
 }
 
 function updatePriceStrip(prices){
-  const map={XAU:'xau',DXY:'dxy',EURUSD:'eur',GBPUSD:'gbp',OIL:'oil'};
+  const active = window.activeAsset || 'XAU';
+  const assetKey = active === 'XAG' ? 'SILVER' : 'XAU';
+  const map={[assetKey]:'xau',DXY:'dxy',EURUSD:'eur',GBPUSD:'gbp',OIL:'oil'};
   Object.entries(map).forEach(([key,id])=>{
     const d=prices[key];if(!d)return;
     const chg=d.change;
@@ -195,26 +208,36 @@ function updatePriceStrip(prices){
     ce.textContent=`${chg>=0?'+':''}${chg}%`;
     ce.style.color=chg>=0?'var(--green)':'var(--red)';
   });
-  const x=prices.XAU;
-  if(x){
-    const b=document.getElementById('bxau');
-    b.style.display='';
-    const conv=convertPrice(x.price);
-    b.textContent=`XAU ${conv.sym}${conv.val}`;
-    b.className='hbadge '+(x.change>=0?'hg':'hr');
+  const b1=document.getElementById('bxau');
+  if(prices.XAU && b1){
+    b1.style.display='';
+    const conv=convertPrice(prices.XAU.price);
+    b1.textContent=`XAU ${conv.sym}${conv.val}`;
+    b1.className='hbadge '+(prices.XAU.change>=0?'hg':'hr')+(active==='XAU'?' active-badge':'');
+  }
+  const b2=document.getElementById('bxag');
+  if(prices.SILVER && b2){
+    b2.style.display='';
+    const conv=convertPrice(prices.SILVER.price);
+    b2.textContent=`XAG ${conv.sym}${conv.val}`;
+    b2.className='hbadge '+(prices.SILVER.change>=0?'hg':'hr')+(active==='XAG'?' active-badge':'');
   }
 }
 
 
 // ── DERIVED PRICES (Correlation, US10Y context, Gold/Silver Ratio) ──────
 function buildDerivedPrices(prices){
-  if(prices.XAU && prices.DXY){
-    const xc=prices.XAU.change, dc=prices.DXY.change;
+  const active = window.activeAsset || 'XAU';
+  const assetKey = active === 'XAG' ? 'SILVER' : 'XAU';
+  
+  if(prices[assetKey] && prices.DXY){
+    const xc=prices[assetKey].change, dc=prices.DXY.change;
     const corr=(xc>0&&dc<0)||(xc<0&&dc>0);
-    const div=!corr&&(Math.abs(xc)>0.3||Math.abs(dc)>0.2);
+    const volTh = active === 'XAG' ? 0.45 : 0.3; // XAG is more volatile, requires larger divergence
+    const div=!corr&&(Math.abs(xc)>volTh||Math.abs(dc)>0.2);
     prices.CORRELATION={
       status:div?'DIVERGENZA':corr?'NORMALE':'DEBOLE',
-      signal:div?'⚠️ Divergenza DXY/XAU':corr?'✅ Correlazione inversa normale':'〰️ Correlazione debole',
+      signal:div?`⚠️ Divergenza DXY/${active}`:corr?'✅ Correlazione inversa normale':'〰️ Correlazione debole',
       manipulation_hint:div
     };
   }
@@ -222,9 +245,9 @@ function buildDerivedPrices(prices){
     const yc=prices.US10Y.change;
     prices.US10Y_CONTEXT={
       yield:prices.US10Y.price, change:yc,
-      signal:yc>0.05?'BEARISH_GOLD':yc<-0.05?'BULLISH_GOLD':'NEUTRAL',
-      label:yc>0.05?`Rendimenti ↑${yc}% — pressione XAU`:
-            yc<-0.05?`Rendimenti ↓${yc}% — supporto XAU`:
+      signal:yc>0.05?`BEARISH_${active}`:yc<-0.05?`BULLISH_${active}`:'NEUTRAL',
+      label:yc>0.05?`Rendimenti ↑${yc}% — pressione ${active}`:
+            yc<-0.05?`Rendimenti ↓${yc}% — supporto ${active}`:
             `Rendimenti stabili ${prices.US10Y.price}%`
     };
   }
@@ -252,7 +275,7 @@ function updateMacroCards(prices){
     if(el) el.textContent=u.yield+'%';
     if(sig){
       const isUp=u.change>0.05, isDown=u.change<-0.05;
-      sig.textContent=isUp?'↑ XAU ↓':isDown?'↓ XAU ↑':'→';
+      sig.textContent=isUp?`↑ ${active} ↓`:isDown?`↓ ${active} ↑`:'→';
       sig.style.color=isUp?'var(--red)':isDown?'var(--green)':'var(--dim)';
     }
     if(lbl) lbl.textContent=u.label;
@@ -288,8 +311,9 @@ function updateCorrelation(prices){
 }
 
 function updateConfidence(prices, sentimentData){
-  const xRaw=prices?.XAU, d=prices?.DXY||dashContext.prices?.DXY, e=prices?.EURUSD||dashContext.prices?.EURUSD, g=prices?.GBPUSD||dashContext.prices?.GBPUSD;
-  const x=xRaw||dashContext.prices?.XAU; // always use latest XAU
+  const active = window.activeAsset || 'XAU';
+  const xRaw=prices?.[active], d=prices?.DXY||dashContext.prices?.DXY, e=prices?.EURUSD||dashContext.prices?.EURUSD, g=prices?.GBPUSD||dashContext.prices?.GBPUSD;
+  const x=xRaw||dashContext.prices?.[active]; // always use latest asset
   const now=new Date();
   const hour=now.getUTCHours();
   const min=now.getUTCMinutes();
@@ -647,7 +671,7 @@ function renderCalEvents(){
         <div class="cal-ev-body">
           <div style="display:flex;align-items:center;gap:5px">
             <div class="cal-ev-time">${timeStr}</div>
-            ${isXau?'<span style="font-size:9px;background:#c8a96e18;border:1px solid #c8a96e33;border-radius:3px;padding:1px 4px;color:var(--g)">⚡XAU</span>':''}
+            ${isXau?`<span style="font-size:9px;background:#c8a96e18;border:1px solid #c8a96e33;border-radius:3px;padding:1px 4px;color:var(--g)">⚡${window.activeAsset||'XAU'}</span>`:''}
             ${isHigh?'<span style="font-size:9px;background:#ff475710;border:1px solid #ff475730;border-radius:3px;padding:1px 4px;color:var(--red)">●HIGH</span>':''}
           </div>
           <div class="cal-ev-name">${e.event||'—'}</div>

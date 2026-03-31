@@ -149,7 +149,8 @@ function computeFromCandles(candles, tf){
 async function fetchBrowserCandles(){
   try{
     // Try our server proxy first (it handles Yahoo + TV history fallback)
-    const url = '/api/candles?range=60d&interval=1h';
+    const asset = window.activeAsset || 'XAU';
+    const url = `/api/candles?asset=${asset}&range=60d&interval=1h`;
     const r = await fetch(url);
     if(!r.ok) throw new Error('Candle proxy HTTP '+r.status);
     const d = await r.json();
@@ -160,7 +161,8 @@ async function fetchBrowserCandles(){
     console.log('fetchBrowserCandles proxy:', e.message);
     // Fallback: try the indicators API which also returns candle_data
     try{
-      const d = await fetchJSON('/api/indicators?tf=1h', 12000);
+      const asset = window.activeAsset || 'XAU';
+      const d = await fetchJSON(`/api/indicators?asset=${asset}&tf=1h`, 12000);
       if(d?.ok && d.candle_data?.length > 50){
         console.log('Candles from indicators API:', d.candle_data.length);
         return d.candle_data;
@@ -174,7 +176,8 @@ async function fetchBrowserCandles(){
 // Fetch all indicators from /api/indicators (MACD from TV Scanner + ADX/CCI from candles)
 async function fetchServerIndicators(){
   try{
-    const d = await fetchJSON('/api/indicators?tf='+mfkkTF, 12000);
+    const asset = window.activeAsset || 'XAU';
+    const d = await fetchJSON(`/api/indicators?asset=${asset}&tf=${mfkkTF}`, 12000);
     if(d?.ok){
       if(d.macd) mfkkServerMacd = d.macd;
       if(d.adx)  mfkkServerAdx  = d.adx;
@@ -433,9 +436,14 @@ function calcMfkk(){
 
   // ── WEIGHTED TOTAL ─────────────────────────────────────
   let tot=0, w=0;
-  if(hasCci){tot+=cciScore*0.15;w+=0.15;}
-  if(hasMacd){tot+=macdScore*0.15;w+=0.15;}
-  if(hasAdx){tot+=adxScore*0.70;w+=0.70;}
+  const isXag = window.activeAsset === 'XAG';
+  const wCci = isXag ? 0.20 : 0.15;
+  const wMacd = isXag ? 0.20 : 0.15;
+  const wAdx = isXag ? 0.60 : 0.70;
+
+  if(hasCci){tot+=cciScore*wCci;w+=wCci;}
+  if(hasMacd){tot+=macdScore*wMacd;w+=wMacd;}
+  if(hasAdx){tot+=adxScore*wAdx;w+=wAdx;}
   const score=w>0?Math.round(tot/w):0;
   const allThree=hasCci&&hasMacd&&hasAdx;
   const strong=[hasCci&&cciScore>=70,hasMacd&&macdScore>=70,hasAdx&&adxScore>=70].filter(Boolean).length;
@@ -449,7 +457,8 @@ function calcMfkk(){
     desc='Trend avanzato — potenziale esaurimento o ritracciamento in arrivo (Rischio alto)';
   } else if(score>=75&&allThree){
     bias=dirLabel+' OTTIMALE';
-    desc='Setup ideale H1 confermato dai test — TP largo consigliato ($25)';
+    const tpVal = window.activeAsset === 'XAG' ? '$0.50' : '$25';
+    desc=`Setup ideale H1 confermato dai test — TP largo consigliato (${tpVal})`;
   } else if(score>=70&&strong>=2){
     bias=dirLabel+' VALIDO';
     desc='2/3 indicatori confermano — setup moderato per ingressi attenti';
@@ -482,7 +491,9 @@ function calcMfkk(){
       qel.textContent='⚠️ Rischio Ipercomprato/Ipervenduto: Trend over-esteso su H1';
     } else if(score>=75&&allThree){
       qel.style.cssText='display:block;background:#00e67615;border:1px solid #00e67630;color:var(--green)';
-      qel.textContent='🎯 SETUP PULITO (Edge Storico) — TP: $25 | SL: $15';
+      const tpVal = window.activeAsset === 'XAG' ? '$0.50' : '$25';
+      const slVal = window.activeAsset === 'XAG' ? '$0.25' : '$15';
+      qel.textContent=`🎯 SETUP PULITO (Edge Storico) — TP: ${tpVal} | SL: ${slVal}`;
     } else if(weak>=2){
       qel.style.cssText='display:block;background:#ff475715;border:1px solid #ff475730;color:var(--red)';
       qel.textContent='❌ SEGNALE DEBOLE — Aspetta migliore allineamento (score < 75 = range laterale)';

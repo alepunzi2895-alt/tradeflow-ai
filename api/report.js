@@ -50,9 +50,10 @@ export default async function handler(req, res) {
     const memoryCtx = memory ? `\nMEMORIA PRECEDENTE:\n${memory}` : "";
     const periodLabel = period === "day" ? "GIORNALIERO" : period === "week" ? "SETTIMANALE" : "MENSILE";
 
+    const asset = req.body.asset || "XAU";
     let prompt = "";
     if (type === "report") {
-      prompt = `Genera un REPORT ${periodLabel} COMPLETO per il trader ${profile?.name || "Alessandro"} su XAU/USD.
+      prompt = `Genera un REPORT ${periodLabel} COMPLETO per il trader ${profile?.name || "Alessandro"} su ${asset}/USD.
 
 DATI PERIODO:
 Trade totali: ${filtered.length} | Win: ${wins} | Loss: ${losses} | WR: ${wr}%
@@ -84,7 +85,7 @@ Il report deve includere:
     } else if (type === "coaching") {
       // Single trade coaching
       const trade = filtered[0];
-      prompt = `Analizza questo singolo trade XAU/USD e dai un coaching costruttivo breve (max 3 righe):
+      prompt = `Analizza questo singolo trade ${asset}/USD e dai un coaching costruttivo breve (max 3 righe):
 Trade: ${trade.dir||trade.direction} | Entry: ${trade.entry} | SL: ${trade.sl} | TP1: ${trade.tp1} | TP2: ${trade.tp2}
 Risultato: ${trade.result} | P&L: ${trade.pnl}$ | Emozione: ${trade.emo||trade.emotion} | Errore: ${trade.err||trade.mistake}
 Note: ${trade.notes || "nessuna"}
@@ -93,7 +94,7 @@ Profilo trader: ${profile?.name}, rischio ${profile?.risk}%, TP1 ${profile?.tp1}
 
 Rispondi in italiano con 1 punto positivo e 1 cosa da ottimizzare. Tono costruttivo, non critico. Max 2 frasi.`;
     } else if (type === "progress") {
-      prompt = `Analizza i progressi del trader ${profile?.name} su XAU/USD e crea una scheda di crescita.
+      prompt = `Analizza i progressi del trader ${profile?.name} su ${asset}/USD e crea una scheda di crescita.
 
 TRADE RECENTI:
 ${tradesSummary}

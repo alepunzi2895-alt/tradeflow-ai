@@ -37,7 +37,7 @@ async function processKbFile(file){
       const text=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file);});
       part={type:'text',text:text.slice(0,8000)};
     }
-    const reply=await api([{role:'user',content:[part,{type:'text',text:'Estrai le regole di trading XAU/USD rilevanti. Entry, risk management, pattern, indicatori, psicologia. Conciso. Italiano.'}]}],
+    const reply=await api([{role:'user',content:[part,{type:'text',text:`Estrai le regole di trading ${window.activeAsset||'XAU'}/USD rilevanti. Entry, risk management, pattern, indicatori, psicologia. Conciso. Italiano.`}]}],
       'Estrai informazioni di trading. Italiano.');
     const entry={id:Date.now(),name:file.name,size:file.size,date:new Date().toLocaleDateString('it-IT'),summary:reply};
     kb.unshift(entry);S.set(K.kb,kb);

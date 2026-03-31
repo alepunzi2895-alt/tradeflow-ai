@@ -1,13 +1,16 @@
 // TradeFlow AI — app.js
 
+window.activeAsset = 'XAU';
+
 // ── TRADINGVIEW CHART WIDGET ─────────────────────────────
 function initTVChart(){
   try{
     if(typeof TradingView === 'undefined') return;
+    document.getElementById('tv-chart-widget').innerHTML = ''; // pulizia prima del render
     new TradingView.widget({
       container_id: "tv-chart-widget",
       autosize: true,
-      symbol: "OANDA:XAUUSD",
+      symbol: `OANDA:${window.activeAsset}USD`,
       interval: "60",
       timezone: "Europe/Rome",
       theme: "dark",
@@ -68,10 +71,34 @@ function saveProfile(){
 }
 
 function updateHdr(){
-  document.getElementById('lsub').textContent=`XAU/USD · DXY · FOREX · ${(P.name||'').toUpperCase()}`;
+  document.getElementById('lsub-name').textContent=P.name ? P.name.toUpperCase() : '';
   const be=document.getElementById('berr');
   if(P.errors?.length){be.style.display='';be.textContent=`⚠${P.errors.length}`;}else{be.style.display='none';}
 }
+
+window.switchAsset = function(asset) {
+  if (window.activeAsset === asset) return;
+  window.activeAsset = asset;
+  
+  // Update TV Chart
+  initTVChart();
+  
+  // Re-fetch Prices 
+  if (typeof fetchPrices === 'function') fetchPrices();
+  
+  // Reset MFKK inputs and re-fetch if we are on dashboard
+  document.querySelectorAll('.mfkk-inp').forEach(i => i.value = '');
+  if (typeof calcMfkk === 'function') calcMfkk();
+  if (typeof fetchMfkkData === 'function') fetchMfkkData();
+  
+  // Reset sentiment loading state
+  document.getElementById('sent-long-bar').style.width = '50%';
+  document.getElementById('sent-short-bar').style.width = '50%';
+  document.getElementById('sent-long-pct').textContent = '—';
+  document.getElementById('sent-short-pct').textContent = '—';
+  document.getElementById('sent-note').style.display = 'none';
+  if (typeof fetchSentiment === 'function') fetchSentiment();
+};
 
 // ── BACKUP / RESTORE ─────────────────────────────────────
 function exportData(){

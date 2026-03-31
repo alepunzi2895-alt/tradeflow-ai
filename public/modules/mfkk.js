@@ -433,9 +433,9 @@ function calcMfkk(){
 
   // ── WEIGHTED TOTAL ─────────────────────────────────────
   let tot=0, w=0;
-  if(hasCci){tot+=cciScore*0.35;w+=0.35;}
-  if(hasMacd){tot+=macdScore*0.35;w+=0.35;}
-  if(hasAdx){tot+=adxScore*0.30;w+=0.30;}
+  if(hasCci){tot+=cciScore*0.15;w+=0.15;}
+  if(hasMacd){tot+=macdScore*0.15;w+=0.15;}
+  if(hasAdx){tot+=adxScore*0.70;w+=0.70;}
   const score=w>0?Math.round(tot/w):0;
   const allThree=hasCci&&hasMacd&&hasAdx;
   const strong=[hasCci&&cciScore>=70,hasMacd&&macdScore>=70,hasAdx&&adxScore>=70].filter(Boolean).length;

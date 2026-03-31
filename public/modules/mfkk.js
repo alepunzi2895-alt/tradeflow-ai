@@ -29,8 +29,10 @@ function setMfkkTF(tf){
 
 // ── MFKK INDICATOR ENGINE ────────────────────────────────
 // Candle cache: fetch once per minute, recalculate every 5s with live price
-let mfkkCandles = [];   // H1 OHLCV cache
-let mfkkLastFetch = 0;  // timestamp of last candle fetch
+let mfkkCandles = [];     // H1 OHLCV cache (fetched browser-side)
+let mfkkLastFetch = 0;    // timestamp of last candle fetch
+let mfkkServerMacd = null; // MACD/ADX from TV Scanner via /api/indicators
+let mfkkServerAdx = null;
 
 // Math helpers
 function _ema(src,p){
@@ -143,60 +145,102 @@ function computeFromCandles(candles, tf){
   };
 }
 
-// Fetch candle history from server (once per 60s)
-async function loadIndicatorCandles(){
+// Browser-side fetch of H1 candles for CCI_S (bypasses Vercel IP blocking)
+async function fetchBrowserCandles(){
   try{
-    const d=await fetchJSON('/api/indicators?tf='+mfkkTF, 12000);
-    if(d?.ok){
-      const telEl=document.getElementById('mfkk-time');
-      mfkkLastFetch=Date.now();
-
-      // Store raw candles for live recalc every 5s
-      if(d.candle_data&&d.candle_data.length>50){
-        mfkkCandles=d.candle_data;
-        console.log('Candles cached:',mfkkCandles.length,'last close:$'+mfkkCandles.at(-1)?.c);
-      }
-
-      dashContext.indicatorBase=d;
-      dashContext.indicators=d;
-
-      // Do immediate recalc with candles (more accurate than server pre-computed)
-      if(mfkkCandles.length>50){
-        const vals=computeFromCandles(mfkkCandles, mfkkTF);
-        if(vals){
-          const set=(id,v)=>_setVal(id,v);
-          set('mfkk-cci',     vals.cci?.value??vals.cci);
-          set('mfkk-macd-fast',vals.macd?.macd??vals.macd);
-          set('mfkk-macd-slow',vals.macd?.signal??vals.signal);
-          set('mfkk-macd-hist',vals.macd?.histogram??vals.histogram);
-          set('mfkk-adx',     vals.adx?.adx??vals.adx);
-          set('mfkk-diplus',  vals.adx?.di_plus??vals.di_plus);
-          set('mfkk-diminus', vals.adx?.di_minus??vals.di_minus);
-          console.log('Client recalc: CCI='+( vals.cci?.value??vals.cci)+' MACD='+(vals.macd?.macd??vals.macd)?.toFixed(2));
-        }
-      } else {
-        // Fallback: use server pre-computed values
-        const set=(id,v)=>_setVal(id,v);
-        set('mfkk-cci',d.cci?.value);
-        set('mfkk-macd-fast',d.macd?.macd);
-        set('mfkk-macd-slow',d.macd?.signal);
-        set('mfkk-macd-hist',d.macd?.histogram);
-        set('mfkk-adx',d.adx?.adx);
-        set('mfkk-diplus',d.adx?.di_plus);
-        set('mfkk-diminus',d.adx?.di_minus);
-      }
-
-      if(telEl){
-        const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const now=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:tz});
-        telEl.textContent='$'+(d.last_close||'?')+' · '+now+' ('+mfkkTF.toUpperCase()+') ⟳';
-      }
-      setTimeout(autoSelectBestDir,50);
+    // Yahoo Finance XAUUSD=X (spot gold) - CORS-enabled, no IP blocking for browsers
+    const url = 'https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD%3DX?interval=1h&range=14d';
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if(!r.ok) throw new Error('Yahoo HTTP '+r.status);
+    const d = await r.json();
+    const rs = d?.chart?.result?.[0];
+    if(!rs?.timestamp) throw new Error('No timestamp data');
+    const q = rs.indicators?.quote?.[0]||{};
+    const candles = [];
+    for(let i=0;i<rs.timestamp.length;i++){
+      if(q.close[i]!=null&&q.high[i]!=null&&q.low[i]!=null)
+        candles.push({t:rs.timestamp[i],h:q.high[i],l:q.low[i],c:q.close[i]});
     }
-  }catch(e){console.log('loadIndicatorCandles:',e.message);}
+    if(candles.length < 30) throw new Error('Too few candles: '+candles.length);
+    console.log('Browser candles OK:', candles.length, 'last=$'+candles.at(-1)?.c?.toFixed(2));
+    return candles;
+  }catch(e){
+    console.log('fetchBrowserCandles:', e.message);
+    return [];
+  }
 }
 
-// Recalculate every 5s: inject live price into last candle, recompute all indicators
+// Fetch MACD/ADX from TV Scanner via /api/indicators (server-side, no candles needed)
+async function fetchServerIndicators(){
+  try{
+    const d = await fetchJSON('/api/indicators?tf='+mfkkTF, 12000);
+    if(d?.ok && d.macd && d.adx){
+      mfkkServerMacd = d.macd;
+      mfkkServerAdx  = d.adx;
+      console.log('Server indicators: MACD='+d.macd.macd?.toFixed(2)+' ADX='+d.adx.adx?.toFixed(2)+' ['+d.source+']');
+    }
+    return d;
+  }catch(e){ console.log('fetchServerIndicators:', e.message); return null; }
+}
+
+// Main loader: runs in parallel, combines browser candles + server MACD/ADX
+async function loadIndicatorCandles(){
+  try{
+    mfkkLastFetch = Date.now();
+    const telEl = document.getElementById('mfkk-time');
+
+    // Run in parallel: browser candles (for CCI_S) + server TV Scanner (for MACD/ADX)
+    const [candles, serverData] = await Promise.all([
+      fetchBrowserCandles(),
+      fetchServerIndicators()
+    ]);
+
+    const set = (id,v) => _setVal(id,v);
+
+    if(candles.length >= 120){
+      mfkkCandles = candles;
+      // Compute CCI_S from browser candles
+      const vals = computeFromCandles(candles, mfkkTF);
+      if(vals){
+        const cciVal = vals.cci?.value ?? vals.cci;
+        set('mfkk-cci', cciVal);
+        console.log('CCI_S from browser candles:', cciVal);
+      }
+    } else if(candles.length > 0){
+      mfkkCandles = candles; // Store even if < 120 for partial use
+    }
+
+    // Use TV Scanner values for MACD and ADX (exact TV values)
+    if(mfkkServerMacd){
+      set('mfkk-macd-fast', mfkkServerMacd.macd);
+      set('mfkk-macd-slow', mfkkServerMacd.signal);
+      set('mfkk-macd-hist', mfkkServerMacd.histogram);
+    }
+    if(mfkkServerAdx){
+      set('mfkk-adx',     mfkkServerAdx.adx);
+      set('mfkk-diplus',  mfkkServerAdx.di_plus);
+      set('mfkk-diminus', mfkkServerAdx.di_minus);
+    }
+
+    // Update timestamp display
+    if(telEl){
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const now = new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:tz});
+      const price = serverData?.last_close || mfkkCandles.at(-1)?.c || '?';
+      telEl.textContent = '$'+price+' · '+now+' ('+mfkkTF.toUpperCase()+') ⟳';
+    }
+
+    if(candles.length >= 120 || mfkkServerMacd){
+      dashContext.indicatorBase = serverData;
+      dashContext.indicators = serverData;
+      setTimeout(autoSelectBestDir, 50);
+    }
+  }catch(e){ console.log('loadIndicatorCandles:', e.message); }
+}
+
+
+// Recalculate CCI_S every 5s: inject live price into last candle
+// MACD and ADX use the server TV Scanner values (updated every 60s)
 function recalcIndicators(){
   if(mfkkCandles.length<50) return;
   const livePrice=marketData?.XAU?.price;
@@ -207,30 +251,27 @@ function recalcIndicators(){
   // Clone candles and update last candle with live price
   const candles=[...mfkkCandles];
   const last={...candles[candles.length-1]};
-  last.c=live;
-  last.h=Math.max(last.h,live);
-  last.l=Math.min(last.l,live);
+  last.c=live; last.h=Math.max(last.h,live); last.l=Math.min(last.l,live);
   candles[candles.length-1]=last;
 
-  // Full recalculation with live price
+  // Recalculate CCI_S with live price
   const vals=computeFromCandles(candles, mfkkTF);
   if(!vals) return;
 
   const set=(id,v)=>_setVal(id,v);
   const cv=vals.cci?.value??vals.cci;
-  const mv=vals.macd?.macd??vals.macd;
-  const sv=vals.macd?.signal??vals.signal;
-  const hv=vals.macd?.histogram??vals.histogram;
-  const av=vals.adx?.adx??vals.adx;
-  const dp=vals.adx?.di_plus??vals.di_plus;
-  const dm=vals.adx?.di_minus??vals.di_minus;
-  set('mfkk-cci',cv);
-  set('mfkk-macd-fast',mv);
-  set('mfkk-macd-slow',sv);
-  set('mfkk-macd-hist',hv);
-  set('mfkk-adx',av);
-  set('mfkk-diplus',dp);
-  set('mfkk-diminus',dm);
+  set('mfkk-cci', cv);
+
+  // Use server TV Scanner values for MACD/ADX (no recalc needed - they update every 60s)
+  const mv = mfkkServerMacd?.macd;
+  const sv_val = mfkkServerMacd?.signal;
+  const hv = mfkkServerMacd?.histogram;
+  const av = mfkkServerAdx?.adx;
+  const dp = mfkkServerAdx?.di_plus;
+  const dm = mfkkServerAdx?.di_minus;
+  if(mv!=null){set('mfkk-macd-fast',mv);set('mfkk-macd-slow',sv_val);set('mfkk-macd-hist',hv);}
+  if(av!=null){set('mfkk-adx',av);set('mfkk-diplus',dp);set('mfkk-diminus',dm);}
+
 
   const telEl=document.getElementById('mfkk-time');
   if(telEl){

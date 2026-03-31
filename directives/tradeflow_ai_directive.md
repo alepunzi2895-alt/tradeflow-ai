@@ -138,30 +138,34 @@ async function fetchT(url, opts={}, ms=8000) {
 |---|---|---|---|
 | 2026-03-31 | Prezzi XAU/USD non caricavano | Yahoo Finance bloccato → FPMARKETS ticker fallito | Multi-ticker TV Scanner (9 alternative) |
 | 2026-03-31 | Indicatori MACD errati (+31 server vs -12 client) | GC=F futures != spot OANDA:XAUUSD | MAI usare GC=F; Yahoo XAUUSD=X come fallback |
-| 2026-03-31 | Tutti indicatori = "No candle data" | Vercel IP blacklistato da Yahoo Finance | Fetch candle browser-side in mfkk.js |
-| 2026-03-31 | ADX = 0,0,0 | `ADX[10]|60` colonna non valida → null → 0 | Usare `ADX|60` senza parametro custom |
-| 2026-03-31 | CCI_S mostra "auto" | range=14d troppo corto o Yahoo XAUUSD=X fallito | range=60d, controllare CORS browser |
-| 2026-03-31 | ADX RMA vs SMA | Usavamo Wilder RMA, TV usa SMA(DX,len) | `ADX = sma(DX, len)` come Pine Script |
-| 2026-03-31 | MACD params errati | (27,20,5) invece di (12,26,9) | Verificare sempre dai settings dialog TV |
+| 2026-03-31 | Tutti indicatori = "No candle data" | Vercel IP blacklistato da Yahoo Finance | Usa `api/candles.js` proxy per bypassare CORS |
+| 2026-03-31 | ADX = 0,0,0 | `ADX[10]|60` colonna non valida → null → 0 | Calcolo server-side esatto da proxy candles |
+| 2026-03-31 | CCI_S mostra "auto" | step="1" input rifiutava valori decimali | Impostato `step="0.01"` su input HTML |
+| 2026-03-31 | ADX RMA vs SMA | Usavamo Wilder RMA, TV usa SMA(DX,len) | Server-side esatto calcolo SMA(DX,10) |
 
 ---
 
-## 7. CHECKLIST PRE-DEPLOY
+## 7. BACKTESTING & SCORING EDGE (H1 XAU/USD)
 
-- [ ] Parametri indicatori verificati da settings dialog TradingView (CCI_S, MACD, ADX)
-- [ ] Nessun `GC=F` nella lista dei ticker
-- [ ] Fetch serverless con timeout < 8s e AbortController
-- [ ] Candle fetch per CCI_S lato browser (non server)
-- [ ] Colonne TV Scanner senza parametro custom per ADX (`ADX|60` non `ADX[10]|60`)
+Il backtest simulato su 1 anno (5700+ candele H1) ha evidenziato le seguenti logiche per filtrare i segnali "puliti" dalla dashboard MFKK:
+1. **Sweet Spot "STRICT"**: I setup migliori si trovano con uno Score tra `75 e 79`. 
+2. **Esaurimento Trend (>80)**: Confluenze perfette (score >= 80) tendono a entrare troppo tardi, quando l'asset è in ipercomprato/ipervenduto estremo e rischia inversioni/ritracciamenti. Considerare segnali >80 come avvisi di possibile "exhaustion".
+3. **Risk/Reward WIDE**: Operando su Gold H1, la volatilità richiede stop loss più ampi (es. SL $15, TP $25) rispetto a configurazioni "tight" ($7) che verrebbero costantemente cacciate dagli spike fisiologici del mercato.
+
+---
+
+## 8. CHECKLIST PRE-DEPLOY
+
+- [ ] Fetch server/proxy con timeout bilanciati (< 8s) per arginare Vercel Cold Starts
+- [ ] Mantenere proxy `api/candles.js` come singola fonte di verità per bypass blacklist
+- [ ] Verificare che non ci sia parsing intero (`parseInt`) o step HTML restrittivi (`step="1"`) per valori indicatori.
 - [ ] `git push origin main` prima di verificare su Vercel
-- [ ] Vercel deploy completato (~60s) prima di testare
-- [ ] Aggiornare sezione "Self-Learning Loop" con nuovi bug risolti
+- [ ] Attendere deploy completato (~60s) su dashboard prima di refresh utente
 
 ---
 
-## 8. PROSSIMI STEP (backlog)
+## 9. PROSSIMI STEP (backlog)
+- [ ] Creazione report automatico giornaliero (`api/report.js`) usando LLM per l'interpretazione dei dati
+- [ ] Gestione account MyFxBook integrato
+- [ ] Fine tuning componenti UI (notifiche e user feedback)
 
-- [ ] **Backtesting MFKK score**: testare su 1 anno di candle H1 XAU/USD per calibrare pesi e soglie dello scoring
-- [ ] **Fix ADX exact match**: implementare SMA(DX,10) lato browser-side per replicare esattamente "ADX and DI for v4"
-- [ ] **CCI_S vs TV**: verificare allineamento dopo fix range=60d
-- [ ] **Auto-refresh MACD/ADX**: polling ogni 60s con indicator del server reload

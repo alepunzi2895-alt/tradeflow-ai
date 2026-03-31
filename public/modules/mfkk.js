@@ -262,13 +262,15 @@ function recalcIndicators(){
   last.c=live; last.h=Math.max(last.h,live); last.l=Math.min(last.l,live);
   candles[candles.length-1]=last;
 
-  // Recalculate CCI_S with live price
+  // Recalculate CCI_S with live price — only if we have enough candles
   const vals=computeFromCandles(candles, mfkkTF);
   if(!vals) return;
 
   const set=(id,v)=>_setVal(id,v);
   const cv=vals.cci?.value??vals.cci;
-  set('mfkk-cci', cv);
+  // Always set CCI from local computation (it uses live price injection)
+  if(cv != null && !isNaN(cv)) set('mfkk-cci', cv);
+
 
   // Use server TV Scanner values for MACD/ADX (no recalc needed - they update every 60s)
   const mv = mfkkServerMacd?.macd;

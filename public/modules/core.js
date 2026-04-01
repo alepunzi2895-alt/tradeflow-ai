@@ -1,5 +1,53 @@
 // TradeFlow AI — modules/core.js
 
+// ── USER ID ───────────────────────────────────────────────
+function genUUID(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=(Math.random()*16)|0;return(c==='x'?r:(r&0x3)|0x8).toString(16);
+  });
+}
+const USER_ID_KEY='tf_user_id';
+let userId=localStorage.getItem(USER_ID_KEY);
+if(!userId){userId=genUUID();localStorage.setItem(USER_ID_KEY,userId);}
+window.userId=userId;
+
+// ── TURSO DB HELPERS ────────────────────────────────────
+/**
+ * Fire-and-forget: send data to /api/db without blocking UI.
+ * Errors are silently swallowed (DB is a bonus, not critical).
+ */
+async function dbSave(action, data){
+  try{
+    await fetch('/api/db',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,...data,user_id:data.user_id||userId}),
+    });
+  }catch(e){console.log(`[db] ${action} failed silently:`,e.message);}
+}
+
+/**
+ * Load data from Turso with timeout. Returns null on failure (fallback to localStorage).
+ */
+async function dbLoad(action, data={}, timeoutMs=5000){
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),timeoutMs);
+    const r=await fetch('/api/db',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,...data,user_id:data.user_id||userId}),
+      signal:ctrl.signal,
+    });
+    clearTimeout(tid);
+    if(!r.ok)return null;
+    return await r.json();
+  }catch(e){console.log(`[db] ${action} load failed:`,e.message);return null;}
+}
+
+window.dbSave=dbSave;
+window.dbLoad=dbLoad;
+
 // ── STORAGE ────────────────────────────────────────────
 const S={get:(k,d=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
 const K={p:'tf_profile',j:'tf_journal',kb:'tf_knowledge',chat:'tf_chat',mfx:'tf_myfx',mem:'tf_memory',amem:'tf_analysis_mem'};
@@ -12,6 +60,22 @@ let mfxSession=S.get(K.mfx,null);
 let marketData=null;
 let dashContext={prices:null,confidence:null,sentiment:null,calendar:null};
 let fxRates={USD:1,EUR:null,GBP:null,CHF:null,JPY:null};
+
+// ── AUTO-REGISTER USER ON BOOT ─────────────────────────────
+(async()=>{
+  try{
+    await dbSave('upsert_user',{
+      id:userId,
+      name:P.name||'Alessandro',
+      risk:P.risk||2,
+      max_dd:P.dd||6,
+      tp1:P.tp1||1.5,
+      tp2:P.tp2||3,
+      currency:P.currency||'USD',
+    });
+    console.log('[TradeFlow] User registered in Turso:',userId.slice(0,8)+'...');
+  }catch(e){console.log('[TradeFlow] Turso user register skipped:',e.message);}
+})();
 
 async function fetchFxRates(){
   if(!P.currency||P.currency==='USD'){fxRates['USD']=1;return;}

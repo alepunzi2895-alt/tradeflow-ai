@@ -135,6 +135,33 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
     if (d.error) throw new Error(d.error.message);
     const text = (d.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
 
+    // Fire-and-forget: save performance snapshot to Turso
+    const userId = req.body.user_id;
+    if (userId && type === "report") {
+      const expectancy = wins > 0 && losses > 0
+        ? ((wins / filtered.length) * avgWin - (losses / filtered.length) * avgLoss)
+        : 0;
+      fetch(`${process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : ""}/api/db`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_performance_snapshot",
+          user_id: userId,
+          symbol: (req.body.asset || "XAU") + "USD",
+          period,
+          total_trades: filtered.length,
+          wins,
+          losses,
+          winrate: wr,
+          expectancy: expectancy.toFixed(2),
+          avg_win: avgWin.toFixed(2),
+          avg_loss: avgLoss.toFixed(2),
+          total_pnl: pnl.toFixed(2),
+          profit_factor: pf,
+        }),
+      }).catch(() => {});
+    }
+
     return res.status(200).json({ ok: true, report: text, stats: { total: filtered.length, wins, losses, wr, pnl: pnl.toFixed(0), pf } });
 
   } catch (err) {

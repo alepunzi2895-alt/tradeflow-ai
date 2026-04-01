@@ -24,10 +24,40 @@ function initForm(){
 }
 function saveEntry(){
   const entry=document.getElementById('f-entry').value;if(!entry)return;
-  const e={id:Date.now(),date:document.getElementById('f-date').value,dir:document.getElementById('f-dir').value,entry,sl:document.getElementById('f-sl').value,tp1:document.getElementById('f-tp1').value,tp2:document.getElementById('f-tp2').value,result:document.getElementById('f-result').value,pnl:document.getElementById('f-pnl').value,emo:document.getElementById('f-emo').value,err:document.getElementById('f-err').value,notes:document.getElementById('f-notes').value};
+  const e={
+    id:'tf_'+Date.now(),
+    date:document.getElementById('f-date').value,
+    dir:document.getElementById('f-dir').value,
+    entry,
+    sl:document.getElementById('f-sl').value,
+    tp1:document.getElementById('f-tp1').value,
+    tp2:document.getElementById('f-tp2').value,
+    result:document.getElementById('f-result').value,
+    pnl:document.getElementById('f-pnl').value,
+    emo:document.getElementById('f-emo').value,
+    err:document.getElementById('f-err').value,
+    notes:document.getElementById('f-notes').value,
+    symbol:(window.activeAsset||'XAU')+'USD',
+  };
   entries.unshift(e);S.set(K.j,entries);
   const w=entries.filter(x=>x.result==='WIN').length;P.winRate=Math.round(w/entries.length*100);S.set(K.p,P);
   document.getElementById('tform').classList.remove('on');renderJournal();updateHdr();
+  // Persist to Turso async
+  dbSave('save_trade',{
+    id:e.id,
+    symbol:e.symbol,
+    direction:e.dir,
+    entry_price:parseFloat(e.entry)||null,
+    sl:parseFloat(e.sl)||null,
+    tp1:parseFloat(e.tp1)||null,
+    tp2:parseFloat(e.tp2)||null,
+    result:e.result,
+    pnl:parseFloat(e.pnl)||0,
+    emotion:e.emo,
+    mistake:e.err,
+    notes:e.notes,
+    trade_date:e.date,
+  }).catch(()=>{});
 }
 document.getElementById('btn-new').onclick=()=>{const f=document.getElementById('tform');f.classList.toggle('on');if(f.classList.contains('on'))initForm();};
 document.getElementById('btn-save').onclick=saveEntry;
@@ -303,8 +333,15 @@ function renderJournal(){
     const pv=parseFloat(e.pnl)||0;
     const d=document.createElement('div');d.className='ec';d.style.cssText=`border:1px solid ${bc};border-left:3px solid ${ac}`;
     const savedCoaching=tradeMemory.entries?.[e.id]||'';
-    d.innerHTML=`<div class="etop"><div class="etgs"><span class="edate">${e.date}</span><span class="edir ${e.dir==='BUY'?'buy':'sell'}">${e.dir}</span>${e.result?`<span class="eres ${e.result.toLowerCase()}">${e.result}</span>`:''}</div><div class="eright">${e.pnl?`<span class="epnl ${pv>=0?'p':'n'}">${pv>=0?'+':''}${e.pnl}$</span>`:''}<button class="bcoach" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--g);font-size:11px;cursor:pointer" title="Coaching AI">💡</button><button class="bdel" data-id="${e.id}">✕</button></div></div><div class="elvl">E:${e.entry} · SL:${e.sl} · TP1:${e.tp1} · TP2:${e.tp2}</div><div class="ebdg">${e.emo!=='Neutro'?`<span class="bemo">${e.emo}</span>`:''}${e.err&&e.err!=='Nessuno'?`<span class="berr">💡 ${e.err}</span>`:''}</div>${savedCoaching?`<div class="trade-coach" style="margin-top:6px;padding:6px 8px;background:#0c0f18;border:1px solid #c8a96e22;border-radius:6px;font-size:11px;color:var(--dim);line-height:1.6">💡 ${savedCoaching}</div>`:''}`;
-    d.querySelector('.bdel').onclick=()=>{entries=entries.filter(x=>x.id!==e.id);S.set(K.j,entries);renderJournal();};
+    d.innerHTML=`<div class="etop"><div class="etgs"><span class="edate">${e.date}</span><span class="edir ${e.dir==='BUY'?'buy':'sell'}">${e.dir}</span>${e.result?`<span class="eres ${e.result.toLowerCase()}">${e.result}</span>`:''}</div><div class="eright">${e.pnl?`<span class="epnl ${pv>=0?'p':'n'}">${pv>=0?'+':''}${e.pnl}$</span>`:''}<button class="bcoach" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--g);font-size:11px;cursor:pointer" title="Coaching AI">💡</button><button class="bdel" data-id="${e.id}">✕</button></div></div><div class="elvl">E:${e.entry} · SL:${e.sl} · TP1:${e.tp1} · TP2:${e.tp2}</div><div class="ebdg">${e.emo!=='Neutro'?`<span class="bemo">${e.emo}</span>`:''}${e.err&&e.err!=='Nessuno'?`<span class="berr">💡 ${e.err}</span>`:''}</div>${savedCoaching?`<div class="trade-coach" style="margin-top:6px;padding:6px 8px;background:#0c0f18;border:1px solid #c8a96e22;border-radius:6px;font-size:11px;color:var(--dim);line-height:1.6">💡 ${savedCoaching}</div>`:''}`;  
+    d.querySelector('.bdel').onclick=()=>{
+      const id=e.id;
+      entries=entries.filter(x=>x.id!==id);
+      S.set(K.j,entries);
+      renderJournal();
+      // Delete from Turso async
+      dbSave('delete_trade',{id,user_id:window.userId}).catch(()=>{});
+    };
     // Coaching button
     const cbtn=d.querySelector('.bcoach');
     if(cbtn)cbtn.onclick=async()=>{
@@ -329,3 +366,49 @@ function renderJournal(){
     list.appendChild(d);
   });
 }
+
+// ── TURSO BOOT SYNC ─────────────────────────────────────────
+// On load: fetch trades from Turso and merge with localStorage (union by id)
+async function syncJournalFromDb(){
+  try{
+    const res=await dbLoad('get_trades',{user_id:window.userId},4000);
+    if(!res?.ok||!res.trades?.length) return;
+    const localIds=new Set(entries.map(e=>String(e.id)));
+    let added=0;
+    for(const t of res.trades){
+      const tid=String(t.id||t.ID);
+      if(localIds.has(tid)) continue;
+      // Map Turso cols back to journal format
+      entries.push({
+        id:tid,
+        date:t.trade_date||t.created_at?.slice(0,10)||'',
+        dir:t.direction||'BUY',
+        entry:t.entry_price||'',
+        sl:t.sl||'',
+        tp1:t.tp1||'',
+        tp2:t.tp2||'',
+        result:t.result||'',
+        pnl:t.pnl||0,
+        emo:t.emotion||'Neutro',
+        err:t.mistake||'Nessuno',
+        notes:t.notes||'',
+        symbol:t.symbol||'XAUUSD',
+        source:'turso_sync',
+      });
+      localIds.add(tid);
+      added++;
+    }
+    if(added>0){
+      // Sort by date desc
+      entries.sort((a,b)=>b.date>a.date?1:-1);
+      S.set(K.j,entries);
+      renderJournal();
+      console.log(`[TradeFlow] Synced ${added} trade(s) from Turso`);
+    }
+  }catch(e){console.log('[TradeFlow] Journal sync skipped:',e.message);}
+}
+
+// Run sync when journal tab is first opened
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(syncJournalFromDb, 1500); // small delay to let core init finish
+});

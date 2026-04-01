@@ -1,10 +1,38 @@
 // TradingView Webhook endpoint
-// Receives indicator values from TradingView alerts and stores them on GitHub
+// Receives indicator values from TradingView alerts and stores them on GitHub + Turso
 
 const OWNER = process.env.GITHUB_OWNER || "alepunzi2895-alt";
 const REPO  = process.env.GITHUB_REPO  || "tradeflow-ai";
 const FILE  = "data/indicators_live.json";
 const TOKEN = process.env.GITHUB_TOKEN;
+
+// ── Turso: persist signal (fire-and-forget) ───────────────────────────────
+async function saveSignalToDb(data) {
+  const url = process.env.TURSO_DB_URL;
+  const token = process.env.TURSO_AUTH_TOKEN;
+  if (!url || !token) return;
+  try {
+    await fetch(`${process.env.VERCEL_URL ? 'https://'+process.env.VERCEL_URL : ''}/api/db`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save_signal",
+        symbol: data.symbol,
+        timeframe: data.tf,
+        type: data.macd > data.signal ? "BULLISH" : data.macd < data.signal ? "BEARISH" : "NEUTRAL",
+        strength: null,
+        source: "tradingview_webhook",
+        cci: data.cci,
+        macd: data.macd,
+        macd_signal: data.signal,
+        adx: data.adx,
+        di_plus: data.di_plus,
+        di_minus: data.di_minus,
+        price: data.price,
+      }),
+    });
+  } catch (e) { console.log("Turso signal save skipped:", e.message); }
+}
 
 async function getFileSha() {
   try {
@@ -96,6 +124,9 @@ export default async function handler(req, res) {
       if (TOKEN) {
         getFileSha().then(sha => saveToGitHub(data, sha)).catch(e => console.log("GitHub save failed:", e.message));
       }
+
+      // Save signal to Turso async (don't wait)
+      saveSignalToDb(data).catch(() => {});
 
       console.log(`Webhook received: TF=${data.tf} Price=${data.price} CCI=${data.cci} MACD=${data.macd}/${data.signal} ADX=${data.adx}`);
       return res.status(200).json({ ok: true, received: data });

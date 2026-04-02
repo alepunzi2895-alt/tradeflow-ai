@@ -3,8 +3,6 @@
 // Uses HTTP transport via https:// URL (libsql auto-detects, works on Vercel serverless).
 
 import { createClient } from "@libsql/client";
-import * as bcrypt from "bcryptjs";
-import * as jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "tradeflow-fallback-secret-key-1234";
 
@@ -201,6 +199,12 @@ async function register(db, body) {
   const { email, password, name, current_user_id } = body;
   if (!email || !password) throw new Error("email and password required");
 
+  // Dynamic import to avoid top-level crashes
+  const bcrypt = await import("bcryptjs");
+  const jwt = await import("jsonwebtoken");
+  const bcrypt_ = bcrypt.default || bcrypt;
+  const jwt_ = jwt.default || jwt;
+
   // Check if user already exists
   const existing = await db.execute({ sql: "SELECT id FROM users WHERE email=?", args: [email] });
   if (existing.rows.length > 0) {
@@ -208,7 +212,7 @@ async function register(db, body) {
   }
 
   const userId = current_user_id || uuid();
-  const hashed = await bcrypt.hash(password, 10);
+  const hashed = await bcrypt_.hash(password, 10);
 
   await db.execute({
     sql: `INSERT INTO users (id, name, email, password, risk, max_dd, tp1, tp2, currency)
@@ -220,13 +224,19 @@ async function register(db, body) {
     args: [userId, name || "Trader", email, hashed]
   });
 
-  const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: "30d" });
+  const token = jwt_.sign({ id: userId, email }, JWT_SECRET, { expiresIn: "30d" });
   return { ok: true, user: { id: userId, email, name: name || "Trader" }, token };
 }
 
 async function login(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and password required");
+
+  // Dynamic import to avoid top-level crashes
+  const bcrypt = await import("bcryptjs");
+  const jwt = await import("jsonwebtoken");
+  const bcrypt_ = bcrypt.default || bcrypt;
+  const jwt_ = jwt.default || jwt;
 
   const result = await db.execute({ sql: "SELECT * FROM users WHERE email=?", args: [email] });
   if (result.rows.length === 0) {
@@ -238,12 +248,12 @@ async function login(db, body) {
     throw new Error("Account senza password. Impossibile accedere.");
   }
 
-  const match = await bcrypt.compare(password, user.password);
+  const match = await bcrypt_.compare(password, user.password);
   if (!match) {
     throw new Error("Credenziali non valide.");
   }
 
-  const token = jwt.sign({ id: user.id, email }, JWT_SECRET, { expiresIn: "30d" });
+  const token = jwt_.sign({ id: user.id, email }, JWT_SECRET, { expiresIn: "30d" });
   return {
     ok: true,
     user: { id: user.id, email: user.email, name: user.name },

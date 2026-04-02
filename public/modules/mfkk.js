@@ -4,12 +4,7 @@
 function _setVal(id, v){
   const el = document.getElementById(id);
   if(!el || v==null || isNaN(+v)) return;
-  const dp = document.getElementById('dash-panel');
-  const saved = dp ? dp.scrollTop : 0;
   el.value = +v;
-  if(dp && saved > 0){
-    requestAnimationFrame(()=>{ dp.scrollTop = saved; });
-  }
 }
 
 // ── MFKK STRATEGY SCORE ──────────────────────────────────

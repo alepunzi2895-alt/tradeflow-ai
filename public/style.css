@@ -27,24 +27,25 @@
 }
 
 html, body {
-  height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
-  overflow: hidden; /* Prevent body scroll to enable inner container scrolling */
-  margin: 0;
+  margin: 0; padding: 0;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: visible !important; /* Force native scroll */
+  -webkit-overflow-scrolling: touch;
 }
 
 #app {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100vh;
   max-width: 500px;
   margin: 0 auto;
   position: relative;
   background: var(--bg);
   box-shadow: 0 0 40px rgba(0,0,0,0.8);
-  overflow: hidden;
 }
 
 /* HEADER */
@@ -136,20 +137,16 @@ html, body {
 /* CONTENT AREA */
 #cont {
   flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 75px; /* Space for floating nav */
+  padding-bottom: 110px; /* Strong space for floating nav */
 }
 .tp {
   display: none;
-  flex: 1;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  width: 100%;
   animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-.tp.on { display: flex; }
+.tp.on { display: block; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(10px); }
@@ -171,7 +168,7 @@ html, body {
 }
 
 /* ── DASHBOARD ── */
-.dp { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px 0 14px; }
+.dp { padding: 14px 14px 20px 14px; overflow: visible; }
 
 /* Live price strip */
 .price-strip {

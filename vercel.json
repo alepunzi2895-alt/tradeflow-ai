@@ -1,68 +1,22 @@
 {
   "rewrites": [
-    {
-      "source": "/api/db",
-      "destination": "/api/db.js"
-    },
-    {
-      "source": "/api/auth",
-      "destination": "/api/db.js"
-    },
-    {
-      "source": "/api/chat",
-      "destination": "/api/chat.js"
-    },
-    {
-      "source": "/api/price",
-      "destination": "/api/price.js"
-    },
-    {
-      "source": "/api/market",
-      "destination": "/api/market.js"
-    },
-    {
-      "source": "/api/myfxbook",
-      "destination": "/api/myfxbook.js"
-    },
-    {
-      "source": "/api/kb",
-      "destination": "/api/kb.js"
-    },
-    {
-      "source": "/api/indicators",
-      "destination": "/api/indicators.js"
-    },
-    {
-      "source": "/api/report",
-      "destination": "/api/report.js"
-    },
-    {
-      "source": "/api/webhook",
-      "destination": "/api/webhook.js"
-    },
-    {
-      "source": "/api/cot-update",
-      "destination": "/api/cot-update.js"
-    },
-    {
-      "source": "/styles.css",
-      "destination": "/public/styles.css"
-    },
-    {
-      "source": "/app.js",
-      "destination": "/public/app.js"
-    },
-    {
-      "source": "/modules/:file",
-      "destination": "/public/modules/:file"
-    },
-    {
-      "source": "/api/tvprice",
-      "destination": "/api/price.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/public/index.html"
-    }
+    { "source": "/api/auth",         "destination": "/api/db.js" },
+    { "source": "/api/db",           "destination": "/api/db.js" },
+    { "source": "/api/kb",           "destination": "/api/db.js" },
+    { "source": "/api/myfxbook",     "destination": "/api/db.js" },
+    
+    { "source": "/api/price",        "destination": "/api/price.js" },
+    { "source": "/api/tvprice",      "destination": "/api/price.js" },
+    { "source": "/api/candles",      "destination": "/api/price.js" },
+    
+    { "source": "/api/market",       "destination": "/api/analysis.js" },
+    { "source": "/api/indicators",   "destination": "/api/analysis.js" },
+    { "source": "/api/cot-update",   "destination": "/api/analysis.js" },
+    
+    { "source": "/api/chat",         "destination": "/api/chat.js" },
+    { "source": "/api/report",       "destination": "/api/report.js" },
+    { "source": "/api/webhook",      "destination": "/api/webhook.js" },
+    
+    { "source": "/(.*)",             "destination": "/index.html" }
   ]
 }

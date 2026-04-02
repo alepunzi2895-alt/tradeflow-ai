@@ -29,7 +29,35 @@ export default async function handler(req, res) {
     'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'TVC:US10Y':'US10Y', 'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
   };
 
-  const asset = (req.query.asset || 'XAU').toUpperCase();
+  let asset = (req.query.asset || "XAU").toUpperCase();
+  let type = req.query.type || "price";
+  if (req.url.includes("/api/candles")) type = "candles";
+  else if (req.url.includes("/api/tvprice")) type = "price";
+
+  if (type === 'candles') {
+    const range = req.query.range || '60d';
+    const interval = req.query.interval || '1h';
+    const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F'] : ['XAUUSD=X', 'GC=F'];
+    for (const sym of symbols) {
+      try {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
+        const r = await fetchT(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }, 7000);
+        if (!r.ok) continue;
+        const d = await r.json();
+        const rs = d?.chart?.result?.[0];
+        if (!rs?.timestamp) continue;
+        const q = rs.indicators?.quote?.[0] || {};
+        const candles = [];
+        for (let i = 0; i < rs.timestamp.length; i++) {
+          if (q.close?.[i] != null && q.high?.[i] != null && q.low?.[i] != null)
+            candles.push({ t: rs.timestamp[i], h: +q.high[i].toFixed(2), l: +q.low[i].toFixed(2), c: +q.close[i].toFixed(2) });
+        }
+        if (candles.length < 30) continue;
+        return res.status(200).json({ ok: true, source: sym, count: candles.length, candles });
+      } catch (e) { console.log(`Price Hub Candles ${sym}:`, e.message); }
+    }
+    return res.status(503).json({ ok: false, error: 'No candle source available' });
+  }
 
   if (asset === 'ALL') {
     try {

@@ -31,7 +31,7 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
-  overflow: hidden; /* Fix for mobile fixed-height layout */
+  /* Removed restrictive overflow */
 }
 
 #app {
@@ -143,8 +143,7 @@ html, body {
   display: none;
   flex: 1;
   flex-direction: column;
-  overflow-y: auto; /* Allow inner scrolling */
-  -webkit-overflow-scrolling: touch;
+  height: 100%; /* Ensure panel takes full container height */
   animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .tp.on { display: flex; }

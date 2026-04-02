@@ -312,12 +312,12 @@ setTimeout(loadSlowData, 1500);
 setTimeout(loadIndicators, 3000);
 // Confidence score with session data immediately (no API needed)
 try{updateConfidence({},{});}catch(e){}
-// Refresh intervals - Staggered to avoid main thread blocking
-setInterval(loadPrices, 8000);
-setInterval(loadSlowData, 60000);
-setInterval(loadSentimentOnly, 12000);
-setInterval(loadIndicatorCandles, 90000);
-setInterval(recalcIndicators, 7000);
-setInterval(() => { if (P.currency && P.currency !== 'USD') fetchFxRates(); }, 120000);
+// Refresh intervals
+setInterval(loadPrices, 3000);
+setInterval(loadSlowData, 30000);
+setInterval(loadSentimentOnly, 3000);
+setInterval(loadIndicatorCandles, 60000);
+setInterval(recalcIndicators, 5000);
+setInterval(() => { if (P.currency && P.currency !== 'USD') fetchFxRates(); }, 60000);
 // GitHub KB sync
 checkKbSync();

@@ -174,8 +174,21 @@ async function patchDb(db) {
   return { ok: true };
 }
 
+async function adminReset(db, body) {
+  const { email, password } = body;
+  if (!email || !password) throw new Error("email and pass required");
+  const bcrypt = await import("bcryptjs");
+  const _bcrypt = bcrypt.default || bcrypt;
+  const hashed = await _bcrypt.hash(password, 10);
+  await db.execute({
+    sql: "UPDATE users SET password=? WHERE email=?",
+    args: [hashed, email]
+  });
+  return { ok: true, message: `Password resettata per ${email}` };
+}
+
 const ACTIONS = {
-  upsert_user: upsertUser, save_trade: saveTrade, get_trades: getTrades, register, login, save_user_data: saveUserData, get_user_data: getUserData, kb_load: kbLoad, kb_save: kbSave, mfx_proxy: mfxProxy, patch_db: patchDb
+  upsert_user: upsertUser, save_trade: saveTrade, get_trades: getTrades, register, login, save_user_data: saveUserData, get_user_data: getUserData, kb_load: kbLoad, kb_save: kbSave, mfx_proxy: mfxProxy, patch_db: patchDb, admin_reset: adminReset
 };
 
 export default async function handler(req, res) {

@@ -56,6 +56,7 @@ async function send(){
     hideDots();addBubble('assistant',reply);
     history.push({role:'assistant',content:reply});
     S.set(K.chat,history.slice(-50).map(m=>({role:m.role,content:m.content})));
+    window.dbSaveUserData && window.dbSaveUserData('chat', history.slice(-50).map(m=>({role:m.role,content:m.content})));
     autoLearn(reply);
   }catch(e){hideDots();addBubble('assistant',`⚠️ ${e.message}`);}
   loading=false;document.getElementById('bsend').disabled=false;

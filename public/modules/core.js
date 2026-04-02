@@ -7,9 +7,12 @@ function genUUID(){
   });
 }
 const USER_ID_KEY='tf_user_id';
+const TOKEN_KEY='tf_token';
 let userId=localStorage.getItem(USER_ID_KEY);
+let sessionToken=localStorage.getItem(TOKEN_KEY);
 if(!userId){userId=genUUID();localStorage.setItem(USER_ID_KEY,userId);}
 window.userId=userId;
+window.sessionToken=sessionToken;
 
 // ── TURSO DB HELPERS ────────────────────────────────────
 /**
@@ -36,7 +39,7 @@ async function dbLoad(action, data={}, timeoutMs=5000){
     const r=await fetch('/api/db',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action,...data,user_id:data.user_id||userId}),
+      body:JSON.stringify({action,...data,user_id:data.user_id||window.userId}),
       signal:ctrl.signal,
     });
     clearTimeout(tid);
@@ -61,21 +64,35 @@ let marketData=null;
 let dashContext={prices:null,confidence:null,sentiment:null,calendar:null};
 let fxRates={USD:1,EUR:null,GBP:null,CHF:null,JPY:null};
 
-// ── AUTO-REGISTER USER ON BOOT ─────────────────────────────
-(async()=>{
-  try{
-    await dbSave('upsert_user',{
-      id:userId,
-      name:P.name||'Alessandro',
-      risk:P.risk||2,
-      max_dd:P.dd||6,
-      tp1:P.tp1||1.5,
-      tp2:P.tp2||3,
-      currency:P.currency||'USD',
+async function dbSaveUserData(type, payload){
+  if(!window.sessionToken) return; // Only sync if fully logged in
+  await dbSave('save_user_data', { doc_type: type, payload: JSON.stringify(payload) });
+}
+window.dbSaveUserData = dbSaveUserData;
+
+// ── CLOUD SYNC & BOOTSTRAP ──────────────────────────────
+async function syncStateFromCloud() {
+  if (!window.sessionToken) return;
+  console.log('[Sync] Sto scaricando user data dal cloud...');
+  const res = await dbLoad('get_user_data', { user_id: window.userId });
+  if (res && res.ok && res.data) {
+    res.data.forEach(row => {
+      try {
+        const payload = JSON.parse(row.payload);
+        if (row.doc_type === 'chat') { history = payload; S.set(K.chat, history); }
+        if (row.doc_type === 'kb') { kb = payload; S.set(K.kb, kb); }
+        if (row.doc_type === 'mfx') { mfxSession = payload; S.set(K.mfx, mfxSession); }
+        if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
+      } catch(e) { console.error('Sync error parsing', row.doc_type, e); }
     });
-    console.log('[TradeFlow] User registered in Turso:',userId.slice(0,8)+'...');
-  }catch(e){console.log('[TradeFlow] Turso user register skipped:',e.message);}
-})();
+    // rebuild knowledge
+    if(kb.length>0){ P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6); S.set(K.p,P); }
+  }
+}
+window.syncStateFromCloud = syncStateFromCloud;
+
+// ── AUTO-REGISTER USER ON BOOT (DEPRECATO IN FAVORE DEL LOGIN)
+// Non forziamo più la registrazione su Turso al boot se è anonimo.
 
 async function fetchFxRates(){
   if(!P.currency||P.currency==='USD'){fxRates['USD']=1;return;}

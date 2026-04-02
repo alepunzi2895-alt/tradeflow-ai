@@ -204,6 +204,100 @@ window.onerror = function(msg, src, line, col, err) {
   return false; // don't suppress
 };
 
+// ── AUTHENTICATION LOGIC ────────────────────────────────
+function showAuth() {
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-overlay').style.display='flex';
+}
+function hideAuth() {
+  document.getElementById('app').style.display='block';
+  document.getElementById('auth-overlay').style.display='none';
+}
+
+document.getElementById('tab-login').onclick=e=>{
+  document.getElementById('form-login').style.display='block';
+  document.getElementById('form-register').style.display='none';
+  e.target.style.borderBottom='2px solid #c8a96e'; e.target.style.color='var(--text)';
+  document.getElementById('tab-register').style.borderBottom='2px solid transparent';
+  document.getElementById('tab-register').style.color='var(--dim)';
+};
+document.getElementById('tab-register').onclick=e=>{
+  document.getElementById('form-register').style.display='block';
+  document.getElementById('form-login').style.display='none';
+  e.target.style.borderBottom='2px solid #c8a96e'; e.target.style.color='var(--text)';
+  document.getElementById('tab-login').style.borderBottom='2px solid transparent';
+  document.getElementById('tab-login').style.color='var(--dim)';
+};
+
+async function handleAuth(action) {
+  const errWrap = document.getElementById('auth-err');
+  const msgWrap = document.getElementById('auth-msg');
+  errWrap.style.display='none'; msgWrap.style.display='none';
+  
+  const email = document.getElementById(action === 'login' ? 'l-email' : 'r-email').value.trim();
+  const pass = document.getElementById(action === 'login' ? 'l-pass' : 'r-pass').value;
+  const name = action === 'register' ? document.getElementById('r-name').value.trim() : undefined;
+  
+  if (!email || !pass || (action === 'register' && !name)) {
+    errWrap.style.display='block'; errWrap.textContent='❌ Compila tutti i campi.';
+    return;
+  }
+  
+  const btn = document.getElementById(action === 'login' ? 'btn-do-login' : 'btn-do-register');
+  const oldTxt = btn.textContent;
+  btn.textContent = '⏳ Attendere...'; btn.disabled = true;
+  
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, email, password: pass, name, current_user_id: window.userId })
+    });
+    const d = await res.json();
+    
+    if (!d.ok) throw new Error(d.error || 'Errore di sistema');
+    
+    // Auth Success
+    localStorage.setItem('tf_token', d.token);
+    localStorage.setItem('tf_user_id', d.user.id);
+    window.sessionToken = d.token;
+    window.userId = d.user.id;
+    P.name = d.user.name;
+    S.set(K.p, P);
+    
+    msgWrap.style.display='block'; msgWrap.textContent='✅ Accesso completato. Inizializzo...';
+    
+    // Download data from Cloud
+    await syncStateFromCloud();
+    
+    // Reboot App state
+    hideAuth();
+    updateHdr();
+    renderJournal();
+    renderKb();
+    try{ renderPlaceholders(); }catch(e){}
+    loadPrices();
+    
+  } catch(e) {
+    errWrap.style.display='block'; errWrap.textContent='❌ ' + e.message;
+  } finally {
+    btn.textContent = oldTxt; btn.disabled = false;
+  }
+}
+
+document.getElementById('btn-do-login').onclick = () => handleAuth('login');
+document.getElementById('btn-do-register').onclick = () => handleAuth('register');
+
+// ── BOOTSTRAP ──────────────────────────────────────────
+if(!window.sessionToken) {
+  showAuth();
+} else {
+  hideAuth();
+  syncStateFromCloud().then(() => {
+    renderJournal(); renderKb(); switchTab('dash');
+  });
+}
+
 // Render UI immediately with placeholders (never block)
 try{ renderPlaceholders(); }catch(e){ console.error('renderPlaceholders:', e); }
 // Stagger loads to avoid hammering APIs simultaneously

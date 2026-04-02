@@ -15,7 +15,49 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div id="app">
+<!-- AUTHENTICATION OVERLAY -->
+<div id="auth-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#050608;z-index:9999;flex-direction:column;justify-content:center;align-items:center;padding:20px;box-sizing:border-box">
+  <div style="background:var(--card);border:1px solid #c8a96e40;border-radius:15px;width:100%;max-width:360px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+    <div style="text-align:center;margin-bottom:20px">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;margin:0 auto 10px">
+        <path d="M4 20 Q10 8 16 14 Q22 20 28 6" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M24 6 L28 6 L28 10" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="ga1" x1="4" y1="20" x2="28" y2="6" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#8b5e1a"/><stop offset="100%" stop-color="#f0d080"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div style="font-size:20px;font-weight:700;color:#e0e4ec;font-family:'Space Grotesk',sans-serif;letter-spacing:-.5px">TradeFlow <span style="color:#c8a96e">AI</span></div>
+    </div>
+    
+    <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border2)">
+      <button id="tab-login" style="flex:1;background:none;border:none;padding:10px;color:var(--text);font-size:13px;font-weight:700;border-bottom:2px solid #c8a96e;cursor:pointer">Accedi</button>
+      <button id="tab-register" style="flex:1;background:none;border:none;padding:10px;color:var(--dim);font-size:13px;font-weight:700;border-bottom:2px solid transparent;cursor:pointer">Registrati</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="form-login">
+      <div class="ff" style="margin-bottom:12px"><label>EMAIL</label><input id="l-email" type="email" placeholder="tu@email.com"></div>
+      <div class="ff" style="margin-bottom:20px"><label>PASSWORD</label><input id="l-pass" type="password" placeholder="••••••••"></div>
+      <button id="btn-do-login" class="bsave" style="width:100%;font-size:13px;padding:12px">Accedi al Trading Desk</button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="form-register" style="display:none">
+      <div class="ff" style="margin-bottom:12px"><label>NOME UTENTE</label><input id="r-name" type="text" placeholder="Nome o Alias"></div>
+      <div class="ff" style="margin-bottom:12px"><label>EMAIL</label><input id="r-email" type="email" placeholder="tu@email.com"></div>
+      <div class="ff" style="margin-bottom:20px"><label>PASSWORD</label><input id="r-pass" type="password" placeholder="••••••••"></div>
+      <button id="btn-do-register" class="bsave" style="width:100%;font-size:13px;padding:12px">Crea nuovo account</button>
+    </div>
+
+    <div id="auth-err" style="display:none;margin-top:15px;font-size:12px;color:#ff8a80;background:#160c0c;border:1px solid #ff475722;border-radius:6px;padding:8px 10px;text-align:center"></div>
+    <div id="auth-msg" style="display:none;margin-top:15px;font-size:12px;color:var(--green);background:#081408;border:1px solid #00e67622;border-radius:6px;padding:8px 10px;text-align:center"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
 <!-- TradingView hidden ticker for price data -->
 <div id="tv-ticker" style="display:none;position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden"></div>
   <!-- HEADER -->

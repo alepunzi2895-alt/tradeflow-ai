@@ -40,7 +40,7 @@ async function processKbFile(file){
     const reply=await api([{role:'user',content:[part,{type:'text',text:`Estrai le regole di trading ${window.activeAsset||'XAU'}/USD rilevanti. Entry, risk management, pattern, indicatori, psicologia. Conciso. Italiano.`}]}],
       'Estrai informazioni di trading. Italiano.');
     const entry={id:Date.now(),name:file.name,size:file.size,date:new Date().toLocaleDateString('it-IT'),summary:reply};
-    kb.unshift(entry);S.set(K.kb,kb);
+    kb.unshift(entry);S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
     P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);S.set(K.p,P);
     stat.style.cssText='display:block;background:#081408;border:1px solid #00e67622;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:var(--green)';
     stat.textContent=`✓ "${file.name}" integrato.${kbSyncEnabled?' Salvataggio su GitHub...':''}`;
@@ -69,7 +69,7 @@ function renderKb(){
 }
 function deleteKb(id){
   kb=kb.filter(k=>k.id!==id);
-  S.set(K.kb,kb);
+  S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
   P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);
   S.set(K.p,P);
   renderKb();
@@ -96,7 +96,7 @@ function importKbFromJson(file){
         const existing=new Set(kb.map(k=>k.name));
         const newDocs=data.knowledge.filter(k=>!existing.has(k.name));
         kb=[...newDocs,...kb];
-        S.set(K.kb,kb);
+        S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
         P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);
         S.set(K.p,P);
         renderKb();

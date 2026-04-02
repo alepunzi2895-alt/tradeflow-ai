@@ -193,6 +193,48 @@ async function getLatestSignals(db, body) {
   return { ok: true, signals: result.rows };
 }
 
+async function saveUserData(db, body) {
+  const { user_id, doc_type, payload } = body;
+  if (!user_id || !doc_type) throw new Error("user_id and doc_type required");
+  const id = uuid();
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET 
+            payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [id, user_id, doc_type, payload || null],
+  });
+  return { ok: true };
+}
+
+async function getUserData(db, body) {
+  const { user_id } = body;
+  if (!user_id) throw new Error("user_id required");
+  const result = await db.execute({
+    sql: "SELECT doc_type, payload FROM user_data WHERE user_id=?",
+    args: [user_id],
+  });
+  return { ok: true, data: result.rows };
+}
+
+async function patchDb(db) {
+  const results = [];
+  try {
+    await db.execute("ALTER TABLE users ADD COLUMN password TEXT");
+    results.push({ msg: "Added password to users" });
+  } catch (e) {
+    results.push({ msg: "Password col might exist: " + e.message });
+  }
+  try {
+    await db.execute("CREATE TABLE IF NOT EXISTS user_data (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, doc_type TEXT NOT NULL, payload TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))");
+    await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_data_type ON user_data(user_id, doc_type)");
+    results.push({ msg: "Created user_data table & index" });
+  } catch(e) {
+    results.push({ msg: "Error creating user_data: " + e.message });
+  }
+  return { ok: true, results };
+}
+
 // ── MAIN HANDLER ─────────────────────────────────────────────────────────────
 
 const ACTIONS = {
@@ -205,6 +247,9 @@ const ACTIONS = {
   save_market_data:         saveMarketData,
   save_performance_snapshot: savePerformanceSnapshot,
   get_latest_signals:       getLatestSignals,
+  save_user_data:           saveUserData,
+  get_user_data:            getUserData,
+  patch_db:                 (db) => patchDb(db),
 };
 
 export default async function handler(req, res) {

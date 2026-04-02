@@ -24,7 +24,18 @@ function renderMyfx(){
         <button class="bsave" id="btn-mfx-login" style="width:100%">🔗 Connetti</button>
         <div id="mfx-err" style="display:none;margin-top:8px;font-size:11px;color:#ff8a80;background:#160c0c;border:1px solid #ff475722;border-radius:6px;padding:7px 9px"></div>
       </div>
-      <div style="color:var(--dim);font-size:11px;line-height:1.7;padding:0 4px">ℹ️ Le credenziali vengono usate solo per chiamare l'API MyFxBook dal server. Non vengono salvate.</div>`;
+      
+      <div style="margin-top:10px;background:#0d0f12;border:1px solid #c8a96e33;border-radius:9px;padding:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;display:flex;align-items:center;gap:5px">📘 COME COLLEGARE MYFXBOOK</div>
+        <div style="font-size:11px;color:var(--dim);line-height:1.6;font-family:sans-serif">
+          1. <b>Registrati su MyFxBook</b>: Vai su <a href="https://www.myfxbook.com/" target="_blank" style="color:var(--g);text-decoration:underline">myfxbook.com</a> e crea un account.<br>
+          2. <b>Scarica l'EA</b>: Nella sezione <i>Portfolio > Add Account</i>, seleziona MetaTrader 4/5 (EA) e scarica il plugin.<br>
+          3. <b>Configura MT4/MT5</b>: Trascina l'EA sul grafico. Durante i settaggi inserisci l'indirizzo email e la password utilizzati per registrarti a MyFxBook e imposta un intervallo di pubblicazione (es. 5 min).<br>
+          4. <b>Collega l'app</b>: Usa la stessa mail e password nel form in alto su TradeFlow AI.<br><br>
+          <i>⚠️ Sicurezza zero logs: TradeFlow invia unicamente una chiamata one-shot alle API ufficiali di MyFxBook per generare un token di sessione. Nessuna password transiterà, verrà registrata, o salvata mai nel nostro database (Turso).</i>
+        </div>
+      </div>
+      `;
     document.getElementById('btn-mfx-login').onclick=mfxLogin;
   }
 }
@@ -38,14 +49,14 @@ async function mfxLogin(){
     const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password:pass})});
     const d=await r.json();
     if(d.error||!d.session)throw new Error(d.message||'Login fallito');
-    mfxSession={session:d.session,email};S.set(K.mfx,mfxSession);renderMyfx();
+    mfxSession={session:d.session,email};S.set(K.mfx,mfxSession); window.dbSaveUserData && window.dbSaveUserData('mfx', mfxSession); renderMyfx();
   }catch(e){
     document.getElementById('mfx-err').style.display='block';
     document.getElementById('mfx-err').textContent='❌ '+e.message;
     btn.textContent='🔗 Connetti';btn.disabled=false;
   }
 }
-function mfxLogout(){mfxSession=null;S.set(K.mfx,null);renderMyfx();}
+function mfxLogout(){mfxSession=null;S.set(K.mfx,null); window.dbSaveUserData && window.dbSaveUserData('mfx', null); renderMyfx();}
 
 async function loadMyfxAccounts(){
   const wrap=document.getElementById('mfx-accounts');if(!wrap)return;

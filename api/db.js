@@ -3,6 +3,10 @@
 // Uses HTTP transport via https:// URL (libsql auto-detects, works on Vercel serverless).
 
 import { createClient } from "@libsql/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "tradeflow-fallback-secret-key-1234";
 
 function getDb() {
   let url   = process.env.TURSO_DB_URL;
@@ -193,6 +197,60 @@ async function getLatestSignals(db, body) {
   return { ok: true, signals: result.rows };
 }
 
+async function register(db, body) {
+  const { email, password, name, current_user_id } = body;
+  if (!email || !password) throw new Error("email and password required");
+
+  // Check if user already exists
+  const existing = await db.execute({ sql: "SELECT id FROM users WHERE email=?", args: [email] });
+  if (existing.rows.length > 0) {
+    throw new Error("Email già registrata.");
+  }
+
+  const userId = current_user_id || uuid();
+  const hashed = await bcrypt.hash(password, 10);
+
+  await db.execute({
+    sql: `INSERT INTO users (id, name, email, password, risk, max_dd, tp1, tp2, currency)
+          VALUES (?, ?, ?, ?, 2, 6, 1.5, 3.0, 'USD')
+          ON CONFLICT(id) DO UPDATE SET
+            email=excluded.email,
+            password=excluded.password,
+            name=COALESCE(excluded.name, name)`,
+    args: [userId, name || "Trader", email, hashed]
+  });
+
+  const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: "30d" });
+  return { ok: true, user: { id: userId, email, name: name || "Trader" }, token };
+}
+
+async function login(db, body) {
+  const { email, password } = body;
+  if (!email || !password) throw new Error("email and password required");
+
+  const result = await db.execute({ sql: "SELECT * FROM users WHERE email=?", args: [email] });
+  if (result.rows.length === 0) {
+    throw new Error("Credenziali non valide.");
+  }
+
+  const user = result.rows[0];
+  if (!user.password) {
+    throw new Error("Account senza password. Impossibile accedere.");
+  }
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
+    throw new Error("Credenziali non valide.");
+  }
+
+  const token = jwt.sign({ id: user.id, email }, JWT_SECRET, { expiresIn: "30d" });
+  return {
+    ok: true,
+    user: { id: user.id, email: user.email, name: user.name },
+    token
+  };
+}
+
 async function saveUserData(db, body) {
   const { user_id, doc_type, payload } = body;
   if (!user_id || !doc_type) throw new Error("user_id and doc_type required");
@@ -250,6 +308,8 @@ const ACTIONS = {
   save_user_data:           saveUserData,
   get_user_data:            getUserData,
   patch_db:                 (db) => patchDb(db),
+  register:                 register,
+  login:                    login,
 };
 
 export default async function handler(req, res) {

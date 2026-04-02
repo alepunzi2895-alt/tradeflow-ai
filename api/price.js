@@ -17,11 +17,55 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── SOURCE 1: TradingView Scanner (primary) ──
-  // Try multiple tickers — FPMARKETS may be down, try OANDA, FOREXCOM, TVC, CAPITALCOM
+  // ── MULTI-ASSET LOGIC (from consolidated tvprice.js) ──
+  const MULTI_TICKERS = [
+    'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD', 'CAPITALCOM:GOLD', 'EASYMARKETS:XAUUSD', 'TVC:GOLD', 'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD',
+    'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD', 'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'TVC:SILVER', 'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD',
+    'TVC:DXY', 'TVC:USOIL', 'TVC:US10Y', 'OANDA:EURUSD', 'OANDA:GBPUSD', 'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
+  ];
+  const TICKER_KEY = {
+    'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU','CAPITALCOM:GOLD':'XAU','EASYMARKETS:XAUUSD':'XAU','TVC:GOLD':'XAU','FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
+    'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER','CAPITALCOM:SILVER':'SILVER','EASYMARKETS:XAGUSD':'SILVER','TVC:SILVER':'SILVER','FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
+    'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'TVC:US10Y':'US10Y', 'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
+  };
+
+  const asset = (req.query.asset || 'XAU').toUpperCase();
+
+  if (asset === 'ALL') {
+    try {
+      const body = { symbols: { tickers: MULTI_TICKERS, query: { types: [] } }, columns: ['close', 'change', 'high', 'low'] };
+      const r = await fetchT('https://scanner.tradingview.com/global/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0',
+          'Origin': 'https://www.tradingview.com',
+          'Referer': 'https://www.tradingview.com/'
+        },
+        body: JSON.stringify(body)
+      }, 7000);
+      if (r.ok) {
+        const d = await r.json();
+        const prices = {};
+        for (const item of d.data) {
+          const key = TICKER_KEY[item.s];
+          if (!key || !item.d || prices[key]) continue;
+          const [close, chgPct, high, low] = item.d;
+          if (close == null || isNaN(+close)) continue;
+          const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+          prices[key] = { price: (+close).toFixed(dec), change: +(chgPct || 0).toFixed(2), high: high != null ? (+high).toFixed(dec) : null, low: low != null ? (+low).toFixed(dec) : null, _source: item.s };
+        }
+        return res.status(200).json({ ok: true, prices, source: 'tradingview', timestamp: new Date().toISOString() });
+      }
+    } catch (e) {
+      console.log('price.js ALL failed:', e.message);
+      return res.status(503).json({ ok: false, error: e.message });
+    }
+  }
+
+  // ── SINGLE ASSET LOGIC (Original price.js) ──
+  const isXag = asset === 'XAG' || asset === 'SILVER';
   try {
-    const asset = (req.query.asset || 'XAU').toUpperCase();
-    const isXag = asset === 'XAG';
     const tickers = isXag ? [
       'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD',
       'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'FPMARKETS:XAGUSD',
@@ -39,7 +83,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0',
         'Origin': 'https://www.tradingview.com',
         'Referer': 'https://www.tradingview.com/'
       },
@@ -48,11 +92,9 @@ export default async function handler(req, res) {
 
     if (r.ok) {
       const d = await r.json();
-      // Find first valid XAU ticker
       const item = d.data?.find(x => x.d && x.d[0] != null && !isNaN(+x.d[0]));
       if (item) {
         const [close, chgPct, high, low] = item.d;
-        console.log(`price.js: TV Scanner OK via ${item.s} ${asset}=${(+close).toFixed(2)}`);
         return res.status(200).json({
           price: (+close).toFixed(2),
           change: (chgPct != null ? (+chgPct).toFixed(2) : "0.00"),
@@ -64,60 +106,29 @@ export default async function handler(req, res) {
         });
       }
     }
-  } catch (e) {
-    console.log('price.js TV Scanner failed:', e.message);
-  }
+  } catch (e) { console.log('price.js TV Scanner failed:', e.message); }
 
-  // ── SOURCE 2: Yahoo Finance v8 (fallback) ──
+  // Fallback to Yahoo
   try {
-    const asset = (req.query.asset || 'XAU').toUpperCase();
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${asset}USD=X?interval=1m&range=1d`;
-    const response = await fetchT(url, {
-      headers: { "User-Agent": "Mozilla/5.0" }
-    }, 5000);
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${asset === 'SILVER' ? 'XAG' : asset}USD=X?interval=1m&range=1d`;
+    const response = await fetchT(url, { headers: { "User-Agent": "Mozilla/5.0" } }, 5000);
     const data = await response.json();
     const quote = data?.chart?.result?.[0]?.meta;
     if (quote && quote.regularMarketPrice) {
       const price = quote.regularMarketPrice;
       const prevClose = quote.chartPreviousClose || quote.previousClose;
       const change = price - prevClose;
-      const changePct = ((change / prevClose) * 100).toFixed(2);
-      console.log(`price.js: Yahoo OK, ${asset}=` + price.toFixed(2));
       return res.status(200).json({
         price: price.toFixed(2),
         change: change.toFixed(2),
-        changePct,
+        changePct: ((change / prevClose) * 100).toFixed(2),
         high: quote.regularMarketDayHigh?.toFixed(2),
         low: quote.regularMarketDayLow?.toFixed(2),
         source: 'yahoo',
         timestamp: new Date().toISOString(),
       });
     }
-  } catch (e) {
-    console.log('price.js Yahoo failed:', e.message);
-  }
-
-  // ── SOURCE 3: Yahoo v8 query2 (last resort) ──
-  try {
-    const asset = (req.query.asset || 'XAU').toUpperCase();
-    const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${asset}USD=X?interval=1m&range=1d`;
-    const r2 = await fetchT(url2, { headers: { "User-Agent": "Mozilla/5.0" } }, 5000);
-    const d2 = await r2.json();
-    const q2 = d2?.chart?.result?.[0]?.meta;
-    if (q2 && q2.regularMarketPrice) {
-      return res.status(200).json({
-        price: q2.regularMarketPrice?.toFixed(2),
-        change: "0.00",
-        changePct: "0.00",
-        high: q2.regularMarketDayHigh?.toFixed(2),
-        low: q2.regularMarketDayLow?.toFixed(2),
-        source: 'yahoo_q2',
-        timestamp: new Date().toISOString(),
-      });
-    }
-  } catch (e) {
-    console.log('price.js Yahoo q2 failed:', e.message);
-  }
+  } catch (e) { console.log('price.js Yahoo failed:', e.message); }
 
   return res.status(503).json({ error: "All price sources failed" });
 }

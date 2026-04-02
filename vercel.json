@@ -6,7 +6,7 @@
     },
     {
       "source": "/api/auth",
-      "destination": "/api/auth.js"
+      "destination": "/api/db.js"
     },
     {
       "source": "/api/chat",
@@ -58,7 +58,7 @@
     },
     {
       "source": "/api/tvprice",
-      "destination": "/api/tvprice.js"
+      "destination": "/api/price.js"
     },
     {
       "source": "/(.*)",

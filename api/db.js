@@ -193,6 +193,31 @@ async function getLatestSignals(db, body) {
   return { ok: true, signals: result.rows };
 }
 
+async function setupTables(db) {
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS trades (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, symbol TEXT DEFAULT 'XAUUSD', direction TEXT, entry_price REAL, exit_price REAL, sl REAL, tp1 REAL, tp2 REAL, size REAL DEFAULT 0, result TEXT DEFAULT '', pnl REAL DEFAULT 0, emotion TEXT DEFAULT 'Neutro', mistake TEXT DEFAULT 'Nessuno', notes TEXT DEFAULT '', strategy TEXT DEFAULT '', source TEXT DEFAULT 'manual', trade_date DATE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS positions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, symbol TEXT, direction TEXT, size REAL, entry_price REAL, risk_percent REAL, stop_loss REAL, take_profit REAL, unrealized_pnl REAL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS signals (id TEXT PRIMARY KEY, symbol TEXT, timeframe TEXT DEFAULT '60', type TEXT, strength REAL, source TEXT DEFAULT 'tradingview_webhook', cci REAL, macd REAL, macd_signal REAL, adx REAL, di_plus REAL, di_minus REAL, price REAL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS market_data (id TEXT PRIMARY KEY, symbol TEXT, timeframe TEXT, open REAL, high REAL, low REAL, close REAL, volume REAL, source TEXT DEFAULT 'tradingview', timestamp DATETIME)`,
+    `CREATE TABLE IF NOT EXISTS news_events (id TEXT PRIMARY KEY, title TEXT, impact TEXT, currency TEXT, forecast TEXT, previous TEXT, actual TEXT, event_time DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS performance_stats (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, symbol TEXT DEFAULT 'XAUUSD', period TEXT DEFAULT 'month', total_trades INTEGER DEFAULT 0, wins INTEGER DEFAULT 0, losses INTEGER DEFAULT 0, winrate REAL, expectancy REAL, avg_win REAL, avg_loss REAL, total_pnl REAL, profit_factor REAL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE INDEX IF NOT EXISTS idx_trades_user_date ON trades(user_id, trade_date DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_signals_symbol_ts ON signals(symbol, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_perf_user ON performance_stats(user_id, period)`,
+  ];
+  const results = [];
+  for (const sql of tables) {
+    try {
+      await db.execute({ sql, args: [] });
+      results.push({ ok: true, sql: sql.slice(0, 60) });
+    } catch (e) {
+      results.push({ ok: false, sql: sql.slice(0, 60), error: e.message });
+    }
+  }
+  const failed = results.filter(r => !r.ok);
+  return { ok: failed.length === 0, total: results.length, failed: failed.length, results };
+}
+
 // ── MAIN HANDLER ─────────────────────────────────────────────────────────────
 
 const ACTIONS = {
@@ -205,6 +230,7 @@ const ACTIONS = {
   save_market_data:         saveMarketData,
   save_performance_snapshot: savePerformanceSnapshot,
   get_latest_signals:       getLatestSignals,
+  setup_tables:             (db) => setupTables(db),
 };
 
 export default async function handler(req, res) {

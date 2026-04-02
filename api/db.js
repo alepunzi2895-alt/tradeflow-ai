@@ -3,8 +3,8 @@
 // Uses HTTP transport via https:// URL (libsql auto-detects, works on Vercel serverless).
 
 import { createClient } from "@libsql/client";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import * as bcrypt from "bcryptjs";
+import * as jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "tradeflow-fallback-secret-key-1234";
 
@@ -339,9 +339,10 @@ export default async function handler(req, res) {
   try {
     const db = getDb();
     const result = await fn(db, body);
+    if (!result) return res.status(500).json({ error: "Action returned no result" });
     return res.status(200).json(result);
-  } catch (err) {
-    console.error(`[db.js] action=${action} error:`, err.message);
-    return res.status(500).json({ ok: false, error: err.message });
+  } catch (e) {
+    console.error("[db.js] Error executing action:", action, e.message);
+    return res.status(500).json({ error: e.message || "Internal Server Error" });
   }
 }

@@ -1,15 +1,18 @@
 // TradeFlow AI — api/db.js
 // Universal Turso DB gateway for all CRUD operations.
-// Uses HTTP transport (WebSocket not available in Vercel serverless).
+// Uses HTTP transport via https:// URL (libsql auto-detects, works on Vercel serverless).
 
-import { createClient } from "@libsql/client/http";
+import { createClient } from "@libsql/client";
 
 function getDb() {
-  const url   = process.env.TURSO_DB_URL;
+  let url   = process.env.TURSO_DB_URL;
   const token = process.env.TURSO_AUTH_TOKEN;
   if (!url || !token) throw new Error("TURSO_DB_URL or TURSO_AUTH_TOKEN missing");
+  // Force HTTP transport: replace libsql:// with https:// so no WebSocket is attempted
+  if (url.startsWith("libsql://")) url = url.replace("libsql://", "https://");
   return createClient({ url, authToken: token });
 }
+
 
 // ── HELPERS ─────────────────────────────────────────────────────────────────
 

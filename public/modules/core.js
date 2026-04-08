@@ -58,7 +58,7 @@ const defP=()=>({name:'Alessandro',risk:2,dd:6,tp1:1.5,tp2:3,errors:[],sessions:
 let P=S.get(K.p,defP()),entries=S.get(K.j,[]),kb=S.get(K.kb,[]);
 let tradeMemory=S.get(K.mem,{entries:{},summary:'',resetDate:null});
 let analysisMemory=S.get(K.amem,{entries:[],lastReset:null});
-let pendingImg=null,loading=false,newsMode=false;
+let pendingImg=null,loading=false,newsMode=true;
 let mfxSession=S.get(K.mfx,null);
 let marketData=null;
 let dashContext={prices:null,confidence:null,sentiment:null,calendar:null};
@@ -211,7 +211,7 @@ Fattori principali:
 Usa questo score per calibrare il peso trade: score>70 = full size, 50-70 = ridotto, <50 = micro o no trade.`;
   }
 
-  // ── NEWS / CALENDAR CONTEXT ────────────────────────────
+  // ── NEWS / CALENDAR CONTEXT (ALWAYS ACTIVE) ────────────
   let newsCtx='';
   if(dashContext.calendar?.length){
     const now=new Date();
@@ -231,9 +231,11 @@ ${soon.map(ev=>{
   return `• ${ev.event} (${ev.currency}) — ${timing}${ev.forecast?', prev: '+ev.forecast:''}`;
 }).join('\n')}
 STRATEGIA PRE-NEWS: riduci size o evita nuove entries 30 min prima di eventi ad alto impatto.`;
-    } else if(newsMode){
+    } else {
       newsCtx=`\nNessun evento ad alto impatto nelle prossime 24h — condizioni normali per entrare.`;
     }
+  } else {
+    newsCtx=`\nCalendario economico non disponibile — verifica manualmente prima di operare.`;
   }
 
   // Analysis memory context

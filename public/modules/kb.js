@@ -59,11 +59,24 @@ async function processKbFile(file){
 function renderKb(){
   document.getElementById('kb-count').textContent=kb.length;
   const list=document.getElementById('kb-list');
-  if(!kb.length){list.innerHTML='<div style="color:var(--border2);font-size:12px;text-align:center;padding:18px 0">Nessun documento caricato.</div>';return;}
+  if(!kb.length){list.innerHTML='<div style="color:var(--dim);font-size:12px;text-align:center;padding:40px">Nessun documento caricato.</div>';return;}
   list.innerHTML='';
   kb.forEach(k=>{
-    const d=document.createElement('div');d.className='kdoc';
-    d.innerHTML=`<div class="kdoc-top"><div><div class="kdoc-name">📄 ${k.name}</div><div class="kdoc-meta">${k.date} · ${(k.size/1024).toFixed(0)}KB</div></div><button onclick="deleteKb(${k.id})" style="background:none;border:none;color:var(--border2);cursor:pointer;font-size:13px">✕</button></div><div class="kdoc-prv">${k.summary?.slice(0,200)||''}</div>`;
+    const d=document.createElement('div');
+    d.className='kb-card glass';
+    
+    // Determine icon based on name
+    const ext = k.name.split('.').pop().toLowerCase();
+    const ico = ['pdf'].includes(ext) ? '📕' : ['png','jpg','jpeg'].includes(ext) ? '🖼️' : '📄';
+    
+    d.innerHTML=`
+      <div class="kb-icon">${ico}</div>
+      <div style="flex:1; min-width:0">
+        <div style="font-size:13px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${k.name}</div>
+        <div style="font-size:10px; color:var(--dim); margin-top:2px">${k.date} · ${(k.size/1024).toFixed(0)}KB</div>
+      </div>
+      <button onclick="deleteKb(${k.id})" style="background:none; border:none; color:var(--dim); cursor:pointer; font-size:16px; padding:4px">✕</button>
+    `;
     list.appendChild(d);
   });
 }

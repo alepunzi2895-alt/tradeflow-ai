@@ -320,43 +320,81 @@ function renderJournal(){
   const wins=entries.filter(e=>e.result==='WIN').length;
   const wr=entries.length?Math.round(wins/entries.length*100):0;
   const pnl=entries.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
-  const stats=[{l:'Trade',v:entries.length,c:'var(--g)'},{l:'Win%',v:`${wr}%`,c:wr>=50?'var(--green)':'var(--red)'},{l:'P&L',v:`${pnl>=0?'+':''}${pnl.toFixed(0)}$`,c:pnl>=0?'var(--green)':'var(--red)'},{l:'Sess.',v:P.sessions||0,c:'var(--dim)'}];
-  document.getElementById('sgrid').innerHTML=stats.map(s=>`<div class="sc"><div class="sv" style="color:${s.c}">${s.v}</div><div class="sl">${s.l}</div></div>`).join('');
+  
+  const stats=[
+    {l:'Win Rate',v:`${wr}%`,c:wr>=50?'var(--green)':'var(--red)'},
+    {l:'P&L Totale',v:`${pnl>=0?'+':''}${pnl.toFixed(0)}$`,c:pnl>=0?'var(--green)':'var(--red)'},
+    {l:'Trade Totali',v:entries.length,c:'#fff'},
+    {l:'Sessioni',v:P.sessions||0,c:'var(--dim)'}
+  ];
+  
+  document.getElementById('sgrid').innerHTML=stats.map(s=>`
+    <div class="sc">
+      <div class="sv" style="color:${s.c}">${s.v}</div>
+      <div class="sl">${s.l}</div>
+    </div>
+  `).join('');
+
   const eb=document.getElementById('ebox');const et=document.getElementById('etags');
-  if(P.errors?.length){eb.style.display='block';et.innerHTML=P.errors.map(e=>`<span class="etag" style="background:#ffca2810;border-color:#ffca2830;color:var(--yellow)">${e}</span>`).join('');}else{eb.style.display='none';}
+  if(P.errors?.length){
+    eb.style.display='block';
+    et.innerHTML=P.errors.map(e=>`<span class="etag">${e}</span>`).join('');
+  }else{eb.style.display='none';}
+
   const list=document.getElementById('elist');
-  if(!entries.length){list.innerHTML='<div class="empt">Nessun trade loggato.</div>';return;}
+  if(!entries.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim);font-size:12px">Nessun trade loggato.</div>';return;}
   list.innerHTML='';
+
   entries.forEach(e=>{
-    const bc=e.result==='WIN'?'#00e67618':e.result==='LOSS'?'#ff475718':'var(--border)';
-    const ac=e.result==='WIN'?'var(--green)':e.result==='LOSS'?'var(--red)':'#444';
+    const resClass = e.result ? e.result.toLowerCase() : '';
+    const d=document.createElement('div');
+    d.className=`ec ${resClass}`;
+    
     const pv=parseFloat(e.pnl)||0;
-    const d=document.createElement('div');d.className='ec';d.style.cssText=`border:1px solid ${bc};border-left:3px solid ${ac}`;
-    const savedCoaching=tradeMemory.entries?.[e.id]||'';
-    d.innerHTML=`<div class="etop"><div class="etgs"><span class="edate">${e.date}</span><span class="edir ${e.dir==='BUY'?'buy':'sell'}">${e.dir}</span>${e.result?`<span class="eres ${e.result.toLowerCase()}">${e.result}</span>`:''}</div><div class="eright">${e.pnl?`<span class="epnl ${pv>=0?'p':'n'}">${pv>=0?'+':''}${e.pnl}$</span>`:''}<button class="bcoach" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--g);font-size:11px;cursor:pointer" title="Coaching AI">💡</button><button class="bdel" data-id="${e.id}">✕</button></div></div><div class="elvl">E:${e.entry} · SL:${e.sl} · TP1:${e.tp1} · TP2:${e.tp2}</div><div class="ebdg">${e.emo!=='Neutro'?`<span class="bemo">${e.emo}</span>`:''}${e.err&&e.err!=='Nessuno'?`<span class="berr">💡 ${e.err}</span>`:''}</div>${savedCoaching?`<div class="trade-coach" style="margin-top:6px;padding:6px 8px;background:#0c0f18;border:1px solid #c8a96e22;border-radius:6px;font-size:11px;color:var(--dim);line-height:1.6">💡 ${savedCoaching}</div>`:''}`;  
+    const dateStr = new Date(e.date).toLocaleDateString('it-IT', {day:'2-digit', month:'short'});
+    
+    d.innerHTML=`
+      <div class="etop">
+        <div>
+          <div class="edate">${dateStr} · ${e.symbol || 'XAUUSD'}</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <span class="etag" style="background:${e.dir==='BUY'?'rgba(0,230,118,0.1)':'rgba(255,71,87,0.1)'};color:${e.dir==='BUY'?'var(--green)':'var(--red)'}">${e.dir}</span>
+            ${e.result ? `<span class="etag" style="text-transform:uppercase">${e.result}</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="epnl" style="color:${pv>=0?'var(--green)':'var(--red)'}">${pv>=0?'+':''}${e.pnl}$</div>
+          <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end">
+            <button class="bcoach" style="background:none;border:none;color:var(--g);font-size:14px;cursor:pointer" title="Coaching AI">💡</button>
+            <button class="bdel" data-id="${e.id}" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer">✕</button>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text);margin-bottom:8px;opacity:0.8">
+        Entry: ${e.entry} · SL: ${e.sl} · TP: ${e.tp1}
+      </div>
+      <div class="etag2">
+        ${e.emo!=='Neutro'?`<span class="etag" style="border-color:var(--blue);color:var(--blue)">${e.emo}</span>`:''}
+        ${e.err&&e.err!=='Nessuno'?`<span class="etag" style="border-color:var(--yellow);color:var(--yellow)">${e.err}</span>`:''}
+      </div>
+      ${tradeMemory.entries?.[e.id] ? `<div class="trade-coach" style="margin-top:10px;padding:10px;background:rgba(200,169,110,0.05);border:1px solid rgba(200,169,110,0.1);border-radius:10px;font-size:11px;color:var(--text);line-height:1.6">💡 ${tradeMemory.entries[e.id]}</div>` : ''}
+    `;
+
     d.querySelector('.bdel').onclick=()=>{
+      if(!confirm('Eliminare questo trade?'))return;
       const id=e.id;
       entries=entries.filter(x=>x.id!==id);
       S.set(K.j,entries);
       renderJournal();
-      // Delete from Turso async
       dbSave('delete_trade',{id,user_id:window.userId}).catch(()=>{});
     };
-    // Coaching button
+
     const cbtn=d.querySelector('.bcoach');
     if(cbtn)cbtn.onclick=async()=>{
       cbtn.textContent='⏳';cbtn.disabled=true;
       const coaching=await coachSingleTrade(e);
       if(coaching){
-        // Show coaching inline
-        const existing=d.querySelector('.trade-coach');
-        if(existing)existing.remove();
-        const div=document.createElement('div');
-        div.className='trade-coach';
-        div.style.cssText='margin-top:6px;padding:6px 8px;background:#0c0f18;border:1px solid #c8a96e22;border-radius:6px;font-size:11px;color:var(--dim);line-height:1.6';
-        div.textContent='💡 '+coaching;
-        d.appendChild(div);
-        // Save to trade memory
+        renderJournal(); // Refresh to show the coaching text
         tradeMemory.entries=tradeMemory.entries||{};
         tradeMemory.entries[e.id]=coaching;
         S.set(K.mem,tradeMemory);

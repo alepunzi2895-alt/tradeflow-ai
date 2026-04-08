@@ -6,24 +6,28 @@ let history=S.get(K.chat,[]);
 
 function addBubble(role,content,dataUrl){
   const w=document.createElement('div');w.className=`bw ${role==='user'?'u':'b'}`;
-  if(role!=='user'){
-    const m=document.createElement('div');m.className='bmeta';
-    m.innerHTML=`<svg class="bico" viewBox="0 0 32 32" fill="none"><path d="M4 20 Q10 8 16 14 Q22 20 28 6" stroke="url(#gh)" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M24 6 L28 6 L28 10" stroke="url(#gh)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="gh" x1="4" y1="20" x2="28" y2="6" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#8b5e1a"/><stop offset="100%" stop-color="#f0d080"/></linearGradient></defs></svg><span class="btm">TradeFlow AI · ${nowT()}</span>`;
-    w.appendChild(m);
-  }
+  
   const b=document.createElement('div');b.className=`bubble ${role==='user'?'u':'b'}`;
   if(dataUrl){const i=document.createElement('img');i.src=dataUrl;i.className='chart';b.appendChild(i);}
+  
   if(role==='user'){b.append(document.createTextNode(content||''));}
   else{
+    // Assistant metadata for premium look
+    const m=document.createElement('div');
+    m.style.cssText='font-size:9px;color:var(--g);font-weight:700;margin-bottom:6px;letter-spacing:0.1em;text-transform:uppercase';
+    m.innerHTML=`TradeFlow AI · ${nowT()}`;
+    b.appendChild(m);
+    
     b.appendChild(md(content));
+    
     const sc=(content||'').match(/MANIPULATION SCORE[:\s]*(\d+)/i);
     if(sc){
       const s=parseInt(sc[1]);
       const col=s<=3?'var(--green)':s<=6?'var(--yellow)':'var(--red)';
       const lbl=s<=3?'PULITO':s<=6?'MISTO':'MANIPOLATO';
-      const badge=document.createElement('div');badge.className='sbadge';
-      badge.style.cssText=`background:${col}12;border:1px solid ${col}35`;
-      badge.innerHTML=`<div class="sdot" style="background:${col};box-shadow:0 0 5px ${col}"></div><span class="stxt" style="color:${col}">MANIP ${s}/10 · ${lbl}</span>`;
+      const badge=document.createElement('div');
+      badge.style.cssText=`margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid ${col}44;border-radius:10px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:${col}`;
+      badge.innerHTML=`<div style="width:6px;height:6px;background:${col};border-radius:50%;box-shadow:0 0 8px ${col}"></div>MANIP ${s}/10 · ${lbl}`;
       b.appendChild(badge);
     }
   }
@@ -82,15 +86,49 @@ function setImg(data){pendingImg=data;document.getElementById('imgthumb').src=da
 function clearImg(){pendingImg=null;document.getElementById('imgprev').classList.remove('on');}
 document.getElementById('bimg').onclick=()=>openOvl('imgsheet');
 document.getElementById('imgclear').onclick=clearImg;
+
+// "Scegli dalla Galleria" — triggers native file picker (gallery on mobile)
 document.getElementById('sdrop').onclick=()=>document.getElementById('file-in').click();
 document.getElementById('file-in').onchange=async e=>{const f=e.target.files?.[0];if(f)setImg(await compress(f));e.target.value='';};
+
+// URL import
 document.getElementById('btn-url').onclick=async()=>{const u=document.getElementById('url-in').value.trim();if(!u)return;try{const r=await fetch(u);const bl=await r.blob();setImg(await compress(new File([bl],'i.jpg',{type:bl.type||'image/jpeg'})));}catch{setImg({dataUrl:u,b64:null,type:'image/jpeg',urlOnly:true});}};
 document.getElementById('btn-sc').onclick=()=>closeOvl('imgsheet');
-window.addEventListener('paste',async e=>{const it=Array.from(e.clipboardData?.items||[]).find(x=>x.type.startsWith('image/'));if(!it)return;e.preventDefault();setImg(await compress(it.getAsFile()));switchTab('analysis');});
 
-// ── NEWS TOGGLE ────────────────────────────────────────
+// PASTE handler — desktop + mobile
+window.addEventListener('paste',async e=>{
+  const items=Array.from(e.clipboardData?.items||[]);
+  const imgItem=items.find(x=>x.type.startsWith('image/'));
+  if(!imgItem)return;
+  e.preventDefault();
+  setImg(await compress(imgItem.getAsFile()));
+  switchTab('analysis');
+});
+
+// Also listen on the textarea specifically (iOS Safari workaround)
+document.getElementById('minput').addEventListener('paste',async e=>{
+  const items=Array.from(e.clipboardData?.items||[]);
+  const imgItem=items.find(x=>x.type.startsWith('image/'));
+  if(!imgItem)return;
+  e.preventDefault();
+  setImg(await compress(imgItem.getAsFile()));
+});
+
+// DRAG & DROP on chat area
+const chatPanel=document.getElementById('tp-analysis');
+if(chatPanel){
+  chatPanel.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();chatPanel.style.outline='2px dashed var(--g)';chatPanel.style.outlineOffset='-4px';});
+  chatPanel.addEventListener('dragleave',e=>{e.preventDefault();chatPanel.style.outline='none';});
+  chatPanel.addEventListener('drop',async e=>{
+    e.preventDefault();e.stopPropagation();chatPanel.style.outline='none';
+    const f=e.dataTransfer?.files?.[0];
+    if(f&&f.type.startsWith('image/')){setImg(await compress(f));}
+  });
+}
+
+// ── NEWS TOGGLE (always on by default) ─────────────────
+document.getElementById('bnews').classList.add('news-on');
 document.getElementById('bnews').onclick=()=>{
   newsMode=!newsMode;
   document.getElementById('bnews').classList.toggle('news-on',newsMode);
-  if(newsMode)addBubble('assistant',`📰 **Modalità News attiva** — Le analisi includeranno il contesto macro e gli eventi ad alto impatto del giorno su ${window.activeAsset||'XAU'}/USD.`);
 };

@@ -403,6 +403,9 @@ function calcMfkk(){
         adxScore=50;adxCol='var(--yellow)';adxHint='DI+>DI- · ADX '+adxVal.toFixed(1)+' (sopra Th=10, < 25) trend nascente';
       } else if(diDiff>0){
         adxScore=30;adxCol='var(--yellow)';adxHint='DI+>DI- ma ADX '+adxVal.toFixed(1)+' < Th=10 — laterale';
+      } else if(diDiff<0&&adxVal>=35){
+        adxScore=Math.round(60+adxStr*25+spreadBonus*15);adxCol='var(--green)';
+        adxHint='DI-('+diMinus.toFixed(1)+')>DI+('+diPlus.toFixed(1)+') ma ADX esteso ('+adxVal.toFixed(1)+') — SETUP INVERSIONE BUY';
       } else {
         adxScore=5;adxCol='var(--red)';adxHint='DI-('+diMinus.toFixed(1)+')>DI+('+diPlus.toFixed(1)+') — bearish, no BUY';
       }
@@ -414,6 +417,9 @@ function calcMfkk(){
         adxScore=50;adxCol='var(--yellow)';adxHint='DI->DI+ · ADX '+adxVal.toFixed(1)+' (sopra Th=10, < 25) trend nascente';
       } else if(diDiff<0){
         adxScore=30;adxCol='var(--yellow)';adxHint='DI->DI+ ma ADX '+adxVal.toFixed(1)+' < Th=10 — laterale';
+      } else if(diDiff>0&&adxVal>=35){
+        adxScore=Math.round(60+adxStr*25+spreadBonus*15);adxCol='var(--green)';
+        adxHint='DI+('+diPlus.toFixed(1)+')>DI-('+diMinus.toFixed(1)+') ma ADX esteso ('+adxVal.toFixed(1)+') — SETUP INVERSIONE SELL';
       } else {
         adxScore=5;adxCol='var(--red)';adxHint='DI+('+diPlus.toFixed(1)+')>DI-('+diMinus.toFixed(1)+') — bullish, no SELL';
       }

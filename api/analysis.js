@@ -152,17 +152,9 @@ export default async function handler(req, res) {
         } catch(e) {}
       }
 
-      // If fetch fails, provide a list of believable upcoming High Impact events (April 2026)
+      // If fetch fails, do not provide fake mock events, just an empty list.
       if (!events.length) {
-        const today = new Date();
-        const nextFri = new Date(today);
-        nextFri.setDate(today.getDate() + ((5 - today.getDay() + 7) % 7)); // Next Friday
-        events = [
-          { time: today.toISOString(), currency: "USD", event: "Unemployment Claims", impact: "High" },
-          { time: nextFri.toISOString(), currency: "USD", event: "Non-Farm Payrolls (NFP)", impact: "High" },
-          { time: nextFri.toISOString(), currency: "USD", event: "Unemployment Rate", impact: "High" },
-          { time: new Date(today.getTime() + 86400000).toISOString(), currency: "EUR", event: "ECB President Lagarde Speech", impact: "High" }
-        ];
+        events = [];
       }
       return res.status(200).json({ ok:true, events, timestamp: new Date().toISOString() });
     }

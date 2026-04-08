@@ -60,7 +60,7 @@ export default async function handler(req, res) {
     if (action === 'accounts') {
       if (!session) return res.status(400).json({ error: true, message: 'Session mancante.' });
 
-      const d = await fetchMfx(`/get-my-accounts.json?session=${encodeURIComponent(session)}`);
+      const d = await fetchMfx(`/get-my-accounts.json?session=${session}`);
       console.log('[myfxbook] accounts response error:', d.error, 'count:', Array.isArray(d.accounts) ? d.accounts.length : 'N/A');
 
       const hasError = d.error === true || d.error === 'true';
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
     if (action === 'history') {
       if (!session || !accountId) return res.status(400).json({ error: true, message: 'Session e accountId richiesti.' });
 
-      const d = await fetchMfx(`/get-history.json?session=${encodeURIComponent(session)}&id=${encodeURIComponent(accountId)}`);
+      const d = await fetchMfx(`/get-history.json?session=${session}&id=${encodeURIComponent(accountId)}`);
 
       const hasError = d.error === true || d.error === 'true';
       if (hasError) return res.json({ error: true, message: d.message || 'Impossibile caricare storico.' });
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
     if (action === 'open') {
       if (!session || !accountId) return res.status(400).json({ error: true, message: 'Session e accountId richiesti.' });
 
-      const d = await fetchMfx(`/get-open-trades.json?session=${encodeURIComponent(session)}&id=${encodeURIComponent(accountId)}`);
+      const d = await fetchMfx(`/get-open-trades.json?session=${session}&id=${encodeURIComponent(accountId)}`);
 
       const hasError = d.error === true || d.error === 'true';
       if (hasError) return res.json({ error: true, message: d.message || 'Impossibile caricare posizioni aperte.' });
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
     // ── LOGOUT ──────────────────────────────────────────
     if (action === 'logout') {
       if (session) {
-        try { await fetchMfx(`/logout.json?session=${encodeURIComponent(session)}`); } catch (_) {}
+        try { await fetchMfx(`/logout.json?session=${session}`); } catch (_) {}
       }
       return res.json({ ok: true });
     }

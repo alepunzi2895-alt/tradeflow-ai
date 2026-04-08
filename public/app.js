@@ -295,6 +295,12 @@ if(!window.sessionToken) {
   hideAuth();
   syncStateFromCloud().then(() => {
     renderJournal(); renderKb(); switchTab('dash');
+    // Re-render chat if cloud returned history that wasn't in localStorage
+    if(history.length > 0 && cm.children.length <= 1) {
+      cm.innerHTML = '';
+      history.forEach(m => addBubble(m.role, m.content || ''));
+      addBubble('assistant', '_Sessione ripristinata — ' + history.length + ' messaggi precedenti._');
+    }
   });
 }
 

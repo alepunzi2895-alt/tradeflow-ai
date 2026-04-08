@@ -223,30 +223,81 @@ export default async function handler(req, res) {
     if (candles.length > 50) {
       const H = candles.map(x => x.h), L = candles.map(x => x.l), C = candles.map(x => x.c);
       
-      // ── ADX(10) Simplificato ──
-      const AP = 10;
+      // ── ADX(10) Exact (from ADX and DI for v4) ──
+      const ADX_P = 10;
       let adx = 20, diP = 20, diM = 20;
       try {
-        const TR = candles.map((c, i) => i === 0 ? 0 : Math.max(c.h - c.l, Math.abs(c.h - candles[i - 1].c), Math.abs(c.l - candles[i - 1].c)));
-        const sTR = TR.slice(-AP).reduce((a, b) => a + b, 0) / AP;
-        if (sTR > 0) {
-          const up = candles.map((c, i) => i === 0 ? 0 : (c.h - candles[i - 1].h > candles[i - 1].l - c.l && c.h - candles[i - 1].h > 0 ? c.h - candles[i - 1].h : 0));
-          const dn = candles.map((c, i) => i === 0 ? 0 : (candles[i - 1].l - c.l > c.h - candles[i - 1].h && candles[i - 1].l - c.l > 0 ? candles[i - 1].l - c.l : 0));
-          diP = (up.slice(-AP).reduce((a, b) => a + b, 0) / sTR) * 10;
-          diM = (dn.slice(-AP).reduce((a, b) => a + b, 0) / sTR) * 10;
-          adx = Math.abs(diP - diM) / (diP + diM || 1) * 100;
+        const n = C.length;
+        if (n > ADX_P) {
+          const TR=new Array(n).fill(0),DMP=new Array(n).fill(0),DMM=new Array(n).fill(0);
+          for(let i=1;i<n;i++){
+            TR[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));
+            const upMove=H[i]-H[i-1], downMove=L[i-1]-L[i];
+            DMP[i]=(upMove>downMove&&upMove>0)?upMove:0;
+            DMM[i]=(downMove>upMove&&downMove>0)?downMove:0;
+          }
+          const sTR=new Array(n).fill(0),sDMP=new Array(n).fill(0),sDMM=new Array(n).fill(0);
+          for(let i=1;i<n;i++){
+            sTR[i]=sTR[i-1]-sTR[i-1]/ADX_P+TR[i];
+            sDMP[i]=sDMP[i-1]-sDMP[i-1]/ADX_P+DMP[i];
+            sDMM[i]=sDMM[i-1]-sDMM[i-1]/ADX_P+DMM[i];
+          }
+          const DIP=sTR.map((v,i)=>v>0?sDMP[i]/v*100:0);
+          const DIM=sTR.map((v,i)=>v>0?sDMM[i]/v*100:0);
+          const DX=DIP.map((v,i)=>{const s=v+DIM[i];return s>0?Math.abs(v-DIM[i])/s*100:0;});
+          
+          const ADX=new Array(n).fill(null);
+          for(let i=ADX_P-1;i<n;i++){
+            let sum=0;for(let j=0;j<ADX_P;j++)sum+=(DX[i-j]||0);
+            ADX[i]=sum/ADX_P;
+          }
+          adx = ADX[n-1] || 20;
+          diP = DIP[n-1] || 20;
+          diM = DIM[n-1] || 20;
         }
       } catch(e) {}
       response.adx = { adx: +adx.toFixed(2), di_plus: +diP.toFixed(1), di_minus: +diM.toFixed(1), trending: adx > 20 };
 
-      // ── CCI_S Simple ──
+      // ── CCI_S Exact ──
       try {
-        const last50 = C.slice(-50);
-        const mean = last50.reduce((a, b) => a + b, 0) / 50;
-        const mdev = last50.reduce((a, b) => a + Math.abs(b - mean), 0) / 50;
-        const cci = mdev === 0 ? 0 : (C.at(-1) - mean) / (0.015 * mdev);
-        const cci_s = ( (cci + 200) / 400 ) * 100; // normalized to 0-100
-        response.cci = { value: +cci_s.toFixed(2), zone: cci_s > 75 ? 'overbought' : cci_s < 25 ? 'oversold' : 'neutral' };
+        const n = C.length;
+        if (n > 120) {
+          const CCI_P=50, STOCH_P=50, SK=8, SD=8;
+          const cci=new Array(n).fill(null);
+          for(let i=CCI_P-1;i<n;i++){
+            const sl=C.slice(i-CCI_P+1,i+1);
+            const mn=sl.reduce((a,b)=>a+b,0)/CCI_P;
+            const md=sl.reduce((a,b)=>a+Math.abs(b-mn),0)/CCI_P;
+            cci[i]=md===0?0:(C[i]-mn)/(0.015*md);
+          }
+          const stk=new Array(n).fill(null);
+          for(let i=CCI_P+STOCH_P-2;i<n;i++){
+            if(cci[i]==null)continue;
+            let lv=Infinity, hv=-Infinity;
+            for(let j=i-STOCH_P+1;j<=i;j++){if(cci[j]!=null){lv=Math.min(lv,cci[j]);hv=Math.max(hv,cci[j]);}}
+            stk[i]=(hv-lv)===0?50:((cci[i]-lv)/(hv-lv))*100;
+          }
+          const stk_k=new Array(n).fill(null);
+          for(let i=SK-1;i<n;i++){
+            const sl=stk.slice(i-SK+1,i+1);
+            if(!sl.some(v=>v==null)) stk_k[i]=sl.reduce((a,b)=>a+b,0)/SK;
+          }
+          const stk_d=new Array(n).fill(null);
+          for(let i=SD-1;i<n;i++){
+            const sl=stk_k.slice(i-SD+1,i+1);
+            if(!sl.some(v=>v==null)) stk_d[i]=sl.reduce((a,b)=>a+b,0)/SD;
+          }
+          const cci_s = stk_d[n-1] ?? 50;
+          response.cci = { value: +cci_s.toFixed(2), zone: cci_s > 75 ? 'overbought' : cci_s < 25 ? 'oversold' : 'neutral' };
+        } else {
+          // fallback to simple if not enough candles
+          const last50 = C.slice(-50);
+          const mean = last50.reduce((a, b) => a + b, 0) / 50;
+          const mdev = last50.reduce((a, b) => a + Math.abs(b - mean), 0) / 50;
+          const cci = mdev === 0 ? 0 : (C.at(-1) - mean) / (0.015 * mdev);
+          const cci_s = ( (cci + 200) / 400 ) * 100;
+          response.cci = { value: +cci_s.toFixed(2), zone: cci_s > 75 ? 'overbought' : cci_s < 25 ? 'oversold' : 'neutral' };
+        }
       } catch(e) {}
     }
 

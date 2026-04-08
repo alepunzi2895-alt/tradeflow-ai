@@ -182,9 +182,38 @@ async function loadSlowData(){
       }catch(e){console.log('Direct sentiment failed:',e.message);}
     }
   });
-  fetchJSON('/api/market?type=calendar', 7000).then(cd=>{
-    if(cd?.ok){dashContext.calendar=cd.events;updateCalendar(cd.events);}
-    else updateCalendar([]);
+  fetchJSON('/api/market?type=calendar', 7000).then(async cd=>{
+    if(cd?.ok && cd.events && cd.events.length > 0){
+      dashContext.calendar=cd.events;
+      updateCalendar(cd.events);
+    } else {
+      // Vercel might be blocked, use client-side fetch via reliable CORS proxy
+      try {
+        const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
+        const r = await fetch(proxyUrl);
+        if (r.ok) {
+          const proxyData = await r.json();
+          const data = JSON.parse(proxyData.contents);
+          const important = data.filter(e => {
+            const country = (e.currency || e.country || "").toUpperCase();
+            return ["USD","EUR","GBP","JPY","AUD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
+          });
+          const events = important.slice(0, 15).map(e => ({
+            id: e.id || Math.random().toString(36).substr(2, 9),
+            time: e.date || e.time || new Date().toISOString(),
+            currency: e.currency || e.country || "USD",
+            event: e.event || e.title || "Economic Event",
+            impact: e.impact || "High"
+          }));
+          dashContext.calendar = events;
+          updateCalendar(events);
+        } else {
+          updateCalendar([]);
+        }
+      } catch(e) {
+        updateCalendar([]);
+      }
+    }
   });
 }
 

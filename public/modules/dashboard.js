@@ -429,8 +429,12 @@ function updateConfidence(prices, sentimentData){
     if(upcoming.length>0){
       const next=upcoming[0];
       const ml=next.minsLeft;
-      const isXau=['NFP','CPI','FOMC','Federal','Fed','PCE','GDP','Payroll','Powell','Employment','Inflation'].some(k=>(next.event||'').includes(k));
-      const xm=isXau?1.3:1.0;
+      const eventName = (next.event||'').toUpperCase();
+      const isMacroRelevant = ['NFP','CPI','FOMC','FEDERAL','FED','PCE','GDP','PAYROLL','POWELL','EMPLOYMENT','INFLATION'].some(k=>eventName.includes(k));
+      // For XAG, industrial news (Oil, Production) are also relevant
+      const isIndustrial = isXag && (eventName.includes('OIL') || eventName.includes('PRODUCTION') || eventName.includes('MANUFACTURING'));
+      
+      const xm = (isMacroRelevant || isIndustrial) ? 1.3 : 1.0;
       if(ml>=-60&&ml<=0){newsScore=Math.round(20*xm);newsLabel='📊 '+(next.event||'').split(' ').slice(0,3).join(' ')+' IN CORSO';newsSub='Volatilità estrema — no entry';newsCol='var(--red)';}
       else if(ml>0&&ml<=30){newsScore=Math.round(15*xm);newsLabel='⚠️ '+(next.event||'').split(' ').slice(0,3).join(' ')+' tra '+Math.round(ml)+'min';newsSub='ZONA ROSSA — chiudi size';newsCol='var(--red)';}
       else if(ml>30&&ml<=120){newsScore=Math.round(35*xm);newsLabel='⚡ '+(next.event||'').split(' ').slice(0,3).join(' ')+' tra '+Math.round(ml)+'min';newsSub='Pre-news — size ridotta';newsCol='var(--yellow)';}
@@ -439,6 +443,13 @@ function updateConfidence(prices, sentimentData){
     }
   }
   newsScore=Math.max(0,Math.min(100,newsScore));
+
+  // Integrate Industrial Demand (Oil) for XAG as part of GSR/Risk context
+  if(isXag && prices.OIL){
+    const oilChg = parseFloat(prices.OIL.change);
+    if(oilChg > 2){ gsrScore = Math.min(100, gsrScore + 5); gsrSub += ' + Supporto domanda ind. (Oil ↑)'; }
+    else if(oilChg < -2){ gsrScore = Math.max(0, gsrScore - 5); gsrSub += ' - Flessione ind. (Oil ↓)'; }
+  }
 
   // ── FACTOR 8: US 10Y Yield (New - peso 10%) ─────────────
   let yieldScore=50, yieldLabel='Rendimenti stabili', yieldSub='', yieldCol='var(--dim)';

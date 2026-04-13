@@ -49,8 +49,15 @@ export default async function handler(req, res) {
         const q = rs.indicators?.quote?.[0] || {};
         const candles = [];
         for (let i = 0; i < rs.timestamp.length; i++) {
-          if (q.close?.[i] != null && q.high?.[i] != null && q.low?.[i] != null)
-            candles.push({ t: rs.timestamp[i], h: +q.high[i].toFixed(2), l: +q.low[i].toFixed(2), c: +q.close[i].toFixed(2) });
+          if (q.close?.[i] != null)
+            candles.push({ 
+              t: rs.timestamp[i], 
+              o: q.open?.[i] ? +q.open[i].toFixed(2) : +q.close[i].toFixed(2),
+              h: q.high?.[i] ? +q.high[i].toFixed(2) : +q.close[i].toFixed(2), 
+              l: q.low?.[i] ? +q.low[i].toFixed(2) : +q.close[i].toFixed(2), 
+              c: +q.close[i].toFixed(2),
+              v: q.volume?.[i] || 0
+            });
         }
         if (candles.length < 30) continue;
         return res.status(200).json({ ok: true, source: sym, count: candles.length, candles });

@@ -109,15 +109,16 @@ async function seRefresh() {
   const el = document.getElementById('se-content');
   if(!el) return;
 
-  // 1. Candele da Yahoo (condivise o fetch veloce)
+  // 1. Candele da Proxy (per evitare CORS)
   let candles = [];
   try {
-    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD%3DX?interval=1h&range=60d');
+    const res = await fetch('/api/price?type=candles&asset=XAU&interval=1h&range=60d');
     const json = await res.json();
-    const r = json.chart.result[0];
-    const ts = r.timestamp;
-    const q = r.indicators.quote[0];
-    candles = ts.map((t,idx) => ({t, o:q.open[idx], h:q.high[idx], l:q.low[idx], c:q.close[idx], v:q.volume[idx]}));
+    if (json.ok && json.candles) {
+      candles = json.candles;
+    } else {
+      throw new Error(json.error || 'Errore dati candele');
+    }
   } catch(e) {
     console.error("Errore fetch candele SE:", e);
     seRenderNoData();

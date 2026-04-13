@@ -76,7 +76,6 @@ async function loadPrices(){
           marketData=prices; dashContext.prices=prices;
           updatePriceStrip(prices);
           updateCorrelation(prices);
-          updateMacroCards(prices);
           updateConfidence(prices, dashContext.sentiment||null);
           updateHeader(prices);
           return; // Already have full data from tvprice
@@ -90,7 +89,6 @@ async function loadPrices(){
         marketData=prices; dashContext.prices=prices;
         updatePriceStrip(prices);
         updateCorrelation(prices);
-        updateMacroCards(prices);
         updateConfidence(prices, dashContext.sentiment||null);
         updateHeader(prices);
       }
@@ -270,36 +268,6 @@ function buildDerivedPrices(prices){
   return prices;
 }
 
-function updateMacroCards(prices){
-  if(!prices) return;
-  const active = window.activeAsset || 'XAU';
-  const u=prices.US10Y_CONTEXT;
-  if(u){
-    const el=document.getElementById('us10y-val');
-    const sig=document.getElementById('us10y-signal');
-    const lbl=document.getElementById('us10y-label');
-    if(el) el.textContent=u.yield+'%';
-    if(sig){
-      const isUp=u.change>0.05, isDown=u.change<-0.05;
-      sig.textContent=isUp?`↑ ${active} ↓`:isDown?`↓ ${active} ↑`:'→';
-      sig.style.color=isUp?'var(--red)':isDown?'var(--green)':'var(--dim)';
-    }
-    if(lbl) lbl.textContent=u.label;
-  }
-  const g=prices.GOLD_SILVER_RATIO;
-  if(g){
-    const el=document.getElementById('gsr-val');
-    const sig=document.getElementById('gsr-signal');
-    const lbl=document.getElementById('gsr-label');
-    if(el) el.textContent=g.ratio;
-    if(sig){
-      const col=g.signal==='STRESS_FINANZIARIO'?'var(--red)':g.signal==='RISK_OFF'?'var(--yellow)':g.signal==='RISK_ON'?'var(--green)':'var(--dim)';
-      sig.textContent=g.signal.replace('_',' ');sig.style.color=col;
-    }
-    if(lbl) lbl.textContent=g.label;
-  }
-  // COT is updated directly by loadCotData — no need to repeat here
-}
 
 function updateCorrelation(prices){
   const c=prices.CORRELATION;if(!c)return;
@@ -661,6 +629,9 @@ function showIndicatorInfo(key, currentData){
   let statusText = '';
   if(currentData){
     statusText = `<b>Stato Attuale:</b> ${currentData.label}<br><b>Score:</b> ${currentData.score}/100`;
+    if(key === 'cot' && window._cotData?.last_updated){
+      statusText += `<br><br><span style="font-size:10px;color:var(--dim)">Aggiornato: ${window._cotData.last_updated}</span>`;
+    }
   } else {
     statusText = `<b>Parametro calcolato in tempo reale</b> dal motore MFKK Strategy Score.`;
   }
@@ -840,18 +811,6 @@ async function loadCotData(){
         sig.style.color = bull ? 'var(--green)' : bear ? 'var(--red)' : 'var(--dim)';
       }
       if(lbl) lbl.textContent = d.cot.labels || 'CFTC Large Spec';
-      // Show last update date (cleanup previous if any)
-      const oldD = lbl.parentNode.querySelector('.cot-date');
-      if(oldD) oldD.remove();
-      if(sig && d.cot.last_updated){
-        const dateEl = document.createElement('div');
-        dateEl.className = 'cot-date';
-        dateEl.style.fontSize = '8px';
-        dateEl.style.color = 'var(--dim)';
-        dateEl.style.marginTop = '2px';
-        dateEl.textContent = 'Aggiornato: ' + d.cot.last_updated;
-        lbl.parentNode.appendChild(dateEl);
-      }
     }
   } catch(e){ console.log('COT:', e.message); }
 }

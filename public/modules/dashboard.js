@@ -384,10 +384,22 @@ function updateConfidence(prices, sentimentData){
     const xc=x?parseFloat(x.change):0;
     const eurBull=ec>0.08, gbpBull=gc2>0.08, activeBull=xc>0.2;
     const eurBear=ec<-0.08, gbpBear=gc2<-0.08, activeBear=xc<-0.2;
-    if(activeBull&&eurBull&&gbpBull){multiScore=80;multiLabel='Confluenza BUY';multiSub=`EUR+GBP+${active} bullish`;multiCol='var(--green)';}
-    else if(activeBear&&eurBear&&gbpBear){multiScore=20;multiLabel='Confluenza SELL';multiSub=`EUR+GBP+${active} bearish`;multiCol='var(--red)';}
-    else if(activeBull&&(eurBull||gbpBull)){multiScore=65;multiLabel='Parziale BUY';multiSub=`${active} bullish, conferma parziale`;multiCol='var(--yellow)';}
-    else if(activeBear&&(eurBear||gbpBear)){multiScore=35;multiLabel='Parziale SELL';multiSub=`${active} bearish, conferma parziale`;multiCol='var(--yellow)';}
+    // For XAG, check XAU correlation
+    const xauTrend = prices.XAU ? parseFloat(prices.XAU.change) : 0;
+    const xauBull = xauTrend > 0.15, xauBear = xauTrend < -0.15;
+
+    if(activeBull&&eurBull&&gbpBull){
+      multiScore=80; multiLabel='Confluenza BUY';
+      multiSub=isXag && xauBull ? `EUR+GBP+XAU+${active} bullish` : `EUR+GBP+${active} bullish`;
+      multiCol='var(--green)';
+    }
+    else if(activeBear&&eurBear&&gbpBear){
+      multiScore=20; multiLabel='Confluenza SELL';
+      multiSub=isXag && xauBear ? `EUR+GBP+XAU+${active} bearish` : `EUR+GBP+${active} bearish`;
+      multiCol='var(--red)';
+    }
+    else if(activeBull&&(eurBull||gbpBull||(isXag && xauBull))){multiScore=65;multiLabel='Parziale BUY';multiSub=`${active} bullish, conferma parziale`;multiCol='var(--yellow)';}
+    else if(activeBear&&(eurBear||gbpBear||(isXag && xauBear))){multiScore=35;multiLabel='Parziale SELL';multiSub=`${active} bearish, conferma parziale`;multiCol='var(--yellow)';}
   }
 
   // ── FACTOR 6: Volatilità (peso 8%) ──────────────────────
@@ -396,9 +408,13 @@ function updateConfidence(prices, sentimentData){
   if(xVol&&xVol.high&&xVol.low){
     const range=parseFloat(xVol.high)-parseFloat(xVol.low);
     const rangePct=xVol.price?(range/parseFloat(xVol.price)*100):0;
-    if(rangePct>1.5){volScore=25;volLabel=`Range ampio $${range.toFixed(0)}`;volSub='Alta volatilità — rischio elevato';volCol='var(--yellow)';}
-    else if(rangePct>0.8){volScore=60;volLabel=`Range normale $${range.toFixed(0)}`;volSub='Volatilità nella norma';volCol='var(--green)';}
-    else{volScore=75;volLabel=`Range stretto $${range.toFixed(0)}`;volSub='Bassa volatilità — setup puliti possibili';volCol='var(--green)';}
+    // XAG is 1.5x - 2x more volatile than XAU
+    const wideThreshold = isXag ? 2.5 : 1.5;
+    const narrowThreshold = isXag ? 1.2 : 0.8;
+
+    if(rangePct > wideThreshold){volScore=25;volLabel=`Range ampio $${range.toFixed(2)}`;volSub='Alta volatilità — rischio elevato';volCol='var(--yellow)';}
+    else if(rangePct > narrowThreshold){volScore=60;volLabel=`Range normale $${range.toFixed(2)}`;volSub='Volatilità nella norma';volCol='var(--green)';}
+    else{volScore=75;volLabel=`Range stretto $${range.toFixed(2)}`;volSub='Bassa volatilità — setup puliti possibili';volCol='var(--green)';}
   }
 
   // ── FACTOR 7: News Impact (peso 13%) ────────────────────

@@ -151,12 +151,14 @@ export default async function handler(req, res) {
 
     // ── 4. COT (CFTC Data — Placeholder) ───────────────────
     if (type === 'cot') {
+      const sym = (symbol || 'XAUUSD').toUpperCase();
+      const isSilver = sym.includes('XAG') || sym.includes('SILVER');
       return res.status(200).json({ 
         ok: true, 
         cot: { 
-          net: "+182K", 
+          net: isSilver ? "+42K" : "+182K", 
           signal: "BULLISH", 
-          labels: "Large Speculators",
+          labels: isSilver ? "Silver (COMEX) Speculators" : "Gold (COMEX) Large Speculators",
           last_updated: "Venerdì, 10 Aprile 2024"
         } 
       });

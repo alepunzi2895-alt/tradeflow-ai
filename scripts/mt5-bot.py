@@ -554,19 +554,27 @@ def get_open_positions_data():
 def get_recent_trades_data(n=20):
     """Legge gli ultimi N trade direttamente da MT5 History"""
     try:
-        # Usiamo timestamp per evitare problemi di fuso orario con datetime
-        end_ts = int(time.time()) + 3600
-        start_ts = end_ts - (3 * 24 * 3600) # 3 giorni fa
+        # Brute force: chiediamo da 0 a un futuro molto lontano
+        # MT5 history_deals_get accetta timestamp o datetime
+        end_ts = int(time.time()) + 86400 * 7 # +1 settimana
+        start_ts = 0
         
         deals = mt5.history_deals_get(start_ts, end_ts)
         if deals is None:
-            log.debug(f"History deals returned None. Error: {mt5.last_error()}")
+            # Fallback usando group="*"
+            deals = mt5.history_deals_get(group="*")
+            
+        if deals is None:
+            log.debug(f"History deals still None. Last error: {mt5.last_error()}")
             return []
+            
+        log.info(f"📊 Recuperati {len(deals)} deal dallo storico MT5")
         
         result = []
         for d in deals:
-            # DEAL_ENTRY_OUT = 1
-            if d.symbol == "" or d.entry != 1: continue
+            # DEAL_ENTRY_OUT = 1 (chiusura), DEAL_ENTRY_INOUT = 2 (reverse)
+            if d.symbol == "" or d.entry not in [1, 2]: continue
+            
             # Filtriamo per mostrare solo i deal relativi a Gold
             if SYMBOL.upper() not in d.symbol.upper(): continue
             
@@ -704,16 +712,16 @@ def run():
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
                 
-                # Calcola statistiche oggi reali da MT5
-                now_ts_sync = int(time.time())
-                start_today_ts = int(datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
-                today_deals = mt5.history_deals_get(start_today_ts, now_ts_sync + 3600)
+                # Calcola statistiche oggi reali da MT5 (brute force)
+                all_deals = mt5.history_deals_get(0, int(time.time()) + 86400)
                 
                 real_pnl_today = 0
                 real_trades_today = 0
-                if today_deals:
-                    for d in today_deals:
-                        if d.symbol != "" and d.entry == 1: # 1 = DEAL_ENTRY_OUT (chiusura)
+                if all_deals:
+                    start_today_ts = int(datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+                    for d in all_deals:
+                        # Consideriamo solo i deal di oggi e di tipo OUT
+                        if d.time >= start_today_ts and d.symbol != "" and d.entry in [1, 2]:
                             real_pnl_today += (d.profit + d.swap + d.commission)
                             real_trades_today += 1
 

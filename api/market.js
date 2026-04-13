@@ -15,7 +15,7 @@ const TICKERS = [
 
 const TICKER_MAP = {
   'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU','CAPITALCOM:GOLD':'XAU','TVC:GOLD':'XAU','FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
-  'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER','CAPITALCOM:SILVER':'SILVER','TVC:SILVER':'SILVER','FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
+  'OANDA:XAGUSD':'XAG','FOREXCOM:XAGUSD':'XAG','PEPPERSTONE:XAGUSD':'XAG','CAPITALCOM:SILVER':'XAG','TVC:SILVER':'XAG','FX:XAGUSD':'XAG','SAXO:XAGUSD':'XAG','FPMARKETS:XAGUSD':'XAG',
   'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
   'TVC:DXY':'DXY', 'TVC:US10Y':'US10Y',
   'OANDA:WTICOUSD':'OIL', 'TVC:USOIL':'OIL', 'CAPITALCOM:OIL':'OIL', 'FX:USOIL':'OIL', 'SAXO:USOILUSD':'OIL', 'FOREXCOM:WTIUSD':'OIL'
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
             if (!key || prices[key]) continue;
             const [close, chg, hi, lo] = item.d;
             if (close == null) continue;
-            const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+            const dec = (key==='XAU'||key==='OIL'||key==='XAG') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
             prices[key] = {
               price: (+close).toFixed(dec),
               change: +(chg||0).toFixed(2),

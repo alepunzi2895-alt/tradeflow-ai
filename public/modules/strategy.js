@@ -1,545 +1,609 @@
-// TradeFlow AI — Strategy Engine (live)
-// Implementa 4 strategie validate da backtest 730gg H1 XAU/USD
-// Regime detection + selezione automatica strategia ottimale per ogni giorno
-// Max 3 trade/giorno, cooldown 60 min, skip giorno estremo (ATR>3x media)
+// TradeFlow AI — Strategy Engine v2
+// 18 indicatori · 5 strategie validate (PF ≥ 1.10) su 730gg H1 XAU/USD
+// Regime detection → selezione automatica strategia ottimale
 
-// ── CONFIG (calibrata da strategy-engine.py backtest) ────────────────────────
-const SE_TP = 20, SE_SL = 12;
-const SE_MAX_TRADES = 3;
-const SE_COOLDOWN_H = 1;
-const SE_SESSION_START = 7, SE_SESSION_END = 17; // UTC
-
-// Profitability ranking (dal backtest 730gg):
-// EXHAUSTION PF=2.29, RSI_EXTREME PF=1.38, SESSION_MOM PF=1.11, MACD_ZERO PF=1.09
-// EMA_TREND PF=1.01 e BB_REVERSAL PF=0.98 ESCLUSE (non profittevoli)
+// ── CONFIG (ottimizzata da backtest) ─────────────────────────────────────────
+const SE = {
+  session:  { start: 7, end: 17 },     // UTC London+NY
+  maxTrades: 3,
+  cooldownH: 1,
+  extremeMult: 3.0,                     // ATR > 3x avg = giorno estremo
+  strategies: {
+    S01_EXHAUSTION:    { tp: 15, sl: 9,  pf: 2.79, wr: '62.6%', label: 'Exhaustion' },
+    S06_ORDERBLOCK:    { tp: 18, sl: 10, pf: 1.57, wr: '46.6%', label: 'Order Block' },
+    S09_VWAP_WPER:     { tp: 18, sl: 10, pf: 1.65, wr: '47.9%', label: 'VWAP + W%R' },
+    S12_WPR_KELTNER:   { tp: 20, sl: 12, pf: 1.22, wr: '42.3%', label: 'W%R + Keltner' },
+    S10_SESSION_MOM:   { tp: 20, sl: 12, pf: 1.10, wr: '39.8%', label: 'Session Momentum' },
+  },
+  regimePriority: {
+    TREND_UP:   ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
+    TREND_DOWN: ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
+    WEAK_UP:    ['S06_ORDERBLOCK','S10_SESSION_MOM','S12_WPR_KELTNER'],
+    WEAK_DOWN:  ['S06_ORDERBLOCK','S10_SESSION_MOM','S12_WPR_KELTNER'],
+    RANGE:      ['S09_VWAP_WPER','S12_WPR_KELTNER','S06_ORDERBLOCK'],
+    VOLATILE:   ['S12_WPR_KELTNER','S09_VWAP_WPER'],
+    UNKNOWN:    ['S10_SESSION_MOM','S09_VWAP_WPER'],
+  }
+};
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let seCandles = [];       // H1 candles cache (da mfkk.js / proxy)
-let seLastUpdate = 0;
-let seSignalsToday = [];  // segnali generati oggi
+let seCandles = [];
+let seInds = null;
 let seRegime = 'UNKNOWN';
-let seActiveStrategies = [];
-let seRefreshTimer = null;
-let seCanvasData = {};    // dati per il mini chart
+let seTimer = null;
 
-// ── MATH HELPERS (mirror di strategy-engine.py) ───────────────────────────────
-function _seEma(src, p) {
-  const k = 2/(p+1); let v = src[0]; const o = [v];
-  for (let i=1; i<src.length; i++) { v = src[i]*k + v*(1-k); o.push(v); }
+// ── MATH HELPERS ──────────────────────────────────────────────────────────────
+const _seEma = (src,p) => {
+  const k=2/(p+1); let v=src[0]; const o=[v];
+  for(let i=1;i<src.length;i++){v=src[i]*k+v*(1-k);o.push(v);}
   return o;
-}
-function _seSma(src, p) {
-  const o = new Array(src.length).fill(null);
-  for (let i=p-1; i<src.length; i++) {
-    let s=0; for(let j=0;j<p;j++) s+=(src[i-j]||0);
-    o[i]=s/p;
+};
+const _seSma = (src,p) => {
+  const o=new Array(src.length).fill(null);
+  for(let i=p-1;i<src.length;i++){
+    let s=0;for(let j=0;j<p;j++)s+=(src[i-j]||0);o[i]=s/p;
   }
   return o;
-}
-function _seRsi(src, p=14) {
-  const n=src.length, out=new Array(n).fill(null);
-  if(n<=p) return out;
-  const gains=[], losses=[];
-  for(let i=1;i<n;i++){
-    gains.push(Math.max(0,src[i]-src[i-1]));
-    losses.push(Math.max(0,src[i-1]-src[i]));
-  }
-  let ag=gains.slice(0,p).reduce((a,b)=>a+b,0)/p;
-  let al=losses.slice(0,p).reduce((a,b)=>a+b,0)/p;
+};
+const _seSmma = (src,p) => {  // Smoothed MA (Alligator)
+  const o=new Array(p-1).fill(null);
+  let v=src.slice(0,p).reduce((a,b)=>a+b,0)/p;o.push(v);
+  for(let i=p;i<src.length;i++){v=(v*(p-1)+src[i])/p;o.push(v);}
+  return o;
+};
+const _seRsi = (src,p=14) => {
+  const n=src.length,out=new Array(n).fill(null);
+  const g=[],l=[];
+  for(let i=1;i<n;i++){g.push(Math.max(0,src[i]-src[i-1]));l.push(Math.max(0,src[i-1]-src[i]));}
+  let ag=g.slice(0,p).reduce((a,b)=>a+b,0)/p,al=l.slice(0,p).reduce((a,b)=>a+b,0)/p;
   out[p]=100-100/(1+(al>0?ag/al:100));
-  for(let i=p;i<gains.length;i++){
-    ag=(ag*(p-1)+gains[i])/p; al=(al*(p-1)+losses[i])/p;
-    out[i+1]=100-100/(1+(al>0?ag/al:100));
-  }
+  for(let i=p;i<g.length;i++){ag=(ag*(p-1)+g[i])/p;al=(al*(p-1)+l[i])/p;out[i+1]=100-100/(1+(al>0?ag/al:100));}
   return out;
-}
-function _seBollinger(src, p=20, mult=2.0) {
-  const mid=_seSma(src,p), up=[], lo=[];
-  for(let i=0;i<src.length;i++){
-    if(mid[i]==null){up.push(null);lo.push(null);continue;}
-    const sl=src.slice(i-p+1,i+1);
-    const mn=sl.reduce((a,b)=>a+b,0)/p;
-    const std=Math.sqrt(sl.reduce((a,b)=>a+(b-mn)**2,0)/p);
-    up.push(mid[i]+mult*std); lo.push(mid[i]-mult*std);
-  }
-  return {up,mid,lo};
-}
-function _seStoch(H,L,C,kp=14,dp=3,sp=3) {
-  const n=C.length, rk=new Array(n).fill(null);
-  for(let i=kp-1;i<n;i++){
-    const h=Math.max(...H.slice(i-kp+1,i+1));
-    const l=Math.min(...L.slice(i-kp+1,i+1));
-    rk[i]=h>l?(C[i]-l)/(h-l)*100:50;
-  }
-  const sk=_seSma(rk.map(x=>x??50),dp);
-  const sd=_seSma(sk.map(x=>x??50),sp);
-  return {sk,sd};
-}
-function _seAdx(H,L,C,p=14) {
-  const n=C.length;
-  const TR=[0],DMP=[0],DMM=[0];
+};
+const _seAtr = (H,L,C,p=14) => {
+  const tr=[0];
+  for(let i=1;i<C.length;i++)tr.push(Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])));
+  return _seSma(tr,p);
+};
+const _seAdx = (H,L,C,p=14) => {
+  const n=C.length,TR=[0],DMP=[0],DMM=[0];
   for(let i=1;i<n;i++){
     TR.push(Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])));
-    const up=H[i]-H[i-1], dn=L[i-1]-L[i];
-    DMP.push(up>dn&&up>0?up:0);
-    DMM.push(dn>up&&dn>0?dn:0);
+    const up=H[i]-H[i-1],dn=L[i-1]-L[i];
+    DMP.push(up>dn&&up>0?up:0);DMM.push(dn>up&&dn>0?dn:0);
   }
-  const sTR=[0],sDMP=[0],sDMM=[0];
+  const sT=[0],sP=[0],sM=[0];
   for(let i=1;i<n;i++){
-    sTR.push(sTR[i-1]-sTR[i-1]/p+TR[i]);
-    sDMP.push(sDMP[i-1]-sDMP[i-1]/p+DMP[i]);
-    sDMM.push(sDMM[i-1]-sDMM[i-1]/p+DMM[i]);
+    sT.push(sT[i-1]-sT[i-1]/p+TR[i]);sP.push(sP[i-1]-sP[i-1]/p+DMP[i]);sM.push(sM[i-1]-sM[i-1]/p+DMM[i]);
   }
-  const DIP=sTR.map((v,i)=>v>0?sDMP[i]/v*100:0);
-  const DIM=sTR.map((v,i)=>v>0?sDMM[i]/v*100:0);
+  const DIP=sT.map((v,i)=>v>0?sP[i]/v*100:0);
+  const DIM=sT.map((v,i)=>v>0?sM[i]/v*100:0);
   const DX=DIP.map((v,i)=>{const s=v+DIM[i];return s>0?Math.abs(v-DIM[i])/s*100:0;});
-  const ADX=_seSma(DX,p);
-  return {adx:ADX,dip:DIP,dim:DIM};
-}
-function _seAtr(H,L,C,p=14) {
-  const tr=[0];
+  return {adx:_seSma(DX,p),dip:DIP,dim:DIM};
+};
+const _seMacd = (C,f=12,sl=26,sig=9) => {
+  const e1=_seEma(C,f),e2=_seEma(C,sl),ml=e1.map((v,i)=>v-e2[i]),sg=_seEma(ml,sig);
+  return {line:ml,sig:sg,hist:ml.map((v,i)=>v-sg[i])};
+};
+const _seBB = (C,p=20,m=2.0) => {
+  const mid=_seSma(C,p),up=[],lo=[],bw=[];
+  for(let i=0;i<C.length;i++){
+    if(mid[i]==null){up.push(null);lo.push(null);bw.push(null);continue;}
+    const sl=C.slice(i-p+1,i+1),mn=sl.reduce((a,b)=>a+b,0)/p;
+    const std=Math.sqrt(sl.reduce((a,b)=>a+(b-mn)**2,0)/p);
+    up.push(mid[i]+m*std);lo.push(mid[i]-m*std);
+    bw.push(mid[i]>0?(up[up.length-1]-lo[lo.length-1])/mid[i]:null);
+  }
+  return {up,mid,lo,bw};
+};
+const _seKeltner = (H,L,C,p=20,m=2.0,ap=10) => {
+  const mid=_seEma(C,p),atr=_seAtr(H,L,C,ap);
+  return {up:mid.map((v,i)=>v+m*(atr[i]||0)),mid,lo:mid.map((v,i)=>v-m*(atr[i]||0))};
+};
+const _seSupertrend = (H,L,C,p=10,m=3.0) => {
+  const atr=_seAtr(H,L,C,p),n=C.length,dir=new Array(n).fill(1);
+  const fUp=new Array(n).fill(0),fLo=new Array(n).fill(0);
+  for(let i=1;i<n;i++){
+    const ub=(H[i]+L[i])/2+m*(atr[i]||0),lb=(H[i]+L[i])/2-m*(atr[i]||0);
+    fUp[i]=ub<fUp[i-1]||C[i-1]>fUp[i-1]?ub:fUp[i-1];
+    fLo[i]=lb>fLo[i-1]||C[i-1]<fLo[i-1]?lb:fLo[i-1];
+    if(dir[i-1]===1&&C[i]<=fUp[i]){dir[i]=1;}
+    else if(dir[i-1]===1&&C[i]>fUp[i]){dir[i]=-1;}
+    else if(dir[i-1]===-1&&C[i]>=fLo[i]){dir[i]=-1;}
+    else if(dir[i-1]===-1&&C[i]<fLo[i]){dir[i]=1;}
+    else dir[i]=dir[i-1];
+  }
+  return dir; // -1=bullish (price above), 1=bearish
+};
+const _seAlligator = (H,L) => {
+  const med=H.map((h,i)=>(h+L[i])/2);
+  return {jaw:_seSmma(med,13),teeth:_seSmma(med,8),lips:_seSmma(med,5)};
+};
+const _seObv = (C,V) => {
+  const o=[0];
   for(let i=1;i<C.length;i++)
-    tr.push(Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])));
-  return _seSma(tr,p);
-}
+    o.push(o[i-1]+(C[i]>C[i-1]?V[i]:C[i]<C[i-1]?-V[i]:0));
+  return o;
+};
+const _seMom = (C,p=10) => C.map((v,i)=>i<p?null:(v-C[i-p])/C[i-p]*100);
+const _seWpr = (H,L,C,p=14) => C.map((_,i)=>{
+  if(i<p-1)return null;
+  const hi=Math.max(...H.slice(i-p+1,i+1)),lo=Math.min(...L.slice(i-p+1,i+1));
+  return hi>lo?(hi-C[i])/(hi-lo)*-100:-50;
+});
+const _seStochRsi = (C,rp=14,sp=14,kp=3,dp=3) => {
+  const r=_seRsi(C,rp),n=C.length,raw=new Array(n).fill(null);
+  for(let i=sp-1;i<n;i++){
+    const sl=r.slice(i-sp+1,i+1).filter(x=>x!=null);
+    if(sl.length<sp||r[i]==null)continue;
+    const hi=Math.max(...sl),lo=Math.min(...sl);
+    raw[i]=hi>lo?(r[i]-lo)/(hi-lo)*100:50;
+  }
+  return {k:_seSma(raw.map(x=>x??50),kp),d:_seSma(raw.map(x=>x??50).map((_,i)=>_seSma(raw.map(x=>x??50),kp)[i]??50),dp)};
+};
+const _seVwap = (candles) => {
+  let cpv=0,cv=0,lastDay=-1;
+  return candles.map(c=>{
+    const d=new Date(c.t*1000).getUTCDate();
+    if(d!==lastDay){cpv=0;cv=0;lastDay=d;}
+    const tp=(c.h+c.l+c.c)/3;cpv+=tp*c.v;cv+=c.v;
+    return cv>0?cpv/cv:tp;
+  });
+};
+const _seOrderBlocks = (H,L,C,lookback=5,thr=0.5) => {
+  const bull=new Array(C.length).fill(false),bear=new Array(C.length).fill(false);
+  for(let i=lookback;i<C.length-3;i++){
+    const gain=([1,2,3].map(j=>Math.max(0,C[i+j]-C[i+j-1])).reduce((a,b)=>a+b,0))/C[i]*100;
+    const drop=([1,2,3].map(j=>Math.max(0,C[i+j-1]-C[i+j])).reduce((a,b)=>a+b,0))/C[i]*100;
+    if(gain>thr&&C[i]<C[i-1]){// bull OB
+      for(let j=i+1;j<Math.min(i+50,C.length);j++){
+        if(C[j]>=L[i]&&C[j]<=H[i]){bull[j]=true;}
+        else if(C[j]<L[i]) break;
+      }
+    }
+    if(drop>thr&&C[i]>C[i-1]){// bear OB
+      for(let j=i+1;j<Math.min(i+50,C.length);j++){
+        if(C[j]>=L[i]&&C[j]<=H[i]){bear[j]=true;}
+        else if(C[j]>H[i]) break;
+      }
+    }
+  }
+  return {bull,bear};
+};
 
-// ── COMPUTE ALL INDICATORS FROM CANDLE ARRAY ──────────────────────────────────
+// ── COMPUTE ALL INDICATORS ────────────────────────────────────────────────────
 function seComputeAll(candles) {
-  if (!candles || candles.length < 220) return null;
-  const H=candles.map(c=>c.h), L=candles.map(c=>c.l), C=candles.map(c=>c.c);
+  if(!candles||candles.length<220) return null;
+  const H=candles.map(c=>c.h),L=candles.map(c=>c.l),C=candles.map(c=>c.c),V=candles.map(c=>c.v||1);
   const n=C.length;
-
-  const e12=_seEma(C,12), e26=_seEma(C,26);
-  const macd=e12.map((v,i)=>v-e26[i]);
-  const sig=_seEma(macd,9);
-  const hist=macd.map((v,i)=>v-sig[i]);
-
   const {adx,dip,dim}=_seAdx(H,L,C,14);
-  const atr=_seAtr(H,L,C,14);
-  const atr30=_seSma(atr.map(x=>x||0),30);
+  const {line:macd,sig:macdSig,hist:macdHist}=_seMacd(C);
+  const atr=_seAtr(H,L,C,14),atr30=_seSma(atr.map(x=>x||0),30);
   const rsi=_seRsi(C,14);
-  const bb=_seBollinger(C,20,2.0);
-  const {sk,sd}=_seStoch(H,L,C,14,3,3);
-  const e20=_seEma(C,20), e50=_seEma(C,50), e200=_seEma(C,200);
-
-  return {H,L,C,n,macd,sig,hist,adx,dip,dim,atr,atr30,rsi,
-          bbUp:bb.up,bbMid:bb.mid,bbLo:bb.lo,sk,sd,e20,e50,e200};
+  const {up:bbUp,lo:bbLo,bw:bbW}=_seBB(C,20,2.0);
+  const kc=_seKeltner(H,L,C,20,2.0,10);
+  const st=_seSupertrend(H,L,C,10,3.0);
+  const {jaw,teeth,lips}=_seAlligator(H,L);
+  const obv=_seObv(C,V),obvE=_seEma(obv,20);
+  const mom=_seMom(C,10),wpr=_seWpr(H,L,C,14),vwap=_seVwap(candles);
+  const {bull:obBull,bear:obBear}=_seOrderBlocks(H,L,C);
+  const srsi=_seStochRsi(C);
+  const e20=_seEma(C,20),e50=_seEma(C,50),e100=_seEma(C,100),e200=_seEma(C,200);
+  return {H,L,C,V,n,adx,dip,dim,macd,macdSig,macdHist,atr,atr30,rsi,
+          bbUp,bbLo,bbW,kc,st,jaw,teeth,lips,obv,obvE,mom,wpr,vwap,
+          obBull,obBear,srsiK:srsi.k,srsiD:srsi.d,e20,e50,e100,e200};
 }
 
 // ── REGIME DETECTION ──────────────────────────────────────────────────────────
-function seDetectRegime(inds, i) {
-  const {adx,dip,dim,atr,atr30,e20,e50,e200} = inds;
-  const a=adx[i], dp=dip[i], dm=dim[i];
-  const av=atr[i], aa=atr30[i];
-  if (a==null||av==null||aa==null) return 'UNKNOWN';
-  const relVol = aa>0 ? av/aa : 1;
-  if (a>=30 && dp>dm) return 'TREND_UP';
-  if (a>=30 && dm>dp) return 'TREND_DOWN';
-  if (a>=22 && dp>dm) return 'WEAK_TREND_UP';
-  if (a>=22 && dm>dp) return 'WEAK_TREND_DOWN';
-  if (relVol>1.4)     return 'VOLATILE_RANGE';
+function seDetectRegime(I,i) {
+  const a=I.adx[i],dp=I.dip[i],dm=I.dim[i],av=I.atr[i],aa=I.atr30[i];
+  if(a==null||av==null||aa==null) return 'UNKNOWN';
+  const rv=aa>0?av/aa:1;
+  if(a>=30&&dp>dm) return 'TREND_UP';
+  if(a>=30&&dm>dp) return 'TREND_DOWN';
+  if(a>=22&&dp>dm) return 'WEAK_UP';
+  if(a>=22&&dm>dp) return 'WEAK_DOWN';
+  if(rv>1.4)       return 'VOLATILE';
   return 'RANGE';
 }
 
-// ── STRATEGY SIGNAL GENERATORS ────────────────────────────────────────────────
-// Ritornano: { dir: 'buy'|'sell', strategy, reason, strength } o null
+// ── 5 STRATEGIE VALIDATE (PF ≥ 1.10) ─────────────────────────────────────────
 
-function seCheckExhaustion(inds, i) {
-  const a=inds.adx[i], dp=inds.dip[i], dm=inds.dim[i];
-  const m=inds.macd[i], s=inds.sig[i];
-  if (a==null||dp==null||m==null) return null;
-  const diff=m-s, spread=Math.abs(dp-dm);
-  // SELL: ADX forte + DI- domina + MACD bullish esteso
-  if (a>=30 && dm>dp && spread>=15 && diff>=1.0) {
-    const wr = diff>=2 ? '92%' : '82%';
-    return {dir:'sell',strategy:'EXHAUSTION',
-      reason:`ADX ${a.toFixed(1)} + DI-${dm.toFixed(1)} vs DI+${dp.toFixed(1)} · MACD +${diff.toFixed(2)} esaurito`,
-      strength: spread>=20&&diff>=1.5 ? 'HIGH' : 'MED', wr};
-  }
-  // BUY: ADX forte + DI+ domina + MACD bearish esteso
-  if (a>=28 && dp>dm && spread>=15 && diff<=-1.0) {
-    return {dir:'buy',strategy:'EXHAUSTION',
-      reason:`ADX ${a.toFixed(1)} + DI+${dp.toFixed(1)} vs DI-${dm.toFixed(1)} · MACD ${diff.toFixed(2)} esaurito`,
-      strength:'MED', wr:'65%'};
-  }
+function seS01_Exhaustion(I,i) {
+  /* EXHAUSTION — PF 2.79, WR 62.6% (TP$15/SL$9)
+     ADX≥30 + DI dominante + MACD esteso contro-trend
+     Pattern: trend forte con momentum opposto = esaurimento imminente */
+  const a=I.adx[i],dp=I.dip[i],dm=I.dim[i],m=I.macd[i],sg=I.macdSig[i];
+  if(a==null||dp==null||m==null) return null;
+  const diff=m-sg,spread=Math.abs(dp-dm);
+  if(a>=30&&dm>dp&&spread>=15&&diff>=1.0)
+    return {dir:'sell',why:`ADX ${a.toFixed(1)} · DI- ${dm.toFixed(1)} > DI+ ${dp.toFixed(1)} (spread ${spread.toFixed(0)}) · MACD +${diff.toFixed(2)} esaurito`};
+  if(a>=28&&dp>dm&&spread>=15&&diff<=-1.0)
+    return {dir:'buy',why:`ADX ${a.toFixed(1)} · DI+ ${dp.toFixed(1)} > DI- ${dm.toFixed(1)} (spread ${spread.toFixed(0)}) · MACD ${diff.toFixed(2)} esaurito`};
   return null;
 }
 
-function seCheckRsiExtreme(inds, i) {
-  const r=inds.rsi[i], a=inds.adx[i];
-  const bu=inds.bbUp[i], bl=inds.bbLo[i], c=inds.C[i];
-  if (r==null||a==null||bu==null) return null;
-  if (a>=28) return null; // solo ranging
-  if (r<=32 && c<=bl*1.003)
-    return {dir:'buy',strategy:'RSI_EXTREME',
-      reason:`RSI ${r.toFixed(0)} oversold + prezzo su BB lower ${bl.toFixed(0)}`,
-      strength:'MED', wr:'55%'};
-  if (r>=68 && c>=bu*0.997)
-    return {dir:'sell',strategy:'RSI_EXTREME',
-      reason:`RSI ${r.toFixed(0)} overbought + prezzo su BB upper ${bu.toFixed(0)}`,
-      strength:'MED', wr:'53%'};
+function seS06_OrderBlock(I,i) {
+  /* ORDER BLOCK — PF 1.57, WR 46.6% (TP$18/SL$10)
+     Prezzo ritesta zona istituzionale (ultima candela prima di impulso forte)
+     + RSI non esaurito + EMA50 conferma direzione */
+  const ob=I.obBull[i],os=I.obBear[i],r=I.rsi[i],e50=I.e50[i],c=I.C[i];
+  if(r==null||e50==null) return null;
+  if(ob&&r<=55&&c>e50*0.998)
+    return {dir:'buy',why:`Order Block bullish · Prezzo $${c.toFixed(0)} su zona istituzionale · RSI ${r.toFixed(0)} · sopra EMA50 $${e50.toFixed(0)}`};
+  if(os&&r>=45&&c<e50*1.002)
+    return {dir:'sell',why:`Order Block bearish · Prezzo $${c.toFixed(0)} su zona istituzionale · RSI ${r.toFixed(0)} · sotto EMA50 $${e50.toFixed(0)}`};
   return null;
 }
 
-function seCheckSessionMom(inds, i, hour) {
-  if (hour<7||hour>10) return null; // solo apertura London
-  const m=inds.macd[i], s=inds.sig[i], r=inds.rsi[i];
-  const a=inds.adx[i], e50=inds.e50[i], c=inds.C[i];
-  if (m==null||r==null||a==null||e50==null) return null;
-  const diff=m-s;
-  if (diff>0.3 && r>=50 && c>e50*0.999 && a>=15)
-    return {dir:'buy',strategy:'SESSION_MOM',
-      reason:`London open: MACD +${diff.toFixed(2)} · RSI ${r.toFixed(0)} · sopra EMA50`,
-      strength:'LOW', wr:'45%'};
-  if (diff<-0.3 && r<=50 && c<e50*1.001 && a>=15)
-    return {dir:'sell',strategy:'SESSION_MOM',
-      reason:`London open: MACD ${diff.toFixed(2)} · RSI ${r.toFixed(0)} · sotto EMA50`,
-      strength:'LOW', wr:'44%'};
+function seS09_VwapWpr(I,i) {
+  /* VWAP + WILLIAMS %R — PF 1.65, WR 47.9% (TP$18/SL$10)
+     Prezzo torna al VWAP dopo deviazione + Williams%R in zona di svolta
+     Intraday mean-reversion affidabile */
+  const vwap=I.vwap[i],c=I.C[i],wpr=I.wpr[i],mom=I.mom[i],r=I.rsi[i];
+  if(vwap==null||wpr==null||mom==null||r==null) return null;
+  const dev=(c-vwap)/vwap*100;
+  if(dev>=-0.3&&dev<=0.1&&wpr<-70&&mom>-0.1&&r>=40)
+    return {dir:'buy',why:`VWAP $${vwap.toFixed(0)} (dev ${dev.toFixed(2)}%) · W%R ${wpr.toFixed(0)} oversold · Momentum ${mom.toFixed(1)}%`};
+  if(dev>=-0.1&&dev<=0.3&&wpr>-30&&mom<0.1&&r<=60)
+    return {dir:'sell',why:`VWAP $${vwap.toFixed(0)} (dev ${dev.toFixed(2)}%) · W%R ${wpr.toFixed(0)} overbought · Momentum ${mom.toFixed(1)}%`};
   return null;
 }
 
-function seCheckMacdZero(inds, i) {
-  if (i<1) return null;
-  const h=inds.hist, e20=inds.e20[i], e50=inds.e50[i];
-  const r=inds.rsi[i], a=inds.adx[i];
-  if (h[i]==null||h[i-1]==null||r==null||a==null) return null;
-  // Cross rialzista + EMA20>EMA50 + RSI momentum
-  if (h[i-1]<0&&h[i]>0&&e20>e50&&r>=40&&r<=65)
-    return {dir:'buy',strategy:'MACD_ZERO',
-      reason:`MACD hist cross zero rialzista · RSI ${r.toFixed(0)} · EMA trend up`,
-      strength:'LOW', wr:'40%'};
-  if (h[i-1]>0&&h[i]<0&&e20<e50&&r>=35&&r<=60)
-    return {dir:'sell',strategy:'MACD_ZERO',
-      reason:`MACD hist cross zero ribassista · RSI ${r.toFixed(0)} · EMA trend down`,
-      strength:'LOW', wr:'40%'};
+function seS12_WprKeltner(I,i) {
+  /* WILLIAMS %R + KELTNER + RSI — PF 1.22, WR 42.3%
+     Prezzo ai limiti del Keltner Channel + W%R estremo + RSI conferma
+     Mean-reversion con filtro volatilità (ADX<30) */
+  const wpr=I.wpr[i],r=I.rsi[i],c=I.C[i],ku=I.kc.up[i],kl=I.kc.lo[i],a=I.adx[i];
+  if(wpr==null||r==null||ku==null||kl==null||a==null) return null;
+  if(a>=30) return null;
+  if(c<=kl*1.002&&wpr<-80&&r<35)
+    return {dir:'buy',why:`Keltner lower $${kl.toFixed(0)} · W%R ${wpr.toFixed(0)} oversold · RSI ${r.toFixed(0)} · ADX ${a.toFixed(0)} (ranging)`};
+  if(c>=ku*0.998&&wpr>-20&&r>65)
+    return {dir:'sell',why:`Keltner upper $${ku.toFixed(0)} · W%R ${wpr.toFixed(0)} overbought · RSI ${r.toFixed(0)} · ADX ${a.toFixed(0)} (ranging)`};
   return null;
 }
 
-// ── REGIME → STRATEGY PRIORITY ───────────────────────────────────────────────
-// Ordinate per PF: EXHAUSTION>RSI_EXTREME>SESSION_MOM>MACD_ZERO
-function seGetStrategyPriority(regime) {
-  const map = {
-    'TREND_UP':         ['EXHAUSTION','SESSION_MOM','MACD_ZERO'],
-    'TREND_DOWN':       ['EXHAUSTION','SESSION_MOM','MACD_ZERO'],
-    'WEAK_TREND_UP':    ['SESSION_MOM','MACD_ZERO','RSI_EXTREME'],
-    'WEAK_TREND_DOWN':  ['SESSION_MOM','MACD_ZERO','RSI_EXTREME'],
-    'RANGE':            ['RSI_EXTREME','MACD_ZERO','SESSION_MOM'],
-    'VOLATILE_RANGE':   ['RSI_EXTREME','SESSION_MOM'],
-    'UNKNOWN':          ['SESSION_MOM','RSI_EXTREME'],
-  };
-  return map[regime] || ['SESSION_MOM','RSI_EXTREME'];
+function seS10_SessionMom(I,i,hour) {
+  /* SESSION MOMENTUM — PF 1.10, WR 39.8%
+     Supertrend + MACD + EMA50 · SOLO apertura London (7-13 UTC)
+     Segue il momentum del mercato nell'ora di massima liquidità */
+  if(hour==null||hour<7||hour>13) return null;
+  const st=I.st[i],m=I.macd[i],sg=I.macdSig[i],r=I.rsi[i],e50=I.e50[i],c=I.C[i];
+  if(m==null||r==null||e50==null) return null;
+  const diff=m-sg;
+  if(st===-1&&diff>0&&r>=45&&r<=70&&c>e50)
+    return {dir:'buy',why:`Supertrend BULL · MACD +${diff.toFixed(2)} · RSI ${r.toFixed(0)} · sopra EMA50 · ${hour}:00 UTC London`};
+  if(st===1&&diff<0&&r>=30&&r<=55&&c<e50)
+    return {dir:'sell',why:`Supertrend BEAR · MACD ${diff.toFixed(2)} · RSI ${r.toFixed(0)} · sotto EMA50 · ${hour}:00 UTC London`};
+  return null;
 }
 
-// ── SCAN: genera segnali per la candela corrente ───────────────────────────────
-function seScanSignals(candles, regime) {
-  if (!candles || candles.length < 220) return null;
-  const inds = seComputeAll(candles);
-  if (!inds) return null;
-  const i = inds.n - 1;
+const SE_STRATEGY_FNS = {
+  S01_EXHAUSTION:  (I,i,h) => seS01_Exhaustion(I,i),
+  S06_ORDERBLOCK:  (I,i,h) => seS06_OrderBlock(I,i),
+  S09_VWAP_WPER:   (I,i,h) => seS09_VwapWpr(I,i),
+  S12_WPR_KELTNER: (I,i,h) => seS12_WprKeltner(I,i),
+  S10_SESSION_MOM: (I,i,h) => seS10_SessionMom(I,i,h),
+};
 
-  const nowUtc = new Date();
-  const hour = nowUtc.getUTCHours();
-
-  // Check extreme day: ATR > 3x avg
-  const av=inds.atr[i], aa=inds.atr30[i];
-  if (av && aa && av > 3*aa) return { extreme: true };
-
-  // Sessione valida
-  if (hour < SE_SESSION_START || hour >= SE_SESSION_END) return { offSession: true, hour };
-
-  const priority = seGetStrategyPriority(regime);
-  const checkers = {
-    'EXHAUSTION': ()=>seCheckExhaustion(inds,i),
-    'RSI_EXTREME': ()=>seCheckRsiExtreme(inds,i),
-    'SESSION_MOM': ()=>seCheckSessionMom(inds,i,hour),
-    'MACD_ZERO': ()=>seCheckMacdZero(inds,i),
-  };
-
-  const signals = [];
-  for (const name of priority) {
-    const fn = checkers[name];
-    if (!fn) continue;
-    const sig = fn();
-    if (sig) signals.push(sig);
-  }
-
-  // Aggiunge indicatori snapshot per debug
-  const snap = {
-    price: inds.C[i].toFixed(2),
-    adx: inds.adx[i]?.toFixed(1),
-    dip: inds.dip[i]?.toFixed(1),
-    dim: inds.dim[i]?.toFixed(1),
-    rsi: inds.rsi[i]?.toFixed(0),
-    macd: inds.macd[i]?.toFixed(2),
-    e20: inds.e20[i]?.toFixed(0),
-    e50: inds.e50[i]?.toFixed(0),
-  };
-
-  return {signals, snapshot:snap, regime};
-}
-
-// ── DAILY STATE (localStorage) ────────────────────────────────────────────────
-function seGetDailyState() {
-  const today = new Date().toISOString().split('T')[0];
-  try {
-    const s = JSON.parse(localStorage.getItem('se_daily') || '{}');
-    if (s.date !== today) return { date:today, trades:[], regime:'UNKNOWN', lastHour:-1 };
+// ── DAILY STATE ────────────────────────────────────────────────────────────────
+function seGetState() {
+  const today=new Date().toISOString().split('T')[0];
+  try{const s=JSON.parse(localStorage.getItem('se_v2')||'{}');
+    if(s.date!==today)return{date:today,trades:[],regime:'UNKNOWN',lastH:-99};
     return s;
-  } catch(e) { return { date:today, trades:[], regime:'UNKNOWN', lastHour:-1 }; }
+  }catch{return{date:today,trades:[],regime:'UNKNOWN',lastH:-99};}
 }
+function seSaveState(s){try{localStorage.setItem('se_v2',JSON.stringify(s));}catch{}}
 
-function seSaveDailyState(state) {
-  try { localStorage.setItem('se_daily', JSON.stringify(state)); } catch(e) {}
-}
-
-// ── MAIN REFRESH LOOP ─────────────────────────────────────────────────────────
+// ── MAIN REFRESH ──────────────────────────────────────────────────────────────
 async function seRefresh() {
-  const state = seGetDailyState();
-  const nowH = new Date().getUTCHours();
-
-  // Carica candles se non disponibili (usa quelle di mfkk.js se già caricate)
-  if (window.mfkkCandles && window.mfkkCandles.length >= 220) {
-    seCandles = window.mfkkCandles;
-  } else if (seCandles.length < 220) {
-    try {
-      const asset = window.activeAsset || 'XAU';
-      const r = await fetch(`/api/candles?asset=${asset}&range=60d&interval=1h`);
-      const d = await r.json();
-      if (d?.ok && d.candles?.length >= 220) seCandles = d.candles;
-    } catch(e) { console.log('se candles:', e.message); }
+  // Carica candles
+  if(window.mfkkCandles&&window.mfkkCandles.length>=220) seCandles=window.mfkkCandles;
+  else if(seCandles.length<220){
+    try{
+      const asset=window.activeAsset||'XAU';
+      const r=await fetch(`/api/candles?asset=${asset}&range=60d&interval=1h`);
+      const d=await r.json();
+      if(d?.ok&&d.candles?.length>=220) seCandles=d.candles;
+    }catch{}
   }
+  if(seCandles.length<220){seRenderNoData();return;}
 
-  if (seCandles.length < 220) { seRenderNoData(); return; }
+  seInds=seComputeAll(seCandles);
+  if(!seInds){seRenderNoData();return;}
 
-  const inds = seComputeAll(seCandles);
-  if (!inds) return;
+  const I=seInds,i=I.n-1;
+  const nowUtc=new Date(),hour=nowUtc.getUTCHours();
+  seRegime=seDetectRegime(I,i);
 
-  // Regime detection con i dati attuali
-  const regime = seDetectRegime(inds, inds.n-1);
-  seRegime = regime;
-  seActiveStrategies = seGetStrategyPriority(regime);
-  if (state.date === new Date().toISOString().split('T')[0]) {
-    state.regime = regime;
-  }
+  const state=seGetState();
+  state.regime=seRegime;
+
+  // Extreme day check
+  const av=I.atr[i],aa=I.atr30[i];
+  const isExtreme=av&&aa&&av>SE.extremeMult*aa;
+  const inSession=hour>=SE.session.start&&hour<SE.session.end;
 
   // Scan segnali
-  const scan = seScanSignals(seCandles, regime);
-
-  // Controlla se possiamo aprire un trade
-  const canTrade =
-    scan && !scan.extreme && !scan.offSession &&
-    state.trades.length < SE_MAX_TRADES &&
-    nowH - (state.lastHour || -99) >= SE_COOLDOWN_H;
-
-  if (canTrade && scan.signals?.length > 0) {
-    // Scegli il segnale migliore (primo = priorità più alta)
-    const best = scan.signals[0];
-    const dup = state.trades.find(t=>t.hour===nowH&&t.dir===best.dir&&t.strategy===best.strategy);
-    if (!dup) {
-      const trade = {
-        ...best,
-        hour: nowH,
-        time: new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}),
-        price: parseFloat(scan.snapshot.price),
-        tp: parseFloat(scan.snapshot.price) + (best.dir==='buy' ? SE_TP : -SE_TP),
-        sl: parseFloat(scan.snapshot.price) + (best.dir==='buy' ? -SE_SL : SE_SL),
-        status: 'open'
-      };
-      state.trades.push(trade);
-      state.lastHour = nowH;
-      seSaveDailyState(state);
+  let pending=[];
+  if(!isExtreme&&inSession){
+    const priority=SE.regimePriority[seRegime]||['S10_SESSION_MOM'];
+    for(const name of priority){
+      const fn=SE_STRATEGY_FNS[name];
+      if(!fn)continue;
+      const sig=fn(I,i,hour);
+      if(sig){
+        const cfg=SE.strategies[name];
+        pending.push({name,label:cfg.label,dir:sig.dir,why:sig.why,
+          tp:cfg.tp,sl:cfg.sl,pf:cfg.pf,wr:cfg.wr,priority:priority.indexOf(name)+1});
+      }
     }
   }
 
-  // Segna trade chiusi (simulazione live: prezzo corrente vs TP/SL)
-  const liveP = parseFloat(scan?.snapshot?.price || 0);
-  if (liveP > 0) {
-    for (const t of state.trades) {
-      if (t.status !== 'open') continue;
-      if (t.dir==='buy' && liveP>=t.tp)  { t.status='win'; t.closePrice=t.tp; }
-      if (t.dir==='buy' && liveP<=t.sl)  { t.status='loss'; t.closePrice=t.sl; }
-      if (t.dir==='sell' && liveP<=t.tp) { t.status='win'; t.closePrice=t.tp; }
-      if (t.dir==='sell' && liveP>=t.sl) { t.status='loss'; t.closePrice=t.sl; }
+  // Aggiunge trade se:
+  const liveP=parseFloat(I.C[i]);
+  if(pending.length>0&&state.trades.length<SE.maxTrades&&hour-state.lastH>=SE.cooldownH){
+    const best=pending[0];
+    const dup=state.trades.find(t=>t.strategy===best.name&&new Date().toISOString().split('T')[0]===t.date&&t.hour===hour);
+    if(!dup){
+      state.trades.push({
+        strategy:best.name,label:best.label,dir:best.dir,why:best.why,
+        tp:best.tp,sl:best.sl,pf:best.pf,wr:best.wr,
+        entry:liveP,date:state.date,hour,
+        time:nowUtc.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC',
+        tpPrice:liveP+(best.dir==='buy'?best.tp:-best.tp),
+        slPrice:liveP+(best.dir==='buy'?-best.sl:best.sl),
+        status:'open'
+      });
+      state.lastH=hour;
     }
-    seSaveDailyState(state);
   }
 
-  seSignalsToday = state.trades;
-  seRender(state, scan, inds);
+  // Aggiorna status trade aperti
+  if(liveP>0){
+    for(const t of state.trades){
+      if(t.status!=='open')continue;
+      if(t.dir==='buy'){
+        if(liveP>=t.tpPrice){t.status='win';t.closePrice=t.tpPrice;}
+        else if(liveP<=t.slPrice){t.status='loss';t.closePrice=t.slPrice;}
+      }else{
+        if(liveP<=t.tpPrice){t.status='win';t.closePrice=t.tpPrice;}
+        else if(liveP>=t.slPrice){t.status='loss';t.closePrice=t.slPrice;}
+      }
+    }
+  }
+  seSaveState(state);
+
+  // Snapshot indicatori per UI
+  const snap={
+    price:liveP.toFixed(2),adx:I.adx[i]?.toFixed(1),dip:I.dip[i]?.toFixed(1),dim:I.dim[i]?.toFixed(1),
+    rsi:I.rsi[i]?.toFixed(0),macd:I.macd[i]?.toFixed(2),e20:I.e20[i]?.toFixed(0),e50:I.e50[i]?.toFixed(0),
+    e100:I.e100[i]?.toFixed(0),e200:I.e200[i]?.toFixed(0),
+    st:I.st[i]===-1?'BULL':'BEAR',wpr:I.wpr[i]?.toFixed(0),mom:I.mom[i]?.toFixed(1),
+    vwap:I.vwap[i]?.toFixed(0),
+    jaw:I.jaw[i]?.toFixed(0),teeth:I.teeth[i]?.toFixed(0),lips:I.lips[i]?.toFixed(0),
+    srsiK:I.srsiK[i]?.toFixed(0),atr:I.atr[i]?.toFixed(2),
+  };
+
+  seRender(state,pending,snap,isExtreme,inSession,hour);
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
-function seRenderNoData() {
-  const el = document.getElementById('se-content');
-  if (!el) return;
-  el.innerHTML = `<div style="text-align:center;padding:30px;color:var(--dim);font-size:13px">
-    Caricamento dati candle in corso...<br><span style="font-size:10px">Le candele sono condivise con il modulo MFKK</span>
-  </div>`;
-}
+function seRender(state,pending,snap,isExtreme,inSession,hour){
+  const el=document.getElementById('se-content');
+  if(!el)return;
 
-function seRender(state, scan, inds) {
-  const el = document.getElementById('se-content');
-  if (!el) return;
-
-  const regimeColors = {
-    'TREND_UP':        {col:'#00e676',bg:'#00e67615',icon:'📈'},
-    'TREND_DOWN':      {col:'#ff4757',bg:'#ff475715',icon:'📉'},
-    'WEAK_TREND_UP':   {col:'#ffd700',bg:'#ffd70015',icon:'↗️'},
-    'WEAK_TREND_DOWN': {col:'#ffca28',bg:'#ffca2815',icon:'↘️'},
-    'RANGE':           {col:'#c8a96e',bg:'#c8a96e15',icon:'↔️'},
-    'VOLATILE_RANGE':  {col:'#b36cff',bg:'#b36cff15',icon:'⚡'},
-    'UNKNOWN':         {col:'var(--dim)',bg:'var(--bg2)',icon:'❓'},
+  const REGIME_META={
+    TREND_UP:    {col:'#00e676',bg:'#00e67612',icon:'📈',label:'TREND RIALZISTA'},
+    TREND_DOWN:  {col:'#ff4757',bg:'#ff475712',icon:'📉',label:'TREND RIBASSISTA'},
+    WEAK_UP:     {col:'#ffd700',bg:'#ffd70012',icon:'↗️',label:'TREND DEBOLE ↑'},
+    WEAK_DOWN:   {col:'#ffca28',bg:'#ffca2812',icon:'↘️',label:'TREND DEBOLE ↓'},
+    RANGE:       {col:'#c8a96e',bg:'#c8a96e12',icon:'↔️',label:'LATERALE (RANGING)'},
+    VOLATILE:    {col:'#b36cff',bg:'#b36cff12',icon:'⚡',label:'VOLATILE'},
+    UNKNOWN:     {col:'var(--dim)',bg:'var(--bg2)',icon:'❓',label:'SCONOSCIUTO'},
   };
-  const rc = regimeColors[seRegime] || regimeColors['UNKNOWN'];
+  const rm=REGIME_META[seRegime]||REGIME_META.UNKNOWN;
+  const wins=state.trades.filter(t=>t.status==='win').length;
+  const losses=state.trades.filter(t=>t.status==='loss').length;
+  const open=state.trades.filter(t=>t.status==='open').length;
+  const pnl=state.trades.reduce((a,t)=>a+(t.status==='win'?t.tp:t.status==='loss'?-t.sl:0),0);
 
-  const today = state.date;
-  const trades = state.trades;
-  const wins = trades.filter(t=>t.status==='win').length;
-  const losses = trades.filter(t=>t.status==='loss').length;
-  const open = trades.filter(t=>t.status==='open').length;
-  const pnl = wins*SE_TP - losses*SE_SL;
-  const pnlCol = pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--dim)';
-
-  // Session / extreme status
-  let statusBar = '';
-  const nowH = new Date().getUTCHours();
-  if (scan?.extreme) {
-    statusBar = `<div style="background:#ff475720;border:1px solid #ff475740;border-radius:6px;padding:6px 9px;font-size:10px;color:#ff4757;margin-bottom:8px">⚠️ GIORNO ESTREMO: ATR >3x media — trading sospeso oggi</div>`;
-  } else if (scan?.offSession) {
-    statusBar = `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:10px;color:var(--dim);margin-bottom:8px">🔴 Fuori sessione (${nowH}:00 UTC) — segnali attivi 07-17 UTC (London/NY)</div>`;
+  // ── STATUS BAR
+  let statusHtml='';
+  if(isExtreme){
+    statusHtml=`<div style="background:#ff475720;border:1px solid #ff475740;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:#ff4757">
+      ⚠️ <b>GIORNO ESTREMO</b> — Volatilità anomala (ATR>${SE.extremeMult}x media). Trading sospeso automaticamente.
+    </div>`;
+  } else if(!inSession){
+    statusHtml=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--dim)">
+      🔴 <b>Fuori sessione</b> (${hour}:00 UTC) — Il sistema genera segnali dalle 07:00 alle 17:00 UTC (London + New York)
+    </div>`;
+  } else if(state.trades.length>=SE.maxTrades){
+    statusHtml=`<div style="background:#00e67610;border:1px solid #00e67625;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--green)">
+      ✅ Massimo trade giornaliero raggiunto (${SE.maxTrades}/${SE.maxTrades}). Riprende domani.
+    </div>`;
   } else {
-    statusBar = `<div style="background:#00e67610;border:1px solid #00e67620;border-radius:6px;padding:6px 9px;font-size:10px;color:var(--green);margin-bottom:8px">🟢 Sessione attiva (${nowH}:00 UTC) — ${SE_MAX_TRADES-trades.length} trade rimanenti oggi</div>`;
+    statusHtml=`<div style="background:#00e67610;border:1px solid #00e67625;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--green)">
+      🟢 <b>Sessione attiva</b> (${hour}:00 UTC) — ${SE.maxTrades-state.trades.length} trade disponibili · Cooldown ${SE.cooldownH}h tra trade
+    </div>`;
   }
 
-  // Regime box
-  const regimeBox = `
-<div style="background:${rc.bg};border:1px solid ${rc.col}40;border-radius:8px;padding:10px 12px;margin-bottom:8px">
-  <div style="display:flex;justify-content:space-between;align-items:center">
+  // ── REGIME + P&L
+  const regimeHtml=`
+<div style="background:${rm.bg};border:1px solid ${rm.col}40;border-radius:9px;padding:11px 13px;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
     <div>
       <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:3px">REGIME DI MERCATO</div>
-      <div style="font-size:15px;font-weight:800;color:${rc.col}">${rc.icon} ${seRegime.replace('_',' ')}</div>
+      <div style="font-size:16px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
+      <div style="font-size:9px;color:${rm.col};margin-top:4px">
+        Strategie attive: ${(SE.regimePriority[seRegime]||['S10_SESSION_MOM']).map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ')}
+      </div>
     </div>
     <div style="text-align:right">
       <div style="font-size:9px;color:var(--dim);margin-bottom:2px">P&L OGGI</div>
-      <div style="font-size:16px;font-weight:800;color:${pnlCol}">${pnl>=0?'+':''}$${pnl.toFixed(0)}</div>
-      <div style="font-size:8px;color:var(--dim)">${wins}W · ${losses}L · ${open}Open</div>
+      <div style="font-size:18px;font-weight:800;color:${pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--fg)'}">${pnl>=0?'+':''}$${pnl.toFixed(0)}</div>
+      <div style="font-size:9px;color:var(--dim)">${wins}✅ · ${losses}❌ · ${open}⏳</div>
     </div>
-  </div>
-  <div style="margin-top:7px;font-size:9px;color:${rc.col}">
-    Strategie attive: ${seActiveStrategies.map(s=>`<span style="background:${rc.col}20;padding:1px 5px;border-radius:3px;margin-right:3px">${s}</span>`).join('')}
   </div>
 </div>`;
 
-  // Snapshot indicatori
-  const snap = scan?.snapshot;
-  const snapBox = snap ? `
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">
-  ${[['ADX',snap.adx],['DI+',snap.dip],['DI-',snap.dim],['RSI',snap.rsi]].map(([k,v])=>`
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px;text-align:center">
-    <div style="font-size:8px;color:var(--dim)">${k}</div>
-    <div style="font-size:11px;font-weight:700;color:var(--fg)">${v??'—'}</div>
-  </div>`).join('')}
-</div>
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">
-  ${[['MACD',snap.macd],['EMA20',snap.e20],['EMA50',snap.e50],['PRICE','$'+snap.price]].map(([k,v])=>`
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:4px;text-align:center">
-    <div style="font-size:8px;color:var(--dim)">${k}</div>
-    <div style="font-size:11px;font-weight:700;color:var(--fg)">${v??'—'}</div>
-  </div>`).join('')}
-</div>` : '';
-
-  // Trade list
-  const tradeRows = trades.length === 0
-    ? `<div style="text-align:center;padding:15px;color:var(--dim);font-size:11px">Nessun trade oggi — in attesa di setup</div>`
-    : trades.map((t,idx)=>{
-        const sCol = t.status==='win'?'#00e676':t.status==='loss'?'#ff4757':'#ffca28';
-        const sIcon = t.status==='win'?'✅':t.status==='loss'?'❌':'⏳';
-        const dirCol = t.dir==='buy'?'#00e676':'#ff4757';
-        const dirIcon = t.dir==='buy'?'▲':'▼';
-        const strWr = t.wr ? ` · WR ${t.wr}` : '';
-        return `
-<div style="background:var(--bg2);border:1px solid ${sCol}40;border-radius:7px;padding:8px 10px;margin-bottom:6px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-    <div>
-      <span style="color:${dirCol};font-weight:700;font-size:11px">${dirIcon} ${t.dir.toUpperCase()}</span>
-      <span style="font-size:9px;color:var(--dim);margin-left:6px">${t.time} UTC · ${t.strategy}${strWr}</span>
-    </div>
-    <div style="font-size:12px">${sIcon} <span style="color:${sCol};font-size:10px;font-weight:700">${t.status.toUpperCase()}</span></div>
-  </div>
-  <div style="font-size:9px;color:var(--dim);margin-bottom:4px">${t.reason}</div>
-  <div style="display:flex;gap:8px;font-size:9px">
-    <span>Entry <b>$${t.price?.toFixed(0)}</b></span>
-    <span style="color:var(--green)">TP $${t.tp?.toFixed(0)} (+$${SE_TP})</span>
-    <span style="color:var(--red)">SL $${t.sl?.toFixed(0)} (-$${SE_SL})</span>
-    <span>R:R 1:1.67</span>
-  </div>
-</div>`;
-      }).join('');
-
-  // Pending signals (non ancora entrati)
-  const pending = (scan?.signals || []).filter(s=>
-    !state.trades.find(t=>t.strategy===s.strategy&&t.time)
-  );
-  const pendingHtml = pending.length>0 && !scan?.offSession && !scan?.extreme ? `
+  // ── INDICATORI SNAPSHOT (2 righe compatte)
+  const indSnap=`
 <div style="margin-bottom:8px">
-  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">SEGNALI ATTIVI ORA</div>
-  ${pending.map(s=>{
-    const sc=s.strength==='HIGH'?'#ffd700':s.strength==='MED'?'var(--green)':'var(--yellow)';
-    const dc=s.dir==='buy'?'#00e676':'#ff4757';
-    return `<div style="background:${sc}15;border:1px solid ${sc}40;border-radius:6px;padding:7px 9px;margin-bottom:5px">
-      <div style="display:flex;justify-content:space-between">
-        <span style="color:${dc};font-weight:700;font-size:11px">${s.dir==='buy'?'▲':'▼'} ${s.dir.toUpperCase()}</span>
-        <span style="color:${sc};font-size:9px">● ${s.strength} · WR ${s.wr}</span>
-      </div>
-      <div style="font-size:9px;color:var(--dim);margin-top:3px">${s.strategy}: ${s.reason}</div>
-    </div>`;
-  }).join('')}
-</div>` : '';
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:4px">INDICATORI CORRENTI</div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:3px">
+    ${[['ADX',snap.adx],['DI+',snap.dip],['DI-',snap.dim],['RSI',snap.rsi],['W%R',snap.wpr]].map(([k,v])=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 2px;text-align:center">
+      <div style="font-size:7px;color:var(--dim)">${k}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
+    </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px">
+    ${[['MACD',snap.macd],['EMA50',snap.e50],['EMA200',snap.e200],['MOM%',snap.mom],['VWAP',snap.vwap]].map(([k,v])=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 2px;text-align:center">
+      <div style="font-size:7px;color:var(--dim)">${k}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
+    </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:3px">
+    ${[['Jaw',snap.jaw],['Teeth',snap.teeth],['Lips',snap.lips],['StRSI',snap.srsiK],['ATR',snap.atr]].map(([k,v])=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 2px;text-align:center">
+      <div style="font-size:7px;color:var(--dim)">${k}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
+    </div>`).join('')}
+  </div>
+</div>`;
 
-  // Strategy performance table (dal backtest)
-  const perfTable = `
-<div style="margin-top:10px">
-  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:6px">PERFORMANCE STORICA (730gg backtest)</div>
+  // ── SEGNALI ATTIVI
+  let pendingHtml='';
+  if(pending.length>0&&!isExtreme&&inSession){
+    pendingHtml=`<div style="margin-bottom:10px">
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">🔔 SEGNALI ATTIVI ORA</div>
+      ${pending.map((s,idx)=>{
+        const dc=s.dir==='buy'?'#00e676':'#ff4757';
+        const pc=idx===0?'#ffd700':'var(--dim)';
+        return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="color:${dc};font-weight:800;font-size:12px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
+            <span style="color:${pc};font-size:9px">${idx===0?'★ PRIORITÀ 1':'P'+(idx+1)} · ${s.label} · WR ${s.wr} · PF ${s.pf}</span>
+          </div>
+          <div style="font-size:9px;color:var(--fg);margin-bottom:4px">${s.why}</div>
+          <div style="display:flex;gap:8px;font-size:9px;color:var(--dim)">
+            <span style="color:var(--green)">TP +$${s.tp}</span>
+            <span style="color:var(--red)">SL -$${s.sl}</span>
+            <span>R:R 1:${(s.tp/s.sl).toFixed(1)}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // ── TRADE DEL GIORNO
+  const tradeHtml=`
+<div style="margin-bottom:10px">
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">TRADE OGGI (${state.date})</div>
+  ${state.trades.length===0
+    ? `<div style="text-align:center;padding:12px;background:var(--bg2);border-radius:7px;font-size:10px;color:var(--dim)">Nessun trade aperto oggi — il sistema attende il setup ideale</div>`
+    : state.trades.map(t=>{
+        const sc=t.status==='win'?'#00e676':t.status==='loss'?'#ff4757':'#ffca28';
+        const si=t.status==='win'?'✅':t.status==='loss'?'❌':'⏳';
+        const dc=t.dir==='buy'?'#00e676':'#ff4757';
+        const pnlT=t.status==='win'?t.tp:t.status==='loss'?-t.sl:0;
+        return `<div style="background:var(--bg2);border:1px solid ${sc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <div>
+              <span style="color:${dc};font-weight:800;font-size:11px">${t.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
+              <span style="font-size:9px;color:var(--dim);margin-left:6px">${t.time} · ${t.label}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px">
+              ${t.status!=='open'?`<span style="color:${sc};font-size:10px;font-weight:700">${pnlT>=0?'+':''}$${pnlT}</span>`:''}
+              <span style="font-size:14px">${si}</span>
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--dim);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.why}</div>
+          <div style="display:flex;gap:8px;font-size:9px">
+            <span>Entry <b>$${t.entry?.toFixed(0)}</b></span>
+            <span style="color:var(--green)">TP $${t.tpPrice?.toFixed(0)} (+$${t.tp})</span>
+            <span style="color:var(--red)">SL $${t.slPrice?.toFixed(0)} (-$${t.sl})</span>
+          </div>
+        </div>`;
+      }).join('')}
+</div>`;
+
+  // ── GUIDE (collassabile) + PERFORMANCE TABLE
+  const guideHtml=`
+<details style="margin-bottom:10px">
+  <summary style="font-size:9px;color:var(--dim);letter-spacing:.08em;cursor:pointer;user-select:none;padding:5px 0">
+    ❓ COME USARE STRATEGY ENGINE (tocca per aprire)
+  </summary>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px;margin-top:6px;font-size:10px;line-height:1.6;color:var(--fg)">
+    <b style="color:var(--g)">Come funziona il sistema:</b><br>
+    1. Ogni ora il sistema analizza 18 indicatori e rileva il <b>regime di mercato</b> (Trend/Range/Volatile).<br>
+    2. In base al regime, seleziona automaticamente le <b>strategie più adatte</b> ordinate per efficienza.<br>
+    3. Se le condizioni di entrata sono soddisfatte, compare un <b>segnale arancione/verde</b> nella sezione "Segnali Attivi".<br>
+    4. Il sistema apre <b>max 3 trade al giorno</b>, con almeno 1 ora tra un trade e l'altro.<br>
+    5. <b>Non tradare nei giorni estremi</b> (ATR anomalo) — il sistema lo segna automaticamente.<br><br>
+
+    <b style="color:var(--g)">Come eseguire i trade:</b><br>
+    • Quando compare un segnale, apri il trade sul tuo broker con il prezzo attuale<br>
+    • Metti il <b>Take Profit</b> e <b>Stop Loss</b> esattamente come mostrato<br>
+    • <b>Non spostare mai lo SL</b> — il sistema è calibrato con queste distanze<br>
+    • Ogni trade usa la stessa size (es. 0.1 lotti) per gestione rischio uniforme<br><br>
+
+    <b style="color:var(--g)">Sessione operativa:</b><br>
+    • <b>07:00 - 17:00 UTC</b> = London + New York (massima liquidità)<br>
+    • Evita Asian session (00:00-07:00 UTC) — meno volatilità, spread più alti<br><br>
+
+    <b style="color:var(--g)">Indicatori usati:</b><br>
+    EMA 20/50/100/200 · MACD · ADX+DI · RSI · StochRSI · Bollinger Bands · Keltner Channels · Supertrend · Alligator (Williams) · OBV · Momentum/ROC · Williams %R · VWAP · Order Blocks · ATR
+  </div>
+</details>`;
+
+  const perfHtml=`
+<div>
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">PERFORMANCE STRATEGIE (730gg backtest H1 XAU)</div>
   <table style="width:100%;border-collapse:collapse;font-size:9px">
     <tr style="color:var(--dim);border-bottom:1px solid var(--border)">
-      <td style="padding:3px 0">Strategia</td><td style="text-align:right">WR%</td>
-      <td style="text-align:right">P&L</td><td style="text-align:right">PF</td>
+      <td style="padding:3px 0">Strategia</td><td style="text-align:right">WR%</td><td style="text-align:right">PF</td><td style="text-align:right">TP/SL</td>
     </tr>
     ${[
-      ['EXHAUSTION','57.9%','$788','2.29','#00e676'],
-      ['RSI_EXTREME','45.4%','$572','1.38','#ffd700'],
-      ['SESSION_MOM','39.9%','$612','1.11','#ffca28'],
-      ['MACD_ZERO','39.6%','$88','1.09','#c8a96e'],
-    ].map(([n,wr,pnl,pf,col])=>`
+      ['S01_EXHAUSTION','62.6%','2.79','$15/$9','#ffd700'],
+      ['S09_VWAP+W%R','47.9%','1.65','$18/$10','#00e676'],
+      ['S06_ORDER BLOCK','46.6%','1.57','$18/$10','#00e676'],
+      ['S12_WPR+KELTNER','42.3%','1.22','$20/$12','#c8a96e'],
+      ['S10_SESSION MOM','39.8%','1.10','$20/$12','#ffca28'],
+    ].map(([n,wr,pf,tpsl,col])=>`
     <tr style="border-bottom:1px solid var(--border2)">
-      <td style="padding:4px 0;color:${col};font-weight:600">${n}</td>
+      <td style="padding:4px 0;color:${col};font-weight:600;font-size:8px">${n}</td>
       <td style="text-align:right;color:${col}">${wr}</td>
-      <td style="text-align:right;color:var(--fg)">${pnl}</td>
-      <td style="text-align:right;color:var(--dim)">${pf}</td>
+      <td style="text-align:right;color:var(--fg)">${pf}</td>
+      <td style="text-align:right;color:var(--dim)">${tpsl}</td>
     </tr>`).join('')}
   </table>
+  <div style="margin-top:6px;font-size:8px;color:var(--border2);text-align:center">
+    Aggiornamento ogni 5 min · Max ${SE.maxTrades} trade/gg · Session 07-17 UTC
+  </div>
 </div>`;
 
-  el.innerHTML = `
-${statusBar}
-${regimeBox}
-${snapBox}
-${pendingHtml}
-<div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:6px">TRADE OGGI (${today})</div>
-${tradeRows}
-${perfTable}
-<div style="margin-top:8px;font-size:8px;color:var(--border2);text-align:center">
-  Aggiornamento automatico ogni 5 min · TP $${SE_TP} · SL $${SE_SL} · Max ${SE_MAX_TRADES}/gg
-</div>`;
+  el.innerHTML=statusHtml+regimeHtml+indSnap+pendingHtml+tradeHtml+guideHtml+perfHtml;
 }
 
-// ── INIT & TIMER ──────────────────────────────────────────────────────────────
-async function initStrategyEngine() {
-  if (seRefreshTimer) clearInterval(seRefreshTimer);
+function seRenderNoData(){
+  const el=document.getElementById('se-content');
+  if(!el)return;
+  el.innerHTML=`<div style="text-align:center;padding:25px;color:var(--dim);font-size:12px">
+    Caricamento dati in corso...<br>
+    <span style="font-size:10px">Le candele vengono condivise con il modulo MFKK (stesso fetch)</span>
+  </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function initStrategyEngine(){
+  if(seTimer)clearInterval(seTimer);
   await seRefresh();
-  seRefreshTimer = setInterval(seRefresh, 5 * 60 * 1000); // ogni 5 minuti
+  seTimer=setInterval(seRefresh,5*60*1000);
 }
-
-// Esponi globalmente per il tab switch
-window.initStrategyEngine = initStrategyEngine;
-window.seRefresh = seRefresh;
+window.initStrategyEngine=initStrategyEngine;
+window.seRefresh=seRefresh;

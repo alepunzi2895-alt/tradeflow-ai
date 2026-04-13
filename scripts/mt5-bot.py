@@ -22,11 +22,11 @@ MT5_SERVER   = "XMGlobal-MT5 6"
 SYMBOL       = "GOLD"
 LOT_SIZE     = 0.02          # lot size iniziale (0.02 = sicuro su €1000)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
-MAX_TRADES   = 3             # max operazioni per giorno
-COOLDOWN_H   = 1             # ore di cooldown tra trade
-EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
-SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
-CHECK_SEC    = 60            # polling ogni 60 secondi
+MAX_TRADES   = 10            # max operazioni per giorno (richiesto 10)
+COOLDOWN_H   = 0.5           # ore di cooldown tra trade (30 min per più frequenza)
+EXTREME_MULT = 3.5           # ATR > 3.5x avg = giorno estremo, skip
+SESSION_UTC  = (0, 24)       # Finestra 24h per massimizzare profitti (come richiesto)
+CHECK_SEC    = 3             # Polling ultra-rapido (3 secondi)
 
 # ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
 VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"
@@ -448,6 +448,62 @@ def place_order(direction, tp_usd, sl_usd, strategy_name):
              f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}]")
     return result
 
+def manage_positions():
+    """Gestisce Break Even e Trailing Stop per le posizioni aperte"""
+    positions = mt5.positions_get(symbol=SYMBOL)
+    if positions is None: return
+
+    tick = mt5.symbol_info_tick(SYMBOL)
+    sym_info = mt5.symbol_info(SYMBOL)
+    if not tick or not sym_info: return
+
+    for p in positions:
+        if p.magic != MAGIC: continue
+        
+        entry = p.price_open
+        current = p.price_current
+        sl = p.sl
+        tp = p.tp
+        initial_risk = abs(entry - sl) if sl != 0 else 10.0 # fallback $10
+        
+        # Calcolo distanza attuale dal profitto in prezzo
+        profit_dist = (current - entry) if p.type == mt5.POSITION_TYPE_BUY else (entry - current)
+        
+        new_sl = None
+
+        # 1. BREAK EVEN (BE): se profitto >= 0.8x rischio iniziale, sposta SL a entry + mini profit
+        if profit_dist >= initial_risk * 0.8:
+            be_level = entry + (sym_info.point * 20) if p.type == mt5.POSITION_TYPE_BUY else entry - (sym_info.point * 20)
+            # Sposta solo se non è già a BE o meglio
+            if p.type == mt5.POSITION_TYPE_BUY and (sl < entry):
+                new_sl = be_level
+            elif p.type == mt5.POSITION_TYPE_SELL and (sl > entry or sl == 0):
+                new_sl = be_level
+
+        # 2. TRAILING STOP (TS): se profitto >= 1.2x rischio iniziale, attiva trailing
+        if profit_dist >= initial_risk * 1.2:
+            trail_dist = initial_risk * 0.7 # distanza del trailing
+            if p.type == mt5.POSITION_TYPE_BUY:
+                potential_ts = current - trail_dist
+                if potential_ts > sl: 
+                    new_sl = potential_ts
+            else:
+                potential_ts = current + trail_dist
+                if sl == 0 or potential_ts < sl:
+                    new_sl = potential_ts
+
+        if new_sl and abs(new_sl - sl) > (sym_info.point * 5): 
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "symbol": SYMBOL,
+                "position": p.ticket,
+                "sl": round(new_sl, sym_info.digits),
+                "tp": tp,
+            }
+            res = mt5.order_send(request)
+            if res.retcode == mt5.TRADE_RETCODE_DONE:
+                log.info(f"🛡️ MODIFICA SL (BE/TS): Ticket {p.ticket} -> SL @ {new_sl:.2f}")
+
 def log_trade_to_json(direction, strategy, price, tp, sl, result):
     """Appende il trade a mt5-trades.json"""
     entry = {
@@ -526,6 +582,28 @@ def sync_to_vercel(acc, positions, trades, bot_status):
     except Exception as e:
         log.debug(f"Sync Vercel fallito (non critico): {e}")
 
+def fetch_remote_commands():
+    """Interroga il DB per nuovi comandi dalla UI"""
+    if not SYNC_ENABLED or not VERCEL_URL: return None
+    payload = json.dumps({
+        'action': 'mt5_command_get',
+        'secret': MT5_SECRET
+    }).encode('utf-8')
+    try:
+        req = urllib.request.Request(
+            f"{VERCEL_URL}/api/db",
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            if r.status == 200:
+                data = json.loads(r.read().decode('utf-8'))
+                return data.get('command')
+    except Exception as e:
+        log.debug(f"Fetch comandi fallito: {e}")
+    return None
+
 # ── LOOP PRINCIPALE ───────────────────────────────────────────────────────────
 def run():
     log.info("="*60)
@@ -545,21 +623,42 @@ def run():
 
     last_bar_time = None   # per rilevare nuova candela H1
     last_sync_time = 0    # timestamp ultimo sync Vercel
+    last_cmd_check = 0    # timestamp ultimo check comandi
 
     while True:
         try:
             now_utc = datetime.datetime.now(datetime.timezone.utc)
+            now_ts = time.time()
 
-            # ── Recupera candele ──────────────────────────────────────────────
+            # ── 1. Gestione Posizioni Aperte (BE/TS) ─────────────────────────
+            manage_positions()
+
+            # ── 2. Verifica Comandi Remoti (ogni CHECK_SEC) ─────────────────
+            if now_ts - last_cmd_check >= CHECK_SEC:
+                cmd = fetch_remote_commands()
+                if cmd:
+                    log.info(f"🚀 RICEVUTO COMANDO REMOTO: {cmd['direction'].upper()} su {cmd['strategy']}")
+                    # Verifica scadenza (3 minuti)
+                    created = datetime.datetime.fromisoformat(cmd['created_at'].replace('Z', '+00:00'))
+                    if (now_utc - created).total_seconds() > 180:
+                        log.warning("⚠️ Comando scaduto (>3min), ignorato.")
+                    else:
+                        # Esegui ordine
+                        result = place_order(cmd['direction'], cmd['tp'], cmd['sl'], cmd['strategy'])
+                        if result:
+                            # Log e Sync immediato (opzionale, già fatto in place_order + sync_to_vercel)
+                            pass
+                last_cmd_check = now_ts
+
+            # ── 3. Recupera candele per analisi autonoma ─────────────────────
             candles = get_candles(300)
             if candles is None or len(candles) < 100:
                 log.warning("Candele non disponibili, riprovo...")
-                time.sleep(30)
+                time.sleep(10)
                 continue
 
-            # ── Sync periodico a Vercel (ogni 60s anche senza nuova barra) ──────
-            now_ts = time.time()
-            if now_ts - last_sync_time >= 60:
+            # ── Sync periodico a Vercel (ogni 30s) ──────
+            if now_ts - last_sync_time >= 30:
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
@@ -580,7 +679,7 @@ def run():
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
             if latest_bar_time == last_bar_time:
                 # Nessuna nuova barra chiusa, aspetta
-                time.sleep(CHECK_SEC)
+                time.sleep(CHECK_SEC) 
                 continue
             last_bar_time = latest_bar_time
             bar_dt = datetime.datetime.fromtimestamp(latest_bar_time, tz=datetime.timezone.utc)
@@ -598,21 +697,21 @@ def run():
             atr_avg = I['atr_avg'][i]
             if atr_v and atr_avg and atr_v > EXTREME_MULT * atr_avg:
                 log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip")
-                time.sleep(CHECK_SEC)
+                time.sleep(10) # Ciclo più breve per reattività comandi
                 continue
 
             # ── Controllo sessione e limiti giornalieri ───────────────────────
             can, reason = state.can_trade(now_utc)
             if not can:
                 log.debug(f"Trade non permesso: {reason}")
-                time.sleep(CHECK_SEC)
+                time.sleep(10) # Ciclo più breve per reattività comandi
                 continue
 
             # ── Controlla posizioni aperte ────────────────────────────────────
             open_pos = count_open_positions()
             if open_pos > 0:
                 log.debug(f"Posizione già aperta ({open_pos}), attendo chiusura")
-                time.sleep(CHECK_SEC)
+                time.sleep(10) # Ciclo più breve per reattività comandi
                 continue
 
             # ── Segnale strategia ─────────────────────────────────────────────
@@ -621,16 +720,30 @@ def run():
 
             if strategy_name is None:
                 log.info(f"Regime: {regime} | Nessun segnale su {bar_dt.strftime('%H:%M')}")
-                time.sleep(CHECK_SEC)
+                time.sleep(10) # Ciclo più breve per reattività comandi
                 continue
 
-            params = STRATEGY_PARAMS[strategy_name]
-            log.info(f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
+            # ── Calcolo TP/SL Dinamico (ATR-based) ──────────────────────────
+            atr_v = I['atr'][i]
+            # Multiplier: 2.0x ATR per TP, 1.0x ATR per SL (come config strat)
+            # Se la strategia ha parametri fissi (S01, S06, etc. in STRATEGY_PARAMS), 
+            # usiamo quelli come minimo, o l'ATR se maggiore.
+            min_tp = STRATEGY_PARAMS[strategy_name]['tp_usd']
+            min_sl = STRATEGY_PARAMS[strategy_name]['sl_usd']
+            
+            calc_tp = round(atr_v * 2.0, 2) if atr_v else min_tp
+            calc_sl = round(atr_v * 1.0, 2) if atr_v else min_sl
+            
+            # Applica protezioni
+            final_tp = max(min_tp, calc_tp)
+            final_sl = max(min_sl, calc_sl)
+
+            log.info(f"★ SEGNALE: {direction.upper()} | {strategy_name} | Regime: {regime} "
                      f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
-                     f"| TP=${params['tp_usd']} SL=${params['sl_usd']}")
+                     f"| TP=${final_tp} SL=${final_sl} (ATR-based)")
 
             # ── Invia ordine ──────────────────────────────────────────────────
-            result = place_order(direction, params['tp_usd'], params['sl_usd'], strategy_name)
+            result = place_order(direction, final_tp, final_sl, strategy_name)
 
             if result:
                 tick = mt5.symbol_info_tick(SYMBOL)
@@ -652,7 +765,7 @@ def run():
                 )
                 last_sync_time = time.time()
 
-            time.sleep(CHECK_SEC)
+            time.sleep(10) # Ciclo più breve per reattività comandi
 
         except KeyboardInterrupt:
             log.info("Bot fermato dall'utente (Ctrl+C)")

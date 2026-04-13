@@ -21,11 +21,11 @@ except ImportError:
 SYMBOL     = 'GC=F'
 TP_USD     = 20.0
 SL_USD     = 12.0
-MAX_TRADES = 3          # per giorno
-COOLDOWN_H = 1          # ora minima tra trade
-SESSION_S  = 7          # UTC
-SESSION_E  = 17
-EXTREME_K  = 3.0        # ATR > 3x avg = giorno estremo
+MAX_TRADES = 10          # per giorno (aggiornato)
+COOLDOWN_H = 0.5         # 30 min tra trade
+SESSION_S  = 0           # 24h trading
+SESSION_E  = 24
+EXTREME_K  = 3.5        
 
 # ── DOWNLOAD ─────────────────────────────────────────────────────────────────
 def download():
@@ -523,23 +523,27 @@ def s11_alligator_awakening(ind,i,hour=None):
         return 'sell'
     return None
 
-def s12_williams_rsi_keltner(ind,i,hour=None):
-    """
-    WILLIAMS %R + RSI + KELTNER CHANNEL
-    Prezzo tocca Keltner Channel + Williams%R estremo + RSI conferma
-    Forte mean-reversion con filtro volatilità
-    """
-    wpr=ind['wpr'][i]; r=ind['rsi'][i]; c=ind['C'][i]
-    kc_u=ind['kc_up'][i]; kc_l=ind['kc_lo'][i]
-    adx=ind['adx'][i]
-    if None in (wpr,r,kc_u,kc_l,adx): return None
-    if adx>=30: return None  # solo ranging/weak
-    # BUY: prezzo sotto Keltner lower + W%R<-80 + RSI<35
-    if c<=kc_l*1.002 and wpr<-80 and r<35:
-        return 'buy'
-    # SELL: prezzo sopra Keltner upper + W%R>-20 + RSI>65
-    if c>=kc_u*0.998 and wpr>-20 and r>65:
-        return 'sell'
+def s13_struc_break(ind,i,hour=None):
+    """S13: Structure Breakout + Retest"""
+    if i < 60: return None
+    H=ind['H']; L=ind['L']; C=ind['C']
+    hh=max(H[i-40:i]); ll=min(L[i-40:i])
+    c=C[i]; l=L[i]; h=H[i]
+    if c > hh and l <= hh * 1.001 and l >= hh * 0.999: return 'buy'
+    if c < ll and h >= ll * 0.999 and h <= ll * 1.001: return 'sell'
+    return None
+
+def s14_key_levels(ind,i,hour=None):
+    """S14: Key Levels (Monthly/Weekly Pivots simulated)"""
+    if i < 24: return None
+    H=ind['H']; L=ind['L']; C=ind['C']
+    high=max(H[i-24:i]); low=min(L[i-24:i]); close=C[i]
+    pp=(high+low+close)/3
+    s1=2*pp-high; r1=2*pp-low
+    c=C[i]; r=ind['rsi'][i]
+    if r is None: return None
+    if c > s1 and L[i] <= s1 * 1.001 and r < 40: return 'buy'
+    if c < r1 and H[i] >= r1 * 0.999 and r > 60: return 'sell'
     return None
 
 # ── STRATEGY MAP ──────────────────────────────────────────────────────────────
@@ -556,6 +560,8 @@ STRATS = {
     'S10_ST_MACD_SESSION':  (s10_supertrend_macd_session, ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
     'S11_ALLIGATOR_AWAKEN': (s11_alligator_awakening, ['RANGE','WEAK_UP','WEAK_DOWN']),
     'S12_WPR_RSI_KELT':     (s12_williams_rsi_keltner,['RANGE','VOLATILE']),
+    'S13_STRUC_BREAK':      (s13_struc_break,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
+    'S14_KEY_LEVELS':       (s14_key_levels,       ['RANGE','WEAK_UP','WEAK_DOWN']),
 }
 
 REGIME_PRIORITY = {
@@ -581,23 +587,47 @@ def run_one(candles, ind, name, fn, tp=TP_USD, sl=SL_USD):
         if av and aa and av>EXTREME_K*aa: continue
         if day_n[day]>=MAX_TRADES: continue
         if hour-day_h[day]<COOLDOWN_H: continue
-        # Tutte le strategie accettano (ind, i, hour)
+        
+        # Dynamic TP/SL mapping
+        curr_tp = tp
+        curr_sl = sl
+        if name in ('S13_STRUC_BREAK','S14_KEY_LEVELS'):
+            curr_tp = round(av * 2.0, 2)
+            curr_sl = round(av * 1.0, 2)
+
         sig=fn(ind,i,hour)
         if sig is None: continue
+        
         entry=c['c']
-        tp_p=entry+tp if sig=='buy' else entry-tp
-        sl_p=entry-sl if sig=='buy' else entry+sl
-        outcome='open'; win=False
-        for j in range(i+1,min(i+25,n)):
-            jh=candles[j]['h']; jl=candles[j]['l']
+        tp_p=entry+curr_tp if sig=='buy' else entry-curr_tp
+        sl_p=entry-curr_sl if sig=='buy' else entry+curr_sl
+        
+        outcome='open'; win=False; close_price=entry
+        curr_sl_dyn = sl_p
+        
+        for j in range(i+1,min(i+30,n)): # max 30 bars (H1)
+            jc=candles[j]['c']; jh=candles[j]['h']; jl=candles[j]['l']
+            
+            # --- SIMULA BE & TRAILING (nuovo richiesto) ---
+            profit = (jc - entry) if sig=='buy' else (entry - jc)
+            risk = curr_sl
+            if profit >= risk * 0.8: # Break Even
+                curr_sl_dyn = entry + 0.2 if sig=='buy' else entry - 0.2
+            if profit >= risk * 1.2: # Trailing
+                potential = jc - risk * 0.7 if sig=='buy' else jc + risk * 0.7
+                if sig=='buy': curr_sl_dyn = max(curr_sl_dyn, potential)
+                else: curr_sl_dyn = min(curr_sl_dyn, potential) if curr_sl_dyn else potential
+
             if sig=='buy':
-                if jh>=tp_p: win=True; outcome='win'; break
-                if jl<=sl_p: outcome='loss'; break
+                if jh>=tp_p: win=True; outcome='win'; close_price=tp_p; break
+                if jl<=curr_sl_dyn: outcome='loss'; close_price=curr_sl_dyn; break
             else:
-                if jl<=tp_p: win=True; outcome='win'; break
-                if jh>=sl_p: outcome='loss'; break
+                if jl<=tp_p: win=True; outcome='win'; close_price=tp_p; break
+                if jh>=curr_sl_dyn: outcome='loss'; close_price=curr_sl_dyn; break
+        
         if outcome=='open': continue
-        pnl=tp if win else -sl
+        p_val = abs(close_price - entry)
+        pnl = p_val if win else -abs(entry - close_price)
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
                         'outcome':outcome,'pnl':pnl,'strategy':name})
         day_n[day]+=1; day_h[day]=hour

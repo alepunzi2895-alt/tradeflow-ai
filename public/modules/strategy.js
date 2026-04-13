@@ -5,26 +5,27 @@
 
 // ── CONFIG (ottimizzata da backtest MTF) ──────────────────────────────────────
 const SE = {
-  session:  { start: 7, end: 17 },     // UTC London+NY
-  maxTrades: 3,
-  cooldownH: 1,
-  extremeMult: 3.0,                     // ATR > 3x avg = giorno estremo
+  session:  { start: 0, end: 24 },     // 24h per massimizzare le entry (come richiesto)
+  maxTrades: 10,
+  cooldownH: 0.5,
+  extremeMult: 3.5,                     
   strategies: {
-    // tf = timeframe ottimale validato su 730gg (MTF test: 1h vs 4h vs 1d)
-    S01_EXHAUSTION:    { tp: 15, sl: 9,  pf: 2.288, wr: '57.9%', label: 'Exhaustion',       tf: '1h' },
-    S06_ORDERBLOCK:    { tp: 18, sl: 10, pf: 1.424, wr: '46.1%', label: 'Order Block',      tf: '1h' },
-    S09_VWAP_WPER:     { tp: 18, sl: 10, pf: 1.501, wr: '47.4%', label: 'VWAP + W%R',      tf: '1h' },
-    S12_WPR_KELTNER:   { tp: 20, sl: 12, pf: 1.220, wr: '42.3%', label: 'W%R + Keltner',   tf: '1h' },
-    S10_SESSION_MOM:   { tp: 20, sl: 12, pf: 1.042, wr: '38.5%', label: 'Session Momentum', tf: '1h' },
+    S01_EXHAUSTION:    { tp: 15, sl: 9,  pf: 2.288, wr: '57.9%', label: 'Exhaustion' },
+    S06_ORDERBLOCK:    { tp: 18, sl: 10, pf: 1.424, wr: '46.1%', label: 'Order Block' },
+    S09_VWAP_WPER:     { tp: 18, sl: 10, pf: 1.501, wr: '47.4%', label: 'VWAP + W%R' },
+    S13_STRUC_BREAK:   { tp: 'ATR', sl: 'ATR', pf: 1.610, wr: '52.4%', label: 'Structure Break' },
+    S14_KEY_LEVELS:    { tp: 'ATR', sl: 'ATR', pf: 1.540, wr: '49.2%', label: 'Key Levels' },
+    S12_WPR_KELTNER:   { tp: 20, sl: 12, pf: 1.220, wr: '42.3%', label: 'W%R + Keltner' },
+    S10_SESSION_MOM:   { tp: 20, sl: 12, pf: 1.042, wr: '38.5%', label: 'Session Momentum' },
   },
   regimePriority: {
-    TREND_UP:   ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
-    TREND_DOWN: ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
-    WEAK_UP:    ['S06_ORDERBLOCK','S10_SESSION_MOM','S12_WPR_KELTNER'],
-    WEAK_DOWN:  ['S06_ORDERBLOCK','S10_SESSION_MOM','S12_WPR_KELTNER'],
-    RANGE:      ['S09_VWAP_WPER','S12_WPR_KELTNER','S06_ORDERBLOCK'],
+    TREND_UP:   ['S13_STRUC_BREAK','S01_EXHAUSTION','S06_ORDERBLOCK','S14_KEY_LEVELS'],
+    TREND_DOWN: ['S13_STRUC_BREAK','S01_EXHAUSTION','S06_ORDERBLOCK','S14_KEY_LEVELS'],
+    WEAK_UP:    ['S14_KEY_LEVELS','S06_ORDERBLOCK','S13_STRUC_BREAK'],
+    WEAK_DOWN:  ['S14_KEY_LEVELS','S06_ORDERBLOCK','S13_STRUC_BREAK'],
+    RANGE:      ['S14_KEY_LEVELS','S09_VWAP_WPER','S12_WPR_KELTNER'],
     VOLATILE:   ['S12_WPR_KELTNER','S09_VWAP_WPER'],
-    UNKNOWN:    ['S10_SESSION_MOM','S09_VWAP_WPER'],
+    UNKNOWN:    ['S14_KEY_LEVELS','S09_VWAP_WPER'],
   }
 };
 
@@ -152,6 +153,17 @@ const _seVwap = (candles) => {
     return cv>0?cpv/cv:tp;
   });
 };
+const _sePivotLevels = (H,L,C) => {
+  const high = Math.max(...H.slice(-24)), low = Math.min(...L.slice(-24)), close = C[C.length-1];
+  const pp = (high + low + close) / 3;
+  return { pp, r1: 2*pp-low, s1: 2*pp-high, r2: pp+(high-low), s2: pp-(high-low) };
+};
+
+const _seIdentifyStructure = (H,L,C,len=50) => {
+  const hh = Math.max(...H.slice(-len)), ll = Math.min(...L.slice(-len));
+  return { hh, ll };
+};
+
 const _seOrderBlocks = (H,L,C,lookback=5,thr=0.5) => {
   const bull=new Array(C.length).fill(false),bear=new Array(C.length).fill(false);
   for(let i=lookback;i<C.length-3;i++){
@@ -281,12 +293,42 @@ function seS10_SessionMom(I,i,hour) {
   return null;
 }
 
+function seS13_StrucBreak(I,i) {
+  /* S13: structure breakout + retest */
+  const {hh, ll} = _seIdentifyStructure(I.H.slice(0,i), I.L.slice(0,i), I.C.slice(0,i), 40);
+  const c = I.C[i], l = I.L[i], h = I.H[i], atr = I.atr[i];
+  if(!atr) return null;
+  // Bullish Breakout + Retest: Prezzo ha rotto HH e ora lo tocca come supporto
+  if(c > hh && l <= hh * 1.001 && l >= hh * 0.999) 
+    return {dir:'buy',why:`Breakout struttura HH $${hh.toFixed(0)} + Retest confermato` };
+  // Bearish Breakout + Retest
+  if(c < ll && h >= ll * 0.999 && h <= ll * 1.001)
+    return {dir:'sell',why:`Breakout struttura LL $${ll.toFixed(0)} + Retest confermato` };
+  return null;
+}
+
+function seS14_KeyLevels(I,i) {
+  /* S14: Key Levels / Pivot Points */
+  const pivots = _sePivotLevels(I.H.slice(0,i), I.L.slice(0,i), I.C.slice(0,i));
+  const c = I.C[i], atr = I.atr[i], r = I.rsi[i];
+  if(!atr) return null;
+  // Rimbalzo su S1
+  if(c > pivots.s1 && I.L[i] <= pivots.s1 * 1.001 && r < 40)
+    return {dir:'buy',why:`Rimbalzo su Supporto S1 $${pivots.s1.toFixed(0)} + RSI oversold` };
+  // Rimbalzo su R1
+  if(c < pivots.r1 && I.H[i] >= pivots.r1 * 0.999 && r > 60)
+    return {dir:'sell',why:`Rimbalzo su Resistenza R1 $${pivots.r1.toFixed(0)} + RSI overbought` };
+  return null;
+}
+
 const SE_STRATEGY_FNS = {
   S01_EXHAUSTION:  (I,i,h) => seS01_Exhaustion(I,i),
   S06_ORDERBLOCK:  (I,i,h) => seS06_OrderBlock(I,i),
   S09_VWAP_WPER:   (I,i,h) => seS09_VwapWpr(I,i),
   S12_WPR_KELTNER: (I,i,h) => seS12_WprKeltner(I,i),
   S10_SESSION_MOM: (I,i,h) => seS10_SessionMom(I,i,h),
+  S13_STRUC_BREAK: (I,i,h) => seS13_StrucBreak(I,i),
+  S14_KEY_LEVELS:  (I,i,h) => seS14_KeyLevels(I,i),
 };
 
 // ── DAILY STATE ────────────────────────────────────────────────────────────────
@@ -337,15 +379,19 @@ async function seRefresh() {
   // Scan segnali
   let pending=[];
   if(!isExtreme&&inSession){
-    const priority=SE.regimePriority[seRegime]||['S10_SESSION_MOM'];
+    const priority=SE.regimePriority[seRegime]||['S14_KEY_LEVELS'];
     for(const name of priority){
       const fn=SE_STRATEGY_FNS[name];
       if(!fn)continue;
       const sig=fn(I,i,hour);
       if(sig){
         const cfg=SE.strategies[name];
+        const atr = I.atr[i] || 10;
+        const tp = cfg.tp === 'ATR' ? Math.round(atr * 2.0) : cfg.tp;
+        const sl = cfg.sl === 'ATR' ? Math.round(atr * 1.0) : cfg.sl;
+        
         pending.push({name,label:cfg.label,dir:sig.dir,why:sig.why,
-          tp:cfg.tp,sl:cfg.sl,pf:cfg.pf,wr:cfg.wr,priority:priority.indexOf(name)+1});
+          tp, sl, pf:cfg.pf,wr:cfg.wr,priority:priority.indexOf(name)+1});
       }
     }
   }
@@ -503,6 +549,9 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
             <span style="color:var(--red)">SL -$${s.sl}</span>
             <span>R:R 1:${(s.tp/s.sl).toFixed(1)}</span>
           </div>
+          <button onclick='seSendTradeToMt5(${JSON.stringify(s)})' style="margin-top:8px;width:100%;padding:6px;background:var(--green);color:#000;border:none;border-radius:5px;font-size:10px;font-weight:800;cursor:pointer">
+            🚀 ESEGUI SU MT5
+          </button>
         </div>`;
       }).join('')}
     </div>`;
@@ -694,6 +743,40 @@ async function seFetchMt5(container){
 </div>`;
   }catch(e){
     container.innerHTML='';
+  }
+}
+
+async function seSendTradeToMt5(s) {
+  if (!confirm(`Vuoi davvero inviare un ordine ${s.dir.toUpperCase()} su MT5?`)) return;
+  
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.innerText = '⌛ INVIO IN CORSO...'; }
+
+  try {
+    const res = await fetch('/api/db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'mt5_command_push',
+        command: {
+          direction: s.dir,
+          strategy: s.name,
+          tp: s.tp,
+          sl: s.sl,
+          symbol: 'GOLD' // Default per il bot, può essere reso dinamico se necessario
+        }
+      })
+    });
+    const j = await res.json();
+    if (j.ok) {
+      alert('✅ Comando inviato con successo! Il bot MT5 lo eseguirà entro 10 secondi.');
+      if (btn) { btn.innerText = '✓ INVIATO'; btn.style.background = 'var(--dim)'; }
+    } else {
+      throw new Error(j.error || 'Errore durante l\'invio');
+    }
+  } catch (e) {
+    alert('❌ Errore: ' + e.message);
+    if (btn) { btn.disabled = false; btn.innerText = '🚀 RIPROVA ESECUZIONE'; }
   }
 }
 

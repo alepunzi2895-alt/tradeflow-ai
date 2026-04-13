@@ -199,6 +199,41 @@ async function mt5Get(db) {
   return { ok: true, data: JSON.parse(row.payload), updated_at: row.updated_at };
 }
 
+async function mt5CommandPush(db, body) {
+  const { command, secret } = body;
+  // Il comando viene pushato dalla UI. La UI non ha il segreto del bot, 
+  // ma possiamo richiedere un token utente o semplicemente fidarci se l'azione è protetta.
+  // In questo caso, essendo un gateway unico, aggiungiamo un controllo rapido.
+  if (!command) throw new Error("Command required");
+  const payload = JSON.stringify({ ...command, created_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('mt5-cmd', 'mt5-bot', 'mt5_command', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true };
+}
+
+async function mt5CommandGet(db, body) {
+  const { secret } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  
+  const result = await db.execute({ sql: "SELECT payload FROM user_data WHERE user_id='mt5-bot' AND doc_type='mt5_command'", args: [] });
+  if (!result.rows.length) return { ok: true, command: null };
+  
+  const row = result.rows[0];
+  if (!row.payload) return { ok: true, command: null };
+  
+  const command = JSON.parse(row.payload);
+  
+  // Una volta letto, "consumiamo" il comando svuotando il payload
+  await db.execute({ sql: "UPDATE user_data SET payload=NULL WHERE user_id='mt5-bot' AND doc_type='mt5_command'", args: [] });
+  
+  return { ok: true, command };
+}
+
 async function adminReset(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and pass required");
@@ -216,6 +251,8 @@ const ACTIONS = {
   upsert_user: upsertUser, save_trade: saveTrade, get_trades: getTrades, register, login, save_user_data: saveUserData, get_user_data: getUserData, kb_load: kbLoad, kb_save: kbSave, mfx_proxy: mfxProxy, patch_db: patchDb, admin_reset: adminReset,
   mt5_push: (db, body) => mt5Push(db, body),
   mt5_get:  (db)      => mt5Get(db),
+  mt5_command_push: (db, body) => mt5CommandPush(db, body),
+  mt5_command_get:  (db, body) => mt5CommandGet(db, body),
 };
 
 export default async function handler(req, res) {

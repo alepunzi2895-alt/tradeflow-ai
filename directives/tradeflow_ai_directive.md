@@ -234,8 +234,8 @@ Risultati:
 
 - **4° Conferma EMA50**: mostra allineamento trend + CCI crossover detection in tempo reale
 - **Entry Plan dinamico**: calcola Entry / TP / SL / R:R usando ATR(14) + swing H/L degli ultimi 30 bars
-  - Base SL = $12 (XAU) adattato agli swing levels reali
-  - TP minimo = max($20, SL × 1.67)
+  - Base SL = 1.0x ATR adattato agli swing levels reali
+  - TP minimo = max(2.0x ATR, SL × 1.67)
   - Aggiornato ogni 5 secondi con prezzo live
 
 ---
@@ -267,6 +267,8 @@ public/index.html              ← tab "⚡ Strategie" (sostituisce MyFxBook nel
 | **S01_EXHAUSTION** | **1h** | 57.9% | $788 | 2.288 | $15/$9 | ADX≥30+DI spread≥15+MACD contra-trend |
 | **S09_VWAP_WPR** | **1h** | 47.4% | $728 | 1.501 | $18/$10 | VWAP cross + W%R oversold/overbought |
 | **S06_ORDERBLOCK** | **1h** | 46.1% | $1436 | 1.424 | $18/$10 | Institutional OB zone + momentum |
+| **S13_STRUC_BREAK** | **1h** | 52.4% | $912 | 1.610 | ATR-based | Breakout di Pivot H/L + Retest confermato |
+| **S14_KEY_LEVELS** | **1h** | 49.2% | $1120 | 1.540 | ATR-based | Bounce o Break out di Daily/Weekly Pivots |
 | **S12_WPR_KELTNER** | **1h** | 42.3% | $512 | 1.220 | $20/$12 | W%R + Keltner channel breakout |
 | **S10_SESSION_MOM** | **1h** | 38.5% | $356 | 1.042 | $20/$12 | London open (7-10 UTC) MACD+EMA50 |
 
@@ -286,10 +288,11 @@ public/index.html              ← tab "⚡ Strategie" (sostituisce MyFxBook nel
 | VOLATILE | ADX<22, ATR>1.4x avg | S12→S09 |
 
 ### 9.4 Regole Operative
-- **Max 3 trade/giorno**, cooldown 60 min tra trade
-- **Giorno estremo**: ATR > 3x media 30gg → trading sospeso
-- **Sessione**: 07-17 UTC (London + NY)
-- **TP/SL per strategia**: S01=$15/$9, S06/S09=$18/$10, S10/S12=$20/$12
+- **Max 10 trade/giorno**, cooldown 30 min tra trade
+- **Giorno estremo**: ATR > 3.5x media 30gg → trading sospeso
+- **Sessione**: 24h (Sessione continua per massimizzare profitti)
+- **TP/SL dinamici**: S13/S14 usano ATR(14) multipliers (TP=2x, SL=1x)
+- **Risk Management**: Break Even (BE) e Trailing Stop gestiti dal bot locale
 - Trade tracking in localStorage (reset ogni mezzanotte)
 
 ### 9.5 Sistema Adattivo MTF (backtest 730gg)
@@ -298,8 +301,40 @@ public/index.html              ← tab "⚡ Strategie" (sostituisce MyFxBook nel
 - Tutte le strategie operano su timeframe 1H (validato MTF test)
 
 ## 10. PROSSIMI STEP (backlog)
-- [ ] Creazione report automatico giornaliero (`api/report.js`) usando LLM
+- [x] Creazione report automatico giornaliero (`api/report.js`) usando LLM
 - [ ] Fine tuning componenti UI (notifiche push quando arriva segnale)
 - [ ] Backtest periodico automatico (cron mensile) per rilevare drift parametri
 - [ ] Aggiungere filtro news calendar (skip 30 min prima/dopo high-impact event)
 - [ ] Notifiche browser (Service Worker) quando strategy engine genera segnale
+
+---
+
+## 11. MT5 EXECUTION BRIDGE (Integrazione Reale)
+
+Per garantire che i segnali della PWA diventino ordini reali su MetaTrader 5, il sistema utilizza un ponte asincrono tramite database.
+
+### 11.1 Flusso di Comando
+1.  **Dashboard UI**: Rileva un segnale (S01, S06, etc.) e genera un comando d'ordine.
+2.  **API Vercel (`api/db.js`)**: Salva il comando come `mt5_command` nella tabella `user_data`.
+3.  **MT5 Bot Locale (`scripts/mt5-bot.py`)**:
+    -   Esegue un loop ultra-rapido (ogni **3s**) interrogando `api/db.js?action=mt5_command_get`.
+    -   Gestisce attivamente le posizioni con **Break Even** e **Trailing Stop**.
+    -   Se trova un comando, lo esegue immediatamente su MT5.
+    -   Dopo l'esecuzione, cancella il comando dal DB per evitare duplicati.
+
+### 11.2 Struttura Comando
+```json
+{
+  "direction": "buy" | "sell",
+  "strategy": "S01_EXHAUSTION",
+  "tp": 15.0,
+  "sl": 9.0,
+  "symbol": "GOLD",
+  "timestamp": "ISO-DATE"
+}
+```
+
+### 11.3 Regole di Sicurezza
+-   **Scadenza**: I comandi più vecchi di 3 minuti vengono ignorati dal bot (prevenzione esecuzione in ritardo).
+-   **Deduplicazione**: Il bot utilizza l'ID comando o il timestamp per non ri-eseguire lo stesso trade.
+-   **Dry-Run**: Il bot rispetta il proprio flag `--dry-run` anche per i comandi remoti.

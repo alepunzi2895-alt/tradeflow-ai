@@ -83,9 +83,9 @@ async function loadPrices(){
         }
       }
     }
-    // Then try full market data in background (now uses TV Scanner primary + Yahoo fallback)
+    // Then try full market data in background (Centralized Market API)
     fetchJSON('/api/market?type=prices', 7000).then(full=>{
-      if(full?.ok&&full.prices&&Object.keys(full.prices).length>2){
+      if(full?.ok && full.prices){
         const prices=buildDerivedPrices(full.prices);
         marketData=prices; dashContext.prices=prices;
         updatePriceStrip(prices);
@@ -93,19 +93,6 @@ async function loadPrices(){
         updateMacroCards(prices);
         updateConfidence(prices, dashContext.sentiment||null);
         updateHeader(prices);
-      } else {
-        // market.js also failed — try tvprice as last resort for all symbols
-        fetchJSON('/api/tvprice', 6000).then(tv=>{
-          if(tv?.ok&&tv.prices&&Object.keys(tv.prices).length>2){
-            const prices=buildDerivedPrices(tv.prices);
-            marketData=prices; dashContext.prices=prices;
-            updatePriceStrip(prices);
-            updateCorrelation(prices);
-            updateMacroCards(prices);
-            updateConfidence(prices, dashContext.sentiment||null);
-            updateHeader(prices);
-          }
-        });
       }
     });
   }catch(e){console.log('Prices:',e.message);}
@@ -147,11 +134,23 @@ async function loadSentimentOnly(){
 async function loadSlowData(){
   // Run in parallel, don't await each other
   const mfxSess = mfxSession?.session ? '&session='+encodeURIComponent(mfxSession.session) : '';
-  fetchJSON('/api/market?type=sentiment'+mfxSess, 6000).then(async sd=>{
-    if(sd?.ok&&sd.xauusd){
-      dashContext.sentiment=sd.xauusd;
-      updateSentiment(sd.xauusd, sd.source);
-      if(marketData)updateConfidence(marketData,sd.xauusd);
+  fetchJSON('/api/market?type=sentiment' + mfxSess, 6000).then(async sd => {
+    const assetStr = `${window.activeAsset || 'XAU'}USD`;
+    if(sd?.ok && sd.outlook && sd.outlook.symbols){
+      const sym = sd.outlook.symbols.find(s => s.name === assetStr) || sd.outlook.symbols[0];
+      if(sym && sym.longPercentage != null){
+        const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
+        const sent = {
+          longPct: lp, shortPct: sp,
+          signal: lp > 60 ? 'RETAIL_LONG_HEAVY' : sp > 60 ? 'RETAIL_SHORT_HEAVY' : 'MIXED',
+          contrarian: lp > 65 ? 'BEARISH_BIAS' : sp > 65 ? 'BULLISH_BIAS' : 'NEUTRAL',
+          note: lp > 65 ? '⚠️ Retail ' + Math.round(lp) + '% long — smart money SHORT' :
+                sp > 65 ? '⚠️ Retail ' + Math.round(sp) + '% short — squeeze possibile' : ''
+        };
+        dashContext.sentiment = sent;
+        updateSentiment(sent, 'myfxbook_proxy');
+        if(marketData) updateConfidence(marketData, sent);
+      }
     } else {
       // Server blocked — fetch MyFxBook directly from browser (no CORS issue)
       try{
@@ -777,27 +776,20 @@ function updateHeader(prices){
 
 async function loadCotData(){
   try{
-    const d=await fetchJSON('/api/market?type=cot',8000);
-    if(d?.ok&&d.netLong!=null){
-      // API returns flat: {ok, netLong, ncLong, ncShort, weekChange, signal, reportDate}
-      window._cotData={
-        net_position: d.netLong*1000,  // convert K to units
-        change: d.weekChange||0,
-        report_date: d.reportDate||d.cached?.slice(0,10)||'—',
-        signal: d.signal||'NEUTRO',
-        interpretation: d.interpretation||''
-      };
+    const d = await fetchJSON('/api/market?type=cot', 8000);
+    if(d?.ok && d.cot){
+      window._cotData = d.cot;
       // Update COT card directly
-      const el=document.getElementById('cot-net');
-      const sig=document.getElementById('cot-signal');
-      const lbl=document.getElementById('cot-label');
-      if(el) el.textContent=(d.netLong>0?'+':'')+d.netLong+'K';
+      const el = document.getElementById('cot-net');
+      const sig = document.getElementById('cot-signal');
+      const lbl = document.getElementById('cot-label');
+      if(el) el.textContent = d.cot.net || '—';
       if(sig){
-        const bull=d.signal?.includes('LONG'), bear=d.signal?.includes('SHORT');
-        sig.textContent=d.signal?.replace(/_/g,' ')||'—';
-        sig.style.color=bull?'var(--green)':bear?'var(--red)':'var(--dim)';
+        const bull = d.cot.signal?.includes('BULL'), bear = d.cot.signal?.includes('BEAR');
+        sig.textContent = d.cot.signal || '—';
+        sig.style.color = bull ? 'var(--green)' : bear ? 'var(--red)' : 'var(--dim)';
       }
-      if(lbl) lbl.textContent='Report: '+(d.reportDate||'—');
+      if(lbl) lbl.textContent = d.cot.labels || 'CFTC Large Spec';
     }
-  }catch(e){console.log('COT:',e.message);}
+  } catch(e){ console.log('COT:', e.message); }
 }

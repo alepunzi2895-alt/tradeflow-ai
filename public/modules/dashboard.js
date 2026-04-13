@@ -219,19 +219,18 @@ function updatePriceStrip(prices){
     b1.className='hbadge '+(prices.XAU.change>=0?'hg':'hr')+(active==='XAU'?' active-badge':'');
   }
   const b2=document.getElementById('bxag');
-  if(prices.SILVER && b2){
+  if(prices.XAG && b2){
     b2.style.display='';
-    const conv=convertPrice(prices.SILVER.price);
+    const conv=convertPrice(prices.XAG.price);
     b2.textContent=`XAG ${conv.sym}${conv.val}`;
-    b2.className='hbadge '+(prices.SILVER.change>=0?'hg':'hr')+(active==='XAG'?' active-badge':'');
+    b2.className='hbadge '+(prices.XAG.change>=0?'hg':'hr')+(active==='XAG'?' active-badge':'');
   }
 }
 
 
-// ── DERIVED PRICES (Correlation, US10Y context, Gold/Silver Ratio) ──────
 function buildDerivedPrices(prices){
   const active = window.activeAsset || 'XAU';
-  const assetKey = active === 'XAG' ? 'SILVER' : 'XAU';
+  const assetKey = active; // Standardized to XAU/XAG
   
   if(prices[assetKey] && prices.DXY){
     const xc=prices[assetKey].change, dc=prices.DXY.change;
@@ -444,12 +443,7 @@ function updateConfidence(prices, sentimentData){
   }
   newsScore=Math.max(0,Math.min(100,newsScore));
 
-  // Integrate Industrial Demand (Oil) for XAG as part of GSR/Risk context
-  if(isXag && prices.OIL){
-    const oilChg = parseFloat(prices.OIL.change);
-    if(oilChg > 2){ gsrScore = Math.min(100, gsrScore + 5); gsrSub += ' + Supporto domanda ind. (Oil ↑)'; }
-    else if(oilChg < -2){ gsrScore = Math.max(0, gsrScore - 5); gsrSub += ' - Flessione ind. (Oil ↓)'; }
-  }
+  newsScore=Math.max(0,Math.min(100,newsScore));
 
   // ── FACTOR 8: US 10Y Yield (New - peso 10%) ─────────────
   let yieldScore=50, yieldLabel='Rendimenti stabili', yieldSub='', yieldCol='var(--dim)';
@@ -464,17 +458,29 @@ function updateConfidence(prices, sentimentData){
   // ── FACTOR 9: Gold/Silver Ratio (New - peso 10%) ───────
   let gsrScore=50, gsrLabel='G/S Ratio neutro', gsrSub='', gsrCol='var(--dim)';
   const ratio = (prices.XAU && prices.XAG) ? parseFloat(parseFloat(prices.XAU.price)/parseFloat(prices.XAG.price)).toFixed(1) : 0;
-    if(isXag){
-      // REGIME PER SILVER: Ratio basso = Bullish per Silver (Risk-On)
+  
+  // Integrate Industrial Demand (Oil) for XAG as part of GSR context
+  if(isXag && prices.OIL){
+    const oilChg = parseFloat(prices.OIL.change);
+    if(oilChg > 2){ gsrScore = 65; gsrSub = 'Supporto domanda ind. (Oil ↑)'; }
+    else if(oilChg < -2){ gsrScore = 35; gsrSub = 'Flessione ind. (Oil ↓)'; }
+  }
+
+  if(isXag){
+    // REGIME PER SILVER: Ratio basso = Bullish per Silver (Risk-On)
+    if(ratio > 0){
       if(ratio < 68){gsrScore=85;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Silver forte (propensione rischio)';gsrCol='var(--green)';}
       else if(ratio > 78){gsrScore=35;gsrLabel=`G/S Ratio ${ratio} · RISK OFF`;gsrSub='Argento debole rispetto all\'Oro';gsrCol='var(--red)';}
       else{gsrScore=50;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--dim)';}
-    } else {
-      // REGIME PER ORO: Ratio alto = Bullish per Gold (Safe Haven)
+    }
+  } else {
+    // REGIME PER ORO: Ratio alto = Bullish per Gold (Safe Haven)
+    if(ratio > 0){
       if(ratio > 78){gsrScore=75;gsrLabel=`G/S Ratio ${ratio} · RISK OFF`;gsrSub='Domanda Oro superiore (difensiva)';gsrCol='var(--green)';}
       else if(ratio < 68){gsrScore=40;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Preferenza Silver (propensione rischio)';gsrCol='var(--yellow)';}
       else{gsrScore=60;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--green)';}
     }
+  }
 
   // ── FACTOR 10: COT Positioning (New - peso 10%) ───────
   let cotScore=50, cotLabel='Dati COT neutri', cotSub='', cotCol='var(--dim)';

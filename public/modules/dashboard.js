@@ -142,13 +142,6 @@ async function loadSentimentOnly(){
     }
   }catch(e){console.log('Sentiment Proxy Error:', e.message);}
 }
-    if(sd?.ok&&sd.xauusd){
-      dashContext.sentiment=sd.xauusd;
-      updateSentiment(sd.xauusd, sd.source);
-      if(marketData)updateConfidence(marketData,sd.xauusd);
-    }
-  }
-}
 
 // Slow refresh: sentiment + calendar (called every 30s)
 async function loadSlowData(){

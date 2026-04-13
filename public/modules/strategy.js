@@ -263,7 +263,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     </div>`;
   } else {
     statusHtml=`<div style="background:#00e67610;border:1px solid #00e67625;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--green)">
-      🟢 <b>Bot MT5 Online</b> (${hour}:00 UTC) — Polling 3s · Real-time Sync attivo
+      🟢 <b>Bot MT5 Online</b> (${hour}:00 UTC) — Polling 1s · Real-time Sync attivo
     </div>`;
   }
 
@@ -356,25 +356,44 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       }).join('')}
 </div>`;
 
-  // ── STORICO REALE
-  const histHtml=`
-<div style="margin-bottom:10px">
-  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">STORICO RECENTE (REAL TRADES)</div>
-  ${history.length===0
-    ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade storico trovato</div>`
-    : history.slice(-5).reverse().map(t=>{
-        const dc=t.direction==='buy'?'#00e676':'#ff4757';
-        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:4px 0;border-bottom:1px solid var(--border2)">
-          <span style="color:${dc}">${t.direction.toUpperCase()}</span>
-          <span style="color:var(--dim)">${new Date(t.time).toLocaleTimeString()}</span>
-          <span>${t.strategy||'—'}</span>
-          <span>$${t.price?.toFixed(2)}</span>
-          <span style="color:${t.profit>=0?'var(--green)':'var(--red)'}">${t.profit>=0?'+':''}${t.profit?.toFixed(2)}</span>
-        </div>`;
-      }).join('')}
+  // ── LIBRERIA STRATEGIE (Dettagli Tecnici)
+  const activeList = SE.regimePriority[seRegime] || [];
+  const catalogHtml = `
+<div style="margin-top:20px; padding-top:15px; border-top:1px dashed var(--border)">
+  <div style="font-size:11px; color:var(--fg); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px">
+    <span>📚 LIBRERIA STRATEGIE & PERFORMANCE</span>
+    <span style="font-size:9px; font-weight:400; color:var(--dim)">(H1 Backtest 2024-2026)</span>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr; gap:8px">
+    ${Object.entries(SE.strategies).map(([id, s]) => {
+      const isActive = activeList.includes(id);
+      const inds = id==='S01' ? 'ADX, DI+, DI-, MACD, RSI' :
+                 id==='S09' ? 'VWAP, W%R (Price Cross)' :
+                 id==='S06' ? 'EMA50 (Order Block), RSI, MACD' :
+                 id==='S13' ? 'Price Action (Breakout Struttura)' :
+                 id==='S14' ? 'Key Levels (Support/Res), RSI' :
+                 id==='S12' ? 'Keltner Channels, W%R' : 'Technical Indicators';
+      
+      return `
+      <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'40':'var(--border)'}; border-radius:8px; padding:10px; position:relative; overflow:hidden">
+        ${isActive ? `<div style="position:absolute; top:0; right:0; background:${rm.col}; color:#000; font-size:7px; font-weight:900; padding:2px 6px; border-bottom-left-radius:6px">ATTIVA ORA</div>` : ''}
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+          <span style="font-size:11px; font-weight:700; color:${isActive?rm.col:'var(--fg)'}">${s.label}</span>
+          <div style="display:flex; gap:10px; font-size:10px">
+            <span style="color:var(--green)">PF <b>${s.pf}</b></span>
+            <span style="color:var(--blue)">WR <b>${s.wr}</b></span>
+          </div>
+        </div>
+        <div style="font-size:9px; color:var(--dim); line-height:1.4">
+          <span style="color:var(--fg); opacity:0.7">Indicatori:</span> ${inds}<br>
+          <span style="color:var(--fg); opacity:0.7">Target:</span> TP $${s.tp} · SL $${s.sl}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
 </div>`;
 
-  el.innerHTML=statusHtml+regimeHtml+indSnap+pendingHtml+posHtml+histHtml;
+  el.innerHTML=statusHtml+regimeHtml+indSnap+pendingHtml+posHtml+histHtml+catalogHtml;
 }
 
 async function seSendTradeToMt5(s) {
@@ -430,7 +449,7 @@ function seRenderNoData(){
 async function initStrategyEngine(){
   if(seTimer)clearInterval(seTimer);
   await seRefresh();
-  seTimer=setInterval(seRefresh, 3000); // Polling 3s ultra-veloce
+  seTimer=setInterval(seRefresh, 1000); // Polling 1s ultra-veloce
 }
 window.initStrategyEngine=initStrategyEngine;
 window.seRefresh=seRefresh;

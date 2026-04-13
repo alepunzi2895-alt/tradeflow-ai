@@ -318,8 +318,8 @@ Per garantire che i segnali della PWA diventino ordini reali su MetaTrader 5, il
 1.  **Dashboard UI**: Rileva un segnale (S01, S06, etc.) e genera un comando d'ordine.
 2.  **API Vercel (`api/db.js`)**: Salva il comando come `mt5_command` nella tabella `user_data`.
 3.  **MT5 Bot Locale (`scripts/mt5-bot.py`)**:
-    -   Esegue un loop ultra-rapido (ogni **3s**) interrogando `api/db.js?action=mt5_command_get`.
-    -   Invia snapshot del conto (equity, bilancio, posizioni) ogni **3s** al DB.
+    -   Esegue un loop ultra-rapido (ogni **1s**) interrogando `api/db.js?action=mt5_command_get`.
+    -   Invia snapshot del conto (equity, bilancio, posizioni) ogni **1s** al DB.
     -   Gestisce attivamente le posizioni con **Break Even** e **Trailing Stop**.
     -   Se trova un comando dalla dashboard, lo esegue immediatamente.
 

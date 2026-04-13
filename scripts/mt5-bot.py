@@ -26,7 +26,7 @@ MAX_TRADES   = 10            # max operazioni per giorno (richiesto 10)
 COOLDOWN_H   = 0.5           # ore di cooldown tra trade (30 min per più frequenza)
 EXTREME_MULT = 3.5           # ATR > 3.5x avg = giorno estremo, skip
 SESSION_UTC  = (0, 24)       # Finestra 24h per massimizzare profitti (come richiesto)
-CHECK_SEC    = 3             # Polling ultra-rapido (3 secondi)
+CHECK_SEC    = 1             # Polling ultra-rapido (1 secondo)
 
 # ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
 VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"

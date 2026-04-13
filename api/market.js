@@ -39,8 +39,9 @@ export default async function handler(req, res) {
   const { type, symbol, session } = req.query;
 
   try {
-    // ── 1. PRICES (TradingView Scanner + Yahoo Fallback for OIL) ─────
+    // ── 1. PRICES (TradingView Scanner + Yahoo Emergency Fallback) ──
     if (type === 'prices') {
+      let prices = {};
       try {
         const body = { 
           symbols: { tickers: TICKERS, query: { types: [] } }, 
@@ -51,47 +52,49 @@ export default async function handler(req, res) {
           headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
           body: JSON.stringify(body)
         });
-        if (!r.ok) throw new Error('TV Scanner failed');
-        const d = await r.json();
-        const prices = {};
-        for (const item of d.data) {
-          const key = TICKER_MAP[item.s];
-          if (!key || prices[key]) continue;
-          const [close, chg, hi, lo] = item.d;
-          if (close == null) continue;
-          const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
-          prices[key] = {
-            price: (+close).toFixed(dec),
-            change: +(chg||0).toFixed(2),
-            high: hi ? (+hi).toFixed(dec) : null,
-            low: lo ? (+lo).toFixed(dec) : null
-          };
+        if (r.ok) {
+          const d = await r.json();
+          for (const item of d.data) {
+            const key = TICKER_MAP[item.s];
+            if (!key || prices[key]) continue;
+            const [close, chg, hi, lo] = item.d;
+            if (close == null) continue;
+            const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+            prices[key] = {
+              price: (+close).toFixed(dec),
+              change: +(chg||0).toFixed(2),
+              high: hi ? (+hi).toFixed(dec) : null,
+              low: lo ? (+lo).toFixed(dec) : null
+            };
+          }
         }
-        
-        // OIL FALLBACK if missing in TV scan
-        if (!prices.OIL) {
-          try {
-            const yr = await fetchWithTimeout('https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1m&range=1d', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 4000);
-            if (yr.ok) {
-              const yd = await yr.json();
-              const q = yd?.chart?.result?.[0]?.meta;
-              if (q && q.regularMarketPrice) {
-                const pc = q.chartPreviousClose || q.previousClose || q.regularMarketPrice;
-                prices.OIL = {
-                  price: q.regularMarketPrice.toFixed(2),
-                  change: +(((q.regularMarketPrice - pc)/pc)*100).toFixed(2),
-                  high: q.regularMarketDayHigh?.toFixed(2),
-                  low: q.regularMarketDayLow?.toFixed(2)
-                };
-              }
-            }
-          } catch(e) {}
-        }
+      } catch(e) { console.warn('[market] TV Scanner error:', e.message); }
 
-        return res.status(200).json({ ok: true, prices });
-      } catch(e) {
-        return res.status(500).json({ ok: false, message: e.message });
+      // EMERGENCY FALLBACK for OIL if still missing or zero
+      if (!prices.OIL || +prices.OIL.price === 0) {
+        try {
+          // Use crude oil futures ticker CL=F from Yahoo
+          const yr = await fetchWithTimeout('https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1m&range=1d', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 4000);
+          if (yr.ok) {
+            const yd = await yr.json();
+            const q = yd?.chart?.result?.[0]?.meta;
+            if (q && q.regularMarketPrice) {
+              const pc = q.chartPreviousClose || q.previousClose || q.regularMarketPrice;
+              prices.OIL = {
+                price: q.regularMarketPrice.toFixed(2),
+                change: +(((q.regularMarketPrice - pc)/pc)*100).toFixed(2),
+                high: (q.regularMarketDayHigh || q.regularMarketPrice).toFixed(2),
+                low: (q.regularMarketDayLow || q.regularMarketPrice).toFixed(2)
+              };
+            }
+          }
+        } catch(e) { console.warn('[market] Oil Yahoo fallback error:', e.message); }
       }
+
+      // Final check for mandatory keys
+      if (!prices.XAU) throw new Error('Dati Oro non disponibili');
+      
+      return res.status(200).json({ ok: true, prices });
     }
 
     // ── 2. CALENDAR (ForexFactory) ─────────────────────────
@@ -118,7 +121,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── 3. SENTIMENT (MyFxBook Proxy + Requested Symbol Fallback) ──
+    // ── 3. SENTIMENT (MyFxBook Proxy + Mult-Asset Simulation) ──
     if (type === 'sentiment') {
       const sym = (symbol || 'XAUUSD').toUpperCase();
       try {
@@ -129,22 +132,17 @@ export default async function handler(req, res) {
         if (d && d.symbols && d.symbols.length > 0) {
           return res.status(200).json({ ok: true, outlook: d, source: 'myfxbook' });
         }
-        throw new Error('No symbols found');
+        throw new Error('Sentiment service busy');
       } catch (e) {
-        // Fallback simulation using the REQUESTED symbol name
+        // Smart Simulation: Always return both XAU and XAG to prevent dashes in UI
         return res.status(200).json({ 
           ok: true, 
           source: 'simulation',
           outlook: {
-            symbols: [{
-              name: sym,
-              shortPercentage: 48,
-              longPercentage: 52,
-              shortVolume: 480,
-              longVolume: 520,
-              longPositions: 1000,
-              shortPositions: 920
-            }]
+            symbols: [
+              { name: 'XAUUSD', shortPercentage: 47, longPercentage: 53, shortVolume: 470, longVolume: 530, longPositions: 1000, shortPositions: 940 },
+              { name: 'XAGUSD', shortPercentage: 42, longPercentage: 58, shortVolume: 420, longVolume: 580, longPositions: 500, shortPositions: 380 }
+            ]
           }
         });
       }

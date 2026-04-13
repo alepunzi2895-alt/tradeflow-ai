@@ -136,6 +136,7 @@ async function loadSlowData(){
   const mfxSess = mfxSession?.session ? '&session='+encodeURIComponent(mfxSession.session) : '';
   fetchJSON('/api/market?type=sentiment&symbol=' + assetStr + mfxSess, 6000).then(async sd => {
     if(sd?.ok && sd.outlook && sd.outlook.symbols){
+      // Support dual-asset simulation response
       const sym = sd.outlook.symbols.find(s => s.name === assetStr) || sd.outlook.symbols[0];
       if(sym && sym.longPercentage != null){
         const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);

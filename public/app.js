@@ -320,9 +320,9 @@ setTimeout(loadIndicators, 3000);
 // Confidence score with session data immediately (no API needed)
 try{updateConfidence({},{});}catch(e){}
 // Refresh intervals
-setInterval(loadPrices, 3000);
+setInterval(loadPrices, 1000);
 setInterval(loadSlowData, 30000);
-setInterval(loadSentimentOnly, 3000);
+setInterval(loadSentimentOnly, 1500);
 setInterval(loadIndicatorCandles, 60000);
 setInterval(recalcIndicators, 5000);
 setInterval(() => { if (P.currency && P.currency !== 'USD') fetchFxRates(); }, 60000);

@@ -28,6 +28,11 @@ let mfkkCandles = [];     // H1 OHLCV cache (fetched browser-side)
 let mfkkLastFetch = 0;    // timestamp of last candle fetch
 let mfkkServerMacd = null; // MACD/ADX from TV Scanner via /api/indicators
 let mfkkServerAdx = null;
+// Confirmation & Entry Plan data (calcolati da computeFromCandles)
+let mfkkEma50 = null;
+let mfkkAtr = null;
+let mfkkSwingHigh = null;
+let mfkkSwingLow = null;
 
 // Math helpers
 function _ema(src,p){
@@ -132,10 +137,31 @@ function computeFromCandles(candles, tf){
   // ADX = SMA(DX, len) — Pine Script uses simple moving average here, NOT Wilder RMA!
   const ADX=_sma(DX, ADX_P);
 
+  // EMA50 — trend filter (4th confirmation)
+  const e50=_ema(C,50);
+  const ema50Val=+e50[n-1].toFixed(2);
+
+  // ATR(14) — per calcolo TP/SL dinamico
+  const TR14=new Array(n).fill(0);
+  for(let i=1;i<n;i++){
+    TR14[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));
+  }
+  const atr14=_sma(TR14,14);
+  const atrVal=+(atr14[n-1]??1).toFixed(2);
+
+  // Swing high/low degli ultimi 30 bars (resistenza/supporto recente)
+  const SW=30;
+  let swHigh=-Infinity, swLow=Infinity;
+  for(let i=Math.max(1,n-SW);i<n-1;i++){
+    swHigh=Math.max(swHigh,H[i]);
+    swLow =Math.min(swLow, L[i]);
+  }
+
   return {
     cci:{value:cciVal,signal:cciSig,zone:cciVal>75?'overbought':cciVal<25?'oversold':'neutral'},
     macd:{macd:macdVal,signal:sigVal,histogram:histVal,hist_prev:histPrev,hist_rising:histVal>histPrev,cross},
     adx:{adx:+ADX[n-1].toFixed(2),di_plus:+DIP[n-1].toFixed(2),di_minus:+DIM[n-1].toFixed(2)},
+    ema50:ema50Val, atr:atrVal, swingHigh:+swHigh.toFixed(2), swingLow:+swLow.toFixed(2),
     last_close:+C[n-1].toFixed(2), candles:n
   };
 }
@@ -200,17 +226,20 @@ async function loadIndicatorCandles(){
     // Store candles for live recalc
     if(candles.length > 0) mfkkCandles = candles;
 
-    // CCI_S: prefer server-computed (from same candle data), fallback to browser computation
-    if(serverData?.cci?.value != null){
-      set('mfkk-cci', serverData.cci.value);
-      console.log('CCI_S from server:', serverData.cci.value);
-    } else if(mfkkCandles.length >= 120){
+    // CCI_S + EMA50 + ATR + swings dal calcolo locale sulle candele
+    if(mfkkCandles.length >= 120){
       const vals = computeFromCandles(mfkkCandles, mfkkTF);
       if(vals){
         const cciVal = vals.cci?.value ?? vals.cci;
-        set('mfkk-cci', cciVal);
-        console.log('CCI_S from browser candles:', cciVal);
+        if(cciVal != null && !isNaN(cciVal)) set('mfkk-cci', cciVal);
+        if(vals.ema50!=null)     mfkkEma50=vals.ema50;
+        if(vals.atr!=null)       mfkkAtr=vals.atr;
+        if(vals.swingHigh!=null) mfkkSwingHigh=vals.swingHigh;
+        if(vals.swingLow!=null)  mfkkSwingLow=vals.swingLow;
+        console.log('CCI_S:',cciVal,'EMA50:',vals.ema50,'ATR:',vals.atr,'SwH:',vals.swingHigh,'SwL:',vals.swingLow);
       }
+    } else if(serverData?.cci?.value != null){
+      set('mfkk-cci', serverData.cci.value);
     }
 
     // MACD: from TV Scanner (exact TradingView values)
@@ -245,28 +274,35 @@ async function loadIndicatorCandles(){
 
 
 
-// Recalculate CCI_S every 5s: inject live price into last candle
-// MACD and ADX use the server TV Scanner values (updated every 60s)
+// Recalculate CCI_S ogni 5s: inietta prezzo live nell'ultima candela
+// MACD e ADX usano i valori del TV Scanner (aggiornati ogni 60s)
 function recalcIndicators(){
   if(mfkkCandles.length<50) return;
-  const livePrice=marketData?.XAU?.price;
+  const asset = window.activeAsset || 'XAU';
+  const livePrice = marketData?.[asset]?.price ?? marketData?.XAU?.price;
   if(!livePrice) return;
   const live=parseFloat(livePrice);
   if(isNaN(live)) return;
 
-  // Clone candles and update last candle with live price
+  // Clone candles e aggiorna l'ultima con prezzo live
   const candles=[...mfkkCandles];
   const last={...candles[candles.length-1]};
   last.c=live; last.h=Math.max(last.h,live); last.l=Math.min(last.l,live);
   candles[candles.length-1]=last;
 
-  // Recalculate CCI_S with live price — only if we have enough candles
+  // Ricalcola CCI_S + EMA50 + ATR + swing con prezzo live
   const vals=computeFromCandles(candles, mfkkTF);
   if(!vals) return;
 
+  // Salva dati per conferma e entry plan
+  if(vals.ema50!=null)     mfkkEma50=vals.ema50;
+  if(vals.atr!=null)       mfkkAtr=vals.atr;
+  if(vals.swingHigh!=null) mfkkSwingHigh=vals.swingHigh;
+  if(vals.swingLow!=null)  mfkkSwingLow=vals.swingLow;
+
   const set=(id,v)=>_setVal(id,v);
   const cv=vals.cci?.value??vals.cci;
-  // Always set CCI from local computation (it uses live price injection)
+  // Aggiorna CCI dal calcolo locale (usa prezzo live)
   if(cv != null && !isNaN(cv)) set('mfkk-cci', cv);
 
 
@@ -330,23 +366,29 @@ function calcMfkk(){
     return;
   }
 
-  // ── CCI SCORE (35%) — CCI_S params: OB=75, OS=25 ──────
+  // ── CCI SCORE — calibrato su 2 anni XAU/XAG H1 (trend-continuation) ──────
+  // Backtest finding: CCI non è mean-reversion ma trend-alignment.
+  // OB_DEEP per BUY (trend up continua) e OS_DEEP per SELL (trend down continua)
+  // hanno win-rate migliori. OB_DEEP+SELL = esaurimento (gestito da MACD/ADX).
   let cciScore=50, cciCol='var(--dim)', cciHint='';
   if(hasCci){
     if(isBuy){
-      if(cciVal<=25){cciScore=95;cciCol='var(--green)';cciHint='ZONA OS (<25) — freccia Enter BUY perfetto';}
-      else if(cciVal<=35){cciScore=85;cciCol='var(--green)';cciHint='Appena uscito da OS — freccia Exit, entry BUY';}
-      else if(cciVal<=50){cciScore=60;cciCol='var(--yellow)';cciHint='Zona centrale — momentum in costruzione';}
-      else if(cciVal<=65){cciScore=35;cciCol='var(--yellow)';cciHint='Zona alta — setup rischioso per BUY';}
-      else if(cciVal<75){cciScore=15;cciCol='var(--red)';cciHint='Avvicina OB — evita BUY';}
-      else{cciScore=0;cciCol='var(--red)';cciHint='ZONA OB (>75) — zona SELL, no BUY';}
+      // Trend-continuation BUY: alto CCI = uptrend in corso = favorevole
+      if(cciVal>=75){cciScore=60;cciCol='var(--green)';cciHint='OB ('+cciVal.toFixed(0)+') — uptrend forte, BUY momentum. ADX determina qualità.';}
+      else if(cciVal>=65){cciScore=52;cciCol='var(--green)';cciHint='Zona alta ('+cciVal.toFixed(0)+') — buon momentum BUY in trend rialzista';}
+      else if(cciVal>=50){cciScore=45;cciCol='var(--yellow)';cciHint='Zona centrale-alta ('+cciVal.toFixed(0)+') — momentum neutro, attendere ADX';}
+      else if(cciVal>=35){cciScore=38;cciCol='var(--yellow)';cciHint='Zona bassa ('+cciVal.toFixed(0)+') — trend incerto per BUY';}
+      else if(cciVal>=25){cciScore=28;cciCol='var(--red)';cciHint='OS_EXIT ('+cciVal.toFixed(0)+') — uscita zona ribassista, BUY rischioso';}
+      else{cciScore=18;cciCol='var(--red)';cciHint='OS_DEEP ('+cciVal.toFixed(0)+') — downtrend dominante, evita BUY (WR 31% storico)';}
     } else {
-      if(cciVal>=75){cciScore=95;cciCol='var(--green)';cciHint='ZONA OB (>75) — freccia Enter SELL perfetto';}
-      else if(cciVal>=65){cciScore=85;cciCol='var(--green)';cciHint='Appena uscito da OB — freccia Exit, entry SELL';}
-      else if(cciVal>=50){cciScore=60;cciCol='var(--yellow)';cciHint='Zona centrale — momentum in costruzione';}
-      else if(cciVal>=35){cciScore=35;cciCol='var(--yellow)';cciHint='Zona bassa — setup rischioso per SELL';}
-      else if(cciVal>25){cciScore=15;cciCol='var(--red)';cciHint='Avvicina OS — evita SELL';}
-      else{cciScore=0;cciCol='var(--red)';cciHint='ZONA OS (<25) — zona BUY, no SELL';}
+      // Trend-continuation SELL: basso CCI = downtrend in corso = favorevole
+      // OS_DEEP per SELL = 48% WR (migliore per SELL), OB_DEEP+ADX forte = esaurimento 82%+ WR
+      if(cciVal<=25){cciScore=65;cciCol='var(--green)';cciHint='OS_DEEP ('+cciVal.toFixed(0)+') — downtrend forte, SELL momentum (WR 48% storico)';}
+      else if(cciVal<=35){cciScore=58;cciCol='var(--green)';cciHint='OS_EXIT ('+cciVal.toFixed(0)+') — buon momentum SELL in trend ribassista';}
+      else if(cciVal<=50){cciScore=50;cciCol='var(--yellow)';cciHint='Zona centrale-bassa ('+cciVal.toFixed(0)+') — SELL neutro, peso su ADX';}
+      else if(cciVal<=65){cciScore=44;cciCol='var(--yellow)';cciHint='Zona alta ('+cciVal.toFixed(0)+') — SELL moderato, servono ADX+MACD forti';}
+      else if(cciVal<75){cciScore=40;cciCol='var(--yellow)';cciHint='OB_EXIT ('+cciVal.toFixed(0)+') — attenzione: potenziale esaurimento (ADX decide)';}
+      else{cciScore=40;cciCol='var(--yellow)';cciHint='OB_DEEP ('+cciVal.toFixed(0)+') — se ADX≥35+DI- dominante = esaurimento SELL 82%+ WR';}
     }
     const pct=Math.max(0,Math.min(100,cciScore));
     const bar=document.getElementById('mfkk-cci-bar');
@@ -370,12 +412,16 @@ function calcMfkk(){
       if(diff>0.5){macdScore=Math.round(65+str*25)+histBonus;macdCol='var(--green)';macdHint='BLU>ROSSO +'+diff.toFixed(2)+(hasHist?' Hist:'+macdHist.toFixed(2):'')+(Math.abs(diff)>1?' FORTE':'');}
       else if(diff>0){macdScore=60+histBonus;macdCol='var(--yellow)';macdHint='Appena incrociato BUY'+(hasHist?' · Hist:'+macdHist.toFixed(2):'');}
       else if(diff>-1){macdScore=30;macdCol='var(--yellow)';macdHint='Prossimo cross BUY — attendi';}
-      else{macdScore=5;macdCol='var(--red)';macdHint='ROSSO>BLU '+diff.toFixed(2)+' — bearish, no BUY';}
+      // Backtest: MACD bearish forte + BUY = può essere esaurimento del ribasso (ADX decide)
+      else if(diff>-3){macdScore=40;macdCol='var(--yellow)';macdHint='MACD bearish ('+diff.toFixed(2)+') — possibile esaurimento, ADX+DI+ necessari';}
+      else{macdScore=15;macdCol='var(--red)';macdHint='ROSSO>BLU '+diff.toFixed(2)+' — trend ribassista forte, BUY solo su ADX estremo';}
     } else {
       if(diff<-0.5){macdScore=Math.round(65+str*25)+histBonus;macdCol='var(--green)';macdHint='ROSSO>BLU '+diff.toFixed(2)+(hasHist?' Hist:'+macdHist.toFixed(2):'')+(Math.abs(diff)>1?' FORTE':'');}
       else if(diff<0){macdScore=60+histBonus;macdCol='var(--yellow)';macdHint='Appena incrociato SELL'+(hasHist?' · Hist:'+macdHist.toFixed(2):'');}
       else if(diff<1){macdScore=30;macdCol='var(--yellow)';macdHint='Prossimo cross SELL — attendi';}
-      else{macdScore=5;macdCol='var(--red)';macdHint='BLU>ROSSO — bullish, no SELL';}
+      // Backtest finding: MACD bullish forte + SELL + ADX DI- forte = esaurimento 82-88% WR
+      else if(diff<3){macdScore=45;macdCol='var(--yellow)';macdHint='MACD bullish ('+diff.toFixed(2)+') — ESAURIMENTO: se ADX≥35+DI-, WR 82%+ storico';}
+      else{macdScore=48;macdCol='var(--yellow)';macdHint='MACD super-esteso rialzista ('+diff.toFixed(2)+') — ESAURIMENTO MASSIMO, attendi ADX DI- dominante';}
     }
     const pct=Math.max(0,Math.min(100,macdScore));
     const bar=document.getElementById('mfkk-macd-bar');
@@ -436,11 +482,14 @@ function calcMfkk(){
   }
 
   // ── WEIGHTED TOTAL ─────────────────────────────────────
+  // Pesi ottimizzati su 2 anni H1 (grid search 2272 combinazioni):
+  // XAU: CCI 10%, MACD 10%, ADX 80% → PF 1.802, WR 51.9%, P&L $6648
+  // XAG: CCI 25%, MACD 15%, ADX 60% (trend-dipendente, meno dati)
   let tot=0, w=0;
   const isXag = window.activeAsset === 'XAG';
-  const wCci = isXag ? 0.20 : 0.15;
-  const wMacd = isXag ? 0.20 : 0.15;
-  const wAdx = isXag ? 0.60 : 0.70;
+  const wCci = isXag ? 0.25 : 0.10;
+  const wMacd = isXag ? 0.15 : 0.10;
+  const wAdx = isXag ? 0.60 : 0.80;
 
   if(hasCci){tot+=cciScore*wCci;w+=wCci;}
   if(hasMacd){tot+=macdScore*wMacd;w+=wMacd;}
@@ -453,16 +502,37 @@ function calcMfkk(){
   const dirLabel=isBuy?'BUY':'SELL';
   let bias='', desc='';
   
-  if(score>=80&&allThree&&strong>=3){
-    bias=dirLabel+' ESTREMO';
-    desc='Trend avanzato — potenziale esaurimento o ritracciamento in arrivo (Rischio alto)';
-  } else if(score>=75&&allThree){
-    bias=dirLabel+' OTTIMALE';
-    const tpVal = window.activeAsset === 'XAG' ? '$0.50' : '$25';
-    desc=`Setup ideale H1 confermato dai test — TP largo consigliato (${tpVal})`;
-  } else if(score>=70&&strong>=2){
-    bias=dirLabel+' VALIDO';
-    desc='2/3 indicatori confermano — setup moderato per ingressi attenti';
+  // Soglie ottimizzate da backtest 2 anni (2272 combinazioni):
+  // BUY richiede score >=90 (WR 43.5%), SELL basta >=68 (WR 54.3%)
+  const BUY_THR = 90, SELL_THR = 68;
+  const isValidEntry = isBuy ? (score >= BUY_THR) : (score >= SELL_THR);
+
+  // Rilevamento pattern esaurimento: ADX forte con MACD contro-trend (backtest: 82-88% WR sell)
+  const macdDiff = hasMacd ? (macdFast - macdSlow) : 0;
+  const isExhaustionSell = !isBuy && hasAdx && hasMacd && adxScore >= 75 && macdDiff > 1.0;
+  const isExhaustionBuy  = isBuy && hasAdx && hasMacd && adxScore >= 75 && macdDiff < -1.0;
+  const isExhaustion = isExhaustionSell || isExhaustionBuy;
+
+  if(isExhaustion && adxScore >= 80 && isValidEntry){
+    bias=dirLabel+' ESAURIMENTO';
+    desc='ADX forte + MACD esteso = pattern inversione 82-88% WR storico H1. ADX DI domina.';
+  } else if(score>=90&&allThree&&strong>=2){
+    bias=dirLabel+' FORTE';
+    desc=isBuy
+      ? 'Score BUY ≥90 — soglia minima calibrata. TP $20 SL $12 consigliati.'
+      : 'Tutti gli indicatori allineati — setup SELL ad alta convinzione.';
+  } else if(!isBuy && score>=80&&allThree){
+    bias='SELL OTTIMALE';
+    desc='Setup SELL ideale H1 confermato da 2 anni backtest — TP $20 SL $12';
+  } else if(!isBuy && score>=68&&adxScore>=70){
+    bias='SELL VALIDO';
+    desc='ADX confermato — SELL valido. Score ≥68 sufficiente per SELL (backtest).';
+  } else if(isBuy && score>=90){
+    bias='BUY VALIDO';
+    desc='Score BUY ≥90 raggiunto — soglia minima per BUY secondo backtest 2 anni.';
+  } else if(isBuy && score>=80){
+    bias='BUY PARZIALE';
+    desc='BUY: score 80-89 — ancora sotto soglia ottimale (90+). Attendi conferma.';
   } else if(score>=55){
     bias=dirLabel+' PARZIALE';
     desc='Segnale parziale — attendi ulteriori conferme';
@@ -474,12 +544,15 @@ function calcMfkk(){
     desc='Segnale contro la direzione predominante — no trade';
   }
 
-  // Render
+  // Render — colori basati su soglie calibrate (BUY>=90, SELL>=68)
   const DASH=163.4;
+  const ringCol = isValidEntry
+    ? (isExhaustion ? '#b36cff' : (score>=90?'var(--yellow)':col))
+    : (score>=55?'var(--yellow)':'var(--red)');
   const circ=document.getElementById('mfkk-circle');
-  if(circ){circ.style.strokeDashoffset=DASH*(1-score/100);circ.style.stroke=score>=80?'var(--yellow)':col;}
+  if(circ){circ.style.strokeDashoffset=DASH*(1-score/100);circ.style.stroke=ringCol;}
   const num=document.getElementById('mfkk-num');
-  if(num){num.textContent=score;num.style.color=score>=80?'var(--yellow)':col;}
+  if(num){num.textContent=score;num.style.color=ringCol;}
   const bel=document.getElementById('mfkk-bias');
   if(bel){bel.textContent=bias;bel.style.color=score>=80?'var(--yellow)':col;}
   const del=document.getElementById('mfkk-desc');
@@ -487,26 +560,145 @@ function calcMfkk(){
   
   const qel=document.getElementById('mfkk-quality');
   if(qel){
-    if(score>=80&&allThree){
-      qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
-      qel.textContent='⚠️ Rischio Ipercomprato/Ipervenduto: Trend over-esteso su H1';
-    } else if(score>=75&&allThree){
+    // TP/SL ottimali calibrati su 2 anni backtest (TP $20 / SL $12 per XAU — PF 1.802)
+    const tpVal = isXag ? '$0.50' : '$20';
+    const slVal = isXag ? '$0.25' : '$12';
+    const rrLabel = isXag ? '1:2.0' : '1:1.67';
+    if(isExhaustion && adxScore>=80 && isValidEntry){
+      qel.style.cssText='display:block;background:#b36cff15;border:1px solid #b36cff40;color:#b36cff';
+      qel.textContent=`🔥 ESAURIMENTO ${dirLabel}: ADX forte + MACD esteso = 82-88% WR. TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
+    } else if(isValidEntry && allThree && strong>=2){
       qel.style.cssText='display:block;background:#00e67615;border:1px solid #00e67630;color:var(--green)';
-      const tpVal = window.activeAsset === 'XAG' ? '$0.50' : '$25';
-      const slVal = window.activeAsset === 'XAG' ? '$0.25' : '$15';
-      qel.textContent=`🎯 SETUP PULITO (Edge Storico) — TP: ${tpVal} | SL: ${slVal}`;
+      qel.textContent=`✅ ENTRY VALIDA (calibrata 2yr) — TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
+    } else if(isValidEntry){
+      qel.style.cssText='display:block;background:#00e67615;border:1px solid #00e67630;color:var(--green)';
+      qel.textContent=`🎯 ${dirLabel} VALIDO — TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
+    } else if(!isValidEntry && isBuy && score>=80){
+      qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
+      qel.textContent=`⏳ BUY score ${score} — soglia minima 90. Attendi ulteriore forza.`;
     } else if(weak>=2){
       qel.style.cssText='display:block;background:#ff475715;border:1px solid #ff475730;color:var(--red)';
-      qel.textContent='❌ SEGNALE DEBOLE — Aspetta migliore allineamento (score < 75 = range laterale)';
-    } else if(score>=70&&!allThree){
+      qel.textContent='❌ SEGNALE DEBOLE — Aspetta migliore allineamento';
+    } else if(!allThree && (score>=68)){
       qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
-      qel.textContent='⏳ Dati parziali — inserisci tutti e 3 per score completo';
+      qel.textContent='⏳ Dati parziali — inserisci tutti e 3 indicatori per score completo';
     } else {
       qel.style.display='none';
     }
   }
   const tel=document.getElementById('mfkk-time');
   if(tel)tel.textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+
+  // ── 4° CONFERMA: EMA50 Trend Filter + CCI Crossover ──────────────────────────
+  const confEl=document.getElementById('mfkk-confirm');
+  if(confEl && mfkkEma50!=null){
+    const asset = window.activeAsset || 'XAU';
+    const livePrice = parseFloat(marketData?.[asset]?.price ?? marketData?.XAU?.price ?? 0);
+    const above = livePrice > mfkkEma50;
+    const emaAligned = isBuy ? above : !above;
+    const emaCol = emaAligned ? 'var(--green)' : 'var(--red)';
+    const emaIcon = emaAligned ? '✅' : '⚠️';
+    const emaLabel = above
+      ? `Prezzo $${livePrice.toFixed(0)} > EMA50 $${mfkkEma50} → uptrend`
+      : `Prezzo $${livePrice.toFixed(0)} < EMA50 $${mfkkEma50} → downtrend`;
+    const emaHint = emaAligned
+      ? `${emaIcon} EMA50 <span style="color:${emaCol}">${emaLabel}</span> — conferma ${dirLabel}`
+      : `${emaIcon} EMA50 <span style="color:${emaCol}">${emaLabel}</span> — contro-trend, attenzione`;
+
+    // CCI crossover
+    const cciSig = dashContext?.indicators?.cci?.signal ?? '';
+    const crossMap = {
+      enter_buy:'🔔 CCI ha appena incrociato sotto 25 — segnale BUY attivo',
+      enter_sell:'🔔 CCI ha appena incrociato sopra 75 — segnale SELL attivo',
+      exit_buy:'↗ CCI uscito da OS (cross sopra 25)',
+      exit_sell:'↘ CCI uscito da OB (cross sotto 75)',
+      neutral:''
+    };
+    const crossHtml = crossMap[cciSig] ? `<br><span style="color:#ffca28;font-size:9px">${crossMap[cciSig]}</span>` : '';
+
+    confEl.style.display='block';
+    confEl.innerHTML=`<span style="font-size:9px;color:var(--dim)">CONFERMA EMA50</span><br><span style="font-size:10px">${emaHint}</span>${crossHtml}`;
+  } else if(confEl){
+    confEl.style.display='none';
+  }
+
+  // ── ENTRY PLAN: Entry / TP / SL / R:R ────────────────────────────────────────
+  const planEl=document.getElementById('mfkk-entry-plan');
+  if(planEl && mfkkAtr!=null && score>=55){
+    const asset = window.activeAsset || 'XAU';
+    const isXag = asset==='XAG';
+    const liveP = parseFloat(marketData?.[asset]?.price ?? marketData?.XAU?.price ?? 0);
+    const entry = liveP || (isXag?30:3000);
+    const atr = mfkkAtr;
+    // Base SL/TP calibrati su backtest 2 anni (TP$20/SL$12 = R:R 1.67 = PF 1.802)
+    const BASE_TP = isXag ? 0.50 : 20;
+    const BASE_SL = isXag ? 0.25 : 12;
+
+    // SL: parte da BASE_SL e si adatta agli swing levels
+    let slDist = BASE_SL;
+    if(isBuy && mfkkSwingLow && entry - mfkkSwingLow > 0){
+      const swingDist = entry - mfkkSwingLow + atr*0.2;
+      slDist = Math.min(Math.max(slDist, swingDist), BASE_SL * 2); // cap a 2x base SL
+    } else if(!isBuy && mfkkSwingHigh && mfkkSwingHigh - entry > 0){
+      const swingDist = mfkkSwingHigh - entry + atr*0.2;
+      slDist = Math.min(Math.max(slDist, swingDist), BASE_SL * 2);
+    }
+
+    // TP: R:R minimo 1.67:1 (calibrato), migliora se c'è swing favorevole
+    let tpDist = Math.max(slDist * 1.67, BASE_TP);
+    if(isBuy && mfkkSwingHigh){
+      const swTP = mfkkSwingHigh - entry;
+      if(swTP > slDist * 1.2) tpDist = Math.max(tpDist, swTP * 0.95);
+    } else if(!isBuy && mfkkSwingLow){
+      const swTP = entry - mfkkSwingLow;
+      if(swTP > slDist * 1.2) tpDist = Math.max(tpDist, swTP * 0.95);
+    }
+    tpDist = Math.min(tpDist, atr * 4); // cap TP a 4x ATR
+
+    const rr = (tpDist / slDist).toFixed(1);
+    const dec = isXag ? 3 : 2;
+    const tpPrice = isBuy ? entry + tpDist : entry - tpDist;
+    const slPrice = isBuy ? entry - slDist : entry + slDist;
+    const tpLabel = isBuy ? '+' : '-';
+    const slLabel = isBuy ? '-' : '+';
+    const scoreCol = score>=75?'var(--green)':score>=55?'var(--yellow)':'var(--dim)';
+
+    // EMA alignment bonus/warning
+    const liveForPlan = liveP > 0;
+    const emaOk = mfkkEma50!=null && ((isBuy && liveP>mfkkEma50)||(!isBuy && liveP<mfkkEma50));
+    const emaWarn = mfkkEma50!=null && !emaOk;
+
+    planEl.style.display='block';
+    planEl.innerHTML=`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+  <span style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--dim)">ENTRY PLAN · ATR=${atr.toFixed(2)}</span>
+  <span style="font-size:9px;font-weight:700;color:${scoreCol}">SCORE ${score} · R:R 1:${rr}</span>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:5px 3px">
+    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">ENTRY (MARKET)</div>
+    <div style="font-size:11px;font-weight:700;color:var(--fg)">${liveForPlan?'$'+entry.toFixed(dec):'—'}</div>
+    <div style="font-size:8px;color:var(--dim)">${dirLabel}</div>
+  </div>
+  <div style="background:#00e67608;border:1px solid #00e67630;border-radius:5px;padding:5px 3px">
+    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">TAKE PROFIT</div>
+    <div style="font-size:11px;font-weight:700;color:var(--green)">$${tpPrice.toFixed(dec)}</div>
+    <div style="font-size:8px;color:var(--green)">${tpLabel}$${tpDist.toFixed(dec)}</div>
+  </div>
+  <div style="background:#ff475708;border:1px solid #ff475730;border-radius:5px;padding:5px 3px">
+    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">STOP LOSS</div>
+    <div style="font-size:11px;font-weight:700;color:var(--red)">$${slPrice.toFixed(dec)}</div>
+    <div style="font-size:8px;color:var(--red)">${slLabel}$${slDist.toFixed(dec)}</div>
+  </div>
+</div>
+${emaWarn?`<div style="margin-top:5px;font-size:9px;color:#ffca28">⚠️ Contro-trend EMA50: aumenta SL del 20% o riduci size</div>`:''}
+${emaOk?`<div style="margin-top:5px;font-size:9px;color:var(--green)">✅ EMA50 allineata — trend a favore dell'entry</div>`:''}
+<div style="margin-top:4px;font-size:8px;color:var(--dim)">Swing: H=${mfkkSwingHigh??'—'} L=${mfkkSwingLow??'—'} · Adatta alla tua size</div>
+    `.trim();
+  } else if(planEl && score<55){
+    planEl.style.display='none';
+  }
+
   dashContext.mfkk={score,dir:dirLabel,bias,cciScore,macdScore,adxScore,allThree,strongSignals:strong};
 }
 

@@ -37,6 +37,10 @@ api/
   market.js           ← tutti gli asset (DXY, EUR, GBP, OIL, US10Y, Silver, GSR)
   indicators.js       ← MFKK indicators: MACD/ADX da TV Scanner, CCI_S da candle browser
   report.js           ← AI report giornaliero
+scripts/
+  backtest-mfkk.mjs         ← backtester Node.js con config ottimale applicata
+  optimize-full.py          ← ottimizzatore grid search 3 fasi (pesi + soglie + cooldown)
+  analyze-entry-conditions.py ← analisi empirica zone indicatori su 2 anni H1
 ```
 
 ---
@@ -101,11 +105,12 @@ function _ema(src, p) {
 ```
 Ogni 5 secondi (recalcIndicators):
   └─ Inietta live XAU price nell'ultima candle
-  └─ Ricalcola CCI_S con live price
+  └─ Ricalcola CCI_S + EMA50 + ATR(14) + SwingH/L con live price
   └─ MACD/ADX: usa server TV Scanner (non ricalcola, aggiorna ogni 60s)
+  └─ Aggiorna UI: conferma EMA50, entry plan ATR-based
 
 Ogni 60 secondi (loadIndicatorCandles):
-  ├─ BROWSER: fetch Yahoo XAUUSD=X candles → CCI_S computation
+  ├─ BROWSER: fetch Yahoo XAUUSD=X candles → CCI_S + EMA50 + ATR + swings
   └─ SERVER: TV Scanner → MACD.macd|60, MACD.signal|60, ADX|60, plus_di|60, minus_di|60
 ```
 
@@ -145,21 +150,82 @@ async function fetchT(url, opts={}, ms=8000) {
 
 ---
 
-## 7. BACKTESTING & SCORING EDGE (H1 XAU/USD)
+## 7. BACKTESTING & SCORING MFKK — PARAMETRI DEFINITIVI
 
-Il backtest simulato su **2 anni massimi** (limite Yahoo Finance per candele H1, ~10.600 candele) ha evidenziato le seguenti logiche definitive per il calcolo MFKK:
-1. **Ribilanciamento Pesi (ADX Dominante)**: I test dimostrano che l'affidabilità su H1 sale drasticamente (dal 42.8% al 47.5% WR con massimizzazione del P&L) se l'ADX ha un peso dominante. **I pesi attuali ottimizzati sono: ADX 70%, MACD 15%, CCI 15%**. L'ADX filtra i "falsi segnali" laterali che MACD/CCI tendono a dare.
-2. **Sweet Spot "STRICT"**: I setup migliori si trovano con uno Score tra `75 e 79`. 
-3. **Esaurimento Trend (>80)**: Confluenze perfette (score >= 80) tendono a entrare troppo tardi, quando l'asset è in ipercomprato/ipervenduto estremo e rischia inversioni/ritracciamenti. Considerare segnali >80 come avvisi di possibile "exhaustion".
-4. **Risk/Reward WIDE**: Operando su Gold H1, la volatilità richiede stop loss più ampi (es. SL $15, TP $25) rispetto a configurazioni "tight" ($7) che verrebbero costantemente cacciate dagli spike fisiologici del mercato.
+### 7.1 Backtest eseguito
+- **Dataset**: 730 giorni H1 XAU/USD (11.441 candele, apr 2024 – apr 2026)
+- **Metodo ottimizzazione**: grid search 2.272 combinazioni (Fase 1) + test ATR vs fisso (Fase 2) + cooldown (Fase 3)
+- **File**: `scripts/optimize-full.py`, `scripts/analyze-entry-conditions.py`, `scripts/backtest-mfkk.mjs`
+
+### 7.2 Parametri Scoring Ottimali
+
+| Parametro | Valore XAU | Valore XAG | Note |
+|---|---|---|---|
+| **Peso CCI_S** | **10%** | 25% | ADX domina il segnale |
+| **Peso MACD** | **10%** | 15% | Secondario — conferma momentum |
+| **Peso ADX** | **80%** | 60% | Primario — trend e DI+ vs DI- |
+| **Score entry BUY** | **≥ 90** | ≥ 75 | BUY richiede alta convinzione (WR 43.5%) |
+| **Score entry SELL** | **≥ 68** | ≥ 70 | SELL più permissiva (WR 54.4%) |
+| **TP XAU** | **$20** | $0.50 | Ottimizzato su 730gg |
+| **SL XAU** | **$12** | $0.25 | R:R 1.67:1 → PF 1.80 |
+| **EMA50 filter** | **OFF** | OFF | Non bloccare trades — EMA è solo nota informativa |
+
+### 7.3 Risultati Backtest Config Ottimale (730gg H1 XAU/USD)
+
+| Metrica | Valore |
+|---|---|
+| Trades totali | 1.439 (317 BUY + 1.122 SELL) |
+| **Win Rate** | **52.0%** |
+| **P&L totale** | **$6.668** |
+| **Profit Factor** | **1.80** |
+| **Max Drawdown** | **$600** |
+| BUY Win Rate | 43.5% (P&L +$612 con soglia 90+) |
+| SELL Win Rate | 54.4% (P&L +$6.056) |
+| Mesi positivi | 15/25 (60%) |
+
+### 7.4 Insights chiave dal Backtest Empirico
+
+1. **CCI non è mean-reversion, è trend-continuation**:
+   - Per BUY: CCI alto (OB_DEEP ≥75) = uptrend in corso = favorevole (NON il contrario)
+   - Per SELL: CCI basso (OS_DEEP ≤25) = downtrend in corso = favorevole (WR 48% storico)
+   - La logica "compra oversold / vendi overbought" è empiricamente sbagliata su H1 XAU
+
+2. **Pattern ESAURIMENTO (82-88% WR)**:
+   - Setup: ADX ≥35 + DI allineato + MACD esteso in direzione OPPOSTA al trade
+   - Esempio SELL: ADX forte con DI- dominante + MACD molto bullish → esaurimento del rialzo
+   - Il MACD "contro-trend" non è penalizzante ma è il segnale più potente
+   - Mostrato in UI con badge viola "ESAURIMENTO"
+
+3. **Zona score ottimale è 80-89** (58.8% WR), NON 90-100 (48.2% WR):
+   - I segnali "estremi" (>90) entrano troppo tardi quando il trend è già over-esteso
+   - Score 80-89 = momentum forte ma non esaurito = entry migliore
+
+4. **SELL >> BUY su XAU H1**:
+   - XAU ha pattern di pullback frequenti (sell-the-bounce) più affidabili dei breakout rialzisti
+   - In periodi bull market (gold ATH), le SELL sui pullback catturano correzioni tecniche
+   - BUY richiede score ≥90 per essere profittevole
+
+5. **EMA50 filter OFF** su XAU H1:
+   - Il pattern di esaurimento SELL funziona anche quando il prezzo è sopra EMA50 (bull trend)
+   - Filtrare le SELL con EMA50 rimuove i migliori trade (bounce reversal in uptrend)
+   - EMA50 è mostrata in UI come **informazione contestuale**, non come blocco
+
+### 7.5 Funzionalità UI aggiunte (calibrate su backtest)
+
+- **4° Conferma EMA50**: mostra allineamento trend + CCI crossover detection in tempo reale
+- **Entry Plan dinamico**: calcola Entry / TP / SL / R:R usando ATR(14) + swing H/L degli ultimi 30 bars
+  - Base SL = $12 (XAU) adattato agli swing levels reali
+  - TP minimo = max($20, SL × 1.67)
+  - Aggiornato ogni 5 secondi con prezzo live
 
 ---
 
 ## 8. CHECKLIST PRE-DEPLOY
 
+- [ ] `node --check public/modules/mfkk.js` — verifica sintassi JS
 - [ ] Fetch server/proxy con timeout bilanciati (< 8s) per arginare Vercel Cold Starts
 - [ ] Mantenere proxy `api/candles.js` come singola fonte di verità per bypass blacklist
-- [ ] Verificare che non ci sia parsing intero (`parseInt`) o step HTML restrittivi (`step="1"`) per valori indicatori.
+- [ ] Verificare che non ci sia parsing intero (`parseInt`) o step HTML restrittivi (`step="1"`)
 - [ ] `git push origin main` prima di verificare su Vercel
 - [ ] Attendere deploy completato (~60s) su dashboard prima di refresh utente
 
@@ -169,4 +235,5 @@ Il backtest simulato su **2 anni massimi** (limite Yahoo Finance per candele H1,
 - [ ] Creazione report automatico giornaliero (`api/report.js`) usando LLM per l'interpretazione dei dati
 - [ ] Gestione account MyFxBook integrato
 - [ ] Fine tuning componenti UI (notifiche e user feedback)
-
+- [ ] Backtest periodico automatico (cron mensile) per rilevare drift nei parametri
+- [ ] Aggiungere filtro temporale (no trade nelle prime 2h di sessione Asian)

@@ -174,42 +174,45 @@ function calcIndicators(candles) {
 function scoreMfkk(cciVal, macdLine, macdSignal, macdHist, adxVal, diPlus, diMinus, dir) {
   const isBuy = dir === 'buy';
 
-  // CCI Score (weight 35%)
+  // CCI Score — calibrato su 2 anni H1 backtest (trend-continuation, non mean-reversion)
+  // BUY: alto CCI = uptrend in corso = favorevole. SELL: basso CCI = downtrend = favorevole.
   let cciScore = 50;
   if (cciVal != null) {
     if (isBuy) {
-      if (cciVal <= 25) cciScore = 95;
-      else if (cciVal <= 35) cciScore = 85;
-      else if (cciVal <= 50) cciScore = 60;
-      else if (cciVal <= 65) cciScore = 35;
-      else if (cciVal < 75) cciScore = 15;
-      else cciScore = 0;
+      if (cciVal >= 75)      cciScore = 60;  // OB_DEEP: uptrend forte (WR storico migl. per BUY)
+      else if (cciVal >= 65) cciScore = 52;
+      else if (cciVal >= 50) cciScore = 45;
+      else if (cciVal >= 35) cciScore = 38;
+      else if (cciVal >= 25) cciScore = 28;
+      else                   cciScore = 18;  // OS_DEEP: downtrend dominante (WR 31%)
     } else {
-      if (cciVal >= 75) cciScore = 95;
-      else if (cciVal >= 65) cciScore = 85;
-      else if (cciVal >= 50) cciScore = 60;
-      else if (cciVal >= 35) cciScore = 35;
-      else if (cciVal > 25) cciScore = 15;
-      else cciScore = 0;
+      if (cciVal <= 25)      cciScore = 65;  // OS_DEEP: downtrend forte (WR 48% storico SELL)
+      else if (cciVal <= 35) cciScore = 58;
+      else if (cciVal <= 50) cciScore = 50;
+      else if (cciVal <= 65) cciScore = 44;
+      else if (cciVal < 75)  cciScore = 40;
+      else                   cciScore = 40;  // OB_DEEP: esaurimento SELL se ADX forte (82%+ WR)
     }
   }
 
-  // MACD Score (weight 35%)
+  // MACD Score — aggiunto pattern esaurimento (backtest: MACD opposto + ADX forte = WR 82-88%)
   let macdScore = 50;
   if (macdLine != null && macdSignal != null) {
     const diff = macdLine - macdSignal;
     const str = Math.min(Math.abs(diff) / 3, 1);
     const histBonus = macdHist != null ? ((isBuy && macdHist > 0) || (!isBuy && macdHist < 0) ? 10 : 0) : 0;
     if (isBuy) {
-      if (diff > 0.5) macdScore = Math.round(65 + str * 25) + histBonus;
-      else if (diff > 0) macdScore = 60 + histBonus;
-      else if (diff > -1) macdScore = 30;
-      else macdScore = 5;
+      if (diff > 0.5)       macdScore = Math.round(65 + str * 25) + histBonus;
+      else if (diff > 0)    macdScore = 60 + histBonus;
+      else if (diff > -1)   macdScore = 30;
+      else if (diff > -3)   macdScore = 40;  // Esaurimento bearish: ADX DI+ ribalta
+      else                  macdScore = 15;
     } else {
-      if (diff < -0.5) macdScore = Math.round(65 + str * 25) + histBonus;
-      else if (diff < 0) macdScore = 60 + histBonus;
-      else if (diff < 1) macdScore = 30;
-      else macdScore = 5;
+      if (diff < -0.5)      macdScore = Math.round(65 + str * 25) + histBonus;
+      else if (diff < 0)    macdScore = 60 + histBonus;
+      else if (diff < 1)    macdScore = 30;
+      else if (diff < 3)    macdScore = 45;  // Esaurimento bullish: ADX DI- + MACD alto = 82%+ WR
+      else                  macdScore = 48;  // MACD super-esteso rialzista = esaurimento massimo
     }
     macdScore = Math.max(0, Math.min(100, macdScore));
   }
@@ -235,8 +238,9 @@ function scoreMfkk(cciVal, macdLine, macdSignal, macdHist, adxVal, diPlus, diMin
     adxScore = Math.max(0, Math.min(100, adxScore));
   }
 
-  // Weighted total
-  const tot = cciScore * 0.35 + macdScore * 0.35 + adxScore * 0.30;
+  // Weighted total — ottimizzato su 2272 combinazioni, 730gg H1 XAU/USD
+  // CCI 10%, MACD 10%, ADX 80% → PF 1.802, WR 51.9%, P&L $6648
+  const tot = cciScore * 0.10 + macdScore * 0.10 + adxScore * 0.80;
   const score = Math.round(tot);
 
   return { score, cciScore, macdScore, adxScore };
@@ -245,6 +249,8 @@ function scoreMfkk(cciVal, macdLine, macdSignal, macdHist, adxVal, diPlus, diMin
 // ─── BACKTEST ENGINE ─────────────────────────────────────────────────────────
 function runBacktest(candles, indicators, config = {}) {
   const { tp = TP, sl = SL, minScore = 70, minScoreForte = 80 } = config;
+  const buyThr  = config.buyThr  ?? minScore;
+  const sellThr = config.sellThr ?? minScore;
   const { stk_d, macd, signal, histogram, ADX, DIP, DIM, C } = indicators;
   const n = C.length;
   
@@ -321,16 +327,21 @@ function runBacktest(candles, indicators, config = {}) {
     const buyScore = scoreMfkk(cciVal, macdVal, sigVal, histVal, adxVal, diP, diM, 'buy');
     const sellScore = scoreMfkk(cciVal, macdVal, sigVal, histVal, adxVal, diP, diM, 'sell');
     
-    // Choose best direction
+    // Choose best direction con soglie separate BUY/SELL
     let dir = null, bestScore = null;
-    if (buyScore.score >= minScore && buyScore.score > sellScore.score) {
+    if (buyScore.score >= buyThr && buyScore.score > sellScore.score) {
       dir = 'buy'; bestScore = buyScore;
-    } else if (sellScore.score >= minScore && sellScore.score > buyScore.score) {
+    } else if (sellScore.score >= sellThr && sellScore.score > buyScore.score) {
       dir = 'sell'; bestScore = sellScore;
     }
     
     if (dir && bestScore) {
-      const isFort = bestScore.score >= minScoreForte && bestScore.cciScore >= 70 && bestScore.macdScore >= 70 && bestScore.adxScore >= 70;
+      // Forte: alta convinzione ADX (score >= minScoreForte + ADX forte)
+      // OPPURE pattern esaurimento (ADX forte con MACD opposto alla direzione)
+      const macdDiffVal = macdVal - sigVal;
+      const isExhaustion = (dir === 'sell' && macdDiffVal > 1.0 && bestScore.adxScore >= 75) ||
+                           (dir === 'buy'  && macdDiffVal < -1.0 && bestScore.adxScore >= 75);
+      const isFort = (bestScore.score >= minScoreForte && bestScore.adxScore >= 75) || isExhaustion;
       openTrade = {
         dir,
         entry: price,
@@ -468,12 +479,13 @@ async function main() {
   
   // Run multiple configurations
   const configs = [
+    // Soglie calibrate: BUY>=90, SELL>=68 (ottimizzate su 2272 combinazioni 730gg)
+    { label: `OTTIMALE: BUY≥90/SELL≥68, TP=$20, SL=$12`, tp: 20, sl: 12, minScore: 68, minScoreForte: 80, buyThr: 90, sellThr: 68 },
     { label: `BASE: Score≥70, TP=$${TP}, SL=$${SL}`, tp: TP, sl: SL, minScore: 70, minScoreForte: 80 },
-    { label: `STRICT: Score≥75, TP=$${TP}, SL=$${SL}`, tp: TP, sl: SL, minScore: 75, minScoreForte: 85 },
-    { label: `RISKY: Score≥60, TP=$${TP}, SL=$${SL}`, tp: TP, sl: SL, minScore: 60, minScoreForte: 75 },
-    { label: `TIGHT: Score≥70, TP=$10, SL=$7`, tp: 10, sl: 7, minScore: 70, minScoreForte: 80 },
-    { label: `WIDE: Score≥70, TP=$20, SL=$12`, tp: 20, sl: 12, minScore: 70, minScoreForte: 80 },
-    { label: `FORTE ONLY: Score≥80, TP=$${TP}, SL=$${SL}`, tp: TP, sl: SL, minScore: 80, minScoreForte: 80 },
+    { label: `STRICT: Score≥80, TP=$${TP}, SL=$${SL}`, tp: TP, sl: SL, minScore: 80, minScoreForte: 85 },
+    { label: `SELL ONLY ≥68, TP=$20, SL=$12`, tp: 20, sl: 12, minScore: 68, minScoreForte: 80, buyThr: 999, sellThr: 68 },
+    { label: `WIDE: Score≥68, TP=$25, SL=$15`, tp: 25, sl: 15, minScore: 68, minScoreForte: 80 },
+    { label: `FORTE ONLY: Score≥85, TP=$20, SL=$12`, tp: 20, sl: 12, minScore: 85, minScoreForte: 85 },
   ];
   
   const allResults = [];

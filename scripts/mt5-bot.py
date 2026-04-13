@@ -553,27 +553,36 @@ def get_open_positions_data():
 
 def get_recent_trades_data(n=20):
     """Legge gli ultimi N trade direttamente da MT5 History"""
-    from_date = datetime.datetime.now() - datetime.timedelta(days=3)
-    deals = mt5.history_deals_get(from_date, datetime.datetime.now())
-    if deals is None or len(deals) == 0: return []
-    
-    result = []
-    # Prendiamo solo i deal di tipo DEAL_ENTRY_OUT (chiusura) o DEAL_ENTRY_INOUT
-    for d in deals:
-        if d.symbol == "" or d.profit == 0: continue
-        # Filtriamo per mostrare solo i deal relativi a Gold
-        if SYMBOL.upper() not in d.symbol.upper(): continue
+    try:
+        # Usiamo timestamp per evitare problemi di fuso orario con datetime
+        end_ts = int(time.time()) + 3600
+        start_ts = end_ts - (3 * 24 * 3600) # 3 giorni fa
         
-        result.append({
-            'ticket':    d.ticket,
-            'symbol':    d.symbol,
-            'direction': 'buy' if d.type == 0 else 'sell',
-            'price':     round(d.price, 2),
-            'profit':    round(d.profit + d.swap + d.commission, 2),
-            'time':      datetime.datetime.fromtimestamp(d.time, tz=datetime.timezone.utc).isoformat(),
-            'strategy':  d.comment.replace('TF-AI ', '') if 'TF-AI' in d.comment else 'MANUALE'
-        })
-    return result[-n:]
+        deals = mt5.history_deals_get(start_ts, end_ts)
+        if deals is None:
+            log.debug(f"History deals returned None. Error: {mt5.last_error()}")
+            return []
+        
+        result = []
+        for d in deals:
+            # DEAL_ENTRY_OUT = 1
+            if d.symbol == "" or d.entry != 1: continue
+            # Filtriamo per mostrare solo i deal relativi a Gold
+            if SYMBOL.upper() not in d.symbol.upper(): continue
+            
+            result.append({
+                'ticket':    d.ticket,
+                'symbol':    d.symbol,
+                'direction': 'buy' if d.type == 0 else 'sell',
+                'price':     round(d.price, 2),
+                'profit':    round(d.profit + d.swap + d.commission, 2),
+                'time':      datetime.datetime.fromtimestamp(d.time, tz=datetime.timezone.utc).isoformat(),
+                'strategy':  d.comment.replace('TF-AI ', '') if 'TF-AI' in d.comment else 'MANUALE'
+            })
+        return result[-n:]
+    except Exception as e:
+        log.error(f"Errore get_recent_trades: {e}")
+        return []
 
 def sync_to_vercel(acc, positions, trades, bot_status):
     """Invia lo stato corrente alla UI su Vercel"""
@@ -696,8 +705,9 @@ def run():
                 trades_data = get_recent_trades_data(20)
                 
                 # Calcola statistiche oggi reali da MT5
-                start_today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                today_deals = mt5.history_deals_get(start_today, datetime.datetime.now())
+                now_ts_sync = int(time.time())
+                start_today_ts = int(datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+                today_deals = mt5.history_deals_get(start_today_ts, now_ts_sync + 3600)
                 
                 real_pnl_today = 0
                 real_trades_today = 0

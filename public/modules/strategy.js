@@ -77,10 +77,24 @@ const SE_STRATEGY_FNS = {
     return null;
   },
   S06_ORDERBLOCK: (I,i) => {
-    // Semplificata per il browser
-    const c=I.C[i], e20=I.e20[i], r=I.rsi[i];
-    if(c>e20 && r<45 && I.macd[i]>0) return {dir:'buy', why:'Rimbalzo su Order Block (EMA20) + Momentum'};
-    if(c<e20 && r>55 && I.macd[i]<0) return {dir:'sell', why:'Rigetto su Order Block (EMA20) + Momentum'};
+    const c=I.C[i], e50=I.e50[i], r=I.rsi[i];
+    if(c>e50 && r<45 && I.macd[i]>0) return {dir:'buy', why:'Rimbalzo su EMA50 (Order Block) + Momentum'};
+    if(c<e50 && r>55 && I.macd[i]<0) return {dir:'sell', why:'Rigetto su EMA50 (Order Block) + Momentum'};
+    return null;
+  },
+  S13_STRUC_BREAK: (I,i) => {
+    const c=I.C[i], h=I.H[i], l=I.L[i];
+    const prevH = Math.max(...I.H.slice(i-20, i-1));
+    const prevL = Math.min(...I.L.slice(i-20, i-1));
+    if(c > prevH) return {dir:'buy', why:'Rottura struttura rialzista (20h high)'};
+    if(c < prevL) return {dir:'sell', why:'Rottura struttura ribassista (20h low)'};
+    return null;
+  },
+  S14_KEY_LEVELS: (I,i) => {
+    const c=I.C[i], r=I.rsi[i];
+    // Semplificato: monitoraggio RSI estremo su livelli psicologici
+    if(r < 30 && c % 10 < 2) return {dir:'buy', why:'Test livello chiave + RSI Oversold'};
+    if(r > 70 && c % 10 > 8) return {dir:'sell', why:'Test livello chiave + RSI Overbought'};
     return null;
   },
   S12_WPR_KELTNER: (I,i) => {
@@ -92,15 +106,15 @@ const SE_STRATEGY_FNS = {
 };
 
 function seDetectRegime(I, i) {
-  const adx = I.adx[i];
-  const dip = I.dip[i];
-  const dim = I.dim[i];
+  const adx = I.adx[i] || 25;
+  const dip = I.dip[i] || 20;
+  const dim = I.dim[i] || 20;
   const atr = I.atr[i];
   const a30 = I.atr30[i];
 
-  if(adx >= 30) return (dip > dim) ? 'TREND_UP' : 'TREND_DOWN';
-  if(adx >= 22) return (dip > dim) ? 'WEAK_UP' : 'WEAK_DOWN';
-  if(atr > 1.4 * a30) return 'VOLATILE';
+  if(adx >= 28) return (dip > dim) ? 'TREND_UP' : 'TREND_DOWN';
+  if(adx >= 20) return (dip > dim) ? 'WEAK_UP' : 'WEAK_DOWN';
+  if(atr > 1.35 * a30) return 'VOLATILE';
   return 'RANGE';
 }
 

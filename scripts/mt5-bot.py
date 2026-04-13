@@ -19,7 +19,7 @@ MT5_LOGIN    = 1301224666
 MT5_PASSWORD = "Alessandro95!"
 MT5_SERVER   = "XMGlobal-MT5 6"
 
-SYMBOL       = "GOLD"
+SYMBOL       = "GOLD"        # Simbolo di base (verrà verificato all'avvio)
 LOT_SIZE     = 0.02          # lot size iniziale (0.02 = sicuro su €1000)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 10            # max operazioni per giorno (richiesto 10)
@@ -534,7 +534,8 @@ def get_open_positions_data():
     if not pos: return []
     result = []
     for p in pos:
-        if p.magic != MAGIC: continue
+        # Mostriamo tutte le posizioni reali del conto (manuali + bot)
+        is_bot = (p.magic == MAGIC)
         result.append({
             'ticket':    p.ticket,
             'direction': 'buy' if p.type == 0 else 'sell',
@@ -544,7 +545,8 @@ def get_open_positions_data():
             'tp':        round(p.tp, 2),
             'sl':        round(p.sl, 2),
             'profit':    round(p.profit, 2),
-            'strategy':  p.comment.replace('TF-AI ', ''),
+            'strategy':  p.comment.replace('TF-AI ', '') if is_bot else 'MANUALE',
+            'is_bot':    is_bot,
             'time':      datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
         })
     return result
@@ -615,6 +617,21 @@ def run():
     if not mt5_connect():
         log.error("Connessione MT5 fallita. Assicurati che MT5 sia aperto e configurato.")
         sys.exit(1)
+
+    # Verifica Simbolo Corretto (GOLD vs gold vs XAUUSD)
+    global SYMBOL
+    possible_symbols = ["GOLD", "gold", "XAUUSD", "XAUUSD.m", "XAUUSD.gr"]
+    found_symbol = None
+    for s in possible_symbols:
+        info = mt5.symbol_info(s)
+        if info:
+            found_symbol = s
+            break
+    if found_symbol:
+        log.info(f"✅ Simbolo Gold rilevato: {found_symbol}")
+        SYMBOL = found_symbol
+    else:
+        log.warning(f"⚠️ Simbolo GOLD non rilevato chiaramente, uso default: {SYMBOL}")
 
     acc = get_account_info()
     if acc:

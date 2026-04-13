@@ -5,14 +5,17 @@ const BASE_MFX = 'https://www.myfxbook.com/api';
 
 const TICKERS = [
   'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD', 'CAPITALCOM:GOLD', 'TVC:GOLD', 
-  'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD', 'TVC:USOIL', 'TVC:US10Y', 'TVC:DXY', 
-  'OANDA:EURUSD', 'OANDA:GBPUSD', 'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD'
+  'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD', 'TVC:USOIL', 'CAPITALCOM:OIL', 'OANDA:WTICOUSD', 'TVC:US10Y', 'TVC:DXY', 
+  'OANDA:EURUSD', 'OANDA:GBPUSD', 'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
+  'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD', 'CAPITALCOM:SILVER', 'TVC:SILVER', 
+  'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD'
 ];
 
 const TICKER_MAP = {
   'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU','CAPITALCOM:GOLD':'XAU','TVC:GOLD':'XAU','FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
+  'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER','CAPITALCOM:SILVER':'SILVER','TVC:SILVER':'SILVER','FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
   'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
-  'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'TVC:US10Y':'US10Y'
+  'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'CAPITALCOM:OIL':'OIL', 'OANDA:WTICOUSD':'OIL', 'TVC:US10Y':'US10Y'
 };
 
 async function fetchWithTimeout(url, opts={}, ms=7000) {
@@ -51,7 +54,7 @@ export default async function handler(req, res) {
         const key = TICKER_MAP[item.s];
         if (!key || prices[key]) continue;
         const [close, chg, hi, lo] = item.d;
-        const dec = (key==='XAU'||key==='OIL') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+        const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
         prices[key] = {
           price: (+close).toFixed(dec),
           change: +(chg||0).toFixed(2),

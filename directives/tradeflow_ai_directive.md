@@ -33,10 +33,10 @@ public/
     kb.js             ← Knowledge Base, upload docs
 api/
   price.js            ← endpoint prezzo live XAU/USD (TV Scanner multi-ticker)
-  tvprice.js          ← proxy TradingView Scanner per prezzi
-  market.js           ← tutti gli asset (DXY, EUR, GBP, OIL, US10Y, Silver, GSR)
+  market.js           ← UNIFIED HUB: prezzi, calendar, sentiment, cot (proxy server-side)
   indicators.js       ← MFKK indicators: MACD/ADX da TV Scanner, CCI_S da candle browser
   report.js           ← AI report giornaliero
+  webhook.js          ← ricezione trades e notifiche
 scripts/
   backtest-mfkk.mjs         ← backtester Node.js con config ottimale applicata
   optimize-full.py          ← ottimizzatore grid search 3 fasi (pesi + soglie + cooldown)
@@ -149,6 +149,8 @@ async function fetchT(url, opts={}, ms=8000) {
 | 2026-03-31 | ADX RMA vs SMA | Usavamo Wilder RMA, TV usa SMA(DX,len) | Server-side esatto calcolo SMA(DX,10) |
 | 2026-04-13 | quality is not defined | dashboard.js:565 ReferenceError | Definito quality/Bg/Col in updateConfidence |
 | 2026-04-13 | Strategy Logic Duplicate | strategy.js Broken Syntax | Unified MT5/Signal logic and cleaned redundant functions |
+| 2026-04-13 | CORS Calendar Fail | 3rd party proxy instabili | Creato /api/market server-side proxy per ForexFactory |
+| 2026-04-13 | GS Ratio / Oil stuck | Missing tickers in unified API | Aggiunti ticker XAG (SILVER) e fallback OIL nell'Hub |
 
 ---
 
@@ -339,3 +341,18 @@ Per garantire che i segnali della PWA diventino ordini reali su MetaTrader 5, il
 -   **Scadenza**: I comandi più vecchi di 3 minuti vengono ignorati dal bot (prevenzione esecuzione in ritardo).
 -   **Deduplicazione**: Il bot utilizza l'ID comando o il timestamp per non ri-eseguire lo stesso trade.
 -   **Dry-Run**: Il bot rispetta il proprio flag `--dry-run` anche per i comandi remoti.
+
+---
+
+## 12. SISTEMA INTERATTIVO & EDUCATIONAL
+
+### 12.1 Interactive Indicators
+Ogni indicatore nel dashboard (AI Confidence e MFKK) è ora cliccabile per visualizzare una spiegazione contestuale.
+- **Componenti**: `.info-overlay` (glassmorphism modal), `.info-content`.
+- **Logica**: Gestita in `dashboard.js` tramite `INDICATOR_DEFS`.
+- **Dinamismo**: Le spiegazioni cambiano in base al valore attuale dell'indicatore (es. Trend Forte vs Laterale).
+
+### 12.2 Unified Market Hub (`api/market.js`)
+Singola fonte di verità per dati macro e calendario, eliminando problemi di CORS e rate-limiting lato client.
+- **Tipi supportati**: `prices` (multi-asset), `calendar` (ForexFactory proxy), `sentiment` (MyFxBook proxy), `cot` (CFTC data).
+- **Resilienza**: Implementati timeout rigidi e fallback silenziosi per evitare il blocco della UI.

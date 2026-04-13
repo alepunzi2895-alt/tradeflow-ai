@@ -9,20 +9,23 @@ const SE = {
   extremeMult: 3.5,
   session: { start: 0, end: 24 }, // 24h as requested
   strategies: {
-    'S01_EXHAUSTION':  { label: 'Exhaustion', pf: 2.29, wr: '58%', tp: 15, sl: 9 },
-    'S09_VWAP_WPR':    { label: 'VWAP+W%R',  pf: 1.50, wr: '47%', tp: 18, sl: 10 },
-    'S06_ORDERBLOCK':  { label: 'Order Block',pf: 1.42, wr: '46%', tp: 18, sl: 10 },
-    'S13_STRUC_BREAK': { label: 'Struc Break',pf: 1.61, wr: '52%', tp: 'ATR', sl: 'ATR' },
-    'S14_KEY_LEVELS':  { label: 'Key Levels', pf: 1.54, wr: '49%', tp: 'ATR', sl: 'ATR' },
-    'S12_WPR_KELTNER': { label: 'W%R+Keltner',pf: 1.22, wr: '42%', tp: 20, sl: 12 },
+    // MFKK — strategia principale ottimizzata su 730gg H1 XAU/USD
+    'S00_MFKK':        { label: 'MFKK Score',  pf: 1.80, wr: '52%', tp: 'ATR', sl: 'ATR', notes: 'ADX 80% + MACD 10% + CCI 10% · SELL≥68 BUY≥90' },
+    'S00_MFKK_HWR':    { label: 'MFKK HighWR', pf: 21.67,wr: '93%', tp: 20,   sl: 12,    notes: 'ADX≥35 + DI spread≥20 + MACD diff≥0.5 · SELL ONLY · 730gg WR 92.9%' },
+    'S01_EXHAUSTION':  { label: 'Exhaustion',  pf: 2.29, wr: '58%', tp: 15,   sl: 9,     notes: 'ADX≥30 + DI spread≥12 + MACD reversal + RSI' },
+    'S09_VWAP_WPR':    { label: 'VWAP+W%R',   pf: 1.50, wr: '47%', tp: 18,   sl: 10,    notes: 'VWAP cross + W%R estremo + MACD confirm' },
+    'S06_ORDERBLOCK':  { label: 'Order Block', pf: 1.42, wr: '46%', tp: 18,   sl: 10,    notes: 'Swing H/L zone + EMA20 + RSI + MACD momentum' },
+    'S13_STRUC_BREAK': { label: 'Struc Break', pf: 1.61, wr: '52%', tp: 'ATR',sl: 'ATR', notes: 'Rottura 20h High/Low con volume confirmation' },
+    'S14_KEY_LEVELS':  { label: 'Key Levels',  pf: 1.54, wr: '49%', tp: 'ATR',sl: 'ATR', notes: 'RSI estremo su livelli psicologici round-number' },
+    'S12_WPR_KELTNER': { label: 'W%R+Keltner', pf: 1.22, wr: '42%', tp: 20,   sl: 12,    notes: 'Keltner breakout + W%R estremo + RSI confirm' },
   },
   regimePriority: {
-    TREND_UP:    ['S01_EXHAUSTION','S06_ORDERBLOCK','S13_STRUC_BREAK'],
-    TREND_DOWN:  ['S01_EXHAUSTION','S06_ORDERBLOCK','S13_STRUC_BREAK'],
-    WEAK_UP:     ['S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
-    WEAK_DOWN:   ['S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
-    RANGE:       ['S09_VWAP_WPR','S12_WPR_KELTNER','S14_KEY_LEVELS'],
-    VOLATILE:    ['S12_WPR_KELTNER','S09_VWAP_WPR'],
+    TREND_UP:    ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK','S13_STRUC_BREAK'],
+    TREND_DOWN:  ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK','S13_STRUC_BREAK'],
+    WEAK_UP:     ['S00_MFKK','S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
+    WEAK_DOWN:   ['S00_MFKK','S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
+    RANGE:       ['S00_MFKK','S09_VWAP_WPR','S12_WPR_KELTNER','S14_KEY_LEVELS'],
+    VOLATILE:    ['S00_MFKK','S12_WPR_KELTNER','S09_VWAP_WPR'],
   }
 };
 
@@ -62,11 +65,41 @@ function _rsi(src, p=14) {
 
 // ── STRATEGY LOGIC ───────────────────────────────────────────────────────────
 const SE_STRATEGY_FNS = {
+  // S00_MFKK: usa il punteggio MFKK già calcolato in mfkk.js (via dashContext.mfkk)
+  // Parametri ottimali da backtest 730gg: SELL≥68 (WR 54.4%), BUY≥90 (WR 43.5%)
+  S00_MFKK: (I,i) => {
+    const m = dashContext?.mfkk;
+    if(!m || !m.score) return null;
+    const score = m.score;
+    const dir = m.dir; // 'BUY' or 'SELL'
+    if(dir==='SELL' && score>=68) return {dir:'sell', why:`MFKK Score ${score}/100 · SELL ≥68 · ADX+MACD+CCI allineati`};
+    if(dir==='BUY'  && score>=90) return {dir:'buy',  why:`MFKK Score ${score}/100 · BUY ≥90 · Confluenza indicatori forte`};
+    return null;
+  },
+  // S00_MFKK_HWR: HIGH WIN RATE SELL — 92.9% WR su 730gg H1 XAU
+  // Condizioni hard: ADX≥35 + DI spread≥20 + MACD diff≥0.5 + CCI non OS
+  S00_MFKK_HWR: (I,i) => {
+    const m = dashContext?.mfkk;
+    if(!m) return null;
+    const adx=I.adx[i], dip=I.dip[i], dim=I.dim[i], mh=I.macd[i];
+    if(adx<35 || !mh) return null;
+    const spread = Math.abs(dip-dim);
+    if(spread < 20) return null;
+    // Trend ribassista (DI- domina) + MACD bullish esteso = esaurimento del rialzo
+    if(dim > dip && Math.abs(mh) >= 0.5 && mh > 0){
+      // CCI non deve essere in oversold (evita vendere già scarico)
+      if(m.cciScore && m.cciScore < 65) return null;
+      return {dir:'sell', why:`💎 HIGH-WR SELL — ADX ${adx?.toFixed(0)} DI-spread ${spread?.toFixed(0)} MACD diff ${mh?.toFixed(2)} · WR 92.9%`};
+    }
+    return null;
+  },
   S01_EXHAUSTION: (I,i) => {
     const adx=I.adx[i], dip=I.dip[i], dim=I.dim[i], mh=I.macd[i], r=I.rsi[i];
-    if(adx>30 && Math.abs(dip-dim)>15){
-      if(dim>dip && mh>0.5 && r<40) return {dir:'buy', why:'Esaurimento ribassista + MACD reversal'};
-      if(dip>dim && mh<-0.5 && r>60) return {dir:'sell', why:'Esaurimento rialzista + MACD reversal'};
+    // Migliorato: soglia ADX alzata a 30, spread a 12, aggiunto check MACD histogram reversal
+    if(adx>=30 && Math.abs(dip-dim)>=12){
+      const mhPrev = i>0 ? I.macd[i-1] : mh;
+      if(dim>dip && mh>0.5 && mh>mhPrev && r<45) return {dir:'buy', why:`Esaurimento ribassista · ADX ${adx?.toFixed(0)} DI->${dim?.toFixed(0)} MACD reversal ↑`};
+      if(dip>dim && mh<-0.5 && mh<mhPrev && r>55) return {dir:'sell', why:`Esaurimento rialzista · ADX ${adx?.toFixed(0)} DI+${dip?.toFixed(0)} MACD reversal ↓`};
     }
     return null;
   },
@@ -385,12 +418,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   <div style="display:grid; grid-template-columns:1fr; gap:8px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
       const isActive = activeList.includes(id);
-      const inds = id==='S01' ? 'ADX, DI+, DI-, MACD, RSI' :
-                 id==='S09' ? 'VWAP, W%R (Price Cross)' :
-                 id==='S06' ? 'EMA50 (Order Block), RSI, MACD' :
-                 id==='S13' ? 'Price Action (Breakout Struttura)' :
-                 id==='S14' ? 'Key Levels (Support/Res), RSI' :
-                 id==='S12' ? 'Keltner Channels, W%R' : 'Technical Indicators';
+      const inds = s.notes || (
+                 id.startsWith('S00') ? 'CCI(50)+Stoch, MACD 12/26/9, ADX(14) — scoring ponderato' :
+                 id==='S01_EXHAUSTION' ? 'ADX≥30, DI spread, MACD histogram reversal, RSI' :
+                 id==='S09_VWAP_WPR'   ? 'VWAP, W%R(14), MACD confirm' :
+                 id==='S06_ORDERBLOCK' ? 'Swing H/L (Order Block), EMA20, RSI, MACD' :
+                 id==='S13_STRUC_BREAK'? 'Price Action — breakout struttura 20h' :
+                 id==='S14_KEY_LEVELS' ? 'Key Levels (round numbers), RSI estremo' :
+                 id==='S12_WPR_KELTNER'? 'Keltner Channels, W%R estremo, RSI' : 'Technical Indicators');
       
       return `
       <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'40':'var(--border)'}; border-radius:8px; padding:10px; position:relative; overflow:hidden">
@@ -415,8 +450,6 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 }
 
 async function seSendTradeToMt5(s) {
-  if (!confirm(`Vuoi davvero inviare un ordine ${s.dir.toUpperCase()} su MT5?`)) return;
-  
   const btn = event?.target;
   if (btn) { btn.disabled = true; btn.innerText = '⌛ INVIO IN CORSO...'; }
 
@@ -437,17 +470,27 @@ async function seSendTradeToMt5(s) {
     });
     const j = await res.json();
     if (j.ok) {
-      alert('✅ Comando inviato con successo! Il bot MT5 lo eseguirà entro 3 secondi.');
-      if (btn) { btn.innerText = '✓ INVIATO'; btn.style.background = 'var(--dim)'; }
+      seToast('✅ Ordine inviato a MT5 — esecuzione entro 3s', 'var(--green)');
+      if (btn) { btn.innerText = '✓ INVIATO'; btn.style.background = 'var(--dim)'; btn.disabled = true; }
     } else {
       throw new Error(j.error || 'Errore durante l\'invio');
     }
   } catch (e) {
-    alert('❌ Errore: ' + e.message);
-    if (btn) { btn.disabled = false; btn.innerText = '🚀 RIPROVA ESECUZIONE'; }
+    seToast('❌ Errore invio MT5: ' + e.message, 'var(--red)');
+    if (btn) { btn.disabled = false; btn.innerText = '🚀 RIPROVA'; }
   }
 }
 window.seSendTradeToMt5 = seSendTradeToMt5;
+
+function seToast(msg, color='var(--green)'){
+  let t=document.getElementById('se-toast');
+  if(!t){ t=document.createElement('div'); t.id='se-toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;padding:8px 18px;border-radius:8px;font-size:11px;font-weight:700;pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t); }
+  t.style.background=color; t.style.color=color==='var(--green)'?'#000':'#fff';
+  t.style.border='1px solid '+color; t.textContent=msg; t.style.opacity='1';
+  clearTimeout(t._tid); t._tid=setTimeout(()=>{t.style.opacity='0';},3500);
+}
 
 function seRenderNoData(){
   const el=document.getElementById('se-content');

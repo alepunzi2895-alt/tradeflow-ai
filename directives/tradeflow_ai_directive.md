@@ -153,6 +153,8 @@ async function fetchT(url, opts={}, ms=8000) {
 | 2026-04-13 | GS Ratio / Oil stuck | Missing tickers in unified API | Aggiunti ticker XAG (SILVER) e fallback OIL nell'Hub |
 | 2026-04-13 | Calendario non caricava eventi | `nfs.faireconomy.media` offline + slice(0,15) troppo basso + campi forecast/actual/previous mancanti nel mapping | Multi-source fallback (3 URL FF), slice aumentato a 60, mapping completo con forecast/actual/previous |
 | 2026-04-13 | Grafico TradingView schiacciato | height fissa a 600px | Aumentata a 800px sia nel container HTML che nel widget JS |
+| 2026-04-14 | MFKK non era nella sezione Strategies | Strategy Engine non usava dashContext.mfkk | Aggiunti S00_MFKK (score≥68 SELL / ≥90 BUY) e S00_MFKK_HWR (92.9% WR SELL ONLY) usando dashContext.mfkk |
+| 2026-04-14 | Conferma dialog bloccava invio MT5 | confirm() richiedeva input utente | Rimosso confirm(), aggiunto toast non-bloccante seToast() |
 
 ---
 

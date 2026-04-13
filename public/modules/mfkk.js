@@ -513,7 +513,25 @@ function calcMfkk(){
   const isExhaustionBuy  = isBuy && hasAdx && hasMacd && adxScore >= 75 && macdDiff < -1.0;
   const isExhaustion = isExhaustionSell || isExhaustionBuy;
 
-  if(isExhaustion && adxScore >= 80 && isValidEntry){
+  // HIGH-WR SIGNAL: hard filter rules da optimize-highwr.py (backtest 730gg H1 XAU)
+  // ADX>=35 + DI spread>=20 + MACD diff>=1.0 (bullish MACD = esaurimento SELL) + CCI not OS + London/NY
+  // Risultato: 95% WR (20 trade), 92.9% WR (28 trade) — SELL ONLY (BUY non affidabile)
+  const nowHour = new Date().getUTCHours();
+  const isLondonNY = nowHour >= 7 && nowHour < 17;
+  const diSpreadAbs = hasAdx ? Math.abs(diPlus - diMinus) : 0;
+  const isHighWrSell = !isBuy && hasAdx && hasMacd && hasCci
+    && adxVal >= 35
+    && diMinus > diPlus       // DI- dominante (bearish)
+    && diSpreadAbs >= 20      // spread ampio = trend forte e chiaro
+    && macdDiff >= 1.0        // MACD bullish esteso = esaurimento del rialzo (pattern inversione)
+    && cciVal >= 25           // CCI non in OS (ob_or_neutral)
+    && isLondonNY;            // sessione London/NY (7-17 UTC)
+  const isHighWrSignal = isHighWrSell; // BUY WR ~46% — non abbastanza per HIGH-WR flag
+
+  if(isHighWrSignal){
+    bias='💎 HIGH-WR SELL';
+    desc='Filtri hard: ADX≥35+DI spread≥20+MACD esaurito+London/NY → 92-95% WR storico (730gg)';
+  } else if(isExhaustion && adxScore >= 80 && isValidEntry){
     bias=dirLabel+' ESAURIMENTO';
     desc='ADX forte + MACD esteso = pattern inversione 82-88% WR storico H1. ADX DI domina.';
   } else if(score>=90&&allThree&&strong>=2){
@@ -546,25 +564,34 @@ function calcMfkk(){
 
   // Render — colori basati su soglie calibrate (BUY>=90, SELL>=68)
   const DASH=163.4;
-  const ringCol = isValidEntry
-    ? (isExhaustion ? '#b36cff' : (score>=90?'var(--yellow)':col))
-    : (score>=55?'var(--yellow)':'var(--red)');
+  const ringCol = isHighWrSignal ? '#ffd700'
+    : isValidEntry
+      ? (isExhaustion ? '#b36cff' : (score>=90?'var(--yellow)':col))
+      : (score>=55?'var(--yellow)':'var(--red)');
   const circ=document.getElementById('mfkk-circle');
   if(circ){circ.style.strokeDashoffset=DASH*(1-score/100);circ.style.stroke=ringCol;}
   const num=document.getElementById('mfkk-num');
   if(num){num.textContent=score;num.style.color=ringCol;}
   const bel=document.getElementById('mfkk-bias');
-  if(bel){bel.textContent=bias;bel.style.color=score>=80?'var(--yellow)':col;}
+  if(bel){bel.textContent=bias;bel.style.color=isHighWrSignal?'#ffd700':(score>=80?'var(--yellow)':col);}
   const del=document.getElementById('mfkk-desc');
   if(del)del.textContent=desc;
-  
+
+  // Indicatore sessione
+  const sessionLabel = isLondonNY ? `🟢 London/NY (${nowHour}:00 UTC)` : `🔴 Fuori sessione (${nowHour}:00 UTC)`;
+  const sessionEl = document.getElementById('mfkk-session');
+  if(sessionEl) sessionEl.textContent = sessionLabel;
+
   const qel=document.getElementById('mfkk-quality');
   if(qel){
     // TP/SL ottimali calibrati su 2 anni backtest (TP $20 / SL $12 per XAU — PF 1.802)
     const tpVal = isXag ? '$0.50' : '$20';
     const slVal = isXag ? '$0.25' : '$12';
     const rrLabel = isXag ? '1:2.0' : '1:1.67';
-    if(isExhaustion && adxScore>=80 && isValidEntry){
+    if(isHighWrSignal){
+      qel.style.cssText='display:block;background:#ffd70020;border:2px solid #ffd70060;color:#ffd700;font-weight:700';
+      qel.innerHTML=`💎 HIGH-WR SELL: ADX≥35 · DI spread≥20 · MACD esaurito · London/NY<br><span style="font-size:9px;font-weight:400;opacity:.85">92-95% WR (730gg backtest) · TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}</span>`;
+    } else if(isExhaustion && adxScore>=80 && isValidEntry){
       qel.style.cssText='display:block;background:#b36cff15;border:1px solid #b36cff40;color:#b36cff';
       qel.textContent=`🔥 ESAURIMENTO ${dirLabel}: ADX forte + MACD esteso = 82-88% WR. TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
     } else if(isValidEntry && allThree && strong>=2){

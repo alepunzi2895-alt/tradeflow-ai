@@ -170,7 +170,27 @@ async function fetchT(url, opts={}, ms=8000) {
 | **SL XAU** | **$12** | $0.25 | R:R 1.67:1 → PF 1.80 |
 | **EMA50 filter** | **OFF** | OFF | Non bloccare trades — EMA è solo nota informativa |
 
-### 7.3 Risultati Backtest Config Ottimale (730gg H1 XAU/USD)
+### 7.3 HIGH-WR SIGNAL — Filtri Hard (optimize-highwr.py, 730gg H1 XAU/USD)
+
+Setup SELL ONLY con regole hard (no scoring):
+
+| Filtro | Valore | Note |
+|---|---|---|
+| **ADX** | ≥ 35 | Trend molto forte |
+| **DI spread** | ≥ 20 | DI- > DI+ (bearish dominante) |
+| **MACD diff** | ≥ 1.0 | MACD bullish esteso = esaurimento del rialzo |
+| **CCI** | ≥ 25 (ob_or_neutral) | Non in zona OS |
+| **Sessione** | London/NY (7-17 UTC) | Fuori Asian/Off |
+
+Risultati:
+- **MACD diff ≥ 1.0**: N=20, **WR=95%**, PnL=$368, PF=31.67, MaxDD=$12
+- **MACD diff ≥ 0.5**: N=28, **WR=92.9%**, PnL=$496, PF=21.67, MaxDD=$12
+- BUY: non affidabile con hard filter (max 46% WR) — flag SELL ONLY
+- UI: badge "💎 HIGH-WR SELL" dorato quando tutte le condizioni sono soddisfatte
+
+> ⚠️ **NOTA**: Il numero di trade è basso (20-28 su 730gg) — questi setup sono rari ma estremamente affidabili. La strategia base (SELL≥68, 1439 trade, 52% WR) rimane il motore principale.
+
+### 7.5 Risultati Backtest Config Ottimale (730gg H1 XAU/USD)
 
 | Metrica | Valore |
 |---|---|
@@ -183,7 +203,7 @@ async function fetchT(url, opts={}, ms=8000) {
 | SELL Win Rate | 54.4% (P&L +$6.056) |
 | Mesi positivi | 15/25 (60%) |
 
-### 7.4 Insights chiave dal Backtest Empirico
+### 7.6 Insights chiave dal Backtest Empirico
 
 1. **CCI non è mean-reversion, è trend-continuation**:
    - Per BUY: CCI alto (OB_DEEP ≥75) = uptrend in corso = favorevole (NON il contrario)
@@ -210,7 +230,7 @@ async function fetchT(url, opts={}, ms=8000) {
    - Filtrare le SELL con EMA50 rimuove i migliori trade (bounce reversal in uptrend)
    - EMA50 è mostrata in UI come **informazione contestuale**, non come blocco
 
-### 7.5 Funzionalità UI aggiunte (calibrate su backtest)
+### 7.7 Funzionalità UI aggiunte (calibrate su backtest)
 
 - **4° Conferma EMA50**: mostra allineamento trend + CCI crossover detection in tempo reale
 - **Entry Plan dinamico**: calcola Entry / TP / SL / R:R usando ATR(14) + swing H/L degli ultimi 30 bars

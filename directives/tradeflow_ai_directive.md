@@ -147,6 +147,8 @@ async function fetchT(url, opts={}, ms=8000) {
 | 2026-03-31 | ADX = 0,0,0 | `ADX[10]|60` colonna non valida → null → 0 | Calcolo server-side esatto da proxy candles |
 | 2026-03-31 | CCI_S mostra "auto" | step="1" input rifiutava valori decimali | Impostato `step="0.01"` su input HTML |
 | 2026-03-31 | ADX RMA vs SMA | Usavamo Wilder RMA, TV usa SMA(DX,len) | Server-side esatto calcolo SMA(DX,10) |
+| 2026-04-13 | quality is not defined | dashboard.js:565 ReferenceError | Definito quality/Bg/Col in updateConfidence |
+| 2026-04-13 | Strategy Logic Duplicate | strategy.js Broken Syntax | Unified MT5/Signal logic and cleaned redundant functions |
 
 ---
 

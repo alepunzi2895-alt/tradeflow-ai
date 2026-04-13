@@ -253,15 +253,15 @@ function buildDerivedPrices(prices){
             `Rendimenti stabili ${prices.US10Y.price}%`
     };
   }
-  if(prices.XAU && prices.SILVER){
-    const gsr=parseFloat(prices.XAU.price)/parseFloat(prices.SILVER.price);
+  if(prices.XAU && prices.XAG){
+    const gsr=parseFloat(prices.XAU.price)/parseFloat(prices.XAG.price);
     prices.GOLD_SILVER_RATIO={
-      ratio:+gsr.toFixed(1),
+      ratio:+(gsr||0).toFixed(1),
       signal:gsr>90?'STRESS_FINANZIARIO':gsr>80?'RISK_OFF':gsr<65?'RISK_ON':'NEUTRO',
-      label:gsr>90?`G/S ${gsr.toFixed(0)} — stress finanziario`:
-            gsr>80?`G/S ${gsr.toFixed(0)} — risk-off`:
-            gsr<65?`G/S ${gsr.toFixed(0)} — risk-on`:
-            `G/S ${gsr.toFixed(0)} — neutro`
+      label:gsr>90?`G/S ${(gsr||0).toFixed(0)} — stress finanziario`:
+            gsr>80?`G/S ${(gsr||0).toFixed(0)} — risk-off`:
+            gsr<65?`G/S ${(gsr||0).toFixed(0)} — risk-on`:
+            `G/S ${(gsr||0).toFixed(0)} — neutro`
     };
   }
   return prices;

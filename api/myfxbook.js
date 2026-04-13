@@ -117,6 +117,13 @@ export default async function handler(req, res) {
       return res.json({ ok: true, openTrades: d.openTrades || [] });
     }
 
+    // ── OUTLOOK ──────────────────────────────────────────
+    if (action === 'outlook') {
+      const sym = body.symbol || 'XAUUSD';
+      const d = await fetchMfx(`/get-community-outlook.json?session=${session||''}&symbols=${encodeURIComponent(sym)}`);
+      return res.json({ ok: true, outlook: d });
+    }
+
     // ── LOGOUT ──────────────────────────────────────────
     if (action === 'logout') {
       if (session) {

@@ -111,33 +111,37 @@ async function loadPrices(){
   }catch(e){console.log('Prices:',e.message);}
 }
 
-// Sentiment-only refresh — tries server first, then direct browser fetch
+// Sentiment-only refresh — uses server-side proxy to avoid CORS
 async function loadSentimentOnly(){
   try{
-    // Try direct browser fetch first (more reliable, no server CORS issues)
     const assetStr = `${window.activeAsset||'XAU'}USD`;
-    const r=await fetch(`https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=${assetStr}`);
-    if(r.ok){
-      const d=await r.json();
-      const sym=d.symbols?.find(s=>s.name===assetStr)||d.symbols?.[0];
-      if(sym?.longPercentage!=null){
-        const lp=parseFloat(sym.longPercentage), sp=parseFloat(sym.shortPercentage);
-        const sent={
-          longPct:lp, shortPct:sp,
-          signal:lp>60?'RETAIL_LONG_HEAVY':sp>60?'RETAIL_SHORT_HEAVY':'MIXED',
-          contrarian:lp>65?'BEARISH_BIAS':sp>65?'BULLISH_BIAS':'NEUTRAL',
-          note:lp>65?'⚠️ Retail '+Math.round(lp)+'% long — smart money SHORT':
-               sp>65?'⚠️ Retail '+Math.round(sp)+'% short — squeeze possibile':''
+    const res = await fetch('/api/myfxbook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'outlook', symbol: assetStr })
+    });
+    
+    if(!res.ok) return;
+    const json = await res.json();
+    if(json.ok && json.outlook){
+      const d = json.outlook;
+      const sym = d.symbols?.find(s=>s.name===assetStr) || d.symbols?.[0];
+      if(sym?.longPercentage != null){
+        const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
+        const sent = {
+          longPct: lp, shortPct: sp,
+          signal: lp > 60 ? 'RETAIL_LONG_HEAVY' : sp > 60 ? 'RETAIL_SHORT_HEAVY' : 'MIXED',
+          contrarian: lp > 65 ? 'BEARISH_BIAS' : sp > 65 ? 'BULLISH_BIAS' : 'NEUTRAL',
+          note: lp > 65 ? '⚠️ Retail '+Math.round(lp)+'% long — smart money SHORT' :
+                sp > 65 ? '⚠️ Retail '+Math.round(sp)+'% short — squeeze possibile' : ''
         };
-        dashContext.sentiment=sent;
-        updateSentiment(sent,'myfxbook_direct');
-        if(marketData)updateConfidence(marketData,sent);
-        return;
+        dashContext.sentiment = sent;
+        updateSentiment(sent, 'myfxbook_proxy');
+        if(marketData) updateConfidence(marketData, sent);
       }
     }
-  }catch(e){
-    // CORS blocked — fall back to server proxy
-    const sd=await fetchJSON('/api/market?type=sentiment',4000);
+  }catch(e){console.log('Sentiment Proxy Error:', e.message);}
+}
     if(sd?.ok&&sd.xauusd){
       dashContext.sentiment=sd.xauusd;
       updateSentiment(sd.xauusd, sd.source);

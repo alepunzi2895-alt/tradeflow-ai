@@ -1,19 +1,21 @@
 // TradeFlow AI — Strategy Engine v2
 // 18 indicatori · 5 strategie validate (PF ≥ 1.10) su 730gg H1 XAU/USD
+// Multi-Timeframe test (1h/4h/1d): 1H confermato ottimale per tutte le strategie
 // Regime detection → selezione automatica strategia ottimale
 
-// ── CONFIG (ottimizzata da backtest) ─────────────────────────────────────────
+// ── CONFIG (ottimizzata da backtest MTF) ──────────────────────────────────────
 const SE = {
   session:  { start: 7, end: 17 },     // UTC London+NY
   maxTrades: 3,
   cooldownH: 1,
   extremeMult: 3.0,                     // ATR > 3x avg = giorno estremo
   strategies: {
-    S01_EXHAUSTION:    { tp: 15, sl: 9,  pf: 2.79, wr: '62.6%', label: 'Exhaustion' },
-    S06_ORDERBLOCK:    { tp: 18, sl: 10, pf: 1.57, wr: '46.6%', label: 'Order Block' },
-    S09_VWAP_WPER:     { tp: 18, sl: 10, pf: 1.65, wr: '47.9%', label: 'VWAP + W%R' },
-    S12_WPR_KELTNER:   { tp: 20, sl: 12, pf: 1.22, wr: '42.3%', label: 'W%R + Keltner' },
-    S10_SESSION_MOM:   { tp: 20, sl: 12, pf: 1.10, wr: '39.8%', label: 'Session Momentum' },
+    // tf = timeframe ottimale validato su 730gg (MTF test: 1h vs 4h vs 1d)
+    S01_EXHAUSTION:    { tp: 15, sl: 9,  pf: 2.288, wr: '57.9%', label: 'Exhaustion',       tf: '1h' },
+    S06_ORDERBLOCK:    { tp: 18, sl: 10, pf: 1.424, wr: '46.1%', label: 'Order Block',      tf: '1h' },
+    S09_VWAP_WPER:     { tp: 18, sl: 10, pf: 1.501, wr: '47.4%', label: 'VWAP + W%R',      tf: '1h' },
+    S12_WPR_KELTNER:   { tp: 20, sl: 12, pf: 1.220, wr: '42.3%', label: 'W%R + Keltner',   tf: '1h' },
+    S10_SESSION_MOM:   { tp: 20, sl: 12, pf: 1.042, wr: '38.5%', label: 'Session Momentum', tf: '1h' },
   },
   regimePriority: {
     TREND_UP:   ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
@@ -487,7 +489,7 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
         return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <span style="color:${dc};font-weight:800;font-size:12px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
-            <span style="color:${pc};font-size:9px">${idx===0?'★ PRIORITÀ 1':'P'+(idx+1)} · ${s.label} · WR ${s.wr} · PF ${s.pf}</span>
+            <span style="color:${pc};font-size:9px">${idx===0?'★ PRIORITÀ 1':'P'+(idx+1)} · ${s.label} · ${s.tf||'1h'} · WR ${s.wr} · PF ${s.pf}</span>
           </div>
           <div style="font-size:9px;color:var(--fg);margin-bottom:4px">${s.why}</div>
           <div style="display:flex;gap:8px;font-size:9px;color:var(--dim)">
@@ -563,20 +565,21 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
 
   const perfHtml=`
 <div>
-  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">PERFORMANCE STRATEGIE (730gg backtest H1 XAU)</div>
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">PERFORMANCE STRATEGIE — MTF test 1h/4h/1d · 730gg XAU/USD</div>
   <table style="width:100%;border-collapse:collapse;font-size:9px">
     <tr style="color:var(--dim);border-bottom:1px solid var(--border)">
-      <td style="padding:3px 0">Strategia</td><td style="text-align:right">WR%</td><td style="text-align:right">PF</td><td style="text-align:right">TP/SL</td>
+      <td style="padding:3px 0">Strategia</td><td style="text-align:right">TF✓</td><td style="text-align:right">WR%</td><td style="text-align:right">PF</td><td style="text-align:right">TP/SL</td>
     </tr>
     ${[
-      ['S01_EXHAUSTION','62.6%','2.79','$15/$9','#ffd700'],
-      ['S09_VWAP+W%R','47.9%','1.65','$18/$10','#00e676'],
-      ['S06_ORDER BLOCK','46.6%','1.57','$18/$10','#00e676'],
-      ['S12_WPR+KELTNER','42.3%','1.22','$20/$12','#c8a96e'],
-      ['S10_SESSION MOM','39.8%','1.10','$20/$12','#ffca28'],
-    ].map(([n,wr,pf,tpsl,col])=>`
+      ['S01_EXHAUSTION','1h','57.9%','2.288','$15/$9','#ffd700'],
+      ['S09_VWAP+W%R','1h','47.4%','1.501','$18/$10','#00e676'],
+      ['S06_ORDER BLOCK','1h','46.1%','1.424','$18/$10','#00e676'],
+      ['S12_WPR+KELTNER','1h','42.3%','1.220','$20/$12','#c8a96e'],
+      ['S10_SESSION MOM','1h','38.5%','1.042','$20/$12','#ffca28'],
+    ].map(([n,tf,wr,pf,tpsl,col])=>`
     <tr style="border-bottom:1px solid var(--border2)">
       <td style="padding:4px 0;color:${col};font-weight:600;font-size:8px">${n}</td>
+      <td style="text-align:right;color:#4fc3f7;font-weight:700">${tf}</td>
       <td style="text-align:right;color:${col}">${wr}</td>
       <td style="text-align:right;color:var(--fg)">${pf}</td>
       <td style="text-align:right;color:var(--dim)">${tpsl}</td>

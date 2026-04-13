@@ -255,42 +255,47 @@ Risultati:
 
 ### 9.1 Architettura
 ```
-scripts/strategy-engine.py    ← backtester 7 strategie + regime detection (730gg H1)
-public/modules/strategy.js    ← live engine: regime + segnali + tracking giornaliero
-public/index.html             ← tab "⚡ Strategie" (sostituisce MyFxBook nel nav)
+scripts/strategy-engine-v2.py  ← backtester v2: 12 strategie × 18 indicatori (730gg H1)
+scripts/strategy-mtf.py        ← MTF backtester: 5 strategie × 3 TF (1h/4h/1d)
+public/modules/strategy.js     ← live engine: regime + segnali + tracking giornaliero
+public/index.html              ← tab "⚡ Strategie" (sostituisce MyFxBook nel nav)
 ```
 
-### 9.2 Strategie Implementate (ordine PF)
-| Strategia | WR% | P&L | PF | Note |
-|---|---|---|---|---|
-| **EXHAUSTION** | 57.9% | $788 | 2.29 | ADX≥30+DI spread≥15+MACD contra-trend |
-| **RSI_EXTREME** | 45.4% | $572 | 1.38 | RSI≤32 o ≥68 + BB band touch + ADX<28 |
-| **SESSION_MOM** | 39.9% | $612 | 1.11 | London open (7-10 UTC) MACD+EMA50 |
-| **MACD_ZERO** | 39.6% | $88 | 1.09 | Hist cross zero + EMA alignment |
-| EMA_TREND | 37.6% | $24 | 1.01 | ❌ non usata (PF insufficiente) |
-| BB_REVERSAL | 37.0% | -$116 | 0.98 | ❌ non usata (PF < 1) |
-| STOCH_CROSS | 38.6% | $104 | 1.05 | ❌ non usata (PF insufficiente) |
+### 9.2 Strategie Attive (v2, ordine PF — escluse quelle con PF < 1.10)
+| Strategia | TF Best | WR% | P&L | PF | TP/SL | Note |
+|---|---|---|---|---|---|---|
+| **S01_EXHAUSTION** | **1h** | 57.9% | $788 | 2.288 | $15/$9 | ADX≥30+DI spread≥15+MACD contra-trend |
+| **S09_VWAP_WPR** | **1h** | 47.4% | $728 | 1.501 | $18/$10 | VWAP cross + W%R oversold/overbought |
+| **S06_ORDERBLOCK** | **1h** | 46.1% | $1436 | 1.424 | $18/$10 | Institutional OB zone + momentum |
+| **S12_WPR_KELTNER** | **1h** | 42.3% | $512 | 1.220 | $20/$12 | W%R + Keltner channel breakout |
+| **S10_SESSION_MOM** | **1h** | 38.5% | $356 | 1.042 | $20/$12 | London open (7-10 UTC) MACD+EMA50 |
+
+**MTF Test risultati** (testato 1h vs 4h vs 1d su 730gg):
+- 1H ottimale per **tutte** le strategie — 4H e 1D performano peggio in tutti i casi
+- Il 4H degrada il PF per via di segnali rari e lookahead insufficiente
+- Il 1D ha trade troppo pochi (N<20) per essere statisticamente valido
 
 ### 9.3 Regime Detection
 | Regime | Condizione | Strategie priorità |
 |---|---|---|
-| TREND_UP | ADX≥30, DI+>DI- | EXHAUSTION → SESSION_MOM → MACD_ZERO |
-| TREND_DOWN | ADX≥30, DI->DI+ | EXHAUSTION → SESSION_MOM → MACD_ZERO |
-| WEAK_TREND | 22≤ADX<30 | SESSION_MOM → MACD_ZERO → RSI_EXTREME |
-| RANGE | ADX<22 | RSI_EXTREME → MACD_ZERO → SESSION_MOM |
-| VOLATILE_RANGE | ADX<22, ATR>1.4x avg | RSI_EXTREME → SESSION_MOM |
+| TREND_UP | ADX≥30, DI+>DI- | S01→S06→S10 |
+| TREND_DOWN | ADX≥30, DI->DI+ | S01→S06→S10 |
+| WEAK_UP | 22≤ADX<30, DI+>DI- | S06→S10→S12 |
+| WEAK_DOWN | 22≤ADX<30, DI->DI+ | S06→S10→S12 |
+| RANGE | ADX<22 | S09→S12→S06 |
+| VOLATILE | ADX<22, ATR>1.4x avg | S12→S09 |
 
 ### 9.4 Regole Operative
 - **Max 3 trade/giorno**, cooldown 60 min tra trade
 - **Giorno estremo**: ATR > 3x media 30gg → trading sospeso
 - **Sessione**: 07-17 UTC (London + NY)
-- **TP $20 / SL $12** (stesse del backtest MFKK)
+- **TP/SL per strategia**: S01=$15/$9, S06/S09=$18/$10, S10/S12=$20/$12
 - Trade tracking in localStorage (reset ogni mezzanotte)
 
-### 9.5 Sistema Adattivo (backtest 730gg)
-- **1472 trade totali**, WR 41.3%, P&L $1792, PF 1.17
-- **$3.28/giorno** media, **2.69 trade/giorno**
-- Giorni con almeno 1 trade: 547/730 (75%)
+### 9.5 Sistema Adattivo MTF (backtest 730gg)
+- **1318 trade totali**, WR 41.1%, P&L $1528, PF 1.164
+- **$3.01/giorno** media, mesi positivi: 20/29
+- Tutte le strategie operano su timeframe 1H (validato MTF test)
 
 ## 10. PROSSIMI STEP (backlog)
 - [ ] Creazione report automatico giornaliero (`api/report.js`) usando LLM

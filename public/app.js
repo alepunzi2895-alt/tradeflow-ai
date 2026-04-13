@@ -31,7 +31,7 @@ function initTVChart(){
       hotlist: false,
       calendar: false,
       width: "100%",
-      height: 450,
+      height: 500,
     });
   }catch(e){ console.log('TradingView widget:', e.message); }
 }

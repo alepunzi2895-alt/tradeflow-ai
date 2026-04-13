@@ -45,7 +45,7 @@ html, body {
 
 #app {
   display: flex; flex-direction: column; min-height: 100vh;
-  max-width: 500px; margin: 0 auto; position: relative;
+  max-width: 650px; margin: 0 auto; position: relative;
   background: var(--bg2);
   box-shadow: 0 0 100px rgba(0,0,0,0.9);
   border-left: 1px solid var(--border); border-right: 1px solid var(--border);

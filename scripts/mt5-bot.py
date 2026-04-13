@@ -608,6 +608,7 @@ def fetch_remote_commands():
 
 # ── LOOP PRINCIPALE ───────────────────────────────────────────────────────────
 def run():
+    global SYMBOL
     log.info("="*60)
     log.info("TradeFlow AI — MT5 Bot avviato")
     log.info(f"Symbol: {SYMBOL} | Lot: {LOT_SIZE} | Max trade/gg: {MAX_TRADES}")
@@ -619,7 +620,6 @@ def run():
         sys.exit(1)
 
     # Verifica Simbolo Corretto (GOLD vs gold vs XAUUSD)
-    global SYMBOL
     possible_symbols = ["GOLD", "gold", "XAUUSD", "XAUUSD.m", "XAUUSD.gr"]
     found_symbol = None
     for s in possible_symbols:

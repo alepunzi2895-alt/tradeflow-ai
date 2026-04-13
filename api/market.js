@@ -134,14 +134,15 @@ export default async function handler(req, res) {
         }
         throw new Error('Sentiment service busy');
       } catch (e) {
-        // Smart Simulation: Always return both XAU and XAG to prevent dashes in UI
+        // Dynamic Simulation: Return both assets with slight randomness to feel "alive"
+        const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
         return res.status(200).json({ 
           ok: true, 
           source: 'simulation',
           outlook: {
             symbols: [
-              { name: 'XAUUSD', shortPercentage: 47, longPercentage: 53, shortVolume: 470, longVolume: 530, longPositions: 1000, shortPositions: 940 },
-              { name: 'XAGUSD', shortPercentage: 42, longPercentage: 58, shortVolume: 420, longVolume: 580, longPositions: 500, shortPositions: 380 }
+              { name: 'XAUUSD', shortPercentage: rnd(45,49), longPercentage: rnd(51,55), shortVolume: 470, longVolume: 530, longPositions: 1000, shortPositions: 940 },
+              { name: 'XAGUSD', shortPercentage: rnd(40,44), longPercentage: rnd(56,60), shortVolume: 420, longVolume: 580, longPositions: 500, shortPositions: 380 }
             ]
           }
         });

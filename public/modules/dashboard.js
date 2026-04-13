@@ -459,19 +459,20 @@ function updateConfidence(prices, sentimentData){
   let yieldScore=50, yieldLabel='Rendimenti stabili', yieldSub='', yieldCol='var(--dim)';
   if(prices.US10Y){
     const yc=parseFloat(prices.US10Y.change);
-    if(yc>0.2){yieldScore=30;yieldLabel=`Rendimenti ↑ (+${yc}%)`;yieldSub='Pressione bearish su XAU';yieldCol='var(--red)';}
-    else if(yc<-0.2){yieldScore=80;yieldLabel=`Rendimenti ↓ (${yc}%)`;yieldSub='Sostegno bullish per XAU';yieldCol='var(--green)';}
-    else{yieldScore=55;yieldLabel='Rendimenti stabili';yieldSub='Nessuna pressione macro';yieldCol='var(--dim)';}
+    const yVal=prices.US10Y.price;
+    if(yc>0.2){yieldScore=30;yieldLabel=`US10Y ${yVal}% ↑ XAU ↓`;yieldSub=`Rendimenti ↑${yc}% — pressione bearish`;yieldCol='var(--red)';}
+    else if(yc<-0.2){yieldScore=80;yieldLabel=`US10Y ${yVal}% ↓ XAU ↑`;yieldSub=`Rendimenti ↓${yc}% — sostegno bullish`;yieldCol='var(--green)';}
+    else{yieldScore=55;yieldLabel=`US10Y ${yVal}% (Stabile)`;yieldSub='Nessuna pressione macro';yieldCol='var(--dim)';}
   }
 
   // ── FACTOR 9: Gold/Silver Ratio (New - peso 10%) ───────
   let gsrScore=50, gsrLabel='G/S Ratio neutro', gsrSub='', gsrCol='var(--dim)';
   if(prices.XAU && prices.SILVER){
-    const ratio=parseFloat(prices.XAU.price)/parseFloat(prices.SILVER.price);
+    const ratio=parseFloat(parseFloat(prices.XAU.price)/parseFloat(prices.SILVER.price)).toFixed(1);
     // User context: 63.6 is RISK ON. High ratio (>80) = Gold expensive.
-    if(ratio > 78){gsrScore=75;gsrLabel='G/S Alto (Safe Haven)';gsrSub='Domanda Oro superiore';gsrCol='var(--green)';}
-    else if(ratio < 68){gsrScore=40;gsrLabel='G/S Basso (Risk-On)';gsrSub='Preferenza Silver/Risk';gsrCol='var(--yellow)';}
-    else{gsrScore=60;gsrLabel='G/S Equilibrato';gsrSub='Regime normale';gsrCol='var(--green)';}
+    if(ratio > 78){gsrScore=75;gsrLabel=`G/S Ratio ${ratio} · RISK OFF`;gsrSub='Domanda Oro superiore (difensiva)';gsrCol='var(--green)';}
+    else if(ratio < 68){gsrScore=40;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Preferenza Silver (propensione rischio)';gsrCol='var(--yellow)';}
+    else{gsrScore=60;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--green)';}
   }
 
   // ── FACTOR 10: COT Positioning (New - peso 10%) ───────

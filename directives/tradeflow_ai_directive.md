@@ -355,4 +355,31 @@ Ogni indicatore nel dashboard (AI Confidence e MFKK) è ora cliccabile per visua
 ### 12.2 Unified Market Hub (`api/market.js`)
 Singola fonte di verità per dati macro e calendario, eliminando problemi di CORS e rate-limiting lato client.
 - **Tipi supportati**: `prices` (multi-asset), `calendar` (ForexFactory proxy), `sentiment` (MyFxBook proxy), `cot` (CFTC data).
-- **Resilienza**: Implementati timeout rigidi e fallback silenziosi per evitare il blocco della UI.
+- **Resilienza**: Implementati timeout rigidi e fallback silenziosi (Yahoo Finance per l'Oil) per evitare il blocco della UI.
+
+---
+
+## 13. AI CONFIDENCE SCORE (V2 — 10 FATTORI)
+
+Il sistema di punteggio istituzionale è stato evoluto per integrare i fondamentali macro insieme alla tecnica pura.
+
+### 13.1 Pesi e Componenti (10% cad. — Bilanciamento Totale)
+
+| Fattore | Tipo | Logica Score (Bullish XAU) |
+|---|---|---|
+| **Momentum** | Tecnica | Chg > 0.3% → Bullish |
+| **DXY Corr** | Correlazione | DXY ↓ XAU ↑ → Bullish |
+| **Session KZ** | Timing | London/NY Open → Bullish |
+| **Sentiment** | Contrarian | Retail over-short (>65%) → Bullish |
+| **Multi-pair** | Confluenza | EUR/GBP/XAU allineati → Bullish |
+| **US 10Y Yield**| Macro (Yield) | Rendimenti in calo → Bullish |
+| **G/S Ratio** | Macro (Risk) | Ratio in crescita (Safe Haven) → Bullish |
+| **COT Data** | Macro (Smart) | Istituzionali Net Long → Bullish |
+| **Volatilità** | Rischio | Low range ATR → Bullish (setup puliti) |
+| **News Filter** | Rischio | Nessuna news imminente (±30m) → Bullish |
+
+### 13.2 Soglie Operative
+- **≥ 75**: FORTE BUY — Setup istituzionale confermato.
+- **60-74**: BUY — Setup operabile con size normale.
+- **40-59**: NEUTRO — Evitare entrate direzionali.
+- **≤ 25**: FORTE SELL — Pressione ribassista coordinata.

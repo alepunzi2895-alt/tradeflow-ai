@@ -455,15 +455,46 @@ function updateConfidence(prices, sentimentData){
   }
   newsScore=Math.max(0,Math.min(100,newsScore));
 
-  // ── WEIGHTED SCORE 7 fattori ─────────────────────────────
+  // ── FACTOR 8: US 10Y Yield (New - peso 10%) ─────────────
+  let yieldScore=50, yieldLabel='Rendimenti stabili', yieldSub='', yieldCol='var(--dim)';
+  if(prices.US10Y){
+    const yc=parseFloat(prices.US10Y.change);
+    if(yc>0.2){yieldScore=30;yieldLabel=`Rendimenti ↑ (+${yc}%)`;yieldSub='Pressione bearish su XAU';yieldCol='var(--red)';}
+    else if(yc<-0.2){yieldScore=80;yieldLabel=`Rendimenti ↓ (${yc}%)`;yieldSub='Sostegno bullish per XAU';yieldCol='var(--green)';}
+    else{yieldScore=55;yieldLabel='Rendimenti stabili';yieldSub='Nessuna pressione macro';yieldCol='var(--dim)';}
+  }
+
+  // ── FACTOR 9: Gold/Silver Ratio (New - peso 10%) ───────
+  let gsrScore=50, gsrLabel='G/S Ratio neutro', gsrSub='', gsrCol='var(--dim)';
+  if(prices.XAU && prices.SILVER){
+    const ratio=parseFloat(prices.XAU.price)/parseFloat(prices.SILVER.price);
+    // User context: 63.6 is RISK ON. High ratio (>80) = Gold expensive.
+    if(ratio > 78){gsrScore=75;gsrLabel='G/S Alto (Safe Haven)';gsrSub='Domanda Oro superiore';gsrCol='var(--green)';}
+    else if(ratio < 68){gsrScore=40;gsrLabel='G/S Basso (Risk-On)';gsrSub='Preferenza Silver/Risk';gsrCol='var(--yellow)';}
+    else{gsrScore=60;gsrLabel='G/S Equilibrato';gsrSub='Regime normale';gsrCol='var(--green)';}
+  }
+
+  // ── FACTOR 10: COT Positioning (New - peso 10%) ───────
+  let cotScore=50, cotLabel='Dati COT neutri', cotSub='', cotCol='var(--dim)';
+  const cot=window._cotData;
+  if(cot){
+    if(cot.signal==='BULLISH'){cotScore=85;cotLabel='COT Bullish';cotSub='Istituzionali Long';cotCol='var(--green)';}
+    else if(cot.signal==='BEARISH'){cotScore=25;cotLabel='COT Bearish';cotSub='Istituzionali Short';cotCol='var(--red)';}
+    else{cotScore=50;cotLabel='COT Neutro';cotSub='Posizionamento misto';cotCol='var(--dim)';}
+  }
+
+  // ── WEIGHTED SCORE 10 fattori (10% cad.) ──────────────────
   const weights=[
-    {score:isNaN(momScore)?50:momScore,  w:0.20},
-    {score:isNaN(dxyScore)?50:dxyScore,  w:0.17},
-    {score:isNaN(sessScore)?50:sessScore,w:0.18},
-    {score:isNaN(sentScore)?50:sentScore,w:0.12},
-    {score:isNaN(multiScore)?50:multiScore,w:0.12},
-    {score:isNaN(volScore)?50:volScore,  w:0.08},
-    {score:isNaN(newsScore)?60:newsScore,w:0.13},
+    {score:isNaN(momScore)?50:momScore,  w:0.10},
+    {score:isNaN(dxyScore)?50:dxyScore,  w:0.10},
+    {score:isNaN(sessScore)?50:sessScore,w:0.10},
+    {score:isNaN(sentScore)?50:sentScore,w:0.10},
+    {score:isNaN(multiScore)?50:multiScore,w:0.10},
+    {score:isNaN(volScore)?50:volScore,  w:0.10},
+    {score:isNaN(newsScore)?60:newsScore,w:0.10},
+    {score:isNaN(yieldScore)?50:yieldScore,w:0.10},
+    {score:isNaN(gsrScore)?50:gsrScore,  w:0.10},
+    {score:isNaN(cotScore)?50:cotScore,  w:0.10},
   ];
   const total=Math.round(weights.reduce((s,f)=>s+f.score*f.w,0));
   let bias='NEUTRO', summary='';
@@ -503,18 +534,23 @@ function updateConfidence(prices, sentimentData){
     momentum:{score:momScore,label:momLabel},dxy:{score:dxyScore,label:dxyLabel},
     session:{score:sessScore,label:sessLabel},sentiment:{score:sentScore,label:sentLabel},
     multi:{score:multiScore,label:multiLabel},vol:{score:volScore,label:volLabel},
-    news:{score:newsScore,label:newsLabel}
+    news:{score:newsScore,label:newsLabel},
+    yield:{score:yieldScore,label:yieldLabel},gsr:{score:gsrScore,label:gsrLabel},
+    cot:{score:cotScore,label:cotLabel}
   }};
 
     // Render factors safely
     const factorsList = [
-      {id:'momentum', ico:'📊', label:momLabel, sub:momSub||'', score:momScore, col:momCol, w:'20%'},
-      {id:'dxy', ico:'🔗', label:dxyLabel, sub:dxySub||'', score:dxyScore, col:dxyCol, w:'17%'},
-      {id:'session', ico:'⏰', label:sessLabel, sub:sessSub||'', score:sessScore, col:sessCol, w:'18%'},
-      {id:'sentiment', ico:'👥', label:sentLabel, sub:sentSub||'', score:sentScore, col:sentCol, w:'12%'},
-      {id:'multi', ico:'🌍', label:multiLabel, sub:multiSub||'', score:multiScore, col:multiCol, w:'12%'},
-      {id:'vol', ico:'📉', label:volLabel, sub:volSub||'', score:volScore, col:volCol, w:'8%'},
-      {id:'news', ico:'📰', label:newsLabel, sub:newsSub||'', score:newsScore, col:newsCol, w:'13%'},
+      {id:'momentum', ico:'📊', label:momLabel, sub:momSub||'', score:momScore, col:momCol, w:'10%'},
+      {id:'dxy', ico:'🔗', label:dxyLabel, sub:dxySub||'', score:dxyScore, col:dxyCol, w:'10%'},
+      {id:'session', ico:'⏰', label:sessLabel, sub:sessSub||'', score:sessScore, col:sessCol, w:'10%'},
+      {id:'sentiment', ico:'👥', label:sentLabel, sub:sentSub||'', score:sentScore, col:sentCol, w:'10%'},
+      {id:'multi', ico:'🌍', label:multiLabel, sub:multiSub||'', score:multiScore, col:multiCol, w:'10%'},
+      {id:'yield', ico:'📈', label:yieldLabel, sub:yieldSub||'', score:yieldScore, col:yieldCol, w:'10%'},
+      {id:'gsr', ico:'⚖️', label:gsrLabel, sub:gsrSub||'', score:gsrScore, col:gsrCol, w:'10%'},
+      {id:'cot', ico:'🏛️', label:cotLabel, sub:cotSub||'', score:cotScore, col:cotCol, w:'10%'},
+      {id:'vol', ico:'📉', label:volLabel, sub:volSub||'', score:volScore, col:volCol, w:'10%'},
+      {id:'news', ico:'📰', label:newsLabel, sub:newsSub||'', score:newsScore, col:newsCol, w:'10%'},
     ];
     const fl = document.getElementById('conf-factors');
     if(fl){
@@ -599,7 +635,19 @@ const INDICATOR_DEFS = {
   },
   'adx': {
     title: 'ADX (Trend Strength)',
-    meaning: 'Average Directional Index. Misura la forza del trend. Sotto 20 indica un mercato laterale (evita breakout). Sopra 30 indica un trend forte e deciso.'
+    meaning: 'Misura la forza del trend. Valori sopra 25 indicano un trend deciso, rendendo i segnali di continuazione molto più affidabili.'
+  },
+  'yield': {
+    title: 'US 10Y Yield Pressure',
+    meaning: 'I rendimenti obbligazionari competono con l\'oro. Rendimenti in crescita rendono il dollaro più attrattivo e pesano negativamente sul prezzo dei metalli.'
+  },
+  'gsr': {
+    title: 'Gold/Silver Ratio (GSR)',
+    meaning: 'Indica il regime di rischio. Un ratio che scende indica Risk-On (Silver forte), un ratio che sale indica Risk-Off o sovraperformance difensiva dell\'Oro.'
+  },
+  'cot': {
+    title: 'COT Large Speculators',
+    meaning: 'Sentiment istituzionale (Smart Money). Seguiamo il posizionamento netto dei grandi speculatori per allinearci ai flussi monetari globali.'
   }
 };
 
@@ -791,6 +839,18 @@ async function loadCotData(){
         sig.style.color = bull ? 'var(--green)' : bear ? 'var(--red)' : 'var(--dim)';
       }
       if(lbl) lbl.textContent = d.cot.labels || 'CFTC Large Spec';
+      // Show last update date (cleanup previous if any)
+      const oldD = lbl.parentNode.querySelector('.cot-date');
+      if(oldD) oldD.remove();
+      if(sig && d.cot.last_updated){
+        const dateEl = document.createElement('div');
+        dateEl.className = 'cot-date';
+        dateEl.style.fontSize = '8px';
+        dateEl.style.color = 'var(--dim)';
+        dateEl.style.marginTop = '2px';
+        dateEl.textContent = 'Aggiornato: ' + d.cot.last_updated;
+        lbl.parentNode.appendChild(dateEl);
+      }
     }
   } catch(e){ console.log('COT:', e.message); }
 }

@@ -152,7 +152,12 @@ export default async function handler(req, res) {
     if (type === 'cot') {
       return res.status(200).json({ 
         ok: true, 
-        cot: { net: "+182K", signal: "BULLISH", labels: "Large Speculators" } 
+        cot: { 
+          net: "+182K", 
+          signal: "BULLISH", 
+          labels: "Large Speculators",
+          last_updated: "Venerdì, 10 Aprile 2024"
+        } 
       });
     }
 

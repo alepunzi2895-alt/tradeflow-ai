@@ -132,23 +132,23 @@ async function loadSentimentOnly(){
 
 // Slow refresh: sentiment + calendar (called every 30s)
 async function loadSlowData(){
-  // Run in parallel, don't await each other
+  const assetStr = `${window.activeAsset || 'XAU'}USD`;
   const mfxSess = mfxSession?.session ? '&session='+encodeURIComponent(mfxSession.session) : '';
-  fetchJSON('/api/market?type=sentiment' + mfxSess, 6000).then(async sd => {
-    const assetStr = `${window.activeAsset || 'XAU'}USD`;
+  fetchJSON('/api/market?type=sentiment&symbol=' + assetStr + mfxSess, 6000).then(async sd => {
     if(sd?.ok && sd.outlook && sd.outlook.symbols){
       const sym = sd.outlook.symbols.find(s => s.name === assetStr) || sd.outlook.symbols[0];
       if(sym && sym.longPercentage != null){
         const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
         const sent = {
           longPct: lp, shortPct: sp,
+          synthetic: sd.source === 'simulation',
           signal: lp > 60 ? 'RETAIL_LONG_HEAVY' : sp > 60 ? 'RETAIL_SHORT_HEAVY' : 'MIXED',
           contrarian: lp > 65 ? 'BEARISH_BIAS' : sp > 65 ? 'BULLISH_BIAS' : 'NEUTRAL',
           note: lp > 65 ? '⚠️ Retail ' + Math.round(lp) + '% long — smart money SHORT' :
                 sp > 65 ? '⚠️ Retail ' + Math.round(sp) + '% short — squeeze possibile' : ''
         };
         dashContext.sentiment = sent;
-        updateSentiment(sent, 'myfxbook_proxy');
+        updateSentiment(sent, sd.source || 'myfxbook_proxy');
         if(marketData) updateConfidence(marketData, sent);
       }
     } else {

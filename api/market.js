@@ -5,7 +5,9 @@ const BASE_MFX = 'https://www.myfxbook.com/api';
 
 const TICKERS = [
   'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD', 'CAPITALCOM:GOLD', 'TVC:GOLD', 
-  'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD', 'TVC:USOIL', 'CAPITALCOM:OIL', 'OANDA:WTICOUSD', 'TVC:US10Y', 'TVC:DXY', 
+  'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD',
+  'OANDA:WTICOUSD', 'TVC:USOIL', 'CAPITALCOM:OIL', 'FX:USOIL', 'SAXO:USOILUSD', 'FOREXCOM:WTIUSD',
+  'TVC:US10Y', 'TVC:DXY', 
   'OANDA:EURUSD', 'OANDA:GBPUSD', 'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
   'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD', 'CAPITALCOM:SILVER', 'TVC:SILVER', 
   'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD'
@@ -15,7 +17,8 @@ const TICKER_MAP = {
   'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU','CAPITALCOM:GOLD':'XAU','TVC:GOLD':'XAU','FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
   'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER','CAPITALCOM:SILVER':'SILVER','TVC:SILVER':'SILVER','FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
   'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
-  'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'CAPITALCOM:OIL':'OIL', 'OANDA:WTICOUSD':'OIL', 'TVC:US10Y':'US10Y'
+  'TVC:DXY':'DXY', 'TVC:US10Y':'US10Y',
+  'OANDA:WTICOUSD':'OIL', 'TVC:USOIL':'OIL', 'CAPITALCOM:OIL':'OIL', 'FX:USOIL':'OIL', 'SAXO:USOILUSD':'OIL', 'FOREXCOM:WTIUSD':'OIL'
 };
 
 async function fetchWithTimeout(url, opts={}, ms=7000) {
@@ -36,33 +39,59 @@ export default async function handler(req, res) {
   const { type, symbol, session } = req.query;
 
   try {
-    // ── 1. PRICES (TradingView Scanner) ────────────────────
+    // ── 1. PRICES (TradingView Scanner + Yahoo Fallback for OIL) ─────
     if (type === 'prices') {
-      const body = { 
-        symbols: { tickers: TICKERS, query: { types: [] } }, 
-        columns: ['close', 'change', 'high', 'low'] 
-      };
-      const r = await fetchWithTimeout('https://scanner.tradingview.com/global/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-        body: JSON.stringify(body)
-      });
-      if (!r.ok) throw new Error('TV Scanner failed');
-      const d = await r.json();
-      const prices = {};
-      for (const item of d.data) {
-        const key = TICKER_MAP[item.s];
-        if (!key || prices[key]) continue;
-        const [close, chg, hi, lo] = item.d;
-        const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
-        prices[key] = {
-          price: (+close).toFixed(dec),
-          change: +(chg||0).toFixed(2),
-          high: hi ? (+hi).toFixed(dec) : null,
-          low: lo ? (+lo).toFixed(dec) : null
+      try {
+        const body = { 
+          symbols: { tickers: TICKERS, query: { types: [] } }, 
+          columns: ['close', 'change', 'high', 'low'] 
         };
+        const r = await fetchWithTimeout('https://scanner.tradingview.com/global/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+          body: JSON.stringify(body)
+        });
+        if (!r.ok) throw new Error('TV Scanner failed');
+        const d = await r.json();
+        const prices = {};
+        for (const item of d.data) {
+          const key = TICKER_MAP[item.s];
+          if (!key || prices[key]) continue;
+          const [close, chg, hi, lo] = item.d;
+          if (close == null) continue;
+          const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+          prices[key] = {
+            price: (+close).toFixed(dec),
+            change: +(chg||0).toFixed(2),
+            high: hi ? (+hi).toFixed(dec) : null,
+            low: lo ? (+lo).toFixed(dec) : null
+          };
+        }
+        
+        // OIL FALLBACK if missing in TV scan
+        if (!prices.OIL) {
+          try {
+            const yr = await fetchWithTimeout('https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1m&range=1d', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 4000);
+            if (yr.ok) {
+              const yd = await yr.json();
+              const q = yd?.chart?.result?.[0]?.meta;
+              if (q && q.regularMarketPrice) {
+                const pc = q.chartPreviousClose || q.previousClose || q.regularMarketPrice;
+                prices.OIL = {
+                  price: q.regularMarketPrice.toFixed(2),
+                  change: +(((q.regularMarketPrice - pc)/pc)*100).toFixed(2),
+                  high: q.regularMarketDayHigh?.toFixed(2),
+                  low: q.regularMarketDayLow?.toFixed(2)
+                };
+              }
+            }
+          } catch(e) {}
+        }
+
+        return res.status(200).json({ ok: true, prices });
+      } catch(e) {
+        return res.status(500).json({ ok: false, message: e.message });
       }
-      return res.status(200).json({ ok: true, prices });
     }
 
     // ── 2. CALENDAR (ForexFactory) ─────────────────────────
@@ -85,24 +114,44 @@ export default async function handler(req, res) {
         }));
         return res.status(200).json({ ok: true, events });
       } catch(e) {
-        // Fallback or empty
         return res.status(200).json({ ok: true, events: [], note: 'Service temporarily unavailable' });
       }
     }
 
-    // ── 3. SENTIMENT (MyFxBook Proxy) ──────────────────────
+    // ── 3. SENTIMENT (MyFxBook Proxy + Requested Symbol Fallback) ──
     if (type === 'sentiment') {
-      const sym = symbol || 'XAUUSD';
-      const mfxUrl = `${BASE_MFX}/get-community-outlook.json?session=${session||''}&symbols=${encodeURIComponent(sym)}`;
-      const r = await fetchWithTimeout(mfxUrl);
-      const d = await r.json();
-      return res.status(200).json({ ok: true, outlook: d });
+      const sym = (symbol || 'XAUUSD').toUpperCase();
+      try {
+        const mfxUrl = `${BASE_MFX}/get-community-outlook.json?session=${session||''}&symbols=${encodeURIComponent(sym)}`;
+        const r = await fetchWithTimeout(mfxUrl);
+        const d = await r.json();
+        
+        if (d && d.symbols && d.symbols.length > 0) {
+          return res.status(200).json({ ok: true, outlook: d, source: 'myfxbook' });
+        }
+        throw new Error('No symbols found');
+      } catch (e) {
+        // Fallback simulation using the REQUESTED symbol name
+        return res.status(200).json({ 
+          ok: true, 
+          source: 'simulation',
+          outlook: {
+            symbols: [{
+              name: sym,
+              shortPercentage: 48,
+              longPercentage: 52,
+              shortVolume: 480,
+              longVolume: 520,
+              longPositions: 1000,
+              shortPositions: 920
+            }]
+          }
+        });
+      }
     }
 
-    // ── 4. COT (CFTC Data — can be derived or mocked) ──────
+    // ── 4. COT (CFTC Data — Placeholder) ───────────────────
     if (type === 'cot') {
-      // Per ora restituiamo dati statici placeholder o derivati
-      // Idealmente qui interroghiamo un DB o un'altra API COT
       return res.status(200).json({ 
         ok: true, 
         cot: { net: "+182K", signal: "BULLISH", labels: "Large Speculators" } 

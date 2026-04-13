@@ -552,13 +552,28 @@ def get_open_positions_data():
     return result
 
 def get_recent_trades_data(n=20):
-    """Legge gli ultimi N trade da mt5-trades.json"""
-    fname = 'mt5-trades.json'
-    if not os.path.exists(fname): return []
-    with open(fname, encoding='utf-8') as f:
-        try: trades = json.load(f)
-        except: return []
-    return trades[-n:]
+    """Legge gli ultimi N trade direttamente da MT5 History"""
+    from_date = datetime.datetime.now() - datetime.timedelta(days=3)
+    deals = mt5.history_deals_get(from_date, datetime.datetime.now())
+    if deals is None or len(deals) == 0: return []
+    
+    result = []
+    # Prendiamo solo i deal di tipo DEAL_ENTRY_OUT (chiusura) o DEAL_ENTRY_INOUT
+    for d in deals:
+        if d.symbol == "" or d.profit == 0: continue
+        # Filtriamo per mostrare solo i deal relativi a Gold
+        if SYMBOL.upper() not in d.symbol.upper(): continue
+        
+        result.append({
+            'ticket':    d.ticket,
+            'symbol':    d.symbol,
+            'direction': 'buy' if d.type == 0 else 'sell',
+            'price':     round(d.price, 2),
+            'profit':    round(d.profit + d.swap + d.commission, 2),
+            'time':      datetime.datetime.fromtimestamp(d.time, tz=datetime.timezone.utc).isoformat(),
+            'strategy':  d.comment.replace('TF-AI ', '') if 'TF-AI' in d.comment else 'MANUALE'
+        })
+    return result[-n:]
 
 def sync_to_vercel(acc, positions, trades, bot_status):
     """Invia lo stato corrente alla UI su Vercel"""
@@ -680,6 +695,18 @@ def run():
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
                 
+                # Calcola statistiche oggi reali da MT5
+                start_today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                today_deals = mt5.history_deals_get(start_today, datetime.datetime.now())
+                
+                real_pnl_today = 0
+                real_trades_today = 0
+                if today_deals:
+                    for d in today_deals:
+                        if d.symbol != "" and d.entry == 1: # 1 = DEAL_ENTRY_OUT (chiusura)
+                            real_pnl_today += (d.profit + d.swap + d.commission)
+                            real_trades_today += 1
+
                 # Calcola regime attuale se abbiamo le candele
                 current_regime = 'UNKNOWN'
                 if 'I' in locals() and 'i' in locals():
@@ -690,8 +717,8 @@ def run():
                     'dry_run': DRY_RUN,
                     'symbol': SYMBOL,
                     'lot': LOT_SIZE,
-                    'trades_today': state.trades_today,
-                    'pnl_today': round(state.pnl_today, 2),
+                    'trades_today': real_trades_today,
+                    'pnl_today': round(real_pnl_today, 2),
                     'regime': current_regime,
                     'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
                 }

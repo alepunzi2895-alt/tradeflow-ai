@@ -356,6 +356,24 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       }).join('')}
 </div>`;
 
+  // ── STORICO REALE
+  const histHtml=`
+<div style="margin-bottom:10px">
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">STORICO RECENTE (REAL TRADES)</div>
+  ${history.length===0
+    ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade storico trovato</div>`
+    : history.slice(-5).reverse().map(t=>{
+        const dc=t.direction==='buy'?'#00e676':'#ff4757';
+        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:4px 0;border-bottom:1px solid var(--border2)">
+          <span style="color:${dc}">${t.direction.toUpperCase()}</span>
+          <span style="color:var(--dim)">${new Date(t.time).toLocaleTimeString()}</span>
+          <span>${t.strategy||'—'}</span>
+          <span>$${t.price?.toFixed(2)}</span>
+          <span style="color:${t.profit>=0?'var(--green)':'var(--red)'}">${t.profit>=0?'+':''}${t.profit?.toFixed(2)}</span>
+        </div>`;
+      }).join('')}
+</div>`;
+
   // ── LIBRERIA STRATEGIE (Dettagli Tecnici)
   const activeList = SE.regimePriority[seRegime] || [];
   const catalogHtml = `

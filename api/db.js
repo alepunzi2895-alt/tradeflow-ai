@@ -174,6 +174,31 @@ async function patchDb(db) {
   return { ok: true };
 }
 
+// ── MT5 LIVE SYNC ─────────────────────────────────────────────────────────────
+// Il bot locale invia il suo stato ogni ~60s con una chiave segreta.
+// La UI legge i dati senza autenticazione (dati di monitoraggio, non sensibili).
+
+async function mt5Push(db, body) {
+  const { secret, account, positions, trades, bot_status } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  const payload = JSON.stringify({ account, positions: positions||[], trades: trades||[], bot_status, synced_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('mt5-live', 'mt5-bot', 'mt5_live', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true };
+}
+
+async function mt5Get(db) {
+  const result = await db.execute({ sql: "SELECT payload, updated_at FROM user_data WHERE user_id='mt5-bot' AND doc_type='mt5_live'", args: [] });
+  if (!result.rows.length) return { ok: true, data: null };
+  const row = result.rows[0];
+  return { ok: true, data: JSON.parse(row.payload), updated_at: row.updated_at };
+}
+
 async function adminReset(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and pass required");
@@ -188,7 +213,9 @@ async function adminReset(db, body) {
 }
 
 const ACTIONS = {
-  upsert_user: upsertUser, save_trade: saveTrade, get_trades: getTrades, register, login, save_user_data: saveUserData, get_user_data: getUserData, kb_load: kbLoad, kb_save: kbSave, mfx_proxy: mfxProxy, patch_db: patchDb, admin_reset: adminReset
+  upsert_user: upsertUser, save_trade: saveTrade, get_trades: getTrades, register, login, save_user_data: saveUserData, get_user_data: getUserData, kb_load: kbLoad, kb_save: kbSave, mfx_proxy: mfxProxy, patch_db: patchDb, admin_reset: adminReset,
+  mt5_push: (db, body) => mt5Push(db, body),
+  mt5_get:  (db)      => mt5Get(db),
 };
 
 export default async function handler(req, res) {

@@ -11,15 +11,15 @@ USO:
   python scripts/mt5-bot.py
   python scripts/mt5-bot.py --dry-run   (simula senza inviare ordini)
 """
-import sys, io, time, json, math, datetime, argparse, os, logging
+import sys, io, time, json, math, datetime, argparse, os, logging, urllib.request, urllib.error
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # ── CONFIGURAZIONE ────────────────────────────────────────────────────────────
-MT5_LOGIN    = 0             # ← inserisci il numero di conto demo
-MT5_PASSWORD = ""            # ← inserisci la password
-MT5_SERVER   = ""            # ← es. "MetaQuotes-Demo" o broker specifico
+MT5_LOGIN    = 1301224666
+MT5_PASSWORD = "Alessandro95!"
+MT5_SERVER   = "XMGlobal-MT5 6"
 
-SYMBOL       = "XAUUSD"
+SYMBOL       = "GOLD"
 LOT_SIZE     = 0.02          # lot size iniziale (0.02 = sicuro su €1000)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 3             # max operazioni per giorno
@@ -27,6 +27,11 @@ COOLDOWN_H   = 1             # ore di cooldown tra trade
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 60            # polling ogni 60 secondi
+
+# ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
+VERCEL_URL   = "https://tradeflow-ai.vercel.app"   # ← URL del tuo deploy Vercel
+MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
+SYNC_ENABLED = True          # False per disabilitare il sync cloud
 
 LOG_FILE     = "mt5-bot.log"
 
@@ -466,6 +471,61 @@ def log_trade_to_json(direction, strategy, price, tp, sl, result):
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump(trades, f, indent=2, ensure_ascii=False)
 
+# ── VERCEL SYNC ───────────────────────────────────────────────────────────────
+def get_open_positions_data():
+    """Legge le posizioni aperte da MT5 e le serializza"""
+    pos = mt5.positions_get(symbol=SYMBOL)
+    if not pos: return []
+    result = []
+    for p in pos:
+        if p.magic != MAGIC: continue
+        result.append({
+            'ticket':    p.ticket,
+            'direction': 'buy' if p.type == 0 else 'sell',
+            'lot':       p.volume,
+            'entry':     round(p.price_open, 2),
+            'current':   round(p.price_current, 2),
+            'tp':        round(p.tp, 2),
+            'sl':        round(p.sl, 2),
+            'profit':    round(p.profit, 2),
+            'strategy':  p.comment.replace('TF-AI ', ''),
+            'time':      datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
+        })
+    return result
+
+def get_recent_trades_data(n=20):
+    """Legge gli ultimi N trade da mt5-trades.json"""
+    fname = 'mt5-trades.json'
+    if not os.path.exists(fname): return []
+    with open(fname, encoding='utf-8') as f:
+        try: trades = json.load(f)
+        except: return []
+    return trades[-n:]
+
+def sync_to_vercel(acc, positions, trades, bot_status):
+    """Invia lo stato corrente alla UI su Vercel"""
+    if not SYNC_ENABLED or not VERCEL_URL: return
+    payload = json.dumps({
+        'action': 'mt5_push',
+        'secret': MT5_SECRET,
+        'account': acc,
+        'positions': positions,
+        'trades': trades,
+        'bot_status': bot_status,
+    }).encode('utf-8')
+    try:
+        req = urllib.request.Request(
+            f"{VERCEL_URL}/api/db",
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            if r.status == 200:
+                log.debug("Sync Vercel OK")
+    except Exception as e:
+        log.debug(f"Sync Vercel fallito (non critico): {e}")
+
 # ── LOOP PRINCIPALE ───────────────────────────────────────────────────────────
 def run():
     log.info("="*60)
@@ -484,6 +544,7 @@ def run():
                  f"(equity={acc['equity']:.2f}, free margin={acc['margin_free']:.2f})")
 
     last_bar_time = None   # per rilevare nuova candela H1
+    last_sync_time = 0    # timestamp ultimo sync Vercel
 
     while True:
         try:
@@ -495,6 +556,25 @@ def run():
                 log.warning("Candele non disponibili, riprovo...")
                 time.sleep(30)
                 continue
+
+            # ── Sync periodico a Vercel (ogni 60s anche senza nuova barra) ──────
+            now_ts = time.time()
+            if now_ts - last_sync_time >= 60:
+                acc_data = get_account_info()
+                positions_data = get_open_positions_data()
+                trades_data = get_recent_trades_data(20)
+                bot_status = {
+                    'running': True,
+                    'dry_run': DRY_RUN,
+                    'symbol': SYMBOL,
+                    'lot': LOT_SIZE,
+                    'trades_today': state.trades_today,
+                    'pnl_today': round(state.pnl_today, 2),
+                    'regime': 'UNKNOWN',
+                    'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
+                }
+                sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
+                last_sync_time = now_ts
 
             # ── Controlla nuova candela H1 ────────────────────────────────────
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
@@ -563,6 +643,14 @@ def run():
                 acc = get_account_info()
                 if acc:
                     log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
+                # Sync immediato dopo trade
+                sync_to_vercel(
+                    acc, get_open_positions_data(), get_recent_trades_data(20),
+                    {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
+                     'trades_today':state.trades_today,'pnl_today':state.pnl_today,
+                     'regime':regime,'last_signal':strategy_name}
+                )
+                last_sync_time = time.time()
 
             time.sleep(CHECK_SEC)
 

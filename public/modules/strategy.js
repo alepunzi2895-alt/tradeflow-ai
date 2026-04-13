@@ -591,6 +591,103 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   el.innerHTML=statusHtml+regimeHtml+indSnap+pendingHtml+tradeHtml+guideHtml+perfHtml;
+
+  // Aggiungi pannello MT5 live (caricato in modo asincrono)
+  const mt5Wrap=document.createElement('div');
+  mt5Wrap.id='se-mt5-panel';
+  mt5Wrap.innerHTML=`<div style="font-size:9px;color:var(--dim);text-align:center;padding:8px">Caricamento conto demo MT5...</div>`;
+  el.appendChild(mt5Wrap);
+  seFetchMt5(mt5Wrap);
+}
+
+// ── MT5 LIVE PANEL ────────────────────────────────────────────────────────────
+async function seFetchMt5(container){
+  try{
+    const r=await fetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'mt5_get'})});
+    const j=await r.json();
+    if(!j.ok||!j.data){
+      container.innerHTML=`<div style="margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:9px;color:var(--dim);text-align:center">
+        🤖 MT5 Bot non connesso<br><span style="font-size:8px">Avvia <code>python scripts/mt5-bot.py</code> sul tuo PC</span></div>`;
+      return;
+    }
+    const d=j.data;
+    const acc=d.account||{};
+    const pos=d.positions||[];
+    const trades=d.trades||[];
+    const bs=d.bot_status||{};
+    const syncAge=d.synced_at?Math.round((Date.now()-new Date(d.synced_at).getTime())/1000):null;
+    const online=syncAge!==null&&syncAge<180;
+    const statusDot=online?'<span style="color:#00e676">●</span>':'<span style="color:#ff4757">●</span>';
+    const statusLabel=online?`sync ${syncAge}s fa`:'offline';
+
+    // Posizioni aperte
+    const posHtml=pos.length===0
+      ?`<div style="color:var(--dim);font-size:9px;text-align:center;padding:4px">Nessuna posizione aperta</div>`
+      :pos.map(p=>{
+        const dir=p.direction==='buy';
+        const col=dir?'#00e676':'#ff4757';
+        const pnlCol=p.profit>=0?'#00e676':'#ff4757';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;background:${col}10;border-radius:5px;margin-bottom:3px;font-size:9px">
+          <span style="color:${col};font-weight:700">${dir?'▲ BUY':'▼ SELL'}</span>
+          <span style="color:var(--fg)">${p.strategy||'—'}</span>
+          <span>@ ${p.entry}</span>
+          <span>TP ${p.tp} / SL ${p.sl}</span>
+          <span style="color:${pnlCol};font-weight:700">${p.profit>=0?'+':''}${p.profit?.toFixed(2)} €</span>
+        </div>`;
+      }).join('');
+
+    // Ultimi trade
+    const recentTrades=trades.slice(-8).reverse();
+    const tradesHtml=recentTrades.length===0
+      ?`<div style="color:var(--dim);font-size:9px;text-align:center;padding:4px">Nessun trade ancora</div>`
+      :recentTrades.map(t=>{
+        const dir=t.direction==='buy';
+        const col=dir?'#00e676':'#ff4757';
+        const dt=new Date(t.time).toLocaleString('it-IT',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px solid var(--border2);color:var(--fg)">
+          <span style="color:${col}">${dir?'▲':'▼'}</span>
+          <span style="color:var(--dim)">${dt}</span>
+          <span>${t.strategy||'—'}</span>
+          <span>@ ${t.price?.toFixed(2)||'—'}</span>
+          <span style="color:var(--dim)">TP ${t.tp?.toFixed(0)||'—'} | SL ${t.sl?.toFixed(0)||'—'}</span>
+          ${t.dry_run?'<span style="color:#ffca28;font-size:7px">DRY</span>':''}
+        </div>`;
+      }).join('');
+
+    container.innerHTML=`
+<div style="margin-top:10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <span style="font-size:10px;font-weight:800;color:var(--fg)">🤖 CONTO DEMO MT5</span>
+    <span style="font-size:8px;color:var(--dim)">${statusDot} ${statusLabel}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+    <div style="background:var(--bg3,var(--bg));border-radius:6px;padding:6px;text-align:center">
+      <div style="font-size:8px;color:var(--dim)">Balance</div>
+      <div style="font-size:12px;font-weight:800;color:var(--fg)">${acc.balance?.toFixed(2)||'—'} ${acc.currency||'€'}</div>
+    </div>
+    <div style="background:var(--bg3,var(--bg));border-radius:6px;padding:6px;text-align:center">
+      <div style="font-size:8px;color:var(--dim)">Equity</div>
+      <div style="font-size:12px;font-weight:800;color:${(acc.equity||0)>=(acc.balance||0)?'#00e676':'#ff4757'}">${acc.equity?.toFixed(2)||'—'}</div>
+    </div>
+    <div style="background:var(--bg3,var(--bg));border-radius:6px;padding:6px;text-align:center">
+      <div style="font-size:8px;color:var(--dim)">Trade oggi</div>
+      <div style="font-size:12px;font-weight:800;color:var(--fg)">${bs.trades_today||0} / ${SE.maxTrades}</div>
+    </div>
+    <div style="background:var(--bg3,var(--bg));border-radius:6px;padding:6px;text-align:center">
+      <div style="font-size:8px;color:var(--dim)">Regime</div>
+      <div style="font-size:10px;font-weight:700;color:#c8a96e">${bs.regime||'—'}</div>
+    </div>
+  </div>
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:4px">POSIZIONI APERTE</div>
+  ${posHtml}
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin:8px 0 4px">ULTIMI TRADE</div>
+  ${tradesHtml}
+  ${bs.dry_run?'<div style="margin-top:6px;text-align:center;font-size:8px;color:#ffca28">⚠ Bot in modalità DRY-RUN (nessun ordine reale)</div>':''}
+</div>`;
+  }catch(e){
+    container.innerHTML='';
+  }
 }
 
 function seRenderNoData(){
@@ -600,6 +697,11 @@ function seRenderNoData(){
     Caricamento dati in corso...<br>
     <span style="font-size:10px">Le candele vengono condivise con il modulo MFKK (stesso fetch)</span>
   </div>`;
+  // Mostra pannello MT5 anche senza candele locali
+  const mt5Wrap=document.createElement('div');
+  mt5Wrap.id='se-mt5-panel';
+  el.appendChild(mt5Wrap);
+  seFetchMt5(mt5Wrap);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -607,6 +709,11 @@ async function initStrategyEngine(){
   if(seTimer)clearInterval(seTimer);
   await seRefresh();
   seTimer=setInterval(seRefresh,5*60*1000);
+  // Refresh pannello MT5 ogni 30 secondi
+  setInterval(()=>{
+    const w=document.getElementById('se-mt5-panel');
+    if(w) seFetchMt5(w);
+  },30*1000);
 }
 window.initStrategyEngine=initStrategyEngine;
 window.seRefresh=seRefresh;

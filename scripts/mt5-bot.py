@@ -657,11 +657,17 @@ def run():
                 time.sleep(10)
                 continue
 
-            # ── Sync periodico a Vercel (ogni 30s) ──────
-            if now_ts - last_sync_time >= 30:
+            # ── Sync periodico a Vercel (ogni CHECK_SEC) ──────
+            if now_ts - last_sync_time >= CHECK_SEC:
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
+                
+                # Calcola regime attuale se abbiamo le candele
+                current_regime = 'UNKNOWN'
+                if 'I' in locals() and 'i' in locals():
+                    current_regime = detect_regime(I, i)
+
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
@@ -669,7 +675,7 @@ def run():
                     'lot': LOT_SIZE,
                     'trades_today': state.trades_today,
                     'pnl_today': round(state.pnl_today, 2),
-                    'regime': 'UNKNOWN',
+                    'regime': current_regime,
                     'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)

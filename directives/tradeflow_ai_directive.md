@@ -257,25 +257,24 @@ Risultati:
 ```
 scripts/strategy-engine-v2.py  ← backtester v2: 12 strategie × 18 indicatori (730gg H1)
 scripts/strategy-mtf.py        ← MTF backtester: 5 strategie × 3 TF (1h/4h/1d)
-public/modules/strategy.js     ← live engine: regime + segnali + tracking giornaliero
-public/index.html              ← tab "⚡ Strategie" (sostituisce MyFxBook nel nav)
+public/modules/strategy.js     ← monitor real-time: regime + segnali + real MT5 account data
+public/index.html              ← tab "⚡ Strategie" (Real account execution monitoring)
 ```
 
-### 9.2 Strategie Attive (v2, ordine PF — escluse quelle con PF < 1.10)
-| Strategia | TF Best | WR% | P&L | PF | TP/SL | Note |
-|---|---|---|---|---|---|---|
-| **S01_EXHAUSTION** | **1h** | 57.9% | $788 | 2.288 | $15/$9 | ADX≥30+DI spread≥15+MACD contra-trend |
-| **S09_VWAP_WPR** | **1h** | 47.4% | $728 | 1.501 | $18/$10 | VWAP cross + W%R oversold/overbought |
-| **S06_ORDERBLOCK** | **1h** | 46.1% | $1436 | 1.424 | $18/$10 | Institutional OB zone + momentum |
-| **S13_STRUC_BREAK** | **1h** | 52.4% | $912 | 1.610 | ATR-based | Breakout di Pivot H/L + Retest confermato |
-| **S14_KEY_LEVELS** | **1h** | 49.2% | $1120 | 1.540 | ATR-based | Bounce o Break out di Daily/Weekly Pivots |
-| **S12_WPR_KELTNER** | **1h** | 42.3% | $512 | 1.220 | $20/$12 | W%R + Keltner channel breakout |
-| **S10_SESSION_MOM** | **1h** | 38.5% | $356 | 1.042 | $20/$12 | London open (7-10 UTC) MACD+EMA50 |
+### 9.2 Strategie Attive & Timeframes (Real-time Optimized)
+| Strategia | TF Best | WR% | PF | Note |
+|---|---|---|---|---|
+| **S01_EXHAUSTION** | **1h** | 57.9% | 2.29 | ADX≥30+DI spread≥15+MACD contra-trend |
+| **S09_VWAP_WPR** | **1h** | 47.4% | 1.50 | VWAP cross + W%R oversold/overbought |
+| **S06_ORDERBLOCK** | **1h** | 46.1% | 1.42 | Institutional OB zone + momentum |
+| **S13_STRUC_BREAK** | **1h** | 52.4% | 1.61 | Breakout di Pivot H/L + Retest confermato |
+| **S14_KEY_LEVELS** | **1h** | 49.2% | 1.54 | Bounce o Break out di Daily/Weekly Pivots |
+| **S12_WPR_KELTNER** | **1h** | 42.3% | 1.22 | W%R + Keltner channel breakout |
 
-**MTF Test risultati** (testato 1h vs 4h vs 1d su 730gg):
-- 1H ottimale per **tutte** le strategie — 4H e 1D performano peggio in tutti i casi
-- Il 4H degrada il PF per via di segnali rari e lookahead insufficiente
-- Il 1D ha trade troppo pochi (N<20) per essere statisticamente valido
+**MTF Test (Gold XAU/USD)**:
+- **1H**: Unico TF profittevole con indicatori standard (WR 38.1% adapt).
+- **5m/15m/30m**: Performance negative (WR < 36%, P&L negativo) causa rumore e spread.
+- **Decisione**: Il motore opera su 1H, ma esegue i controlli ogni 3s.
 
 ### 9.3 Regime Detection
 | Regime | Condizione | Strategie priorità |
@@ -293,7 +292,7 @@ public/index.html              ← tab "⚡ Strategie" (sostituisce MyFxBook nel
 - **Sessione**: 24h (Sessione continua per massimizzare profitti)
 - **TP/SL dinamici**: S13/S14 usano ATR(14) multipliers (TP=2x, SL=1x)
 - **Risk Management**: Break Even (BE) e Trailing Stop gestiti dal bot locale
-- Trade tracking in localStorage (reset ogni mezzanotte)
+- **Tracking**: Nessuna simulazione locale; visualizzazione esclusiva di dati reali MT5.
 
 ### 9.5 Sistema Adattivo MTF (backtest 730gg)
 - **1318 trade totali**, WR 41.1%, P&L $1528, PF 1.164
@@ -318,9 +317,9 @@ Per garantire che i segnali della PWA diventino ordini reali su MetaTrader 5, il
 2.  **API Vercel (`api/db.js`)**: Salva il comando come `mt5_command` nella tabella `user_data`.
 3.  **MT5 Bot Locale (`scripts/mt5-bot.py`)**:
     -   Esegue un loop ultra-rapido (ogni **3s**) interrogando `api/db.js?action=mt5_command_get`.
+    -   Invia snapshot del conto (equity, bilancio, posizioni) ogni **3s** al DB.
     -   Gestisce attivamente le posizioni con **Break Even** e **Trailing Stop**.
-    -   Se trova un comando, lo esegue immediatamente su MT5.
-    -   Dopo l'esecuzione, cancella il comando dal DB per evitare duplicati.
+    -   Se trova un comando dalla dashboard, lo esegue immediatamente.
 
 ### 11.2 Struttura Comando
 ```json

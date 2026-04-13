@@ -331,22 +331,6 @@ const SE_STRATEGY_FNS = {
   S14_KEY_LEVELS:  (I,i,h) => seS14_KeyLevels(I,i),
 };
 
-// ── DAILY STATE ────────────────────────────────────────────────────────────────
-function seGetState() {
-  const today=new Date().toISOString().split('T')[0];
-  try{const s=JSON.parse(localStorage.getItem('se_v2')||'{}');
-    if(s.date!==today)return{date:today,trades:[],regime:'UNKNOWN',lastH:-99};
-    return s;
-  }catch{return{date:today,trades:[],regime:'UNKNOWN',lastH:-99};}
-}
-function seSaveState(s){try{localStorage.setItem('se_v2',JSON.stringify(s));}catch{}}
-function seResetTrades(){
-  const today=new Date().toISOString().split('T')[0];
-  seSaveState({date:today,trades:[],regime:'UNKNOWN',lastH:-99});
-  seRefresh();
-}
-window.seResetTrades=seResetTrades;
-
 // ── MAIN REFRESH ──────────────────────────────────────────────────────────────
 async function seRefresh() {
   // Carica candles
@@ -368,15 +352,23 @@ async function seRefresh() {
   const nowUtc=new Date(),hour=nowUtc.getUTCHours();
   seRegime=seDetectRegime(I,i);
 
-  const state=seGetState();
-  state.regime=seRegime;
+  // Snapshot indicatori per UI
+  const liveP=parseFloat(I.C[i]);
+  const snap={
+    price:liveP.toFixed(2),adx:I.adx[i]?.toFixed(1),dip:I.dip[i]?.toFixed(1),dim:I.dim[i]?.toFixed(1),
+    rsi:I.rsi[i]?.toFixed(0),macd:I.macd[i]?.toFixed(2),e20:I.e20[i]?.toFixed(0),e50:I.e50[i]?.toFixed(0),
+    e100:I.e100[i]?.toFixed(0),e200:I.e200[i]?.toFixed(0),
+    st:I.st[i]===-1?'BULL':'BEAR',wpr:I.wpr[i]?.toFixed(0),mom:I.mom[i]?.toFixed(1),
+    vwap:I.vwap[i]?.toFixed(0),
+    jaw:I.jaw[i]?.toFixed(0),teeth:I.teeth[i]?.toFixed(0),lips:I.lips[i]?.toFixed(0),
+    srsiK:I.srsiK[i]?.toFixed(0),atr:I.atr[i]?.toFixed(2),
+  };
 
-  // Extreme day check
+  // Scan segnali potenziali (non simulati)
   const av=I.atr[i],aa=I.atr30[i];
   const isExtreme=av&&aa&&av>SE.extremeMult*aa;
   const inSession=hour>=SE.session.start&&hour<SE.session.end;
-
-  // Scan segnali
+  
   let pending=[];
   if(!isExtreme&&inSession){
     const priority=SE.regimePriority[seRegime]||['S14_KEY_LEVELS'];
@@ -389,63 +381,28 @@ async function seRefresh() {
         const atr = I.atr[i] || 10;
         const tp = cfg.tp === 'ATR' ? Math.round(atr * 2.0) : cfg.tp;
         const sl = cfg.sl === 'ATR' ? Math.round(atr * 1.0) : cfg.sl;
-        
         pending.push({name,label:cfg.label,dir:sig.dir,why:sig.why,
           tp, sl, pf:cfg.pf,wr:cfg.wr,priority:priority.indexOf(name)+1});
       }
     }
   }
 
-  // Aggiunge trade se:
-  const liveP=parseFloat(I.C[i]);
-  if(pending.length>0&&state.trades.length<SE.maxTrades&&hour-state.lastH>=SE.cooldownH){
-    const best=pending[0];
-    const dup=state.trades.find(t=>t.strategy===best.name&&new Date().toISOString().split('T')[0]===t.date&&t.hour===hour);
-    if(!dup){
-      state.trades.push({
-        strategy:best.name,label:best.label,dir:best.dir,why:best.why,
-        tp:best.tp,sl:best.sl,pf:best.pf,wr:best.wr,
-        entry:liveP,date:state.date,hour,
-        time:nowUtc.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC',
-        tpPrice:liveP+(best.dir==='buy'?best.tp:-best.tp),
-        slPrice:liveP+(best.dir==='buy'?-best.sl:best.sl),
-        status:'open'
-      });
-      state.lastH=hour;
-    }
-  }
+  // Fetch real MT5 data separately and render
+  const mt5Data = await seFetchMt5Data();
+  seRender(mt5Data,pending,snap,isExtreme,inSession,hour);
+}
 
-  // Aggiorna status trade aperti
-  if(liveP>0){
-    for(const t of state.trades){
-      if(t.status!=='open')continue;
-      if(t.dir==='buy'){
-        if(liveP>=t.tpPrice){t.status='win';t.closePrice=t.tpPrice;}
-        else if(liveP<=t.slPrice){t.status='loss';t.closePrice=t.slPrice;}
-      }else{
-        if(liveP<=t.tpPrice){t.status='win';t.closePrice=t.tpPrice;}
-        else if(liveP>=t.slPrice){t.status='loss';t.closePrice=t.slPrice;}
-      }
-    }
-  }
-  seSaveState(state);
-
-  // Snapshot indicatori per UI
-  const snap={
-    price:liveP.toFixed(2),adx:I.adx[i]?.toFixed(1),dip:I.dip[i]?.toFixed(1),dim:I.dim[i]?.toFixed(1),
-    rsi:I.rsi[i]?.toFixed(0),macd:I.macd[i]?.toFixed(2),e20:I.e20[i]?.toFixed(0),e50:I.e50[i]?.toFixed(0),
-    e100:I.e100[i]?.toFixed(0),e200:I.e200[i]?.toFixed(0),
-    st:I.st[i]===-1?'BULL':'BEAR',wpr:I.wpr[i]?.toFixed(0),mom:I.mom[i]?.toFixed(1),
-    vwap:I.vwap[i]?.toFixed(0),
-    jaw:I.jaw[i]?.toFixed(0),teeth:I.teeth[i]?.toFixed(0),lips:I.lips[i]?.toFixed(0),
-    srsiK:I.srsiK[i]?.toFixed(0),atr:I.atr[i]?.toFixed(2),
-  };
-
-  seRender(state,pending,snap,isExtreme,inSession,hour);
+async function seFetchMt5Data() {
+  try {
+    const r=await fetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'mt5_get'})});
+    const j=await r.json();
+    return j.ok ? j.data : null;
+  } catch(e) { return null; }
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
-function seRender(state,pending,snap,isExtreme,inSession,hour){
+function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const el=document.getElementById('se-content');
   if(!el)return;
 
@@ -459,10 +416,13 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
     UNKNOWN:     {col:'var(--dim)',bg:'var(--bg2)',icon:'❓',label:'SCONOSCIUTO'},
   };
   const rm=REGIME_META[seRegime]||REGIME_META.UNKNOWN;
-  const wins=state.trades.filter(t=>t.status==='win').length;
-  const losses=state.trades.filter(t=>t.status==='loss').length;
-  const open=state.trades.filter(t=>t.status==='open').length;
-  const pnl=state.trades.reduce((a,t)=>a+(t.status==='win'?t.tp:t.status==='loss'?-t.sl:0),0);
+  
+  const acc=mt5Data?.account||{};
+  const pos=mt5Data?.positions||[];
+  const history=mt5Data?.trades||[];
+  const bs=mt5Data?.bot_status||{};
+  const syncAge=mt5Data?.synced_at?Math.round((Date.now()-new Date(mt5Data.synced_at).getTime())/1000):null;
+  const online=syncAge!==null&&syncAge<10;
 
   // ── STATUS BAR
   let statusHtml='';
@@ -472,19 +432,16 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
     </div>`;
   } else if(!inSession){
     statusHtml=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--dim)">
-      🔴 <b>Fuori sessione</b> (${hour}:00 UTC) — Il sistema genera segnali dalle 07:00 alle 17:00 UTC (London + New York)
-    </div>`;
-  } else if(state.trades.length>=SE.maxTrades){
-    statusHtml=`<div style="background:#00e67610;border:1px solid #00e67625;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--green)">
-      ✅ Massimo trade giornaliero raggiunto (${SE.maxTrades}/${SE.maxTrades}). Riprende domani.
+      🔴 <b>Fuori sessione</b> (${hour}:00 UTC) — Monitoraggio attivo, bot sempre online.
     </div>`;
   } else {
     statusHtml=`<div style="background:#00e67610;border:1px solid #00e67625;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--green)">
-      🟢 <b>Sessione attiva</b> (${hour}:00 UTC) — ${SE.maxTrades-state.trades.length} trade disponibili · Cooldown ${SE.cooldownH}h tra trade
+      🟢 <b>Bot MT5 Online</b> (${hour}:00 UTC) — Polling 3s · Real-time Sync attivo
     </div>`;
   }
 
-  // ── REGIME + P&L
+  // ── REGIME + P&L REALE
+  const pnlOggi = bs.pnl_today || 0;
   const regimeHtml=`
 <div style="background:${rm.bg};border:1px solid ${rm.col}40;border-radius:9px;padding:11px 13px;margin-bottom:8px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -492,18 +449,18 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
       <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:3px">REGIME DI MERCATO</div>
       <div style="font-size:16px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
       <div style="font-size:9px;color:${rm.col};margin-top:4px">
-        Strategie attive: ${(SE.regimePriority[seRegime]||['S10_SESSION_MOM']).map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ')}
+        Strategie attive: ${(SE.regimePriority[seRegime]||['S14_KEY_LEVELS']).map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ')}
       </div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:9px;color:var(--dim);margin-bottom:2px">P&L OGGI</div>
-      <div style="font-size:18px;font-weight:800;color:${pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--fg)'}">${pnl>=0?'+':''}$${pnl.toFixed(0)}</div>
-      <div style="font-size:9px;color:var(--dim)">${wins}✅ · ${losses}❌ · ${open}⏳</div>
+      <div style="font-size:9px;color:var(--dim);margin-bottom:2px">PROFITTO REALIZZATO (MT5)</div>
+      <div style="font-size:18px;font-weight:800;color:${pnlOggi>0?'var(--green)':pnlOggi<0?'var(--red)':'var(--fg)'}">${pnlOggi>=0?'+':''}${pnlOggi.toFixed(2)} €</div>
+      <div style="font-size:9px;color:var(--dim)">${online?'ONLINE':'OFFLINE'} · ${bs.trades_today||0} trade oggi</div>
     </div>
   </div>
 </div>`;
 
-  // ── INDICATORI SNAPSHOT (2 righe compatte)
+  // ── INDICATORI SNAPSHOT
   const indSnap=`
 <div style="margin-bottom:8px">
   <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:4px">INDICATORI CORRENTI</div>
@@ -521,73 +478,77 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
       <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
     </div>`).join('')}
   </div>
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:3px">
-    ${[['Jaw',snap.jaw],['Teeth',snap.teeth],['Lips',snap.lips],['StRSI',snap.srsiK],['ATR',snap.atr]].map(([k,v])=>`
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 2px;text-align:center">
-      <div style="font-size:7px;color:var(--dim)">${k}</div>
-      <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
-    </div>`).join('')}
-  </div>
 </div>`;
 
   // ── SEGNALI ATTIVI
   let pendingHtml='';
   if(pending.length>0&&!isExtreme&&inSession){
     pendingHtml=`<div style="margin-bottom:10px">
-      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">🔔 SEGNALI ATTIVI ORA</div>
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">🔔 SEGNALI ATTIVI (POTENZIALI)</div>
       ${pending.map((s,idx)=>{
         const dc=s.dir==='buy'?'#00e676':'#ff4757';
-        const pc=idx===0?'#ffd700':'var(--dim)';
         return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <span style="color:${dc};font-weight:800;font-size:12px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
-            <span style="color:${pc};font-size:9px">${idx===0?'★ PRIORITÀ 1':'P'+(idx+1)} · ${s.label} · ${s.tf||'1h'} · WR ${s.wr} · PF ${s.pf}</span>
+            <span style="color:var(--dim);font-size:9px">${s.label} · WR ${s.wr} · PF ${s.pf}</span>
           </div>
           <div style="font-size:9px;color:var(--fg);margin-bottom:4px">${s.why}</div>
           <div style="display:flex;gap:8px;font-size:9px;color:var(--dim)">
             <span style="color:var(--green)">TP +$${s.tp}</span>
             <span style="color:var(--red)">SL -$${s.sl}</span>
-            <span>R:R 1:${(s.tp/s.sl).toFixed(1)}</span>
           </div>
           <button onclick='seSendTradeToMt5(${JSON.stringify(s)})' style="margin-top:8px;width:100%;padding:6px;background:var(--green);color:#000;border:none;border-radius:5px;font-size:10px;font-weight:800;cursor:pointer">
-            🚀 ESEGUI SU MT5
+            🚀 ESEGUI COMANDO SU MT5
           </button>
         </div>`;
       }).join('')}
     </div>`;
   }
 
-  // ── TRADE DEL GIORNO
-  const tradeHtml=`
+  // ── POSIZIONI REALI MT5
+  const posHtml=`
 <div style="margin-bottom:10px">
-  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">TRADE OGGI (${state.date})</div>
-  ${state.trades.length===0
-    ? `<div style="text-align:center;padding:12px;background:var(--bg2);border-radius:7px;font-size:10px;color:var(--dim)">Nessun trade aperto oggi — il sistema attende il setup ideale</div>`
-    : state.trades.map(t=>{
-        const sc=t.status==='win'?'#00e676':t.status==='loss'?'#ff4757':'#ffca28';
-        const si=t.status==='win'?'✅':t.status==='loss'?'❌':'⏳';
-        const dc=t.dir==='buy'?'#00e676':'#ff4757';
-        const pnlT=t.status==='win'?t.tp:t.status==='loss'?-t.sl:0;
-        return `<div style="background:var(--bg2);border:1px solid ${sc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">POSIZIONI APERTE (REALI MT5)</div>
+  ${pos.length===0
+    ? `<div style="text-align:center;padding:12px;background:var(--bg2);border-radius:7px;font-size:10px;color:var(--dim)">Nessuna posizione aperta sul conto</div>`
+    : pos.map(p=>{
+        const dc=p.direction==='buy'?'#00e676':'#ff4757';
+        const pCol=p.profit>=0?'var(--green)':'var(--red)';
+        return `<div style="background:var(--bg2);border:1px solid ${dc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-            <div>
-              <span style="color:${dc};font-weight:800;font-size:11px">${t.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
-              <span style="font-size:9px;color:var(--dim);margin-left:6px">${t.time} · ${t.label}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:5px">
-              ${t.status!=='open'?`<span style="color:${sc};font-size:10px;font-weight:700">${pnlT>=0?'+':''}$${pnlT}</span>`:''}
-              <span style="font-size:14px">${si}</span>
-            </div>
+            <span style="color:${dc};font-weight:800;font-size:11px">${p.direction.toUpperCase()} ${p.symbol}</span>
+            <span style="color:${pCol};font-weight:800;font-size:12px">${p.profit>=0?'+':''}${p.profit.toFixed(2)} €</span>
           </div>
-          <div style="font-size:9px;color:var(--dim);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.why}</div>
-          <div style="display:flex;gap:8px;font-size:9px">
-            <span>Entry <b>$${t.entry?.toFixed(0)}</b></span>
-            <span style="color:var(--green)">TP $${t.tpPrice?.toFixed(0)} (+$${t.tp})</span>
-            <span style="color:var(--red)">SL $${t.slPrice?.toFixed(0)} (-$${t.sl})</span>
+          <div style="font-size:9px;color:var(--dim);display:flex;gap:8px">
+            <span>Entry <b>$${p.entry}</b></span>
+            <span>TP $${p.tp}</span>
+            <span>SL $${p.sl}</span>
+            <span style="margin-left:auto;color:var(--fg)">${p.strategy||''}</span>
           </div>
         </div>`;
       }).join('')}
 </div>`;
+
+  // ── STORICO REALE
+  const histHtml=`
+<div style="margin-bottom:10px">
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">STORICO RECENTE (REAL TRADES)</div>
+  ${history.length===0
+    ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade storico trovato</div>`
+    : history.slice(-5).reverse().map(t=>{
+        const dc=t.direction==='buy'?'#00e676':'#ff4757';
+        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:4px 0;border-bottom:1px solid var(--border2)">
+          <span style="color:${dc}">${t.direction.toUpperCase()}</span>
+          <span style="color:var(--dim)">${new Date(t.time).toLocaleTimeString()}</span>
+          <span>${t.strategy||'—'}</span>
+          <span>$${t.price?.toFixed(2)}</span>
+          <span style="color:${t.profit>=0?'var(--green)':'var(--red)'}">${t.profit>=0?'+':''}${t.profit?.toFixed(2)}</span>
+        </div>`;
+      }).join('')}
+</div>`;
+
+  el.innerHTML=statusHtml+regimeHtml+indSnap+pendingHtml+posHtml+histHtml;
+}
 
   // ── GUIDE (collassabile) + PERFORMANCE TABLE
   const guideHtml=`
@@ -763,13 +724,13 @@ async function seSendTradeToMt5(s) {
           strategy: s.name,
           tp: s.tp,
           sl: s.sl,
-          symbol: 'GOLD' // Default per il bot, può essere reso dinamico se necessario
+          symbol: 'GOLD'
         }
       })
     });
     const j = await res.json();
     if (j.ok) {
-      alert('✅ Comando inviato con successo! Il bot MT5 lo eseguirà entro 10 secondi.');
+      alert('✅ Comando inviato con successo! Il bot MT5 lo eseguirà entro 3 secondi.');
       if (btn) { btn.innerText = '✓ INVIATO'; btn.style.background = 'var(--dim)'; }
     } else {
       throw new Error(j.error || 'Errore durante l\'invio');
@@ -779,31 +740,27 @@ async function seSendTradeToMt5(s) {
     if (btn) { btn.disabled = false; btn.innerText = '🚀 RIPROVA ESECUZIONE'; }
   }
 }
+window.seSendTradeToMt5 = seSendTradeToMt5;
 
 function seRenderNoData(){
   const el=document.getElementById('se-content');
   if(!el)return;
   el.innerHTML=`<div style="text-align:center;padding:25px;color:var(--dim);font-size:12px">
-    Caricamento dati in corso...<br>
-    <span style="font-size:10px">Le candele vengono condivise con il modulo MFKK (stesso fetch)</span>
+    <div class="spinner" style="margin:0 auto 10px"></div>
+    Sincronizzazione MT5 in corso...<br>
+    <span style="font-size:10px">Verifica che il bot locale sia attivo</span>
   </div>`;
-  // Mostra pannello MT5 anche senza candele locali
-  const mt5Wrap=document.createElement('div');
-  mt5Wrap.id='se-mt5-panel';
-  el.appendChild(mt5Wrap);
-  seFetchMt5(mt5Wrap);
+  // Proviamo comunque ad aggiornare i dati MT5
+  seFetchMt5Data().then(mt5Data => {
+    if(mt5Data) seRender(mt5Data, [], {}, false, true, new Date().getUTCHours());
+  });
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function initStrategyEngine(){
   if(seTimer)clearInterval(seTimer);
   await seRefresh();
-  seTimer=setInterval(seRefresh,5*60*1000);
-  // Refresh pannello MT5 ogni 30 secondi
-  setInterval(()=>{
-    const w=document.getElementById('se-mt5-panel');
-    if(w) seFetchMt5(w);
-  },30*1000);
+  seTimer=setInterval(seRefresh, 3000); // Polling 3s ultra-veloce
 }
 window.initStrategyEngine=initStrategyEngine;
 window.seRefresh=seRefresh;

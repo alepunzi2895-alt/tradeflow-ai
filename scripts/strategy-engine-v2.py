@@ -18,7 +18,10 @@ except ImportError:
     HAS_YF = False
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-SYMBOL     = 'GC=F'
+import os
+SYMBOL     = os.getenv('BT_SYMBOL', 'GC=F')
+INTERVAL   = os.getenv('BT_INTERVAL', '1h')
+PERIOD     = os.getenv('BT_PERIOD', '730d')
 TP_USD     = 20.0
 SL_USD     = 12.0
 MAX_TRADES = 10          # per giorno (aggiornato)
@@ -30,7 +33,8 @@ EXTREME_K  = 3.5
 # ── DOWNLOAD ─────────────────────────────────────────────────────────────────
 def download():
     if not HAS_YF: raise RuntimeError("pip install yfinance")
-    df = yf.download(SYMBOL, period='730d', interval='1h', progress=False)
+    print(f"Downloading {SYMBOL} {INTERVAL} for {PERIOD}...")
+    df = yf.download(SYMBOL, period=PERIOD, interval=INTERVAL, progress=False)
     if df is None or len(df)==0: raise RuntimeError(f"No data for {SYMBOL}")
     if hasattr(df.columns,'levels'): df.columns = df.columns.get_level_values(0)
     out=[]
@@ -523,6 +527,25 @@ def s11_alligator_awakening(ind,i,hour=None):
         return 'sell'
     return None
 
+def s12_williams_rsi_keltner(ind,i,hour=None):
+    """
+    WILLIAMS %R + RSI + KELTNER CHANNEL
+    Prezzo tocca Keltner Channel + Williams%R estremo + RSI conferma
+    Forte mean-reversion con filtro volatilità
+    """
+    wpr=ind['wpr'][i]; r=ind['rsi'][i]; c=ind['c'][i] if 'c' in ind else ind['C'][i]
+    ku=ind['kc_up'][i]; kl=ind['kc_lo'][i]
+    adx=ind['adx'][i]
+    if None in (wpr,r,ku,kl,adx): return None
+    if adx>=30: return None  # solo ranging/weak
+    # BUY: prezzo sotto Keltner lower + W%R<-80 + RSI<35
+    if c<=kl*1.002 and wpr<-80 and r<35:
+        return 'buy'
+    # SELL: prezzo sopra Keltner upper + W%R>-20 + RSI>65
+    if c>=ku*0.998 and wpr>-20 and r>65:
+        return 'sell'
+    return None
+
 def s13_struc_break(ind,i,hour=None):
     """S13: Structure Breakout + Retest"""
     if i < 60: return None
@@ -706,7 +729,7 @@ def main():
 
     print("Download dati...")
     candles=download()
-    print(f"  {len(candles)} candele H1 ({candles[0]['date'] if 'date' in candles[0] else datetime.datetime.utcfromtimestamp(candles[0]['t']).strftime('%Y-%m-%d')} → oggi)")
+    print(f"  {len(candles)} candele {INTERVAL} ({candles[0]['t'] if 't' in candles[0] else '?'})")
 
     print("Calcolo 15 indicatori...")
     ind=compute_all(candles)

@@ -99,26 +99,44 @@ export default async function handler(req, res) {
 
     // ── 2. CALENDAR (ForexFactory) ─────────────────────────
     if (type === 'calendar') {
-      try {
-        const r = await fetchWithTimeout('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
-        if(!r.ok) throw new Error('ForexFactory offline');
-        const data = await r.json();
-        const CountryList = ["USD", "EUR", "GBP", "JPY", "AUD"];
+      const CalendarSources = [
+        'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
+        'https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json',
+        'https://cdn.forexfactory.com/ffcal_week_this.json'
+      ];
+      const CountryList = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"];
+      let data = null;
+      for (const url of CalendarSources) {
+        try {
+          const r = await fetchWithTimeout(url);
+          if (r.ok) { data = await r.json(); break; }
+        } catch(e) { /* try next */ }
+      }
+      if (data && Array.isArray(data)) {
+        const normalizeImpact = i => {
+          const s = (i || '').toLowerCase();
+          if (s === 'high' || s === '3') return 'High';
+          if (s === 'medium' || s === '2') return 'Medium';
+          if (s === 'low' || s === '1') return 'Low';
+          return i || 'Low';
+        };
         const events = data.filter(e => {
-          const c = (e.currency || e.country || "").toUpperCase();
-          const i = (e.impact || "").toLowerCase();
-          return CountryList.includes(c) && (i === "high" || i === "medium");
-        }).slice(0, 15).map(e => ({
+          const c = (e.currency || e.country || '').toUpperCase();
+          const i = (e.impact || '').toLowerCase();
+          return CountryList.includes(c) && (i === 'high' || i === 'medium' || i === '3' || i === '2');
+        }).slice(0, 60).map(e => ({
           id: e.id || Math.random(),
           time: e.date || e.time,
-          currency: (e.currency || e.country || "USD").toUpperCase(),
-          event: e.event || e.title,
-          impact: e.impact || "High"
+          currency: (e.currency || e.country || 'USD').toUpperCase(),
+          event: e.event || e.title || '—',
+          impact: normalizeImpact(e.impact),
+          forecast: e.forecast || '',
+          actual: e.actual || '',
+          previous: e.previous || ''
         }));
         return res.status(200).json({ ok: true, events });
-      } catch(e) {
-        return res.status(200).json({ ok: true, events: [], note: 'Service temporarily unavailable' });
       }
+      return res.status(200).json({ ok: true, events: [], note: 'Calendar sources unavailable' });
     }
 
     // ── 3. SENTIMENT (MyFxBook Proxy + Mult-Asset Simulation) ──

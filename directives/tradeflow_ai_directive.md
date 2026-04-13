@@ -151,6 +151,8 @@ async function fetchT(url, opts={}, ms=8000) {
 | 2026-04-13 | Strategy Logic Duplicate | strategy.js Broken Syntax | Unified MT5/Signal logic and cleaned redundant functions |
 | 2026-04-13 | CORS Calendar Fail | 3rd party proxy instabili | Creato /api/market server-side proxy per ForexFactory |
 | 2026-04-13 | GS Ratio / Oil stuck | Missing tickers in unified API | Aggiunti ticker XAG (SILVER) e fallback OIL nell'Hub |
+| 2026-04-13 | Calendario non caricava eventi | `nfs.faireconomy.media` offline + slice(0,15) troppo basso + campi forecast/actual/previous mancanti nel mapping | Multi-source fallback (3 URL FF), slice aumentato a 60, mapping completo con forecast/actual/previous |
+| 2026-04-13 | Grafico TradingView schiacciato | height fissa a 600px | Aumentata a 800px sia nel container HTML che nel widget JS |
 
 ---
 

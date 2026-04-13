@@ -179,38 +179,17 @@ async function loadSlowData(){
       }catch(e){console.log('Direct sentiment failed:',e.message);}
     }
   });
-  fetchJSON('/api/market?type=calendar', 7000).then(async cd=>{
-    if(cd?.ok && cd.events && cd.events.length > 0){
-      dashContext.calendar=cd.events;
+  // Economic Calendar — uses robust server-side proxy
+  fetchJSON('/api/market?type=calendar', 7000).then(cd => {
+    if(cd?.ok && cd.events){
+      dashContext.calendar = cd.events;
       updateCalendar(cd.events);
     } else {
-      // Vercel might be blocked, use client-side fetch via reliable CORS proxy
-      try {
-        const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
-        const r = await fetch(proxyUrl);
-        if (r.ok) {
-          const proxyData = await r.json();
-          const data = JSON.parse(proxyData.contents);
-          const important = data.filter(e => {
-            const country = (e.currency || e.country || "").toUpperCase();
-            return ["USD","EUR","GBP","JPY","AUD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
-          });
-          const events = important.slice(0, 15).map(e => ({
-            id: e.id || Math.random().toString(36).substr(2, 9),
-            time: e.date || e.time || new Date().toISOString(),
-            currency: e.currency || e.country || "USD",
-            event: e.event || e.title || "Economic Event",
-            impact: e.impact || "High"
-          }));
-          dashContext.calendar = events;
-          updateCalendar(events);
-        } else {
-          updateCalendar([]);
-        }
-      } catch(e) {
-        updateCalendar([]);
-      }
+      updateCalendar([]);
     }
+  }).catch(e => {
+    console.log('Calendar Error:', e.message);
+    updateCalendar([]);
   });
 }
 
@@ -528,23 +507,25 @@ function updateConfidence(prices, sentimentData){
   }};
 
     // Render factors safely
-    const factorsList=[
-      {ico:'📊',label:momLabel, sub:momSub||'', score:momScore, col:momCol, w:'20%'},
-      {ico:'🔗',label:dxyLabel, sub:dxySub||'', score:dxyScore, col:dxyCol, w:'17%'},
-      {ico:'⏰',label:sessLabel,sub:sessSub||'',score:sessScore,col:sessCol,w:'18%'},
-      {ico:'👥',label:sentLabel,sub:sentSub||'',score:sentScore,col:sentCol,w:'12%'},
-      {ico:'🌍',label:multiLabel,sub:multiSub||'',score:multiScore,col:multiCol,w:'12%'},
-      {ico:'📉',label:volLabel, sub:volSub||'', score:volScore, col:volCol, w:'8%'},
-      {ico:'📰',label:newsLabel,sub:newsSub||'',score:newsScore,col:newsCol,w:'13%'},
+    const factorsList = [
+      {id:'momentum', ico:'📊', label:momLabel, sub:momSub||'', score:momScore, col:momCol, w:'20%'},
+      {id:'dxy', ico:'🔗', label:dxyLabel, sub:dxySub||'', score:dxyScore, col:dxyCol, w:'17%'},
+      {id:'session', ico:'⏰', label:sessLabel, sub:sessSub||'', score:sessScore, col:sessCol, w:'18%'},
+      {id:'sentiment', ico:'👥', label:sentLabel, sub:sentSub||'', score:sentScore, col:sentCol, w:'12%'},
+      {id:'multi', ico:'🌍', label:multiLabel, sub:multiSub||'', score:multiScore, col:multiCol, w:'12%'},
+      {id:'vol', ico:'📉', label:volLabel, sub:volSub||'', score:volScore, col:volCol, w:'8%'},
+      {id:'news', ico:'📰', label:newsLabel, sub:newsSub||'', score:newsScore, col:newsCol, w:'13%'},
     ];
-    const fl=document.getElementById('conf-factors');
+    const fl = document.getElementById('conf-factors');
     if(fl){
-      fl.innerHTML='';
-      factorsList.forEach(f=>{
-        const pct=Math.max(0,Math.min(100,isNaN(f.score)?50:f.score));
-        const div=document.createElement('div');
-        div.className='cf';
-        div.innerHTML=
+      fl.innerHTML = '';
+      factorsList.forEach(f => {
+        const pct = Math.max(0, Math.min(100, isNaN(f.score) ? 50 : f.score));
+        const div = document.createElement('div');
+        div.className = 'cf';
+        div.style.cursor = 'pointer';
+        div.onclick = () => showIndicatorInfo(f.id, f);
+        div.innerHTML =
           '<div class="cf-ico">'+f.ico+'</div>'+
           '<div class="cf-info">'+
             '<div class="cf-label" style="color:'+f.col+'">'+f.label+'</div>'+
@@ -557,7 +538,7 @@ function updateConfidence(prices, sentimentData){
         fl.appendChild(div);
       });
     }
-    const qel=document.getElementById('conf-quality');
+    const qel = document.getElementById('conf-quality');
     if(qel){
       let quality = '', qualityBg = '', qualityCol = '';
       if(total >= 80){ quality = '💎 Setup di ALTA QUALITÀ: Confluenza macro e tecnica eccellente.'; qualityBg = '#00e67615'; qualityCol = 'var(--green)'; }
@@ -566,17 +547,81 @@ function updateConfidence(prices, sentimentData){
       else if(total > 0) { quality = '❌ Bassa Qualità: Segnali contrastanti. Evita operazioni aggressive.'; qualityBg = '#ff475710'; qualityCol = 'var(--red)'; }
 
       if(quality){
-        qel.style.display='block';
-        qel.style.background=qualityBg;
-        qel.style.borderRadius='7px';
-        qel.style.padding='7px 10px';
-        qel.style.color=qualityCol;
-        qel.style.fontSize='11px';
-        qel.style.lineHeight='1.5';
-        qel.textContent=quality;
-      }else{qel.style.display='none';}
+        qel.style.display = 'block';
+        qel.style.background = qualityBg;
+        qel.style.borderRadius = '7px';
+        qel.style.padding = '7px 10px';
+        qel.style.color = qualityCol;
+        qel.style.fontSize = '11px';
+        qel.style.lineHeight = '1.5';
+        qel.textContent = quality;
+      } else { qel.style.display = 'none'; }
     }
 }
+
+// ── INDICATOR INFO MODAL ──
+const INDICATOR_DEFS = {
+  'momentum': {
+    title: 'Momentum Prezzo (M5/H1)',
+    meaning: 'Misura la velocità del trend. Se il prezzo si muove velocemente nella direzione del trend, il momentum è alto e attira altri buyer.'
+  },
+  'dxy': {
+    title: 'Correlazione DXY',
+    meaning: 'L\'oro ha una correlazione inversa col Dollaro (DXY). Se il DXY crolla o è in un setup bearish, la probabilità di un rialzo dell\'oro (XAU) aumenta drasticamente.'
+  },
+  'session': {
+    title: 'Sessione di Trading',
+    meaning: 'Le sessioni London (08:00+) e New York (14:30+) portano la massima liquidità. Operare fuori sessione (Asiatica) è spesso rischioso per i breakout.'
+  },
+  'sentiment': {
+    title: 'Retail Sentiment (Contrarian)',
+    meaning: 'Logica Smart Money: se la maggior parte dei trader retail è LONG, noi cerchiamo opportunità SHORT (e viceversa) per catturare la liquidità degli stop loss.'
+  },
+  'multi': {
+    title: 'Multi-Timeframe Confluence',
+    meaning: 'Controlla che il trend su M15, H1 e H4 sia allineato. Una posizione è molto più sicura se tutti i timeframe puntano nella stessa direzione.'
+  },
+  'vol': {
+    title: 'Volatilità (ATR)',
+    meaning: 'L\'ATR misura quanto "rumore" c\'è nel mercato. Alta volatilità richiede stop loss più larghi, bassa volatilità permette entry più precise.'
+  },
+  'news': {
+    title: 'Filtro News Macro',
+    meaning: 'Evitiamo di fare trading 30 minuti prima e dopo news High Impact. Le news possono causare slippage o movimenti irrazionali del prezzo.'
+  },
+  'cci': {
+    title: 'CCI_S (MFKK Parameter)',
+    meaning: 'Commodity Channel Index ottimizzato. Identifica se siamo in una fase di spinta ciclica. MFKK lo usa per confermare la continuazione del trend.'
+  },
+  'macd': {
+    title: 'MACD (MFKK Parameter)',
+    meaning: 'Moving Average Convergence Divergence. Monitoriamo l\'incrocio delle medie e l\'istogramma per capire se il momentum sta accelerando o se c\'è esaurimento.'
+  },
+  'adx': {
+    title: 'ADX (Trend Strength)',
+    meaning: 'Average Directional Index. Misura la forza del trend. Sotto 20 indica un mercato laterale (evita breakout). Sopra 30 indica un trend forte e deciso.'
+  }
+};
+
+function showIndicatorInfo(key, currentData){
+  const def = INDICATOR_DEFS[key];
+  if(!def) return;
+  document.getElementById('info-title').innerHTML = `<span>${currentData?.ico||'ℹ️'}</span> ${def.title}`;
+  document.getElementById('info-meaning').textContent = def.meaning;
+  
+  let statusText = '';
+  if(currentData){
+    statusText = `<b>Stato Attuale:</b> ${currentData.label}<br><b>Score:</b> ${currentData.score}/100`;
+  } else {
+    statusText = `<b>Parametro calcolato in tempo reale</b> dal motore MFKK Strategy Score.`;
+  }
+  document.getElementById('info-status').innerHTML = statusText;
+  document.getElementById('info-overlay').style.display = 'flex';
+}
+window.closeIndicatorInfo = function(){
+  document.getElementById('info-overlay').style.display = 'none';
+};
+window.showIndicatorInfo = showIndicatorInfo;
 
 function updateSentiment(s, source){
   const srcEl=document.getElementById('sent-source');

@@ -501,6 +501,16 @@
 </div></div>
 
 
+  <!-- INDICATOR INFO MODAL -->
+  <div id="info-overlay" class="info-overlay" onclick="closeIndicatorInfo()">
+    <div class="info-content" onclick="event.stopPropagation()">
+      <div class="info-title" id="info-title"></div>
+      <div class="info-meaning" id="info-meaning"></div>
+      <div class="info-status" id="info-status"></div>
+      <button class="info-close" onclick="closeIndicatorInfo()">Chiudi</button>
+    </div>
+  </div>
+
   <!-- Core utilities (storage, API, compression) -->
   <script src="/modules/core.js"></script>
   <!-- Dashboard: prices, confidence, sentiment, macro -->

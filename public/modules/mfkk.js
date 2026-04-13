@@ -242,6 +242,23 @@ async function loadIndicatorCandles(){
     } else if(serverData?.cci?.value != null){
       set('mfkk-cci', serverData.cci.value);
     }
+    
+    // Add interactivity to rows
+    const cciRow = document.getElementById('mfkk-cci-row');
+    if(cciRow){
+      cciRow.style.cursor = 'pointer';
+      cciRow.onclick = () => window.showIndicatorInfo('cci');
+    }
+    const macdRow = document.getElementById('mfkk-macd-row');
+    if(macdRow){
+      macdRow.style.cursor = 'pointer';
+      macdRow.onclick = () => window.showIndicatorInfo('macd');
+    }
+    const adxRow = document.getElementById('mfkk-adx-row');
+    if(adxRow){
+      adxRow.style.cursor = 'pointer';
+      adxRow.onclick = () => window.showIndicatorInfo('adx');
+    }
 
     // MACD: from TV Scanner (exact TradingView values)
     if(mfkkServerMacd){

@@ -518,3 +518,22 @@ a:hover { text-decoration: underline; }
   background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
 }
 .ff select option { background: #0b0d11; color: var(--text); }
+/* ── INFO POPUP ── */
+.info-overlay {
+  display: none; position: fixed; inset: 0; 
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  z-index: 1000; align-items: center; justify-content: center;
+  padding: 20px; animation: fadeIn 0.2s ease;
+}
+.info-content {
+  background: linear-gradient(145deg, #10131a, #0b0d11);
+  border: 1px solid rgba(200,169,110,0.25);
+  border-radius: 20px; width: 100%; max-width: 360px;
+  padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  position: relative; animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.info-title { font-size: 16px; font-weight: 700; color: var(--g); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.info-meaning { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 15px; }
+.info-status { font-size: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; line-height: 1.5; color: var(--dim); }
+.info-status b { color: #fff; }
+.info-close { margin-top: 20px; width: 100%; padding: 12px; background: rgba(200,169,110,0.1); border: 1px solid rgba(200,169,110,0.2); border-radius: 12px; color: var(--g); font-size: 13px; font-weight: 700; cursor: pointer; }

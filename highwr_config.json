@@ -1,0 +1,396 @@
+{
+  "generated": "2026-04-13T09:02:04Z",
+  "best_quality": {
+    "filters": {
+      "adx_min": 35,
+      "di_spread_min": 20,
+      "macd_mode": "exhaustion",
+      "cci_filter": "ob_or_neutral",
+      "session": "london_ny",
+      "candle_confirm": false,
+      "ema200_filter": "off",
+      "macd_diff_min": 0.5
+    },
+    "results": {
+      "n": 28,
+      "wr": 92.9,
+      "pnl": 496.0,
+      "pf": 21.667,
+      "maxdd": 12.0,
+      "sn": 28,
+      "bn": 0,
+      "swr": 92.9,
+      "bwr": 0
+    }
+  },
+  "best_wr": {
+    "filters": {
+      "adx_min": 35,
+      "di_spread_min": 20,
+      "macd_mode": "exhaustion",
+      "cci_filter": "ob_or_neutral",
+      "session": "london_ny",
+      "candle_confirm": false,
+      "ema200_filter": "off",
+      "macd_diff_min": 0.5
+    },
+    "results": {
+      "n": 28,
+      "wr": 92.9,
+      "pnl": 496.0,
+      "pf": 21.667,
+      "maxdd": 12.0,
+      "sn": 28,
+      "bn": 0,
+      "swr": 92.9,
+      "bwr": 0
+    }
+  },
+  "all_top15": [
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 20,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_or_neutral",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 28,
+        "wr": 92.9,
+        "pnl": 496.0,
+        "pf": 21.667,
+        "maxdd": 12.0,
+        "sn": 28,
+        "bn": 0,
+        "swr": 92.9,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 30,
+        "di_spread_min": 20,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_or_neutral",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 30,
+        "wr": 90.0,
+        "pnl": 504.0,
+        "pf": 15.0,
+        "maxdd": 12.0,
+        "sn": 30,
+        "bn": 0,
+        "swr": 90.0,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 20,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_or_neutral",
+        "session": "london_ny",
+        "candle_confirm": true,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 17,
+        "wr": 88.2,
+        "pnl": 276.0,
+        "pf": 12.5,
+        "maxdd": 12.0,
+        "sn": 17,
+        "bn": 0,
+        "swr": 88.2,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 20,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_deep",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 19,
+        "wr": 84.2,
+        "pnl": 284.0,
+        "pf": 8.889,
+        "maxdd": 24.0,
+        "sn": 19,
+        "bn": 0,
+        "swr": 84.2,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 20,
+        "macd_mode": "exhaustion",
+        "cci_filter": "any",
+        "session": "all",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 91,
+        "wr": 83.5,
+        "pnl": 1340.0,
+        "pf": 8.444,
+        "maxdd": 24.0,
+        "sn": 91,
+        "bn": 0,
+        "swr": 83.5,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 30,
+        "di_spread_min": 20,
+        "macd_mode": "exhaustion",
+        "cci_filter": "any",
+        "session": "all",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 96,
+        "wr": 83.3,
+        "pnl": 1408.0,
+        "pf": 8.333,
+        "maxdd": 36.0,
+        "sn": 96,
+        "bn": 0,
+        "swr": 83.3,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_deep",
+        "session": "all",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 43,
+        "wr": 81.4,
+        "pnl": 604.0,
+        "pf": 7.292,
+        "maxdd": 24.0,
+        "sn": 43,
+        "bn": 0,
+        "swr": 81.4,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_or_neutral",
+        "session": "london_ny",
+        "candle_confirm": true,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 23,
+        "wr": 78.3,
+        "pnl": 300.0,
+        "pf": 6.0,
+        "maxdd": 36.0,
+        "sn": 23,
+        "bn": 0,
+        "swr": 78.3,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 30,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_deep",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 26,
+        "wr": 76.9,
+        "pnl": 328.0,
+        "pf": 5.556,
+        "maxdd": 24.0,
+        "sn": 26,
+        "bn": 0,
+        "swr": 76.9,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_deep",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 26,
+        "wr": 76.9,
+        "pnl": 328.0,
+        "pf": 5.556,
+        "maxdd": 28.0,
+        "sn": 26,
+        "bn": 0,
+        "swr": 76.9,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_or_neutral",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 44,
+        "wr": 75.0,
+        "pnl": 528.0,
+        "pf": 5.0,
+        "maxdd": 40.0,
+        "sn": 44,
+        "bn": 0,
+        "swr": 75.0,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "any",
+        "session": "london_ny",
+        "candle_confirm": true,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 44,
+        "wr": 75.0,
+        "pnl": 528.0,
+        "pf": 5.0,
+        "maxdd": 40.0,
+        "sn": 44,
+        "bn": 0,
+        "swr": 75.0,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "any",
+        "session": "all",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 133,
+        "wr": 74.4,
+        "pnl": 1572.0,
+        "pf": 4.853,
+        "maxdd": 48.0,
+        "sn": 133,
+        "bn": 0,
+        "swr": 74.4,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 35,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "any",
+        "session": "all",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 133,
+        "wr": 74.4,
+        "pnl": 1572.0,
+        "pf": 4.853,
+        "maxdd": 48.0,
+        "sn": 133,
+        "bn": 0,
+        "swr": 74.4,
+        "bwr": 0
+      }
+    },
+    {
+      "filters": {
+        "adx_min": 30,
+        "di_spread_min": 15,
+        "macd_mode": "exhaustion",
+        "cci_filter": "ob_or_neutral",
+        "session": "london_ny",
+        "candle_confirm": false,
+        "ema200_filter": "off",
+        "macd_diff_min": 0.5
+      },
+      "results": {
+        "n": 46,
+        "wr": 73.9,
+        "pnl": 536.0,
+        "pf": 4.722,
+        "maxdd": 36.0,
+        "sn": 46,
+        "bn": 0,
+        "swr": 73.9,
+        "bwr": 0
+      }
+    }
+  ]
+}

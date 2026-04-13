@@ -383,3 +383,10 @@ Il sistema di punteggio istituzionale è stato evoluto per integrare i fondament
 - **60-74**: BUY — Setup operabile con size normale.
 - **40-59**: NEUTRO — Evitare entrate direzionali.
 - **≤ 25**: FORTE SELL — Pressione ribassista coordinata.
+
+### 13.3 Intelligenza Multi-Asset (XAU vs XAG)
+Il punteggio si adatta dinamicamente all'asset selezionato (`window.activeAsset`):
+- **G/S Ratio**: 
+    - Per **XAU**: Ratio alto (>78) = SAFE HAVEN (Bullish Oro).
+    - Per **XAG**: Ratio basso (<68) = RISK ON (Bullish Argento).
+- **Yield & Confluence**: Etichette e calcoli si basano sul simbolo attivo per evitare disallineamenti macro.

@@ -286,8 +286,9 @@ function updateCorrelation(prices){
 
 function updateConfidence(prices, sentimentData){
   const active = window.activeAsset || 'XAU';
+  const isXag = active === 'XAG';
   const xRaw=prices?.[active], d=prices?.DXY||dashContext.prices?.DXY, e=prices?.EURUSD||dashContext.prices?.EURUSD, g=prices?.GBPUSD||dashContext.prices?.GBPUSD;
-  const x=xRaw||dashContext.prices?.[active]; // always use latest asset
+  const x=xRaw||dashContext.prices?.[active];
   const now=new Date();
   const hour=now.getUTCHours();
   const min=now.getUTCMinutes();
@@ -300,9 +301,9 @@ function updateConfidence(prices, sentimentData){
   if(corrData){
     const status=corrData.status;
     const xc=x?.change||0;
-    if(status==='NORMALE'&&xc>0){dxyScore=80;dxyLabel='DXY ↓ XAU ↑';dxySub='Correlazione inversa bullish';dxyCol='var(--green)';}
-    else if(status==='NORMALE'&&xc<0){dxyScore=20;dxyLabel='DXY ↑ XAU ↓';dxySub='Correlazione inversa bearish';dxyCol='var(--red)';}
-    else if(status==='DIVERGENZA'){dxyScore=35;dxyLabel='Divergenza DXY/XAU';dxySub='⚠ Possibile manipolazione';dxyCol='var(--yellow)';}
+    if(status==='NORMALE'&&xc>0){dxyScore=80;dxyLabel=`DXY ↓ ${active} ↑`;dxySub='Correlazione inversa bullish';dxyCol='var(--green)';}
+    else if(status==='NORMALE'&&xc<0){dxyScore=20;dxyLabel=`DXY ↑ ${active} ↓`;dxySub='Correlazione inversa bearish';dxyCol='var(--red)';}
+    else if(status==='DIVERGENZA'){dxyScore=35;dxyLabel=`Divergenza DXY/${active}`;dxySub='⚠ Possibile manipolazione';dxyCol='var(--yellow)';}
     else{dxyScore=50;dxyLabel='Correlazione debole';dxySub='Mercato indeciso';dxyCol='var(--dim)';}
   } else if(x&&(d||dashContext.prices?.DXY)){
     const d2=d||dashContext.prices?.DXY;
@@ -321,11 +322,11 @@ function updateConfidence(prices, sentimentData){
     const chg=parseFloat(x.change)||0;
     const price=parseFloat(x.price);
     const spread=x.high&&x.low?(parseFloat(x.high)-parseFloat(x.low)):0;
-    if(chg>0.8){momScore=85;momLabel=`Momentum forte ↑ +${chg}%`;momSub='Trend intraday bullish';momCol='var(--green)';}
-    else if(chg>0.3){momScore=68;momLabel=`Momentum moderato ↑ +${chg}%`;momSub='Bias bullish';momCol='var(--green)';}
-    else if(chg<-0.8){momScore=15;momLabel=`Momentum forte ↓ ${chg}%`;momSub='Trend intraday bearish';momCol='var(--red)';}
-    else if(chg<-0.3){momScore=32;momLabel=`Momentum moderato ↓ ${chg}%`;momSub='Bias bearish';momCol='var(--red)';}
-    else{momScore=50;momLabel=`Laterale (${chg}%)`;momSub='Nessun bias chiaro';momCol='var(--dim)';}
+    if(chg>0.8){momScore=85;momLabel=`Momentum ${active} ↑ +${chg}%`;momSub='Trend intraday bullish';momCol='var(--green)';}
+    else if(chg>0.3){momScore=68;momLabel=`Momentum ${active} ↑ +${chg}%`;momSub='Bias bullish';momCol='var(--green)';}
+    else if(chg<-0.8){momScore=15;momLabel=`Momentum ${active} ↓ ${chg}%`;momSub='Trend intraday bearish';momCol='var(--red)';}
+    else if(chg<-0.3){momScore=32;momLabel=`Momentum ${active} ↓ ${chg}%`;momSub='Bias bearish';momCol='var(--red)';}
+    else{momScore=50;momLabel=`Momentum ${active} lat.`;momSub='Nessun bias chiaro';momCol='var(--dim)';}
   }
 
   // ── FACTOR 3: Kill Zone Timing (peso 18%) ─────────────
@@ -381,12 +382,12 @@ function updateConfidence(prices, sentimentData){
   if(prices.EURUSD&&prices.GBPUSD){
     const ec=parseFloat(prices.EURUSD.change), gc2=parseFloat(prices.GBPUSD.change);
     const xc=x?parseFloat(x.change):0;
-    const eurBull=ec>0.08, gbpBull=gc2>0.08, xauBull=xc>0.2;
-    const eurBear=ec<-0.08, gbpBear=gc2<-0.08, xauBear=xc<-0.2;
-    if(xauBull&&eurBull&&gbpBull){multiScore=80;multiLabel='Confluenza BUY';multiSub='EUR+GBP+XAU bullish';multiCol='var(--green)';}
-    else if(xauBear&&eurBear&&gbpBear){multiScore=20;multiLabel='Confluenza SELL';multiSub='EUR+GBP+XAU bearish';multiCol='var(--red)';}
-    else if(xauBull&&(eurBull||gbpBull)){multiScore=65;multiLabel='Parziale BUY';multiSub='XAU bullish, conferma parziale';multiCol='var(--yellow)';}
-    else if(xauBear&&(eurBear||gbpBear)){multiScore=35;multiLabel='Parziale SELL';multiSub='XAU bearish, conferma parziale';multiCol='var(--yellow)';}
+    const eurBull=ec>0.08, gbpBull=gc2>0.08, activeBull=xc>0.2;
+    const eurBear=ec<-0.08, gbpBear=gc2<-0.08, activeBear=xc<-0.2;
+    if(activeBull&&eurBull&&gbpBull){multiScore=80;multiLabel='Confluenza BUY';multiSub=`EUR+GBP+${active} bullish`;multiCol='var(--green)';}
+    else if(activeBear&&eurBear&&gbpBear){multiScore=20;multiLabel='Confluenza SELL';multiSub=`EUR+GBP+${active} bearish`;multiCol='var(--red)';}
+    else if(activeBull&&(eurBull||gbpBull)){multiScore=65;multiLabel='Parziale BUY';multiSub=`${active} bullish, conferma parziale`;multiCol='var(--yellow)';}
+    else if(activeBear&&(eurBear||gbpBear)){multiScore=35;multiLabel='Parziale SELL';multiSub=`${active} bearish, conferma parziale`;multiCol='var(--yellow)';}
   }
 
   // ── FACTOR 6: Volatilità (peso 8%) ──────────────────────
@@ -428,27 +429,31 @@ function updateConfidence(prices, sentimentData){
   if(prices.US10Y){
     const yc=parseFloat(prices.US10Y.change);
     const yVal=prices.US10Y.price;
-    if(yc>0.2){yieldScore=30;yieldLabel=`US10Y ${yVal}% ↑ XAU ↓`;yieldSub=`Rendimenti ↑${yc}% — pressione bearish`;yieldCol='var(--red)';}
-    else if(yc<-0.2){yieldScore=80;yieldLabel=`US10Y ${yVal}% ↓ XAU ↑`;yieldSub=`Rendimenti ↓${yc}% — sostegno bullish`;yieldCol='var(--green)';}
+    if(yc>0.2){yieldScore=30;yieldLabel=`US10Y ${yVal}% ↑ ${active} ↓`;yieldSub=`Rendimenti ↑${yc}% — pressione bearish`;yieldCol='var(--red)';}
+    else if(yc<-0.2){yieldScore=80;yieldLabel=`US10Y ${yVal}% ↓ ${active} ↑`;yieldSub=`Rendimenti ↓${yc}% — sostegno bullish`;yieldCol='var(--green)';}
     else{yieldScore=55;yieldLabel=`US10Y ${yVal}% (Stabile)`;yieldSub='Nessuna pressione macro';yieldCol='var(--dim)';}
   }
 
   // ── FACTOR 9: Gold/Silver Ratio (New - peso 10%) ───────
   let gsrScore=50, gsrLabel='G/S Ratio neutro', gsrSub='', gsrCol='var(--dim)';
-  if(prices.XAU && prices.SILVER){
-    const ratio=parseFloat(parseFloat(prices.XAU.price)/parseFloat(prices.SILVER.price)).toFixed(1);
-    // User context: 63.6 is RISK ON. High ratio (>80) = Gold expensive.
-    if(ratio > 78){gsrScore=75;gsrLabel=`G/S Ratio ${ratio} · RISK OFF`;gsrSub='Domanda Oro superiore (difensiva)';gsrCol='var(--green)';}
-    else if(ratio < 68){gsrScore=40;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Preferenza Silver (propensione rischio)';gsrCol='var(--yellow)';}
-    else{gsrScore=60;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--green)';}
-  }
+    if(isXag){
+      // REGIME PER SILVER: Ratio basso = Bullish per Silver (Risk-On)
+      if(ratio < 68){gsrScore=85;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Silver forte (propensione rischio)';gsrCol='var(--green)';}
+      else if(ratio > 78){gsrScore=35;gsrLabel=`G/S Ratio ${ratio} · RISK OFF`;gsrSub='Argento debole rispetto all\'Oro';gsrCol='var(--red)';}
+      else{gsrScore=50;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--dim)';}
+    } else {
+      // REGIME PER ORO: Ratio alto = Bullish per Gold (Safe Haven)
+      if(ratio > 78){gsrScore=75;gsrLabel=`G/S Ratio ${ratio} · RISK OFF`;gsrSub='Domanda Oro superiore (difensiva)';gsrCol='var(--green)';}
+      else if(ratio < 68){gsrScore=40;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Preferenza Silver (propensione rischio)';gsrCol='var(--yellow)';}
+      else{gsrScore=60;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--green)';}
+    }
 
   // ── FACTOR 10: COT Positioning (New - peso 10%) ───────
   let cotScore=50, cotLabel='Dati COT neutri', cotSub='', cotCol='var(--dim)';
   const cot=window._cotData;
   if(cot){
-    if(cot.signal==='BULLISH'){cotScore=85;cotLabel='COT Bullish';cotSub='Istituzionali Long';cotCol='var(--green)';}
-    else if(cot.signal==='BEARISH'){cotScore=25;cotLabel='COT Bearish';cotSub='Istituzionali Short';cotCol='var(--red)';}
+    if(cot.signal==='BULLISH'){cotScore=85;cotLabel=`COT ${active} Bullish`;cotSub='Istituzionali Long';cotCol='var(--green)';}
+    else if(cot.signal==='BEARISH'){cotScore=25;cotLabel=`COT ${active} Bearish`;cotSub='Istituzionali Short';cotCol='var(--red)';}
     else{cotScore=50;cotLabel='COT Neutro';cotSub='Posizionamento misto';cotCol='var(--dim)';}
   }
 

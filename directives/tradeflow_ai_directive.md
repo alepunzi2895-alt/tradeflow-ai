@@ -251,9 +251,50 @@ Risultati:
 
 ---
 
-## 9. PROSSIMI STEP (backlog)
-- [ ] Creazione report automatico giornaliero (`api/report.js`) usando LLM per l'interpretazione dei dati
-- [ ] Gestione account MyFxBook integrato
-- [ ] Fine tuning componenti UI (notifiche e user feedback)
-- [ ] Backtest periodico automatico (cron mensile) per rilevare drift nei parametri
-- [ ] Aggiungere filtro temporale (no trade nelle prime 2h di sessione Asian)
+## 9. STRATEGY ENGINE (implementato)
+
+### 9.1 Architettura
+```
+scripts/strategy-engine.py    ← backtester 7 strategie + regime detection (730gg H1)
+public/modules/strategy.js    ← live engine: regime + segnali + tracking giornaliero
+public/index.html             ← tab "⚡ Strategie" (sostituisce MyFxBook nel nav)
+```
+
+### 9.2 Strategie Implementate (ordine PF)
+| Strategia | WR% | P&L | PF | Note |
+|---|---|---|---|---|
+| **EXHAUSTION** | 57.9% | $788 | 2.29 | ADX≥30+DI spread≥15+MACD contra-trend |
+| **RSI_EXTREME** | 45.4% | $572 | 1.38 | RSI≤32 o ≥68 + BB band touch + ADX<28 |
+| **SESSION_MOM** | 39.9% | $612 | 1.11 | London open (7-10 UTC) MACD+EMA50 |
+| **MACD_ZERO** | 39.6% | $88 | 1.09 | Hist cross zero + EMA alignment |
+| EMA_TREND | 37.6% | $24 | 1.01 | ❌ non usata (PF insufficiente) |
+| BB_REVERSAL | 37.0% | -$116 | 0.98 | ❌ non usata (PF < 1) |
+| STOCH_CROSS | 38.6% | $104 | 1.05 | ❌ non usata (PF insufficiente) |
+
+### 9.3 Regime Detection
+| Regime | Condizione | Strategie priorità |
+|---|---|---|
+| TREND_UP | ADX≥30, DI+>DI- | EXHAUSTION → SESSION_MOM → MACD_ZERO |
+| TREND_DOWN | ADX≥30, DI->DI+ | EXHAUSTION → SESSION_MOM → MACD_ZERO |
+| WEAK_TREND | 22≤ADX<30 | SESSION_MOM → MACD_ZERO → RSI_EXTREME |
+| RANGE | ADX<22 | RSI_EXTREME → MACD_ZERO → SESSION_MOM |
+| VOLATILE_RANGE | ADX<22, ATR>1.4x avg | RSI_EXTREME → SESSION_MOM |
+
+### 9.4 Regole Operative
+- **Max 3 trade/giorno**, cooldown 60 min tra trade
+- **Giorno estremo**: ATR > 3x media 30gg → trading sospeso
+- **Sessione**: 07-17 UTC (London + NY)
+- **TP $20 / SL $12** (stesse del backtest MFKK)
+- Trade tracking in localStorage (reset ogni mezzanotte)
+
+### 9.5 Sistema Adattivo (backtest 730gg)
+- **1472 trade totali**, WR 41.3%, P&L $1792, PF 1.17
+- **$3.28/giorno** media, **2.69 trade/giorno**
+- Giorni con almeno 1 trade: 547/730 (75%)
+
+## 10. PROSSIMI STEP (backlog)
+- [ ] Creazione report automatico giornaliero (`api/report.js`) usando LLM
+- [ ] Fine tuning componenti UI (notifiche push quando arriva segnale)
+- [ ] Backtest periodico automatico (cron mensile) per rilevare drift parametri
+- [ ] Aggiungere filtro news calendar (skip 30 min prima/dopo high-impact event)
+- [ ] Notifiche browser (Service Worker) quando strategy engine genera segnale

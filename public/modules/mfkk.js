@@ -24,7 +24,8 @@ function setMfkkTF(tf){
 
 // ── MFKK INDICATOR ENGINE ────────────────────────────────
 // Candle cache: fetch once per minute, recalculate every 5s with live price
-let mfkkCandles = [];     // H1 OHLCV cache (fetched browser-side)
+let mfkkCandles = [];     // H1 OHLCV cache (fetched browser-side — shared with strategy.js via window)
+Object.defineProperty(window,'mfkkCandles',{get:()=>mfkkCandles,set:v=>{mfkkCandles=v;}});
 let mfkkLastFetch = 0;    // timestamp of last candle fetch
 let mfkkServerMacd = null; // MACD/ADX from TV Scanner via /api/indicators
 let mfkkServerAdx = null;

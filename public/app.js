@@ -142,6 +142,7 @@ function switchTab(tab){
   if(tab==='journal')renderJournal();
   if(tab==='kb')renderKb();
   if(tab==='myfx')renderMyfx();
+  if(tab==='strategy' && typeof initStrategyEngine==='function') initStrategyEngine();
 }
 document.querySelectorAll('.tb').forEach(btn=>btn.onclick=()=>switchTab(btn.dataset.tab));
 

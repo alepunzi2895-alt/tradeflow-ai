@@ -409,6 +409,19 @@
       <div class="mfp"><div id="mfx-content"></div></div>
     </div>
 
+    <!-- STRATEGY ENGINE TAB -->
+    <div class="tp" id="tp-strategy">
+      <div class="mfp">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--g)">⚡ STRATEGY ENGINE</div>
+          <button onclick="seRefresh()" style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;color:var(--dim);font-size:9px;cursor:pointer">⟳ Aggiorna</button>
+        </div>
+        <div id="se-content">
+          <div style="text-align:center;padding:30px;color:var(--dim);font-size:12px">Inizializzazione strategy engine...</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- BOTTOM TABS -->
@@ -418,7 +431,7 @@
       <button class="tb" data-tab="analysis"><span class="ti">🤖</span><span class="tl">Analisi</span></button>
       <button class="tb" data-tab="journal"><span class="ti">📓</span><span class="tl">Journal</span></button>
       <button class="tb" data-tab="kb"><span class="ti">📚</span><span class="tl">Apprendi</span></button>
-      <button class="tb" data-tab="myfx"><span class="ti">📈</span><span class="tl">MyFxBook</span></button>
+      <button class="tb" data-tab="strategy"><span class="ti">⚡</span><span class="tl">Strategie</span></button>
     </div>
   </div>
 </div>
@@ -502,6 +515,8 @@
   <script src="/modules/kb.js"></script>
   <!-- MFKK: strategy score, indicators -->
   <script src="/modules/mfkk.js"></script>
+  <!-- Strategy Engine: regime detection + multi-strategy signals -->
+  <script src="/modules/strategy.js"></script>
   <!-- App: init, tabs, overlays, profile -->
   <script src="/app.js"></script>
 </body>

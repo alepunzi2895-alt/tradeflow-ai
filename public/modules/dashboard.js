@@ -562,6 +562,12 @@ function updateConfidence(prices, sentimentData){
     }
     const qel=document.getElementById('conf-quality');
     if(qel){
+      let quality = '', qualityBg = '', qualityCol = '';
+      if(total >= 80){ quality = '💎 Setup di ALTA QUALITÀ: Confluenza macro e tecnica eccellente.'; qualityBg = '#00e67615'; qualityCol = 'var(--green)'; }
+      else if(total >= 65){ quality = '✅ Setup BUONO: Condizioni favorevoli per entry a basso rischio.'; qualityBg = '#4fc3f715'; qualityCol = 'var(--blue)'; }
+      else if(total >= 50){ quality = '⚠️ Setup MEDIO: Confluenza parziale, gestisci il rischio con attenzione.'; qualityBg = '#ffd70010'; qualityCol = 'var(--yellow)'; }
+      else if(total > 0) { quality = '❌ Bassa Qualità: Segnali contrastanti. Evita operazioni aggressive.'; qualityBg = '#ff475710'; qualityCol = 'var(--red)'; }
+
       if(quality){
         qel.style.display='block';
         qel.style.background=qualityBg;

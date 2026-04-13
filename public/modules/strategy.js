@@ -298,6 +298,12 @@ function seGetState() {
   }catch{return{date:today,trades:[],regime:'UNKNOWN',lastH:-99};}
 }
 function seSaveState(s){try{localStorage.setItem('se_v2',JSON.stringify(s));}catch{}}
+function seResetTrades(){
+  const today=new Date().toISOString().split('T')[0];
+  seSaveState({date:today,trades:[],regime:'UNKNOWN',lastH:-99});
+  seRefresh();
+}
+window.seResetTrades=seResetTrades;
 
 // ── MAIN REFRESH ──────────────────────────────────────────────────────────────
 async function seRefresh() {
@@ -586,7 +592,8 @@ function seRender(state,pending,snap,isExtreme,inSession,hour){
     </tr>`).join('')}
   </table>
   <div style="margin-top:6px;font-size:8px;color:var(--border2);text-align:center">
-    Aggiornamento ogni 5 min · Max ${SE.maxTrades} trade/gg · Session 07-17 UTC
+    Aggiornamento ogni 5 min · Max ${SE.maxTrades} trade/gg · Session 07-17 UTC ·
+    <span onclick="seResetTrades()" style="cursor:pointer;color:#ff4757;text-decoration:underline">Reset trade simulati</span>
   </div>
 </div>`;
 

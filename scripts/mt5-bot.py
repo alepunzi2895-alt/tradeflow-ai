@@ -29,7 +29,7 @@ SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 60            # polling ogni 60 secondi
 
 # ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
-VERCEL_URL   = "https://tradeflow-ai.vercel.app"   # ← URL del tuo deploy Vercel
+VERCEL_URL   = "https://tradeflow-ai-alepunzi2895-alt.vercel.app"  # aggiorna se diverso
 MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
 SYNC_ENABLED = True          # False per disabilitare il sync cloud
 

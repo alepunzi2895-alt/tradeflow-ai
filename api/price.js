@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   ];
   const TICKER_KEY = {
     'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU','CAPITALCOM:GOLD':'XAU','EASYMARKETS:XAUUSD':'XAU','TVC:GOLD':'XAU','FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
-    'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','PEPPERSTONE:XAGUSD':'SILVER','CAPITALCOM:SILVER':'SILVER','EASYMARKETS:XAGUSD':'SILVER','TVC:SILVER':'SILVER','FX:XAGUSD':'SILVER','SAXO:XAGUSD':'SILVER','FPMARKETS:XAGUSD':'SILVER',
+    'OANDA:XAGUSD':'XAG', 'FOREXCOM:XAGUSD':'XAG', 'PEPPERSTONE:XAGUSD':'XAG', 'CAPITALCOM:SILVER':'XAG', 'EASYMARKETS:XAGUSD':'XAG', 'TVC:SILVER':'XAG', 'FX:XAGUSD':'XAG', 'SAXO:XAGUSD':'XAG', 'FPMARKETS:XAGUSD':'XAG',
     'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'TVC:US10Y':'US10Y', 'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
   };
 
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
           if (!key || !item.d || prices[key]) continue;
           const [close, chgPct, high, low] = item.d;
           if (close == null || isNaN(+close)) continue;
-          const dec = (key==='XAU'||key==='OIL'||key==='SILVER') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+          const dec = (key==='XAU'||key==='OIL'||key==='XAG') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
           prices[key] = { price: (+close).toFixed(dec), change: +(chgPct || 0).toFixed(2), high: high != null ? (+high).toFixed(dec) : null, low: low != null ? (+low).toFixed(dec) : null, _source: item.s };
         }
         return res.status(200).json({ ok: true, prices, source: 'tradingview', timestamp: new Date().toISOString() });

@@ -297,7 +297,7 @@ async function loadIndicatorCandles(){
 function recalcIndicators(){
   if(mfkkCandles.length<50) return;
   const asset = window.activeAsset || 'XAU';
-  const livePrice = marketData?.[asset]?.price ?? marketData?.XAU?.price;
+  const livePrice = marketData?.[asset]?.price;
   if(!livePrice) return;
   const live=parseFloat(livePrice);
   if(isNaN(live)) return;
@@ -672,36 +672,36 @@ function calcMfkk(){
   if(planEl && mfkkAtr!=null && score>=55){
     const asset = window.activeAsset || 'XAU';
     const isXag = asset==='XAG';
-    const liveP = parseFloat(marketData?.[asset]?.price ?? marketData?.XAU?.price ?? 0);
+    const liveP = parseFloat(marketData?.[asset]?.price ?? 0);
     const entry = liveP || (isXag?30:3000);
     const atr = mfkkAtr;
     // Base SL/TP calibrati su backtest 2 anni (TP$20/SL$12 = R:R 1.67 = PF 1.802)
-    const BASE_TP = isXag ? 0.50 : 20;
-    const BASE_SL = isXag ? 0.25 : 12;
+    const BASE_TP = isXag ? 0.50 : 20.0;
+    const BASE_SL = isXag ? 0.25 : 12.0;
 
     // SL: parte da BASE_SL e si adatta agli swing levels
     let slDist = BASE_SL;
     if(isBuy && mfkkSwingLow && entry - mfkkSwingLow > 0){
-      const swingDist = entry - mfkkSwingLow + atr*0.2;
-      slDist = Math.min(Math.max(slDist, swingDist), BASE_SL * 2); // cap a 2x base SL
+      const swingDist = (entry - mfkkSwingLow) + atr*0.1;
+      slDist = Math.min(Math.max(slDist, swingDist), BASE_SL * 1.8); // cap a 1.8x base SL
     } else if(!isBuy && mfkkSwingHigh && mfkkSwingHigh - entry > 0){
-      const swingDist = mfkkSwingHigh - entry + atr*0.2;
-      slDist = Math.min(Math.max(slDist, swingDist), BASE_SL * 2);
+      const swingDist = (mfkkSwingHigh - entry) + atr*0.1;
+      slDist = Math.min(Math.max(slDist, swingDist), BASE_SL * 1.8);
     }
 
-    // TP: R:R minimo 1.67:1 (calibrato), migliora se c'è swing favorevole
-    let tpDist = Math.max(slDist * 1.67, BASE_TP);
+    // TP: R:R minimo 1.8:1 (calibrato), migliora se c'è swing favorevole
+    let tpDist = Math.max(slDist * 1.8, BASE_TP);
     if(isBuy && mfkkSwingHigh){
       const swTP = mfkkSwingHigh - entry;
-      if(swTP > slDist * 1.2) tpDist = Math.max(tpDist, swTP * 0.95);
+      if(swTP > slDist * 1.2) tpDist = Math.max(tpDist, swTP * 0.9);
     } else if(!isBuy && mfkkSwingLow){
       const swTP = entry - mfkkSwingLow;
-      if(swTP > slDist * 1.2) tpDist = Math.max(tpDist, swTP * 0.95);
+      if(swTP > slDist * 1.2) tpDist = Math.max(tpDist, swTP * 0.9);
     }
-    tpDist = Math.min(tpDist, atr * 4); // cap TP a 4x ATR
+    tpDist = Math.min(tpDist, atr * 4.5); // cap TP a 4.5x ATR
 
     const rr = (tpDist / slDist).toFixed(1);
-    const dec = isXag ? 3 : 2;
+    const dec = (asset==='XAU'||asset==='XAG') ? 3 : 2;
     const tpPrice = isBuy ? entry + tpDist : entry - tpDist;
     const slPrice = isBuy ? entry - slDist : entry + slDist;
     const tpLabel = isBuy ? '+' : '-';
@@ -716,29 +716,29 @@ function calcMfkk(){
     planEl.style.display='block';
     planEl.innerHTML=`
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-  <span style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--dim)">ENTRY PLAN · ATR=${atr.toFixed(2)}</span>
+  <span style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--dim)">ENTRY PLAN · ATR=${atr.toFixed(dec)}</span>
   <span style="font-size:9px;font-weight:700;color:${scoreCol}">SCORE ${score} · R:R 1:${rr}</span>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:5px 3px">
     <div style="font-size:8px;color:var(--dim);margin-bottom:2px">ENTRY (MARKET)</div>
-    <div style="font-size:11px;font-weight:700;color:var(--fg)">${liveForPlan?'$'+entry.toFixed(dec):'—'}</div>
+    <div style="font-size:11px;font-weight:700;color:var(--fg)">$${entry.toFixed(dec)}</div>
     <div style="font-size:8px;color:var(--dim)">${dirLabel}</div>
   </div>
   <div style="background:#00e67608;border:1px solid #00e67630;border-radius:5px;padding:5px 3px">
-    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">TAKE PROFIT</div>
+    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">TAKE PROFIT (TARGET)</div>
     <div style="font-size:11px;font-weight:700;color:var(--green)">$${tpPrice.toFixed(dec)}</div>
     <div style="font-size:8px;color:var(--green)">${tpLabel}$${tpDist.toFixed(dec)}</div>
   </div>
   <div style="background:#ff475708;border:1px solid #ff475730;border-radius:5px;padding:5px 3px">
-    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">STOP LOSS</div>
+    <div style="font-size:8px;color:var(--dim);margin-bottom:2px">STOP LOSS (PROTECT)</div>
     <div style="font-size:11px;font-weight:700;color:var(--red)">$${slPrice.toFixed(dec)}</div>
     <div style="font-size:8px;color:var(--red)">${slLabel}$${slDist.toFixed(dec)}</div>
   </div>
 </div>
 ${emaWarn?`<div style="margin-top:5px;font-size:9px;color:#ffca28">⚠️ Contro-trend EMA50: aumenta SL del 20% o riduci size</div>`:''}
 ${emaOk?`<div style="margin-top:5px;font-size:9px;color:var(--green)">✅ EMA50 allineata — trend a favore dell'entry</div>`:''}
-<div style="margin-top:4px;font-size:8px;color:var(--dim)">Swing: H=${mfkkSwingHigh??'—'} L=${mfkkSwingLow??'—'} · Adatta alla tua size</div>
+<div style="margin-top:4px;font-size:8px;color:var(--dim)">Swing: H=${mfkkSwingHigh?mfkkSwingHigh.toFixed(dec):'—'} L=${mfkkSwingLow?mfkkSwingLow.toFixed(dec):'—'} · Adatta alla tua size</div>
     `.trim();
   } else if(planEl && score<55){
     planEl.style.display='none';

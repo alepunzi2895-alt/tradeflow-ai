@@ -463,6 +463,7 @@ function updateConfidence(prices, sentimentData){
 
   // ── FACTOR 9: Gold/Silver Ratio (New - peso 10%) ───────
   let gsrScore=50, gsrLabel='G/S Ratio neutro', gsrSub='', gsrCol='var(--dim)';
+  const ratio = (prices.XAU && prices.XAG) ? parseFloat(parseFloat(prices.XAU.price)/parseFloat(prices.XAG.price)).toFixed(1) : 0;
     if(isXag){
       // REGIME PER SILVER: Ratio basso = Bullish per Silver (Risk-On)
       if(ratio < 68){gsrScore=85;gsrLabel=`G/S Ratio ${ratio} · RISK ON`;gsrSub='Silver forte (propensione rischio)';gsrCol='var(--green)';}

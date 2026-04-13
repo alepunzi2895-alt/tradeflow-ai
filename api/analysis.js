@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     if (type === "prices") {
       const TICKER_KEY = {
         'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','TVC:GOLD':'XAU',
-        'OANDA:XAGUSD':'SILVER','FOREXCOM:XAGUSD':'SILVER','TVC:SILVER':'SILVER',
+        'OANDA:XAGUSD':'XAG','FOREXCOM:XAGUSD':'XAG','TVC:SILVER':'XAG',
         'TVC:DXY':'DXY','TVC:USOIL':'OIL','TVC:US10Y':'US10Y',
         'OANDA:EURUSD':'EURUSD','OANDA:GBPUSD':'GBPUSD'
       };
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       // Fill gaps with Yahoo
       const gaps = [
         {k:'XAU', s:'XAUUSD=X'}, {k:'DXY', s:'DX-Y.NYB'}, {k:'EURUSD', s:'EURUSD=X'},
-        {k:'GBPUSD', s:'GBPUSD=X'}, {k:'OIL', s:'CL=F'}, {k:'SILVER', s:'XAGUSD=X'}, {k:'US10Y', s:'^TNX'}
+        {k:'GBPUSD', s:'GBPUSD=X'}, {k:'OIL', s:'CL=F'}, {k:'XAG', s:'XAGUSD=X'}, {k:'US10Y', s:'^TNX'}
       ].filter(g => !prices[g.k]);
       
       for (const gap of gaps) {
@@ -89,8 +89,8 @@ export default async function handler(req, res) {
         const yc = +prices.US10Y.change;
         prices.US10Y_CONTEXT = { yield: +prices.US10Y.price, signal: yc > 0.05 ? "BEARISH_GOLD" : yc < -0.05 ? "BULLISH_GOLD" : "NEUTRAL" };
       }
-      if (prices.XAU && prices.SILVER) {
-        const ratio = parseFloat(prices.XAU.price) / parseFloat(prices.SILVER.price);
+      if (prices.XAU && prices.XAG) {
+        const ratio = parseFloat(prices.XAU.price) / parseFloat(prices.XAG.price);
         prices.GOLD_SILVER_RATIO = { ratio: +ratio.toFixed(1), signal: ratio > 80 ? "RISK_OFF" : ratio < 65 ? "RISK_ON" : "NEUTRO" };
       }
       if (prices.XAU && prices.DXY) {

@@ -29,9 +29,11 @@ SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 60            # polling ogni 60 secondi
 
 # ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
-VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app/"  # aggiorna se diverso
+# ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
+VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"  # NO slash finale
 MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
 SYNC_ENABLED = True          # False per disabilitare il sync cloud
+
 
 LOG_FILE     = "mt5-bot.log"
 
@@ -541,7 +543,8 @@ def run():
                  f"(equity={acc['equity']:.2f}, free margin={acc['margin_free']:.2f})")
 
     last_bar_time = None   # per rilevare nuova candela H1
-    last_sync_time = 0    # timestamp ultimo sync Vercel
+    last_sync_time = -999  # forza sync immediato al primo ciclo
+
 
     while True:
         try:

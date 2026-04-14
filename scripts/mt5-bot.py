@@ -37,19 +37,19 @@ LOG_FILE     = "mt5-bot.log"
 
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
-# Solo MFKK attive — nuove strategie da indicatori TV verranno aggiunte qui.
+# 2 strategie MFKK attive post-backtest MT5 2026-04-14
 STRATEGY_PARAMS = {
-    'S00_MFKK':     {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Score'},
-    'S00_MFKK_HWR': {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK HighWR'},
+    'S00_MFKK':          {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK Score'},
+    'S05_MFKK_INTRADAY': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday'},
 }
-# Allineato con strategy.js regimePriority
+# Allineato con strategy.js regimePriority (aggiornato 2026-04-14)
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S00_MFKK_HWR', 'S00_MFKK'],
-    'TREND_DOWN': ['S00_MFKK_HWR', 'S00_MFKK'],
-    'WEAK_UP':    ['S00_MFKK'],
-    'WEAK_DOWN':  ['S00_MFKK_HWR', 'S00_MFKK'],
-    'RANGE':      ['S00_MFKK'],
-    'VOLATILE':   ['S00_MFKK'],
+    'TREND_UP':   ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'TREND_DOWN': ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'WEAK_UP':    ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'WEAK_DOWN':  ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'RANGE':      ['S05_MFKK_INTRADAY', 'S00_MFKK'],
+    'VOLATILE':   ['S05_MFKK_INTRADAY', 'S00_MFKK'],
     'UNKNOWN':    ['S00_MFKK'],
 }
 
@@ -557,6 +557,16 @@ def run():
             # ── Sync periodico a Vercel (ogni 60s anche senza nuova barra) ──────
             now_ts = time.time()
             if now_ts - last_sync_time >= 60:
+                # Verifica connessione MT5 — riconnetti se persa
+                if mt5.account_info() is None:
+                    log.warning("MT5 connessione persa — tentativo riconnessione...")
+                    mt5.shutdown()
+                    time.sleep(5)
+                    if not mt5_connect():
+                        log.error("Riconnessione MT5 fallita, riprovo in 30s")
+                        time.sleep(30)
+                        continue
+                    log.info("MT5 riconnesso correttamente.")
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)

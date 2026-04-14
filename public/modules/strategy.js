@@ -12,12 +12,24 @@ const SE = {
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
     // ── BACKTEST REALE su MT5 GOLD H1 · 730gg · aggiornato 2026-04-14 ──
-    // MFKK Score: WR 41.7% · PF 1.19 · 24m +$3.260 · MaxDD $1.332 · 2435 trade
+    // MFKK Score: WR 41.7% · PF 1.19 · 24m +$3.260 · MaxDD $1.332 · ~3.3 trade/gg
     'S00_MFKK': { label: 'MFKK Score', pf: 1.19, wr: '42%', tp: '$20', sl: '$12',
-      stats: { pnl_1m: 284, pnl_6m: 1600, pnl_12m: 1936, pnl_24m: 3260, maxdd: 1332, trades_12m: 1316, best_regime: 'TREND' } },
-    // MFKK Intraday: V2 Triple MACD H1 · OBV + RSI + MACD + Momentum · WR 37% · PF 1.24 · 24m +$4.794
+      stats: {
+        pnl_1m: 284,  td_1m: 3.03,
+        pnl_6m: 1600, td_6m: 3.11,
+        pnl_12m: 1936, td_12m: 3.61,
+        pnl_24m: 3260, td_24m: 3.34,
+        maxdd: 1332, trades_12m: 1316, best_regime: 'TREND'
+      } },
+    // MFKK Intraday: V2 Triple MACD H1 · WR 37% · PF 1.24 · 24m +$4.794 · MaxDD $1.367 · ~3.3 trade/gg
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.24, wr: '37%', tp: 'ATR×2', sl: 'ATR×1',
-      stats: { pnl_1m: 1082, pnl_6m: 1830, pnl_12m: 4179, pnl_24m: 4794, maxdd: 1367, trades_12m: 1252, best_regime: 'TUTTI' } },
+      stats: {
+        pnl_1m: 1082, td_1m: 2.83,
+        pnl_6m: 1830, td_6m: 3.24,
+        pnl_12m: 4179, td_12m: 3.43,
+        pnl_24m: 4794, td_24m: 3.30,
+        maxdd: 1367, trades_12m: 1252, best_regime: 'TUTTI'
+      } },
   },
   // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──
   regimePriority: {
@@ -816,27 +828,19 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:8px;text-align:center">
-          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
-            <div style="color:var(--dim);margin-bottom:1px">1 MESE</div>
-            <div style="font-weight:700;color:${pnl1col}">${st.pnl_1m!=null ? ((st.pnl_1m>=0?'+':'')+'$'+st.pnl_1m) : '+$—'}</div>
-          </div>
-          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
-            <div style="color:var(--dim);margin-bottom:1px">6 MESI</div>
-            <div style="font-weight:700;color:${pnl6col}">${st.pnl_6m!=null ? ((st.pnl_6m>=0?'+':'')+'$'+st.pnl_6m) : '+$—'}</div>
-          </div>
-          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
-            <div style="color:var(--dim);margin-bottom:1px">12 MESI</div>
-            <div style="font-weight:700;color:${pnl12col}">${st.pnl_12m!=null ? ((st.pnl_12m>=0?'+':'')+'$'+st.pnl_12m) : '+$—'}</div>
-          </div>
-          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
-            <div style="color:var(--dim);margin-bottom:1px">24 MESI</div>
-            <div style="font-weight:700;color:${pnl24col}">${st.pnl_24m!=null ? ((st.pnl_24m>=0?'+':'')+'$'+st.pnl_24m) : '+$—'}</div>
-          </div>
-          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
-            <div style="color:var(--dim);margin-bottom:1px">MAX DD</div>
-            <div style="font-weight:700;color:var(--red)">${st.maxdd!=null ? '-$'+st.maxdd : '-$—'}</div>
-          </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:8px;text-align:center;margin-bottom:3px">
+          ${[['1 MESE','pnl_1m','td_1m',pnl1col],['6 MESI','pnl_6m','td_6m',pnl6col],['12 MESI','pnl_12m','td_12m',pnl12col],['24 MESI','pnl_24m','td_24m',pnl24col],['MAX DD','maxdd',null,'var(--red)']].map(([label,pkey,tdkey,col])=>{
+            const v = st[pkey];
+            const displayV = pkey==='maxdd'
+              ? (v!=null ? '-$'+v : '-$—')
+              : (v!=null ? (v>=0?'+':'')+`$${v}` : '+$—');
+            const tdVal = tdkey && st[tdkey]!=null ? `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} td/gg</div>` : '';
+            return `<div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
+              <div style="color:var(--dim);margin-bottom:1px">${label}</div>
+              <div style="font-weight:700;color:${col}">${displayV}</div>
+              ${tdVal}
+            </div>`;
+          }).join('')}
         </div>
         <div style="margin-top:4px;font-size:8px;color:var(--dim);display:flex;gap:8px">
           <span>~${st.trades_12m||'?'} trade/anno</span>

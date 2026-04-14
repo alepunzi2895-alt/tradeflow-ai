@@ -378,25 +378,30 @@ def calc_stats(trades, all_trades=None):
     }
 
 def stats_by_period(trades, candles):
-    """Calcola P&L per 1m, 6m, 12m, 24m."""
+    """Calcola P&L, WR, PF, trades/day per 1m, 6m, 12m, 24m."""
     if not trades or not candles: return {}
-    now_ts=candles[-1]['t']
-    cutoffs={
-        '1m':  now_ts - 30*24*3600,
-        '6m':  now_ts - 180*24*3600,
-        '12m': now_ts - 365*24*3600,
-        '24m': now_ts - 730*24*3600,
-    }
-    result={}
+    now_ts = candles[-1]['t']
+    period_days = {'1m': 30, '6m': 180, '12m': 365, '24m': 730}
+    cutoffs = {p: now_ts - d*24*3600 for p,d in period_days.items()}
+
+    result = {}
     for period, cutoff in cutoffs.items():
-        subset=[t for t in trades if t['ts']>=cutoff]
-        s=calc_stats(subset)
-        result[period]={
-            'n':s['n'] if s else 0,
-            'pnl':s['pnl'] if s else 0,
-            'wr':s['wr'] if s else 0,
-            'pf':s['pf'] if s else 0,
-            'dd':s['dd'] if s else 0,
+        subset = [t for t in trades if t['ts'] >= cutoff]
+        s = calc_stats(subset)
+        days = period_days[period]
+        n = s['n'] if s else 0
+        # Conta giorni unici con almeno 1 trade (per avg più accurata)
+        trading_days = len(set(t['date'] for t in subset)) if subset else 1
+        avg_td = round(n / days, 2)           # media su tutti i giorni del periodo
+        avg_td_active = round(n / max(trading_days,1), 2)  # media sui giorni attivi
+        result[period] = {
+            'n':       n,
+            'pnl':     s['pnl'] if s else 0,
+            'wr':      s['wr']  if s else 0,
+            'pf':      s['pf']  if s else 0,
+            'dd':      s['dd']  if s else 0,
+            'avg_td':  avg_td,               # trade/giorno (su periodo completo)
+            'avg_td_active': avg_td_active,  # trade/giorno (solo giorni con trade)
         }
     return result
 
@@ -528,8 +533,9 @@ def main():
         print(f"  MaxDD: ${s_mfkk['dd']} | BUY WR: {s_mfkk['buy_wr']}% | SELL WR: {s_mfkk['sell_wr']}%")
         print(f"  Mesi positivi: {s_mfkk['pos_months']}")
     print(f"\n  Breakdown per periodo:")
+    print(f"    {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
     for p,ps in periods_mfkk.items():
-        print(f"    {p:>4}: {ps['n']:>4} trade | WR={ps['wr']:>5.1f}% | P&L=${ps['pnl']:>8.1f} | PF={ps['pf']:>5.3f}")
+        print(f"    {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
 
     results['S00_MFKK_SCORE'] = {
         'strategy':'MFKK Score', 'tf':'H1', 'tp':TP_H1, 'sl':SL_H1,
@@ -554,8 +560,9 @@ def main():
         print(f"  MaxDD: ${s_hwr['dd']} | SELL WR: {s_hwr['sell_wr']}%")
         print(f"  Mesi positivi: {s_hwr['pos_months']}")
     print(f"\n  Breakdown per periodo:")
+    print(f"    {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
     for p,ps in periods_hwr.items():
-        print(f"    {p:>4}: {ps['n']:>4} trade | WR={ps['wr']:>5.1f}% | P&L=${ps['pnl']:>8.1f} | PF={ps['pf']:>5.3f}")
+        print(f"    {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
 
     results['S00_MFKK_HWR'] = {
         'strategy':'MFKK HighWR', 'tf':'H1', 'tp':TP_HWR, 'sl':SL_HWR,
@@ -614,8 +621,9 @@ def main():
         print(f"   WR={s['wr']}% | PF={s['pf']} | P&L=${s['pnl']} | MaxDD=${s['dd']}")
         print(f"   Trade={s['n']} | BUY WR={s['buy_wr']}% | SELL WR={s['sell_wr']}%")
         print(f"\n   Breakdown per periodo (best combo):")
+        print(f"     {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
         for p,ps in b['periods'].items():
-            print(f"     {p:>4}: {ps['n']:>4} trade | WR={ps['wr']:>5.1f}% | P&L=${ps['pnl']:>8.1f} | PF={ps['pf']:>5.3f}")
+            print(f"     {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
     else:
         print("⚠️  Nessuna variante MFKK Intraday con N>=20. Usa più dati storici.")
         best_overall={'variant':'V1_OBV_RSI_MOM','tf':'H1','stats':None,'periods':{},'score':0}

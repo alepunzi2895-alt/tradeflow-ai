@@ -364,7 +364,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <div style="text-align:right">
       <div style="font-size:9px;color:var(--dim);margin-bottom:2px">PROFITTO REALIZZATO (MT5)</div>
       <div style="font-size:18px;font-weight:800;color:${pnlOggi>0?'var(--green)':pnlOggi<0?'var(--red)':'var(--fg)'}">${pnlOggi>=0?'+':''}${pnlOggi.toFixed(2)} €</div>
-      <div style="font-size:9px;color:var(--dim)">${online?'ONLINE':'OFFLINE'} · ${bs.trades_today||0} trade oggi</div>
+      <div style="font-size:9px;color:var(--dim)">${botOnline?'ONLINE':'OFFLINE'} · ${bs.trades_today||0} trade oggi</div>
     </div>
   </div>
 </div>`;

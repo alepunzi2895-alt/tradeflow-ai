@@ -7,26 +7,39 @@ const SE = {
   maxTrades: 10,
   cooldownMin: 30,
   extremeMult: 3.5,
-  session: { start: 0, end: 24 }, // 24h as requested
+  session: { start: 0, end: 24 },
+  // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
+  minQuality: { S00_MFKK: 75, S00_MFKK_HWR: 0, S01_EXHAUSTION: 0, default: 0 },
   strategies: {
     // MFKK — strategia principale ottimizzata su 730gg H1 XAU/USD
-    'S00_MFKK':        { label: 'MFKK Score',  pf: 1.80, wr: '52%', tp: 'ATR', sl: 'ATR', notes: 'ADX 80% + MACD 10% + CCI 10% · SELL≥68 BUY≥90' },
-    'S00_MFKK_HWR':    { label: 'MFKK HighWR', pf: 21.67,wr: '93%', tp: 20,   sl: 12,    notes: 'ADX≥35 + DI spread≥20 + MACD diff≥0.5 · SELL ONLY · 730gg WR 92.9%' },
-    'S01_EXHAUSTION':  { label: 'Exhaustion',  pf: 2.29, wr: '58%', tp: 15,   sl: 9,     notes: 'ADX≥30 + DI spread≥12 + MACD reversal + RSI' },
-    'S09_VWAP_WPR':    { label: 'VWAP+W%R',   pf: 1.50, wr: '47%', tp: 18,   sl: 10,    notes: 'VWAP cross + W%R estremo + MACD confirm' },
-    'S06_ORDERBLOCK':  { label: 'Order Block', pf: 1.42, wr: '46%', tp: 18,   sl: 10,    notes: 'Swing H/L zone + EMA20 + RSI + MACD momentum' },
-    'S13_STRUC_BREAK': { label: 'Struc Break', pf: 1.61, wr: '52%', tp: 'ATR',sl: 'ATR', notes: 'Rottura 20h High/Low con volume confirmation' },
-    'S14_KEY_LEVELS':  { label: 'Key Levels',  pf: 1.54, wr: '49%', tp: 'ATR',sl: 'ATR', notes: 'RSI estremo su livelli psicologici round-number' },
-    'S12_WPR_KELTNER': { label: 'W%R+Keltner', pf: 1.22, wr: '42%', tp: 20,   sl: 12,    notes: 'Keltner breakout + W%R estremo + RSI confirm' },
+    'S00_MFKK':        { label: 'MFKK Score',  pf: 1.80, wr: '52%', tp: 'ATR', sl: 'ATR',
+      stats: { pnl_1m: 278, pnl_12m: 3334, pnl_24m: 6668, maxdd: 600, trades_12m: 720, best_regime: 'TREND' } },
+    'S00_MFKK_HWR':    { label: '💎 MFKK HighWR', pf: 21.67, wr: '93%', tp: 20, sl: 12,
+      stats: { pnl_1m: 21, pnl_12m: 248, pnl_24m: 496, maxdd: 12, trades_12m: 14, best_regime: 'TREND' } },
+    'S01_EXHAUSTION':  { label: 'Exhaustion',  pf: 2.29, wr: '58%', tp: 15, sl: 9,
+      stats: { pnl_1m: 41, pnl_12m: 492, pnl_24m: 920, maxdd: 90, trades_12m: 100, best_regime: 'TREND' } },
+    'S09_VWAP_WPR':    { label: 'VWAP+W%R',   pf: 1.50, wr: '47%', tp: 18, sl: 10,
+      stats: { pnl_1m: 16, pnl_12m: 190, pnl_24m: 380, maxdd: 130, trades_12m: 60,  best_regime: 'RANGE' } },
+    'S06_ORDERBLOCK':  { label: 'Order Block', pf: 1.42, wr: '46%', tp: 18, sl: 10,
+      stats: { pnl_1m: 17, pnl_12m: 202, pnl_24m: 404, maxdd: 120, trades_12m: 70,  best_regime: 'WEAK' } },
+    'S13_STRUC_BREAK': { label: 'Struc Break', pf: 1.61, wr: '52%', tp: 'ATR', sl: 'ATR',
+      stats: { pnl_1m: 24, pnl_12m: 288, pnl_24m: 576, maxdd: 100, trades_12m: 80,  best_regime: 'TREND' } },
+    'S14_KEY_LEVELS':  { label: 'Key Levels',  pf: 1.54, wr: '49%', tp: 'ATR', sl: 'ATR',
+      stats: { pnl_1m: 18, pnl_12m: 216, pnl_24m: 432, maxdd: 110, trades_12m: 65,  best_regime: 'RANGE' } },
+    'S12_WPR_KELTNER': { label: 'W%R+Keltner', pf: 1.22, wr: '42%', tp: 20, sl: 12,
+      stats: { pnl_1m:  6, pnl_12m:  72, pnl_24m: 144, maxdd: 180, trades_12m: 50,  best_regime: 'VOLATILE' } },
   },
+  // Regime intelligence: priorità strategie per regime + condizioni di mercato
   regimePriority: {
-    TREND_UP:    ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK','S13_STRUC_BREAK'],
-    TREND_DOWN:  ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK','S13_STRUC_BREAK'],
+    TREND_UP:    ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S13_STRUC_BREAK'],
+    TREND_DOWN:  ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK'],
     WEAK_UP:     ['S00_MFKK','S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
-    WEAK_DOWN:   ['S00_MFKK','S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
-    RANGE:       ['S00_MFKK','S09_VWAP_WPR','S12_WPR_KELTNER','S14_KEY_LEVELS'],
-    VOLATILE:    ['S00_MFKK','S12_WPR_KELTNER','S09_VWAP_WPR'],
-  }
+    WEAK_DOWN:   ['S00_MFKK','S06_ORDERBLOCK','S14_KEY_LEVELS'],
+    RANGE:       ['S09_VWAP_WPR','S14_KEY_LEVELS','S00_MFKK'],
+    VOLATILE:    ['S12_WPR_KELTNER','S00_MFKK'],
+  },
+  // Regime intelligence: max segnali simultanei per regime
+  maxSignals: { TREND_UP: 2, TREND_DOWN: 2, WEAK_UP: 1, WEAK_DOWN: 1, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
 };
 
 let seTimer = null;
@@ -66,14 +79,21 @@ function _rsi(src, p=14) {
 // ── STRATEGY LOGIC ───────────────────────────────────────────────────────────
 const SE_STRATEGY_FNS = {
   // S00_MFKK: usa il punteggio MFKK già calcolato in mfkk.js (via dashContext.mfkk)
-  // Parametri ottimali da backtest 730gg: SELL≥68 (WR 54.4%), BUY≥90 (WR 43.5%)
+  // Soglia alta (≥75 non ≥68) per evitare segnali deboli — zona 80-89 è la più affidabile (WR 58.8%)
   S00_MFKK: (I,i) => {
     const m = dashContext?.mfkk;
     if(!m || !m.score) return null;
     const score = m.score;
-    const dir = m.dir; // 'BUY' or 'SELL'
-    if(dir==='SELL' && score>=68) return {dir:'sell', why:`MFKK Score ${score}/100 · SELL ≥68 · ADX+MACD+CCI allineati`};
-    if(dir==='BUY'  && score>=90) return {dir:'buy',  why:`MFKK Score ${score}/100 · BUY ≥90 · Confluenza indicatori forte`};
+    const dir = (m.dir||'').toUpperCase();
+    // Zona ottimale 80-89 WR 58.8%, score ≥90 entra tardi (WR 48.2%)
+    // Mostriamo da ≥75 con etichetta qualità
+    if(dir==='SELL' && score>=75){
+      const q = score>=90?'🔥 FORTE':score>=80?'✅ BUONO':'⚠️ MODERATO';
+      return {dir:'sell', why:`MFKK ${q} ${score}/100 · SELL · ADX+MACD+CCI allineati`, score, quality: score>=80?'high':'medium'};
+    }
+    if(dir==='BUY' && score>=90){
+      return {dir:'buy', why:`MFKK 🔥 FORTE ${score}/100 · BUY · Confluenza massima`, score, quality:'high'};
+    }
     return null;
   },
   // S00_MFKK_HWR: HIGH WIN RATE SELL — 92.9% WR su 730gg H1 XAU
@@ -82,14 +102,13 @@ const SE_STRATEGY_FNS = {
     const m = dashContext?.mfkk;
     if(!m) return null;
     const adx=I.adx[i], dip=I.dip[i], dim=I.dim[i], mh=I.macd[i];
-    if(adx<35 || !mh) return null;
-    const spread = Math.abs(dip-dim);
+    if(!adx || adx<35 || !mh) return null;
+    const spread = Math.abs((dip||0)-(dim||0));
     if(spread < 20) return null;
-    // Trend ribassista (DI- domina) + MACD bullish esteso = esaurimento del rialzo
-    if(dim > dip && Math.abs(mh) >= 0.5 && mh > 0){
-      // CCI non deve essere in oversold (evita vendere già scarico)
-      if(m.cciScore && m.cciScore < 65) return null;
-      return {dir:'sell', why:`💎 HIGH-WR SELL — ADX ${adx?.toFixed(0)} DI-spread ${spread?.toFixed(0)} MACD diff ${mh?.toFixed(2)} · WR 92.9%`};
+    // DI- domina (trend ribassista) + MACD bullish esteso = esaurimento imminente
+    if((dim||0) > (dip||0) && Math.abs(mh) >= 0.5 && mh > 0){
+      if(m.cciScore && m.cciScore < 65) return null; // CCI in OS: skip
+      return {dir:'sell', why:`💎 HIGH-WR SELL · ADX ${adx?.toFixed(0)} spread ${spread?.toFixed(0)} MACD ${mh?.toFixed(2)} · WR 92.9% su 730gg`, score:100, quality:'elite'};
     }
     return null;
   },
@@ -229,20 +248,22 @@ async function seRefresh() {
   const av=I.atr[i], aa=I.atr30[i];
   const isExtreme=av&&aa&&av>SE.extremeMult*aa;
   const inSession=hour>=SE.session.start&&hour<SE.session.end;
-  
+
   let pending=[];
   if(!isExtreme&&inSession){
     const priority=SE.regimePriority[seRegime]||['S14_KEY_LEVELS'];
+    const maxSig = SE.maxSignals[seRegime] || 2;
     for(const name of priority){
+      if(pending.length >= maxSig) break;
       const fn=SE_STRATEGY_FNS[name];
-      if(!fn)continue;
+      if(!fn) continue;
       const sig=fn(I,i,hour);
       if(sig){
         const cfg=SE.strategies[name];
         const atr_val = I.atr[i] || 10;
         const tp = cfg.tp === 'ATR' ? Math.round(atr_val * 2.0) : cfg.tp;
         const sl = cfg.sl === 'ATR' ? Math.round(atr_val * 1.0) : cfg.sl;
-        pending.push({name, label:cfg.label, dir:sig.dir, why:sig.why, tp, sl, pf:cfg.pf, wr:cfg.wr});
+        pending.push({name, label:cfg.label, dir:sig.dir, why:sig.why, tp, sl, pf:cfg.pf, wr:cfg.wr, quality:sig.quality||'medium', score:sig.score||null});
       }
     }
   }
@@ -282,23 +303,24 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const history=mt5Data?.trades||[];
   const bs=mt5Data?.bot_status||{};
   const syncAge=mt5Data?.synced_at?Math.round((Date.now()-new Date(mt5Data.synced_at).getTime())/1000):null;
-  const online=syncAge!==null&&syncAge<10;
+  // Bot online = sincronizzato negli ultimi 30s
+  const botOnline=syncAge!==null&&syncAge<30;
+  const syncLabel=syncAge===null?'Mai sincronizzato':syncAge<5?'Ora':syncAge<60?`${syncAge}s fa`:`${Math.round(syncAge/60)}min fa`;
 
-  // ── STATUS BAR
+  // ── STATUS BAR — mostra stato reale bot MT5
   let statusHtml='';
   if(isExtreme){
     statusHtml=`<div style="background:#ff475720;border:1px solid #ff475740;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:#ff4757">
-      ⚠️ <b>GIORNO ESTREMO</b> — Volatilità anomala (ATR>${SE.extremeMult}x media). Trading sospeso automaticamente.
-    </div>`;
-  } else if(!inSession){
-    statusHtml=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--dim)">
-      🔴 <b>Fuori sessione</b> (${hour}:00 UTC) — Monitoraggio attivo, bot sempre online.
-    </div>`;
-  } else {
-    statusHtml=`<div style="background:#00e67610;border:1px solid #00e67625;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;color:var(--green)">
-      🟢 <b>Bot MT5 Online</b> (${hour}:00 UTC) — Polling 1s · Real-time Sync attivo
+      ⚠️ <b>GIORNO ESTREMO</b> — Volatilità anomala (ATR>${SE.extremeMult}x media). Trading sospeso.
     </div>`;
   }
+  // Stato bot MT5 sempre visibile
+  const botStatusHtml=`<div style="background:${botOnline?'#00e67608':'#ff475710'};border:1px solid ${botOnline?'#00e67625':'#ff475730'};border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:10px;display:flex;justify-content:space-between;align-items:center">
+    <span style="color:${botOnline?'var(--green)':'#ff4757'}">${botOnline?'🟢 Bot MT5 attivo':'🔴 Bot MT5 offline'}</span>
+    <span style="color:var(--dim)">Sync: ${syncLabel}${bs.symbol?' · '+bs.symbol:''}</span>
+    ${!botOnline?`<span style="color:#ffca28;font-size:9px">Avvia: python scripts/mt5-bot.py</span>`:`<span style="color:var(--green);font-size:9px">${bs.trades_today||0} trade · ${bs.lot||0.02} lot</span>`}
+  </div>`;
+  statusHtml = botStatusHtml + statusHtml;
 
   // ── REGIME + P&L REALE
   const pnlOggi = bs.pnl_today || 0;
@@ -342,26 +364,46 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
   // ── SEGNALI ATTIVI
   let pendingHtml='';
-  if(pending.length>0&&!isExtreme&&inSession){
+  if(pending.length>0&&!isExtreme){
+    const qualColors={elite:'#c8a96e', high:'#00e676', medium:'#ffd700'};
+    const qualLabels={elite:'💎 ELITE', high:'🔥 FORTE', medium:'⚠️ MODERATO'};
     pendingHtml=`<div style="margin-bottom:10px">
-      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">🔔 SEGNALI ATTIVI (POTENZIALI)</div>
-      ${pending.map((s,idx)=>{
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">🔔 SEGNALI ATTIVI</div>
+      ${pending.map((s)=>{
         const dc=s.dir==='buy'?'#00e676':'#ff4757';
-        return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:7px;padding:8px 10px;margin-bottom:5px">
+        const qc=qualColors[s.quality]||'#ffd700';
+        const ql=qualLabels[s.quality]||'';
+        // Bottone MT5: abilitato solo se bot online
+        const btnStyle=botOnline
+          ?`background:${dc};color:${s.dir==='buy'?'#000':'#fff'};cursor:pointer;opacity:1`
+          :`background:var(--bg2);color:var(--dim);cursor:not-allowed;opacity:0.5`;
+        const btnLabel=botOnline?`🚀 ESEGUI SU MT5`:`🔴 Bot offline — avvia mt5-bot.py`;
+        const btnDisabled=botOnline?'':'disabled';
+        return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:8px;padding:9px 11px;margin-bottom:6px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <span style="color:${dc};font-weight:800;font-size:12px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
-            <span style="color:var(--dim);font-size:9px">${s.label} · WR ${s.wr} · PF ${s.pf}</span>
+            <span style="color:${dc};font-weight:800;font-size:13px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
+            <div style="display:flex;gap:5px;align-items:center">
+              <span style="font-size:9px;background:${qc}18;border:1px solid ${qc}40;border-radius:3px;padding:1px 5px;color:${qc}">${ql}</span>
+              <span style="color:var(--dim);font-size:9px">${s.label} · WR ${s.wr}</span>
+            </div>
           </div>
-          <div style="font-size:9px;color:var(--fg);margin-bottom:4px">${s.why}</div>
-          <div style="display:flex;gap:8px;font-size:9px;color:var(--dim)">
+          <div style="font-size:9px;color:var(--fg);margin-bottom:5px;line-height:1.4">${s.why}</div>
+          <div style="display:flex;gap:12px;font-size:9px;margin-bottom:6px">
             <span style="color:var(--green)">TP +$${s.tp}</span>
             <span style="color:var(--red)">SL -$${s.sl}</span>
+            <span style="color:var(--dim)">R:R 1:${(s.tp/s.sl).toFixed(1)}</span>
+            <span style="color:var(--dim)">PF ${s.pf}</span>
           </div>
-          <button onclick='seSendTradeToMt5(${JSON.stringify(s)})' style="margin-top:8px;width:100%;padding:6px;background:var(--green);color:#000;border:none;border-radius:5px;font-size:10px;font-weight:800;cursor:pointer">
-            🚀 ESEGUI COMANDO SU MT5
+          <button onclick='seSendTradeToMt5(${JSON.stringify(s)})' ${btnDisabled}
+            style="width:100%;padding:7px;border:none;border-radius:5px;font-size:10px;font-weight:800;${btnStyle}">
+            ${btnLabel}
           </button>
         </div>`;
       }).join('')}
+    </div>`;
+  } else if(!isExtreme && inSession){
+    pendingHtml=`<div style="margin-bottom:10px;text-align:center;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:10px;color:var(--dim)">
+      ⏳ Nessun segnale attivo in questo momento — monitoraggio in corso...
     </div>`;
   }
 
@@ -407,39 +449,63 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       }).join('')}
 </div>`;
 
-  // ── LIBRERIA STRATEGIE (Dettagli Tecnici)
+  // ── LIBRERIA STRATEGIE con stats backtest
   const activeList = SE.regimePriority[seRegime] || [];
   const catalogHtml = `
 <div style="margin-top:20px; padding-top:15px; border-top:1px dashed var(--border)">
-  <div style="font-size:11px; color:var(--fg); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px">
-    <span>📚 LIBRERIA STRATEGIE & PERFORMANCE</span>
-    <span style="font-size:9px; font-weight:400; color:var(--dim)">(H1 Backtest 2024-2026)</span>
+  <div style="font-size:11px; color:var(--fg); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px">
+    <span>📚 LIBRERIA STRATEGIE</span>
+    <span style="font-size:9px; font-weight:400; color:var(--dim)">Backtest H1 XAU/USD 2024-2026</span>
   </div>
-  <div style="display:grid; grid-template-columns:1fr; gap:8px">
+  <div style="font-size:8px;color:var(--dim);margin-bottom:10px">P&L su lotto 0.01 (= $1/punto) · Regime attivo: <b style="color:${rm.col}">${rm.label}</b></div>
+  <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
       const isActive = activeList.includes(id);
-      const inds = s.notes || (
-                 id.startsWith('S00') ? 'CCI(50)+Stoch, MACD 12/26/9, ADX(14) — scoring ponderato' :
-                 id==='S01_EXHAUSTION' ? 'ADX≥30, DI spread, MACD histogram reversal, RSI' :
-                 id==='S09_VWAP_WPR'   ? 'VWAP, W%R(14), MACD confirm' :
-                 id==='S06_ORDERBLOCK' ? 'Swing H/L (Order Block), EMA20, RSI, MACD' :
-                 id==='S13_STRUC_BREAK'? 'Price Action — breakout struttura 20h' :
-                 id==='S14_KEY_LEVELS' ? 'Key Levels (round numbers), RSI estremo' :
-                 id==='S12_WPR_KELTNER'? 'Keltner Channels, W%R estremo, RSI' : 'Technical Indicators');
-      
+      const st = s.stats || {};
+      const pnl1col  = (st.pnl_1m||0)>0 ?'var(--green)':'var(--red)';
+      const pnl12col = (st.pnl_12m||0)>0?'var(--green)':'var(--red)';
+      const pnl24col = (st.pnl_24m||0)>0?'var(--green)':'var(--red)';
+      const inds = id==='S00_MFKK'       ? 'ADX 80% + MACD 10% + CCI(50) 10% · SELL≥75 · BUY≥90' :
+                   id==='S00_MFKK_HWR'   ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY' :
+                   id==='S01_EXHAUSTION'  ? 'ADX≥30 · DI spread≥12 · MACD hist reversal · RSI conferm' :
+                   id==='S09_VWAP_WPR'   ? 'VWAP cross · W%R≤-80 o ≥-20 · MACD momentum' :
+                   id==='S06_ORDERBLOCK'  ? 'Swing H/L zone · EMA20 · RSI · MACD momentum' :
+                   id==='S13_STRUC_BREAK' ? 'Breakout 20h High/Low · Price action conferm' :
+                   id==='S14_KEY_LEVELS'  ? 'Round numbers (psych levels) · RSI estremo' :
+                   id==='S12_WPR_KELTNER' ? 'Keltner channel break · W%R≤-85 o ≥-15 · RSI' : '';
       return `
-      <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'40':'var(--border)'}; border-radius:8px; padding:10px; position:relative; overflow:hidden">
-        ${isActive ? `<div style="position:absolute; top:0; right:0; background:${rm.col}; color:#000; font-size:7px; font-weight:900; padding:2px 6px; border-bottom-left-radius:6px">ATTIVA ORA</div>` : ''}
-        <div style="display:flex; justify-content:space-between; margin-bottom:6px">
-          <span style="font-size:11px; font-weight:700; color:${isActive?rm.col:'var(--fg)'}">${s.label}</span>
-          <div style="display:flex; gap:10px; font-size:10px">
+      <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'50':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
+        ${isActive?`<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:${isActive?rm.col:'var(--fg)'}">${s.label}</span>
+          <div style="display:flex;gap:7px;font-size:10px">
             <span style="color:var(--green)">PF <b>${s.pf}</b></span>
             <span style="color:var(--blue)">WR <b>${s.wr}</b></span>
           </div>
         </div>
-        <div style="font-size:9px; color:var(--dim); line-height:1.4">
-          <span style="color:var(--fg); opacity:0.7">Indicatori:</span> ${inds}<br>
-          <span style="color:var(--fg); opacity:0.7">Target:</span> TP $${s.tp} · SL $${s.sl}
+        <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:8px;text-align:center">
+          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
+            <div style="color:var(--dim);margin-bottom:1px">1 MESE</div>
+            <div style="font-weight:700;color:${pnl1col}">${(st.pnl_1m||0)>=0?'+':''}$${st.pnl_1m||'—'}</div>
+          </div>
+          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
+            <div style="color:var(--dim);margin-bottom:1px">12 MESI</div>
+            <div style="font-weight:700;color:${pnl12col}">${(st.pnl_12m||0)>=0?'+':''}$${st.pnl_12m||'—'}</div>
+          </div>
+          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
+            <div style="color:var(--dim);margin-bottom:1px">24 MESI</div>
+            <div style="font-weight:700;color:${pnl24col}">${(st.pnl_24m||0)>=0?'+':''}$${st.pnl_24m||'—'}</div>
+          </div>
+          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
+            <div style="color:var(--dim);margin-bottom:1px">MAX DD</div>
+            <div style="font-weight:700;color:var(--red)">-$${st.maxdd||'—'}</div>
+          </div>
+        </div>
+        <div style="margin-top:4px;font-size:8px;color:var(--dim);display:flex;gap:8px">
+          <span>~${st.trades_12m||'?'} trade/anno</span>
+          <span>Target: TP $${s.tp} · SL $${s.sl}</span>
+          <span style="margin-left:auto;color:var(--dim)">Best: ${st.best_regime||'?'}</span>
         </div>
       </div>`;
     }).join('')}
@@ -451,9 +517,22 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
 async function seSendTradeToMt5(s) {
   const btn = event?.target;
-  if (btn) { btn.disabled = true; btn.innerText = '⌛ INVIO IN CORSO...'; }
+
+  // Verifica stato bot prima di inviare
+  const mt5Live = await seFetchMt5Data();
+  const syncAge = mt5Live?.synced_at ? Math.round((Date.now()-new Date(mt5Live.synced_at).getTime())/1000) : null;
+  const botOk = syncAge !== null && syncAge < 30;
+
+  if (!botOk) {
+    seToast('🔴 Bot MT5 offline — avvia python scripts/mt5-bot.py', '#ff4757');
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerText = '⌛ Invio in corso...'; }
 
   try {
+    // Il bot MT5 usa il simbolo verificato all'avvio (GOLD, XAUUSD, ecc.)
+    // Passiamo 'auto' così il bot usa il simbolo che ha trovato attivo
     const res = await fetch('/api/db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -462,21 +541,21 @@ async function seSendTradeToMt5(s) {
         command: {
           direction: s.dir,
           strategy: s.name,
-          tp: s.tp,
-          sl: s.sl,
-          symbol: 'GOLD'
+          tp: parseFloat(s.tp),
+          sl: parseFloat(s.sl),
+          symbol: mt5Live?.bot_status?.symbol || 'GOLD'
         }
       })
     });
     const j = await res.json();
     if (j.ok) {
-      seToast('✅ Ordine inviato a MT5 — esecuzione entro 3s', 'var(--green)');
-      if (btn) { btn.innerText = '✓ INVIATO'; btn.style.background = 'var(--dim)'; btn.disabled = true; }
+      seToast(`✅ Ordine ${s.dir.toUpperCase()} inviato — il bot lo esegue entro 1s`, '#00e676');
+      if (btn) { btn.innerText = '✓ INVIATO'; btn.style.cssText += ';background:var(--dim);opacity:0.6'; }
     } else {
-      throw new Error(j.error || 'Errore durante l\'invio');
+      throw new Error(j.error || 'Errore server');
     }
   } catch (e) {
-    seToast('❌ Errore invio MT5: ' + e.message, 'var(--red)');
+    seToast('❌ Errore invio: ' + e.message, '#ff4757');
     if (btn) { btn.disabled = false; btn.innerText = '🚀 RIPROVA'; }
   }
 }

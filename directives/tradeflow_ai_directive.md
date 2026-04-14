@@ -155,6 +155,9 @@ async function fetchT(url, opts={}, ms=8000) {
 | 2026-04-13 | Grafico TradingView schiacciato | height fissa a 600px | Aumentata a 800px sia nel container HTML che nel widget JS |
 | 2026-04-14 | MFKK non era nella sezione Strategies | Strategy Engine non usava dashContext.mfkk | Aggiunti S00_MFKK (score≥68 SELL / ≥90 BUY) e S00_MFKK_HWR (92.9% WR SELL ONLY) usando dashContext.mfkk |
 | 2026-04-14 | Conferma dialog bloccava invio MT5 | confirm() richiedeva input utente | Rimosso confirm(), aggiunto toast non-bloccante seToast() |
+| 2026-04-14 | Bottone MT5 sempre abilitato anche a bot offline | Nessun check stato bot prima di inviare | seSendTradeToMt5 ora verifica syncAge<30s; se offline mostra messaggio e blocca invio |
+| 2026-04-14 | Segnali MFKK troppo frequenti (soglia 68 troppo bassa) | Score 68+ quasi sempre soddisfatto | Soglia alzata a 75; zona 80-89 (WR 58.8%) evidenziata come ottimale |
+| 2026-04-14 | Catalog strategie senza statistiche di rendimento | Catalog mostrava solo PF e WR | Aggiunte colonne P&L 1M/12M/24M e MaxDD per ogni strategia |
 
 ---
 

@@ -14,6 +14,14 @@ USO:
 import sys, io, time, json, math, datetime, argparse, os, logging, urllib.request, urllib.error
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
+# ── RISK MANAGER ─────────────────────────────────────────────────────────────
+try:
+    from risk_manager import get_risk_manager, RiskManager
+except ImportError:
+    get_risk_manager = None
+    log_placeholder = logging.getLogger('tf-bot')
+    log_placeholder.warning("risk_manager.py non trovato — uso lot size fisso")
+
 # ── CONFIGURAZIONE ────────────────────────────────────────────────────────────
 MT5_LOGIN    = 1301224666
 MT5_PASSWORD = "Alessandro95!"
@@ -28,8 +36,6 @@ EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 60            # polling ogni 60 secondi
 
-# ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
-# ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
 VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"  # NO slash finale
 MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
 SYNC_ENABLED = True          # False per disabilitare il sync cloud
@@ -433,17 +439,22 @@ def count_open_positions():
     if pos is None: return 0
     return len([p for p in pos if p.magic == MAGIC])
 
-def place_order(direction, tp_usd, sl_usd, strategy_name):
-    """Invia un ordine market su MT5"""
+def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None):
+    """Invia un ordine market su MT5 con lot size adattivo da RiskManager"""
     tick = mt5.symbol_info_tick(SYMBOL)
     sym_info = mt5.symbol_info(SYMBOL)
     if tick is None or sym_info is None:
         log.error("Impossibile ottenere tick/info simbolo")
         return None
 
-    # Calcola TP/SL in prezzo
-    point = sym_info.point          # di solito 0.01 per XAUUSD
     digits = sym_info.digits
+    lot = lot_size if lot_size else LOT_SIZE
+
+    # Risolvi ATR-based TP/SL (se 'ATR' stringa, usa valore calcolato)
+    if not isinstance(tp_usd, (int, float)) or tp_usd <= 0:
+        tp_usd = 20.0
+    if not isinstance(sl_usd, (int, float)) or sl_usd <= 0:
+        sl_usd = 12.0
 
     if direction == 'buy':
         order_type = mt5.ORDER_TYPE_BUY
@@ -459,7 +470,7 @@ def place_order(direction, tp_usd, sl_usd, strategy_name):
     request = {
         "action":    mt5.TRADE_ACTION_DEAL,
         "symbol":    SYMBOL,
-        "volume":    LOT_SIZE,
+        "volume":    lot,
         "type":      order_type,
         "price":     price,
         "sl":        sl_price,
@@ -472,7 +483,7 @@ def place_order(direction, tp_usd, sl_usd, strategy_name):
     }
 
     if DRY_RUN:
-        log.info(f"[DRY-RUN] Ordine simulato: {direction.upper()} {LOT_SIZE} {SYMBOL} "
+        log.info(f"[DRY-RUN] Ordine simulato: {direction.upper()} {lot} {SYMBOL} "
                  f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}]")
         return {'retcode': 10009, 'simulated': True}
 
@@ -480,7 +491,7 @@ def place_order(direction, tp_usd, sl_usd, strategy_name):
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         log.error(f"Ordine fallito: retcode={result.retcode} — {result.comment}")
         return None
-    log.info(f"✓ Ordine eseguito: #{result.order} {direction.upper()} {LOT_SIZE} {SYMBOL} "
+    log.info(f"✓ Ordine eseguito: #{result.order} {direction.upper()} {lot} {SYMBOL} "
              f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}]")
     return result
 
@@ -609,7 +620,15 @@ def run():
 
     last_bar_time = None   # per rilevare nuova candela H1
     last_sync_time = -999  # forza sync immediato al primo ciclo
+    last_ai_score  = 50.0  # default neutro
+    last_score_ts  = 0     # timestamp ultimo fetch score
 
+    # Inizializza RiskManager
+    rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
+    if rm:
+        log.info(f"RiskManager attivo — base_lot={LOT_SIZE} max_lot={LOT_SIZE*5}")
+    else:
+        log.warning("RiskManager disabilitato — uso lot size fisso")
 
     while True:
         try:
@@ -622,7 +641,7 @@ def run():
                 time.sleep(30)
                 continue
 
-            # ── Sync periodico a Vercel (ogni 20s) ─────────────────────────
+            # ── Sync periodico a Vercel (ogni 20s) + fetch AI score ────────
             now_ts = time.time()
             if now_ts - last_sync_time >= 20:
                 # Verifica connessione MT5 — riconnetti se persa
@@ -635,6 +654,13 @@ def run():
                         time.sleep(30)
                         continue
                     log.info("MT5 riconnesso correttamente.")
+
+            # ── Fetch AI Score ogni 60s ────────────────────────────────────
+            if rm and (now_ts - last_score_ts) >= 60:
+                last_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                last_score_ts = now_ts
+                log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f} — tier: {rm.get_tier(last_ai_score)['label']}")
+
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
@@ -664,6 +690,11 @@ def run():
             # ── Calcola indicatori ────────────────────────────────────────────
             I = compute_indicators(candles)
             i = len(candles) - 2   # ultima barra chiusa
+
+            # ── Gestione posizioni: BE + Trailing + Parziali ──────────────────
+            if rm:
+                atr_now = I['atr'][i] if I['atr'][i] else 10.0
+                rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
 
             # ── Regime ───────────────────────────────────────────────────────
             regime = detect_regime(I, i)
@@ -700,19 +731,45 @@ def run():
                 continue
 
             params = STRATEGY_PARAMS[strategy_name]
-            log.info(f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
-                     f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
-                     f"| TP=${params['tp_usd']} SL=${params['sl_usd']}")
 
-            # ── Invia ordine ──────────────────────────────────────────────────
-            result = place_order(direction, params['tp_usd'], params['sl_usd'], strategy_name)
+            # ── Calcola parametri adattativi con RiskManager ──────────────────
+            atr_i = I['atr'][i] if I['atr'][i] else None
+            if rm:
+                rp = rm.get_order_params(
+                    ai_score=last_ai_score,
+                    atr=atr_i,
+                    strategy=strategy_name,
+                    direction=direction
+                )
+                lot_use = rp['lot']
+                tp_use  = rp['tp_usd']
+                sl_use  = rp['sl_usd']
+                log.info(
+                    f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
+                    f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
+                    f"| score={last_ai_score:.0f} | {rp['tier_label']} "
+                    f"| lot={lot_use} | TP=${tp_use} | SL=${sl_use} "
+                    f"| BE@+${rp['be_trigger']} | TS step=${rp['ts_step']}"
+                )
+            else:
+                lot_use = LOT_SIZE
+                tp_use  = params['tp_usd'] if isinstance(params['tp_usd'], float) else 20.0
+                sl_use  = params['sl_usd'] if isinstance(params['sl_usd'], float) else 12.0
+                log.info(
+                    f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
+                    f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
+                    f"| TP=${tp_use} SL=${sl_use}"
+                )
+
+            # ── Invia ordine ────────────────────────────────────────
+            result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
 
             if result:
                 tick = mt5.symbol_info_tick(SYMBOL)
                 price = tick.ask if direction=='buy' else tick.bid if tick else 0
                 log_trade_to_json(direction, strategy_name, price,
-                                  price + (params['tp_usd'] if direction=='buy' else -params['tp_usd']),
-                                  price - (params['sl_usd'] if direction=='buy' else -params['sl_usd']),
+                                  round(price + (tp_use if direction=='buy' else -tp_use), 2),
+                                  round(price - (sl_use if direction=='buy' else -sl_use), 2),
                                   result)
                 state.record_trade(0, now_utc)  # PnL reale verrà da MT5
                 acc = get_account_info()

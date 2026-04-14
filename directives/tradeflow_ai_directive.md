@@ -88,12 +88,14 @@ api/
 
 scripts/
   mt5-bot.py                  ← Bot trading Python: loop 1s, bridge MT5 ↔ Vercel DB
+  risk_manager.py             ← **NUOVO** Modulo gestione rischio adattiva (AI Score → lot/TP/SL/BE/TS)
   fetch_mt5_history.py        ← Scarica GOLD H1 da MT5 → xauusd_h1_mt5.json (dati broker reali)
   strategy-engine-v2.py       ← Backtester Python (--file xauusd_h1_mt5.json per dati MT5 reali)
   strategy-mtf.py             ← MTF backtester: strategie × 3 TF
   backtest-mfkk.mjs           ← Backtester Node.js MFKK con config ottimale
   optimize-full.py            ← Ottimizzatore grid search 3 fasi
   analyze-entry-conditions.py ← Analisi empirica zone indicatori su 2 anni H1
+  backtest_mfkk_intraday.py   ← Backtester dedicato: MFKK Score + Intraday multi-variant, H1 vs M30, avg_td
 
 directives/
   tradeflow_ai_directive.md   ← QUESTO FILE — leggere sempre prima di intervenire
@@ -333,10 +335,48 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | Bot online/offline a tratti in UI | Sync ogni 60s ma soglia UI `syncAge < 30s` → falsi negativi con qualsiasi jitter di rete | Ridotto sync bot a **20s** · alzata soglia UI a **90s** (`botOnline = syncAge < 90`) |
 | 2026-04-14 | Bot non eseguiva ordini in autonomia | `SIGNAL_FNS` conteneva S01/S06/S09/S10/S12 (strategie archiviate), non S00_MFKK né S05_MFKK_INTRADAY → `get_signal()` ritornava sempre `(None, None)` | Riscritti `signal_mfkk_score()` e `signal_mfkk_intraday()` identici a strategy.js · aggiunti CCI+Momentum+OBV T-Channel a `compute_indicators()` · `SIGNAL_FNS` ora ha solo le 2 strategie attive |
 | 2026-04-14 | Storico trade vuoto in UI | `get_recent_trades_data()` leggeva solo `mt5-trades.json` (mai popolato perché bot non eseguiva ordini) | Riscritta per usare `mt5.history_deals_get()` direttamente · filtra solo deal di chiusura (entry=1) · fallback su file se MT5 non disponibile |
+| 2026-04-14 | Implementato Risk Manager adattivo | Feature richiesta utente: AI Score → lot/TP/SL/BE/TS/parziali | Creato `scripts/risk_manager.py` · 5 tier risk (CONSERVATIVE/NORMAL/AGGRESSIVE/STRONG/MAX) · integrato in mt5-bot.py · fetch AI score ogni 60s da Vercel · manage_positions() eseguito ad ogni barra H1 |
 
 ---
 
-## 7. BACKTESTING & SCORING MFKK — PARAMETRI DEFINITIVI
+## 8. RISK MANAGER — DETTAGLIO TECNICO (`risk_manager.py`)
+
+### 8.1 Logica AI Score → Tier
+
+| Tier | AI Score | Lot Mult | TP Mult | SL Mult | BE trigger | TS Step | Parziale |
+|---|---|---|---|---|---|---|---|
+| 🔵 CONSERVATIVE | < 40 | ×0.5 | ×1.0 | ×0.8 | 50% TP | 0.8×ATR | No |
+| ⚪ NORMAL | 40-60 | ×1.0 | ×1.5 | ×1.0 | 60% TP | 0.6×ATR | No |
+| 🟡 AGGRESSIVE | 60-75 | ×1.5 | ×2.0 | ×1.0 | 50% TP | 0.5×ATR | Sì 50% |
+| 🟠 STRONG | 75-85 | ×2.0 | ×2.5 | ×1.2 | 40% TP | 0.4×ATR | Sì 50% |
+| 🔴 MAX | > 85 | ×2.5 | ×3.0 | ×1.5 | 35% TP | 0.35×ATR | Sì 50% |
+
+### 8.2 Flusso operativo
+1. **Ogni 60s**: fetch AI Score da Vercel DB (`/api/db?action=mt5_get`)
+2. **Ad ogni segnale**: `RiskManager.get_order_params(ai_score, atr, strategy)` → lot/TP/SL/BE/TS
+3. **Ad ogni barra H1**: `RiskManager.manage_positions()` gestisce tutte le posizioni aperte:
+   - **Parzializzazione**: chiude 50% del lotto quando prezzo raggiunge il 50% del TP
+   - **Break Even**: sposta SL a entry+0.02 quando prezzo raggiunge il 40% del TP
+   - **Trailing Stop**: attivato dopo BE, step = `ts_step × ATR` aggiornato ad ogni barra
+
+### 8.3 Parametri base per strategia
+| Strategia | TP base | SL base | ATR-based |
+|---|---|---|---|
+| S00_MFKK | $20.0 | $12.0 | No (fisso) · moltiplicato per tier |
+| S05_MFKK_INTRADAY | ATR×2.0 | ATR×1.0 | Sì · moltiplicato per tier |
+
+### 8.4 Esempio log con score 78 (tier STRONG)
+```
+🧠 AI Score aggiornato: 78.0 — tier: 🟠 STRONG
+★ SEGNALE: BUY | MFKK Score | Regime: TREND_UP
+  | ADX=32.4 | RSI=58.1 | score=78 | 🟠 STRONG
+  | lot=0.04 | TP=$50.0 | SL=$28.8 | BE@+$20.0 | TS step=$11.2
+✂️  Parziale ticket#12345: chiusi 0.02 lot @ dist=$25.00
+🛡️  BE ticket#12345: SL → 3238.74
+📈 Trailing ticket#12345: SL → 3245.80
+```
+
+---
 
 ### 7.1 Dataset e Metodo
 - **Dataset primario**: MT5 GOLD (XMGlobal-MT5 6) · 730 giorni H1/M30/H4 reali · conto demo #1301224666 · sempre `--mt5`

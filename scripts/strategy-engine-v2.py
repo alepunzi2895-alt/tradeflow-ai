@@ -3,10 +3,15 @@
 TradeFlow AI — Strategy Engine v2
 Indicatori: OBV, Alligator, Supertrend, Order Blocks, BB, EMA 20/50/100/200,
             Momentum/ROC, RSI, StochRSI, MACD, ADX, ATR, Keltner, Williams%R, VWAP
-Strategie: 12 strategie composite backtestato su 730gg H1 XAU/USD
+Strategie: backtest su 730gg H1 XAU/USD
 Output: strategy_engine_v2.json con rank, parametri, entry rules
+
+USO:
+  python scripts/strategy-engine-v2.py                         # yfinance GC=F (fallback)
+  python scripts/strategy-engine-v2.py --file xauusd_h1_mt5.json  # dati reali MT5 ✅
+  python scripts/strategy-engine-v2.py --file xauusd_h1_730d.json # dati storici salvati
 """
-import sys, io
+import sys, io, argparse
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 import json, datetime, math
@@ -17,6 +22,15 @@ try:
 except ImportError:
     HAS_YF = False
 
+# ── ARGPARSE ──────────────────────────────────────────────────────────────────
+_parser = argparse.ArgumentParser(description='TradeFlow AI Backtester v2', add_help=False)
+_parser.add_argument('--file', type=str, default=None,
+    help='Carica candele da file JSON (prodotto da fetch_mt5_history.py). '
+         'Se omesso usa yfinance GC=F.')
+_parser.add_argument('--out',  type=str, default='strategy_engine_v2.json',
+    help='File output risultati (default: strategy_engine_v2.json)')
+_args, _ = _parser.parse_known_args()
+
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 import os
 SYMBOL     = os.getenv('BT_SYMBOL', 'GC=F')
@@ -24,13 +38,24 @@ INTERVAL   = os.getenv('BT_INTERVAL', '1h')
 PERIOD     = os.getenv('BT_PERIOD', '730d')
 TP_USD     = 20.0
 SL_USD     = 12.0
-MAX_TRADES = 10          # per giorno (aggiornato)
-COOLDOWN_H = 0.5         # 30 min tra trade
-SESSION_S  = 0           # 24h trading
+MAX_TRADES = 10
+COOLDOWN_H = 0.5
+SESSION_S  = 0
 SESSION_E  = 24
-EXTREME_K  = 3.5        
+EXTREME_K  = 3.5
+OUT_FILE   = _args.out
 
-# ── DOWNLOAD ─────────────────────────────────────────────────────────────────
+# ── CARICAMENTO DATI ──────────────────────────────────────────────────────────
+def load_from_file(path):
+    """Carica candele da JSON prodotto da fetch_mt5_history.py o dati salvati."""
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    candles = data['candles'] if isinstance(data, dict) and 'candles' in data else data
+    src = data.get('source', 'file') if isinstance(data, dict) else 'file'
+    sym = data.get('symbol', path) if isinstance(data, dict) else path
+    print(f"Caricato {len(candles)} candele da {path} (source={src}, symbol={sym})")
+    return candles
+
 def download():
     if not HAS_YF: raise RuntimeError("pip install yfinance")
     print(f"Downloading {SYMBOL} {INTERVAL} for {PERIOD}...")
@@ -172,6 +197,70 @@ def obv(c,v):
         else: out.append(out[-1])
     return out
 
+def stdev_arr(src, p):
+    """Standard deviation su finestra rolling p."""
+    out=[None]*(p-1)
+    for i in range(p-1,len(src)):
+        sl=src[i-p+1:i+1]
+        mn=sum(sl)/p
+        out.append(math.sqrt(sum((x-mn)**2 for x in sl)/p))
+    return out
+
+def dema(src, p):
+    """Double EMA — riduce lag rispetto a EMA standard."""
+    ma1=ema(src,p); ma2=ema(ma1,p)
+    return [2*ma1[i]-ma2[i] for i in range(len(src))]
+
+def obv_macd_tchannel(H,L,C,V,
+                      window_len=28,v_len=14,ma_len=9,slow_len=26):
+    """
+    OBV MACD Indicator — traduzione fedele Pine Script v4
+    Ritorna (macd_line, b5, oc)
+      macd_line : DEMA(9,obvOut) - EMA(26,close)
+      b5        : livello T-Channel
+      oc        : direzione (1=bull, -1=bear, 0=init)
+    Segnali: oc[i] != oc[i-1] → cambio direzione
+    """
+    n=len(C)
+
+    # 1. OBV normalizzato a price-scale
+    obv_raw=[0.0]
+    for i in range(1,n):
+        s=1 if C[i]>C[i-1] else (-1 if C[i]<C[i-1] else 0)
+        obv_raw.append(obv_raw[-1]+s*(V[i] or 0))
+
+    hl=[H[i]-L[i] for i in range(n)]
+    price_spread=stdev_arr(hl,window_len)
+    smooth=sma(obv_raw,v_len)
+    v_diff=[obv_raw[i]-(smooth[i] or 0) for i in range(n)]
+    v_spread=stdev_arr(v_diff,window_len)
+
+    out=[]
+    for i in range(n):
+        if smooth[i] is None or not v_spread[i] or not price_spread[i]:
+            out.append(C[i]); continue
+        shadow=(obv_raw[i]-smooth[i])/v_spread[i]*price_spread[i]
+        out.append(H[i]+shadow if shadow>0 else L[i]+shadow)
+
+    # 2. DEMA(9) + MACD
+    dm=dema(out,ma_len)
+    slow_ma=ema(C,slow_len)
+    macd_line=[dm[i]-slow_ma[i] for i in range(n)]
+
+    # 3. T-Channel (p=1)
+    b5=[macd_line[0]]; oc_=[0]; cum_dev=0.0
+    for i in range(1,n):
+        cum_dev+=abs(macd_line[i]-b5[-1])
+        a15=cum_dev/i
+        if   macd_line[i]>b5[-1]+a15: b5.append(macd_line[i])
+        elif macd_line[i]<b5[-1]-a15: b5.append(macd_line[i])
+        else: b5.append(b5[-1])
+        if   b5[-1]>b5[-2]: oc_.append(1)
+        elif b5[-1]<b5[-2]: oc_.append(-1)
+        else: oc_.append(oc_[-1])
+
+    return macd_line,b5,oc_
+
 def momentum(c,p=10):
     """Rate of Change (%)"""
     out=[None]*p
@@ -257,9 +346,12 @@ def compute_all(candles):
     # Alligator
     jaw,teeth,lips=alligator(H,L)
 
-    # OBV
+    # OBV (standard)
     obv_v=obv(C,V)
     obv_ema20=ema(obv_v,20)
+
+    # OBV MACD T-Channel (Pine Script v4 indicator)
+    obvm_ml,obvm_b5,obvm_oc=obv_macd_tchannel(H,L,C,V)
 
     # Momentum/ROC (10)
     mom=momentum(C,10)
@@ -296,6 +388,7 @@ def compute_all(candles):
         'st':st_dir,
         'jaw':jaw,'teeth':teeth,'lips':lips,
         'obv':obv_v,'obv_e20':obv_ema20,
+        'obv_macd_ml':obvm_ml,'obv_macd_b5':obvm_b5,'obv_macd_oc':obvm_oc,
         'mom':mom,'wpr':wpr,'vwap':vwap,
         'ob_bull':ob_bull,'ob_bear':ob_bear,
     }
@@ -569,6 +662,20 @@ def s14_key_levels(ind,i,hour=None):
     if c < r1 and H[i] >= r1 * 0.999 and r > 60: return 'sell'
     return None
 
+def s15_obv_macd(ind,i,hour=None):
+    """
+    OBV MACD T-Channel — Pine Script v4 (traduzione fedele)
+    Segnale: T-Channel cambia direzione
+      BUY  quando oc passa da -1/0 a  1 (momentum volume-based rialzista)
+      SELL quando oc passa da  1/0 a -1 (momentum volume-based ribassista)
+    """
+    if i<1: return None
+    oc=ind.get('obv_macd_oc')
+    if oc is None: return None
+    if oc[i]==1  and oc[i-1]!=1:  return 'buy'
+    if oc[i]==-1 and oc[i-1]!=-1: return 'sell'
+    return None
+
 # ── STRATEGY MAP ──────────────────────────────────────────────────────────────
 STRATS = {
     'S01_EXHAUSTION':       (s1_exhaustion,        ['TREND_UP','TREND_DOWN']),
@@ -585,16 +692,18 @@ STRATS = {
     'S12_WPR_RSI_KELT':     (s12_williams_rsi_keltner,['RANGE','VOLATILE']),
     'S13_STRUC_BREAK':      (s13_struc_break,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
     'S14_KEY_LEVELS':       (s14_key_levels,       ['RANGE','WEAK_UP','WEAK_DOWN']),
+    # ── Nuovi indicatori TV ──
+    'S15_OBV_MACD':         (s15_obv_macd,         ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','RANGE','VOLATILE']),
 }
 
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
-    'TREND_DOWN': ['S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
-    'WEAK_UP':    ['S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'WEAK_DOWN':  ['S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'RANGE':      ['S12_WPR_RSI_KELT','S07_STOCHRSI_BB','S09_VWAP_WPER','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'VOLATILE':   ['S07_STOCHRSI_BB','S12_WPR_RSI_KELT','S09_VWAP_WPER'],
-    'UNKNOWN':    ['S10_ST_MACD_SESSION','S07_STOCHRSI_BB','S09_VWAP_WPER'],
+    'TREND_UP':   ['S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
+    'TREND_DOWN': ['S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
+    'WEAK_UP':    ['S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
+    'WEAK_DOWN':  ['S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
+    'RANGE':      ['S15_OBV_MACD','S12_WPR_RSI_KELT','S07_STOCHRSI_BB','S09_VWAP_WPER','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
+    'VOLATILE':   ['S15_OBV_MACD','S07_STOCHRSI_BB','S12_WPR_RSI_KELT','S09_VWAP_WPER'],
+    'UNKNOWN':    ['S15_OBV_MACD','S10_ST_MACD_SESSION','S07_STOCHRSI_BB'],
 }
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
@@ -727,9 +836,13 @@ def main():
     print("            Supertrend, Alligator, OBV, Momentum, Williams%R, VWAP, Order Blocks")
     print("="*72)
 
-    print("Download dati...")
-    candles=download()
-    print(f"  {len(candles)} candele {INTERVAL} ({candles[0]['t'] if 't' in candles[0] else '?'})")
+    print("Caricamento dati...")
+    if _args.file:
+        candles = load_from_file(_args.file)
+    else:
+        print("  (nessun --file specificato, uso yfinance GC=F)")
+        candles = download()
+    print(f"  {len(candles)} candele H1 | prima: {datetime.datetime.fromtimestamp(candles[0]['t']).strftime('%Y-%m-%d')} | ultima: {datetime.datetime.fromtimestamp(candles[-1]['t']).strftime('%Y-%m-%d')}")
 
     print("Calcolo 15 indicatori...")
     ind=compute_all(candles)

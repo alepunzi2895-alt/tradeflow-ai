@@ -1,0 +1,293 @@
+{
+  "generated": "2026-04-14T20:04:03.875678",
+  "config": {
+    "tp_mult": 2.0,
+    "sl_mult": 1.0,
+    "days": 730
+  },
+  "results": {
+    "H1": {
+      "V1_Flip_RSI_Mom_ADX": {
+        "stats": {
+          "n": 220,
+          "wr": 35.5,
+          "pnl": 335.9,
+          "pf": 1.116,
+          "dd": 750.9,
+          "avg_day": 2.24,
+          "pos_months": "11/23",
+          "n_buy": 99,
+          "n_sell": 121,
+          "buy_wr": 28.3,
+          "sell_wr": 41.3
+        },
+        "trades_count": 220
+      },
+      "V2_Triple_MACD_ADX": {
+        "stats": {
+          "n": 2321,
+          "wr": 33.8,
+          "pnl": -5037.5,
+          "pf": 0.827,
+          "dd": 5805.3,
+          "avg_day": -12.23,
+          "pos_months": "9/24",
+          "n_buy": 1304,
+          "n_sell": 1017,
+          "buy_wr": 30.8,
+          "sell_wr": 37.7
+        },
+        "trades_count": 2321
+      },
+      "V3_Flip_Extreme_ADX": {
+        "stats": {
+          "n": 178,
+          "wr": 33.7,
+          "pnl": 420.4,
+          "pf": 1.166,
+          "dd": 569.6,
+          "avg_day": 2.8,
+          "pos_months": "7/24",
+          "n_buy": 66,
+          "n_sell": 112,
+          "buy_wr": 28.8,
+          "sell_wr": 36.6
+        },
+        "trades_count": 178
+      },
+      "V4_SELL_Exhaustion": {
+        "stats": {
+          "n": 285,
+          "wr": 42.8,
+          "pnl": 2154.4,
+          "pf": 2.037,
+          "dd": 486.5,
+          "avg_day": 20.32,
+          "pos_months": "13/23",
+          "n_buy": 0,
+          "n_sell": 285,
+          "buy_wr": 0,
+          "sell_wr": 42.8
+        },
+        "trades_count": 285
+      },
+      "V5_Mom_Session": {
+        "stats": {
+          "n": 99,
+          "wr": 29.3,
+          "pnl": 73.5,
+          "pf": 1.063,
+          "dd": 329.9,
+          "avg_day": 0.93,
+          "pos_months": "8/21",
+          "n_buy": 44,
+          "n_sell": 55,
+          "buy_wr": 22.7,
+          "sell_wr": 34.5
+        },
+        "trades_count": 99
+      },
+      "V6_Strong_5cond": {
+        "stats": {
+          "n": 37,
+          "wr": 35.1,
+          "pnl": 236.7,
+          "pf": 1.414,
+          "dd": 309.9,
+          "avg_day": 7.89,
+          "pos_months": "6/13",
+          "n_buy": 15,
+          "n_sell": 22,
+          "buy_wr": 26.7,
+          "sell_wr": 40.9
+        },
+        "trades_count": 37
+      },
+      "V7_SELL_Flip_RSI_MACD": {
+        "stats": {
+          "n": 77,
+          "wr": 41.6,
+          "pnl": 462.6,
+          "pf": 1.475,
+          "dd": 331.0,
+          "avg_day": 9.44,
+          "pos_months": "8/20",
+          "n_buy": 0,
+          "n_sell": 77,
+          "buy_wr": 0,
+          "sell_wr": 41.6
+        },
+        "trades_count": 77
+      },
+      "V8_SELL_Strong_Trend": {
+        "stats": {
+          "n": 492,
+          "wr": 43.7,
+          "pnl": 2436.4,
+          "pf": 1.441,
+          "dd": 1308.0,
+          "avg_day": 15.62,
+          "pos_months": "12/24",
+          "n_buy": 0,
+          "n_sell": 492,
+          "buy_wr": 0,
+          "sell_wr": 43.7
+        },
+        "trades_count": 492
+      }
+    }
+  },
+  "ranking": [
+    {
+      "rank": 1,
+      "tf": "H1",
+      "variant": "V4_SELL_Exhaustion",
+      "score": 7.397,
+      "stats": {
+        "n": 285,
+        "wr": 42.8,
+        "pnl": 2154.4,
+        "pf": 2.037,
+        "dd": 486.5,
+        "avg_day": 20.32,
+        "pos_months": "13/23",
+        "n_buy": 0,
+        "n_sell": 285,
+        "buy_wr": 0,
+        "sell_wr": 42.8
+      }
+    },
+    {
+      "rank": 2,
+      "tf": "H1",
+      "variant": "V8_SELL_Strong_Trend",
+      "score": 3.637,
+      "stats": {
+        "n": 492,
+        "wr": 43.7,
+        "pnl": 2436.4,
+        "pf": 1.441,
+        "dd": 1308.0,
+        "avg_day": 15.62,
+        "pos_months": "12/24",
+        "n_buy": 0,
+        "n_sell": 492,
+        "buy_wr": 0,
+        "sell_wr": 43.7
+      }
+    },
+    {
+      "rank": 3,
+      "tf": "H1",
+      "variant": "V7_SELL_Flip_RSI_MACD",
+      "score": 1.868,
+      "stats": {
+        "n": 77,
+        "wr": 41.6,
+        "pnl": 462.6,
+        "pf": 1.475,
+        "dd": 331.0,
+        "avg_day": 9.44,
+        "pos_months": "8/20",
+        "n_buy": 0,
+        "n_sell": 77,
+        "buy_wr": 0,
+        "sell_wr": 41.6
+      }
+    },
+    {
+      "rank": 4,
+      "tf": "H1",
+      "variant": "V3_Flip_Extreme_ADX",
+      "score": 0.752,
+      "stats": {
+        "n": 178,
+        "wr": 33.7,
+        "pnl": 420.4,
+        "pf": 1.166,
+        "dd": 569.6,
+        "avg_day": 2.8,
+        "pos_months": "7/24",
+        "n_buy": 66,
+        "n_sell": 112,
+        "buy_wr": 28.8,
+        "sell_wr": 36.6
+      }
+    },
+    {
+      "rank": 5,
+      "tf": "H1",
+      "variant": "V6_Strong_5cond",
+      "score": 0.689,
+      "stats": {
+        "n": 37,
+        "wr": 35.1,
+        "pnl": 236.7,
+        "pf": 1.414,
+        "dd": 309.9,
+        "avg_day": 7.89,
+        "pos_months": "6/13",
+        "n_buy": 15,
+        "n_sell": 22,
+        "buy_wr": 26.7,
+        "sell_wr": 40.9
+      }
+    },
+    {
+      "rank": 6,
+      "tf": "H1",
+      "variant": "V1_Flip_RSI_Mom_ADX",
+      "score": 0.478,
+      "stats": {
+        "n": 220,
+        "wr": 35.5,
+        "pnl": 335.9,
+        "pf": 1.116,
+        "dd": 750.9,
+        "avg_day": 2.24,
+        "pos_months": "11/23",
+        "n_buy": 99,
+        "n_sell": 121,
+        "buy_wr": 28.3,
+        "sell_wr": 41.3
+      }
+    },
+    {
+      "rank": 7,
+      "tf": "H1",
+      "variant": "V5_Mom_Session",
+      "score": 0.16,
+      "stats": {
+        "n": 99,
+        "wr": 29.3,
+        "pnl": 73.5,
+        "pf": 1.063,
+        "dd": 329.9,
+        "avg_day": 0.93,
+        "pos_months": "8/21",
+        "n_buy": 44,
+        "n_sell": 55,
+        "buy_wr": 22.7,
+        "sell_wr": 34.5
+      }
+    }
+  ],
+  "best_per_tf": {
+    "H1": {
+      "variant": "V4_SELL_Exhaustion",
+      "stats": {
+        "n": 285,
+        "wr": 42.8,
+        "pnl": 2154.4,
+        "pf": 2.037,
+        "dd": 486.5,
+        "avg_day": 20.32,
+        "pos_months": "13/23",
+        "n_buy": 0,
+        "n_sell": 285,
+        "buy_wr": 0,
+        "sell_wr": 42.8
+      }
+    }
+  }
+}

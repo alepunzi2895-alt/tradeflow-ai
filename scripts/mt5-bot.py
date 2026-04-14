@@ -19,41 +19,38 @@ MT5_LOGIN    = 1301224666
 MT5_PASSWORD = "Alessandro95!"
 MT5_SERVER   = "XMGlobal-MT5 6"
 
-SYMBOL       = "GOLD"        # Simbolo di base (verrà verificato all'avvio)
+SYMBOL       = "GOLD"
 LOT_SIZE     = 0.02          # lot size iniziale (0.02 = sicuro su €1000)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
-MAX_TRADES   = 10            # max operazioni per giorno (richiesto 10)
-COOLDOWN_H   = 0.5           # ore di cooldown tra trade (30 min per più frequenza)
-EXTREME_MULT = 3.5           # ATR > 3.5x avg = giorno estremo, skip
-SESSION_UTC  = (0, 24)       # Finestra 24h per massimizzare profitti (come richiesto)
-CHECK_SEC    = 1             # Polling ultra-rapido (1 secondo)
+MAX_TRADES   = 3             # max operazioni per giorno
+COOLDOWN_H   = 1             # ore di cooldown tra trade
+EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
+SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
+CHECK_SEC    = 60            # polling ogni 60 secondi
 
 # ── VERCEL SYNC (mostra dati live nella UI) ───────────────────────────────────
-VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"
+VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app/"  # aggiorna se diverso
 MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
 SYNC_ENABLED = True          # False per disabilitare il sync cloud
 
 LOG_FILE     = "mt5-bot.log"
 
-# ── TP/SL per strategia (in punti/pips su XAUUSD) ───────────────────────────
-# Su XAUUSD spot: 1 punto = $0.01, quindi TP=$15 → 1500 punti
-# In mt5: XAUUSD ha digits=2, quindi 1 punto = 0.01
-# Usiamo valori in dollari, converti in punti al momento dell'ordine
+# ── TP/SL per strategia ───────────────────────────────────────────────────────
+# GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
+# Solo MFKK attive — nuove strategie da indicatori TV verranno aggiunte qui.
 STRATEGY_PARAMS = {
-    'S01_EXHAUSTION':  {'tp_usd': 15.0, 'sl_usd':  9.0, 'label': 'Exhaustion'},
-    'S06_ORDERBLOCK':  {'tp_usd': 18.0, 'sl_usd': 10.0, 'label': 'Order Block'},
-    'S09_VWAP_WPR':    {'tp_usd': 18.0, 'sl_usd': 10.0, 'label': 'VWAP+W%R'},
-    'S12_WPR_KELTNER': {'tp_usd': 20.0, 'sl_usd': 12.0, 'label': 'W%R+Keltner'},
-    'S10_SESSION_MOM': {'tp_usd': 20.0, 'sl_usd': 12.0, 'label': 'Session Mom'},
+    'S00_MFKK':     {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Score'},
+    'S00_MFKK_HWR': {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK HighWR'},
 }
+# Allineato con strategy.js regimePriority
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
-    'TREND_DOWN': ['S01_EXHAUSTION','S06_ORDERBLOCK','S10_SESSION_MOM'],
-    'WEAK_UP':    ['S06_ORDERBLOCK','S10_SESSION_MOM','S12_WPR_KELTNER'],
-    'WEAK_DOWN':  ['S06_ORDERBLOCK','S10_SESSION_MOM','S12_WPR_KELTNER'],
-    'RANGE':      ['S09_VWAP_WPR','S12_WPR_KELTNER','S06_ORDERBLOCK'],
-    'VOLATILE':   ['S12_WPR_KELTNER','S09_VWAP_WPR'],
-    'UNKNOWN':    ['S10_SESSION_MOM'],
+    'TREND_UP':   ['S00_MFKK_HWR', 'S00_MFKK'],
+    'TREND_DOWN': ['S00_MFKK_HWR', 'S00_MFKK'],
+    'WEAK_UP':    ['S00_MFKK'],
+    'WEAK_DOWN':  ['S00_MFKK_HWR', 'S00_MFKK'],
+    'RANGE':      ['S00_MFKK'],
+    'VOLATILE':   ['S00_MFKK'],
+    'UNKNOWN':    ['S00_MFKK'],
 }
 
 # ── LOGGING ───────────────────────────────────────────────────────────────────
@@ -448,62 +445,6 @@ def place_order(direction, tp_usd, sl_usd, strategy_name):
              f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}]")
     return result
 
-def manage_positions():
-    """Gestisce Break Even e Trailing Stop per le posizioni aperte"""
-    positions = mt5.positions_get(symbol=SYMBOL)
-    if positions is None: return
-
-    tick = mt5.symbol_info_tick(SYMBOL)
-    sym_info = mt5.symbol_info(SYMBOL)
-    if not tick or not sym_info: return
-
-    for p in positions:
-        if p.magic != MAGIC: continue
-        
-        entry = p.price_open
-        current = p.price_current
-        sl = p.sl
-        tp = p.tp
-        initial_risk = abs(entry - sl) if sl != 0 else 10.0 # fallback $10
-        
-        # Calcolo distanza attuale dal profitto in prezzo
-        profit_dist = (current - entry) if p.type == mt5.POSITION_TYPE_BUY else (entry - current)
-        
-        new_sl = None
-
-        # 1. BREAK EVEN (BE): se profitto >= 0.8x rischio iniziale, sposta SL a entry + mini profit
-        if profit_dist >= initial_risk * 0.8:
-            be_level = entry + (sym_info.point * 20) if p.type == mt5.POSITION_TYPE_BUY else entry - (sym_info.point * 20)
-            # Sposta solo se non è già a BE o meglio
-            if p.type == mt5.POSITION_TYPE_BUY and (sl < entry):
-                new_sl = be_level
-            elif p.type == mt5.POSITION_TYPE_SELL and (sl > entry or sl == 0):
-                new_sl = be_level
-
-        # 2. TRAILING STOP (TS): se profitto >= 1.2x rischio iniziale, attiva trailing
-        if profit_dist >= initial_risk * 1.2:
-            trail_dist = initial_risk * 0.7 # distanza del trailing
-            if p.type == mt5.POSITION_TYPE_BUY:
-                potential_ts = current - trail_dist
-                if potential_ts > sl: 
-                    new_sl = potential_ts
-            else:
-                potential_ts = current + trail_dist
-                if sl == 0 or potential_ts < sl:
-                    new_sl = potential_ts
-
-        if new_sl and abs(new_sl - sl) > (sym_info.point * 5): 
-            request = {
-                "action": mt5.TRADE_ACTION_SLTP,
-                "symbol": SYMBOL,
-                "position": p.ticket,
-                "sl": round(new_sl, sym_info.digits),
-                "tp": tp,
-            }
-            res = mt5.order_send(request)
-            if res.retcode == mt5.TRADE_RETCODE_DONE:
-                log.info(f"🛡️ MODIFICA SL (BE/TS): Ticket {p.ticket} -> SL @ {new_sl:.2f}")
-
 def log_trade_to_json(direction, strategy, price, tp, sl, result):
     """Appende il trade a mt5-trades.json"""
     entry = {
@@ -534,8 +475,7 @@ def get_open_positions_data():
     if not pos: return []
     result = []
     for p in pos:
-        # Mostriamo tutte le posizioni reali del conto (manuali + bot)
-        is_bot = (p.magic == MAGIC)
+        if p.magic != MAGIC: continue
         result.append({
             'ticket':    p.ticket,
             'direction': 'buy' if p.type == 0 else 'sell',
@@ -545,52 +485,19 @@ def get_open_positions_data():
             'tp':        round(p.tp, 2),
             'sl':        round(p.sl, 2),
             'profit':    round(p.profit, 2),
-            'strategy':  p.comment.replace('TF-AI ', '') if is_bot else 'MANUALE',
-            'is_bot':    is_bot,
+            'strategy':  p.comment.replace('TF-AI ', ''),
             'time':      datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
         })
     return result
 
 def get_recent_trades_data(n=20):
-    """Legge gli ultimi N trade direttamente da MT5 History"""
-    try:
-        # Brute force: chiediamo da 0 a un futuro molto lontano
-        # MT5 history_deals_get accetta timestamp o datetime
-        end_ts = int(time.time()) + 86400 * 7 # +1 settimana
-        start_ts = 0
-        
-        deals = mt5.history_deals_get(start_ts, end_ts)
-        if deals is None:
-            # Fallback usando group="*"
-            deals = mt5.history_deals_get(group="*")
-            
-        if deals is None:
-            log.debug(f"History deals still None. Last error: {mt5.last_error()}")
-            return []
-            
-        log.info(f"📊 Recuperati {len(deals)} deal dallo storico MT5")
-        
-        result = []
-        for d in deals:
-            # DEAL_ENTRY_OUT = 1 (chiusura), DEAL_ENTRY_INOUT = 2 (reverse)
-            if d.symbol == "" or d.entry not in [1, 2]: continue
-            
-            # Filtriamo per mostrare solo i deal relativi a Gold
-            if SYMBOL.upper() not in d.symbol.upper(): continue
-            
-            result.append({
-                'ticket':    d.ticket,
-                'symbol':    d.symbol,
-                'direction': 'buy' if d.type == 0 else 'sell',
-                'price':     round(d.price, 2),
-                'profit':    round(d.profit + d.swap + d.commission, 2),
-                'time':      datetime.datetime.fromtimestamp(d.time, tz=datetime.timezone.utc).isoformat(),
-                'strategy':  d.comment.replace('TF-AI ', '') if 'TF-AI' in d.comment else 'MANUALE'
-            })
-        return result[-n:]
-    except Exception as e:
-        log.error(f"Errore get_recent_trades: {e}")
-        return []
+    """Legge gli ultimi N trade da mt5-trades.json"""
+    fname = 'mt5-trades.json'
+    if not os.path.exists(fname): return []
+    with open(fname, encoding='utf-8') as f:
+        try: trades = json.load(f)
+        except: return []
+    return trades[-n:]
 
 def sync_to_vercel(acc, positions, trades, bot_status):
     """Invia lo stato corrente alla UI su Vercel"""
@@ -616,31 +523,8 @@ def sync_to_vercel(acc, positions, trades, bot_status):
     except Exception as e:
         log.debug(f"Sync Vercel fallito (non critico): {e}")
 
-def fetch_remote_commands():
-    """Interroga il DB per nuovi comandi dalla UI"""
-    if not SYNC_ENABLED or not VERCEL_URL: return None
-    payload = json.dumps({
-        'action': 'mt5_command_get',
-        'secret': MT5_SECRET
-    }).encode('utf-8')
-    try:
-        req = urllib.request.Request(
-            f"{VERCEL_URL}/api/db",
-            data=payload,
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
-        with urllib.request.urlopen(req, timeout=8) as r:
-            if r.status == 200:
-                data = json.loads(r.read().decode('utf-8'))
-                return data.get('command')
-    except Exception as e:
-        log.debug(f"Fetch comandi fallito: {e}")
-    return None
-
 # ── LOOP PRINCIPALE ───────────────────────────────────────────────────────────
 def run():
-    global SYMBOL
     log.info("="*60)
     log.info("TradeFlow AI — MT5 Bot avviato")
     log.info(f"Symbol: {SYMBOL} | Lot: {LOT_SIZE} | Max trade/gg: {MAX_TRADES}")
@@ -651,20 +535,6 @@ def run():
         log.error("Connessione MT5 fallita. Assicurati che MT5 sia aperto e configurato.")
         sys.exit(1)
 
-    # Verifica Simbolo Corretto (GOLD vs gold vs XAUUSD)
-    possible_symbols = ["GOLD", "gold", "XAUUSD", "XAUUSD.m", "XAUUSD.gr"]
-    found_symbol = None
-    for s in possible_symbols:
-        info = mt5.symbol_info(s)
-        if info:
-            found_symbol = s
-            break
-    if found_symbol:
-        log.info(f"✅ Simbolo Gold rilevato: {found_symbol}")
-        SYMBOL = found_symbol
-    else:
-        log.warning(f"⚠️ Simbolo GOLD non rilevato chiaramente, uso default: {SYMBOL}")
-
     acc = get_account_info()
     if acc:
         log.info(f"Account: {acc['balance']:.2f} {acc['currency']} "
@@ -672,72 +542,32 @@ def run():
 
     last_bar_time = None   # per rilevare nuova candela H1
     last_sync_time = 0    # timestamp ultimo sync Vercel
-    last_cmd_check = 0    # timestamp ultimo check comandi
 
     while True:
         try:
             now_utc = datetime.datetime.now(datetime.timezone.utc)
-            now_ts = time.time()
 
-            # ── 1. Gestione Posizioni Aperte (BE/TS) ─────────────────────────
-            manage_positions()
-
-            # ── 2. Verifica Comandi Remoti (ogni CHECK_SEC) ─────────────────
-            if now_ts - last_cmd_check >= CHECK_SEC:
-                cmd = fetch_remote_commands()
-                if cmd:
-                    log.info(f"🚀 RICEVUTO COMANDO REMOTO: {cmd['direction'].upper()} su {cmd['strategy']}")
-                    # Verifica scadenza (3 minuti)
-                    created = datetime.datetime.fromisoformat(cmd['created_at'].replace('Z', '+00:00'))
-                    if (now_utc - created).total_seconds() > 180:
-                        log.warning("⚠️ Comando scaduto (>3min), ignorato.")
-                    else:
-                        # Esegui ordine
-                        result = place_order(cmd['direction'], cmd['tp'], cmd['sl'], cmd['strategy'])
-                        if result:
-                            # Log e Sync immediato (opzionale, già fatto in place_order + sync_to_vercel)
-                            pass
-                last_cmd_check = now_ts
-
-            # ── 3. Recupera candele per analisi autonoma ─────────────────────
+            # ── Recupera candele ──────────────────────────────────────────────
             candles = get_candles(300)
             if candles is None or len(candles) < 100:
                 log.warning("Candele non disponibili, riprovo...")
-                time.sleep(10)
+                time.sleep(30)
                 continue
 
-            # ── Sync periodico a Vercel (ogni CHECK_SEC) ──────
-            if now_ts - last_sync_time >= CHECK_SEC:
+            # ── Sync periodico a Vercel (ogni 60s anche senza nuova barra) ──────
+            now_ts = time.time()
+            if now_ts - last_sync_time >= 60:
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
-                
-                # Calcola statistiche oggi reali da MT5 (brute force)
-                all_deals = mt5.history_deals_get(0, int(time.time()) + 86400)
-                
-                real_pnl_today = 0
-                real_trades_today = 0
-                if all_deals:
-                    start_today_ts = int(datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
-                    for d in all_deals:
-                        # Consideriamo solo i deal di oggi e di tipo OUT
-                        if d.time >= start_today_ts and d.symbol != "" and d.entry in [1, 2]:
-                            real_pnl_today += (d.profit + d.swap + d.commission)
-                            real_trades_today += 1
-
-                # Calcola regime attuale se abbiamo le candele
-                current_regime = 'UNKNOWN'
-                if 'I' in locals() and 'i' in locals():
-                    current_regime = detect_regime(I, i)
-
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
                     'symbol': SYMBOL,
                     'lot': LOT_SIZE,
-                    'trades_today': real_trades_today,
-                    'pnl_today': round(real_pnl_today, 2),
-                    'regime': current_regime,
+                    'trades_today': state.trades_today,
+                    'pnl_today': round(state.pnl_today, 2),
+                    'regime': 'UNKNOWN',
                     'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
@@ -747,7 +577,7 @@ def run():
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
             if latest_bar_time == last_bar_time:
                 # Nessuna nuova barra chiusa, aspetta
-                time.sleep(CHECK_SEC) 
+                time.sleep(CHECK_SEC)
                 continue
             last_bar_time = latest_bar_time
             bar_dt = datetime.datetime.fromtimestamp(latest_bar_time, tz=datetime.timezone.utc)
@@ -765,21 +595,21 @@ def run():
             atr_avg = I['atr_avg'][i]
             if atr_v and atr_avg and atr_v > EXTREME_MULT * atr_avg:
                 log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip")
-                time.sleep(10) # Ciclo più breve per reattività comandi
+                time.sleep(CHECK_SEC)
                 continue
 
             # ── Controllo sessione e limiti giornalieri ───────────────────────
             can, reason = state.can_trade(now_utc)
             if not can:
                 log.debug(f"Trade non permesso: {reason}")
-                time.sleep(10) # Ciclo più breve per reattività comandi
+                time.sleep(CHECK_SEC)
                 continue
 
             # ── Controlla posizioni aperte ────────────────────────────────────
             open_pos = count_open_positions()
             if open_pos > 0:
                 log.debug(f"Posizione già aperta ({open_pos}), attendo chiusura")
-                time.sleep(10) # Ciclo più breve per reattività comandi
+                time.sleep(CHECK_SEC)
                 continue
 
             # ── Segnale strategia ─────────────────────────────────────────────
@@ -788,30 +618,16 @@ def run():
 
             if strategy_name is None:
                 log.info(f"Regime: {regime} | Nessun segnale su {bar_dt.strftime('%H:%M')}")
-                time.sleep(10) # Ciclo più breve per reattività comandi
+                time.sleep(CHECK_SEC)
                 continue
 
-            # ── Calcolo TP/SL Dinamico (ATR-based) ──────────────────────────
-            atr_v = I['atr'][i]
-            # Multiplier: 2.0x ATR per TP, 1.0x ATR per SL (come config strat)
-            # Se la strategia ha parametri fissi (S01, S06, etc. in STRATEGY_PARAMS), 
-            # usiamo quelli come minimo, o l'ATR se maggiore.
-            min_tp = STRATEGY_PARAMS[strategy_name]['tp_usd']
-            min_sl = STRATEGY_PARAMS[strategy_name]['sl_usd']
-            
-            calc_tp = round(atr_v * 2.0, 2) if atr_v else min_tp
-            calc_sl = round(atr_v * 1.0, 2) if atr_v else min_sl
-            
-            # Applica protezioni
-            final_tp = max(min_tp, calc_tp)
-            final_sl = max(min_sl, calc_sl)
-
-            log.info(f"★ SEGNALE: {direction.upper()} | {strategy_name} | Regime: {regime} "
+            params = STRATEGY_PARAMS[strategy_name]
+            log.info(f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
                      f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
-                     f"| TP=${final_tp} SL=${final_sl} (ATR-based)")
+                     f"| TP=${params['tp_usd']} SL=${params['sl_usd']}")
 
             # ── Invia ordine ──────────────────────────────────────────────────
-            result = place_order(direction, final_tp, final_sl, strategy_name)
+            result = place_order(direction, params['tp_usd'], params['sl_usd'], strategy_name)
 
             if result:
                 tick = mt5.symbol_info_tick(SYMBOL)
@@ -833,7 +649,7 @@ def run():
                 )
                 last_sync_time = time.time()
 
-            time.sleep(10) # Ciclo più breve per reattività comandi
+            time.sleep(CHECK_SEC)
 
         except KeyboardInterrupt:
             log.info("Bot fermato dall'utente (Ctrl+C)")

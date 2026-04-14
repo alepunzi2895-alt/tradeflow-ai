@@ -28,9 +28,19 @@ LEGGI → DIAGNOSTICA → AGISCI → REGISTRA → MIGLIORA
 
 ### 0.3 Regole di autodiagnosi
 - **Se un componente restituisce `undefined` o `ReferenceError`**: cercare dove la variabile è definita e verificare scope e naming.
-- **Se un ordine MT5 fallisce con retcode**: cercare il codice nella tabella **§11.4** prima di modificare il codice.
+- **Se un ordine MT5 fallisce con retcode**: cercare il codice nella tabella **§10.4** prima di modificare il codice.
 - **Se un'API restituisce dati errati**: verificare se il problema è lato Vercel (IP blacklist) o lato browser prima di cambiare la sorgente dati.
 - **Se la UI non si aggiorna**: ricordare che `seRefresh` ricostruisce l'intero `innerHTML` ogni **1 secondo** — le modifiche DOM asincrone su elementi dentro `#se-content` vengono sovrascritte.
+- **Se un segnale MFKK_HWR non appare mai**: verificare che `dashContext.mfkk` esponga le chiavi `adx`, `dip`, `dim`, `macd`. La fallback `seInds.adx=25` è sempre < 35 → il segnale viene filtrato silenziosamente.
+- **Prima di aggiungere una nuova strategia**: definire ID (`S01_*`, `S02_*`, …), scrivere la funzione in `SE_STRATEGY_FNS`, aggiungere entry in `SE.strategies` con stats backtest, inserire l'ID nella `regimePriority` corretta. MAI mettere in produzione senza backtest >= 6 mesi H1.
+
+### 0.4 Protocollo integrazione nuovi indicatori TradingView
+Quando l'utente fornisce un indicatore Pine Script da TradingView:
+1. **Capire la logica**: identificare i segnali di entry/exit (BUY/SELL) e i filtri.
+2. **Tradurre in JS**: riscrivere il calcolo in `strategy.js` dentro `SE_STRATEGY_FNS` come `S0X_NOMEIND`.
+3. **Dati necessari**: valutare se l'indicatore richiede nuove colonne TV Scanner (aggiungere in `api/price.js`) o nuovi calcoli browser-side (aggiungere in `seInds`).
+4. **Backtest**: eseguire `scripts/strategy-engine-v2.py` con il nuovo segnale su 730gg GC=F H1 prima di attivare in produzione.
+5. **Aggiornare la directive**: aggiungere entry in §5.2, §5.3, §6 (Self-Learning Log), e §7 se la strategia ha parametri ottimizzati.
 
 ---
 
@@ -78,8 +88,9 @@ api/
 
 scripts/
   mt5-bot.py                  ← Bot trading Python: loop 1s, bridge MT5 ↔ Vercel DB
-  strategy-engine-v2.py       ← Backtester Python: 12 strategie × 18 indicatori (730gg H1)
-  strategy-mtf.py             ← MTF backtester: 5 strategie × 3 TF
+  fetch_mt5_history.py        ← Scarica GOLD H1 da MT5 → xauusd_h1_mt5.json (dati broker reali)
+  strategy-engine-v2.py       ← Backtester Python (--file xauusd_h1_mt5.json per dati MT5 reali)
+  strategy-mtf.py             ← MTF backtester: strategie × 3 TF
   backtest-mfkk.mjs           ← Backtester Node.js MFKK con config ottimale
   optimize-full.py            ← Ottimizzatore grid search 3 fasi
   analyze-entry-conditions.py ← Analisi empirica zone indicatori su 2 anni H1
@@ -223,31 +234,36 @@ seDetectRegime(I, i):
   default → RANGE
 ```
 
-### 5.2 Strategie Attive (post-backtest 730gg GC=F H1)
+### 5.2 Strategie Attive (post-backtest 730gg GC=F H1 · aggiornato 2026-04-14)
 | ID | Label | WR | PF | P&L 24m | Regimi |
 |---|---|---|---|---|---|
-| S00_MFKK | MFKK Score | 48% | 1.53 | +$12.086 | TREND/WEAK |
-| S00_MFKK_HWR | 💎 MFKK HighWR | 84% | 8.73 | +$2.443 | TREND |
-| S01_EXHAUSTION | Exhaustion | 56% | 2.03 | +$1.948 | TREND |
-| S04_BB_SQUEEZE | BB Squeeze | 39% | 1.04 | +$1.163 | RANGE |
-| S09_VWAP_WPR | VWAP+W%R | 80% | 5.59 | +$167 | RANGE |
-| S06_ORDERBLOCK | Order Block | 41% | 1.09 | +$290 | RANGE/WEAK |
-| S12_WPR_KELTNER | W%R+Keltner | 37% | 0.96 | -$246 | VOLATILE only |
+| S00_MFKK | MFKK Score | 48% | 1.53 | +$12.086 | Tutti |
+| S00_MFKK_HWR | 💎 MFKK HighWR | 84% | 8.73 | +$2.443 | TREND/WEAK_DOWN |
+| S02_ULTIMATE_RSI | Ultimate RSI | ? | ? | In backtest | Tutti |
+| S03_MOMENTUM | Momentum(10) | ? | ? | In backtest | Tutti |
+| S04_ICT_ORDERFLOW | ICT Order Flow | ? | ? | In backtest | Tutti |
 
-**Strategie RIMOSSE (P&L negativo su 2y)**:
-- S13_STRUC_BREAK: -$1.411 ❌
-- S14_KEY_LEVELS: -$633 ❌
-- S08_OBV_EMA_MOM: -$3.016 ❌
+**Strategie RIMOSSE** (focus su MFKK · nuove strategie verranno da indicatori TV personalizzati):
+- S01_EXHAUSTION: rimossa per semplificare — sostituita da MFKK che copre lo stesso segnale
+- S04_BB_SQUEEZE: rimossa — PF 1.04 non sufficiente, MaxDD alto ($1.290)
+- S09_VWAP_WPR: rimossa — troppo rara (8 trade/anno), difficile da integrare
+- S06_ORDERBLOCK: rimossa — PF 1.09 con 234 trade/anno, efficienza bassa
+- S12_WPR_KELTNER: rimossa — P&L negativo (-$246) su 2 anni
+- S13_STRUC_BREAK: rimossa — P&L -$1.411 ❌
+- S14_KEY_LEVELS: rimossa — P&L -$633 ❌
+- S08_OBV_EMA_MOM: rimossa — P&L -$3.016 ❌
 
-### 5.3 Regime Priority (aggiornata 2026-04)
+> **Prossimo step**: aggiungere strategie basate su indicatori TradingView personalizzati (Pine Script) → vedi §0.4 per il protocollo.
+
+### 5.3 Regime Priority (aggiornata 2026-04-14)
 | Regime | Strategie priorità |
 |---|---|
-| TREND_UP | HWR → MFKK → EXHAUSTION |
-| TREND_DOWN | HWR → MFKK → EXHAUSTION |
-| WEAK_UP | MFKK → BB_SQUEEZE → ORDERBLOCK |
-| WEAK_DOWN | MFKK → EXHAUSTION → ORDERBLOCK |
-| RANGE | VWAP_WPR → BB_SQUEEZE → ORDERBLOCK |
-| VOLATILE | WPR_KELTNER → BB_SQUEEZE |
+| TREND_UP | HWR → MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
+| TREND_DOWN | HWR → MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
+| WEAK_UP | MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
+| WEAK_DOWN | HWR → MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
+| RANGE | OBV_MACD → ULTIMATE_RSI → MOMENTUM → MFKK |
+| VOLATILE | OBV_MACD → ULTIMATE_RSI → MOMENTUM → MFKK |
 
 ### 5.4 Parametri Operativi
 - Max **10 trade/giorno**, cooldown **30 min** tra trade
@@ -284,7 +300,17 @@ seDetectRegime(I, i):
 | 2026-04-14 | Backtest XAUUSD=X delisted Yahoo | HTTP 404 su tutti i chunk | Migrato a GC=F via yfinance per backtesting storico |
 | 2026-04-14 | S13/S14 in rotation con P&L negativo | Priority basata su stime | Rimossi dopo backtest 730gg; sostituiti con S04_BB_SQUEEZE in RANGE |
 | 2026-04-14 | `ReferenceError: online is not defined` | Variabile `online` usata in seRender ma non definita; nome corretto è `botOnline` (definita alla riga 334) | Rinominato `online` → `botOnline` in strategy.js:367 |
-| 2026-04-14 | Ordine MT5 fallisce `retcode=10027` | "AutoTrading disabled by client" — pulsante Algo Trading non attivo in MT5 | Non è un bug di codice — l'utente deve abilitare Algo Trading nella toolbar MT5 (vedi §11.4) |
+| 2026-04-14 | Ordine MT5 fallisce `retcode=10027` | "AutoTrading disabled by client" — pulsante Algo Trading non attivo in MT5 | Non è un bug di codice — l'utente deve abilitare Algo Trading nella toolbar MT5 (vedi §10.4) |
+| 2026-04-14 | S00_MFKK_HWR non scattava mai | `seInds.adx` è fallback statico (25) sempre < 35 → condizione ADX≥35 mai soddisfatta | Fix: S00_MFKK_HWR ora legge `dashContext.mfkk.adx/dip/dim/macd` reali, con fallback a seInds |
+| 2026-04-14 | Architettura strategie semplificata | Decisione utente: tenere solo S00_MFKK e S00_MFKK_HWR · preparare slot per strategie TV | Rimosse S01/S04/S06/S09/S12/S13/S14 da SE.strategies, SE_STRATEGY_FNS, regimePriority |
+| 2026-04-14 | mt5-bot.py aveva vecchie strategie (S01/S06/S09/S12) | STRATEGY_PARAMS e REGIME_PRIORITY non sincronizzati con strategy.js | Aggiornati in mt5-bot.py per usare solo S00_MFKK + S00_MFKK_HWR |
+| 2026-04-14 | Backtester usava solo yfinance GC=F | Nessun modo per usare dati broker reali MT5 | Creato fetch_mt5_history.py + flag --file in strategy-engine-v2.py |
+| 2026-04-14 | Integrazione nuovo indicatore TradingView | Utente ha richiesto indicatore Ultimate RSI [LuxAlgo] | Tradotto in JS via `_calcUltimateRSI` in `strategy.js` come S02_ULTIMATE_RSI |
+| 2026-04-14 | Integrazione indicatore Momentum | Utente ha richiesto indicatore Momentum puro | Aggiunto `S03_MOMENTUM` (Periodo: 10) in `strategy.js` |
+| 2026-04-14 | Integrazione ICT Order Flow | Utente ha fornito script ICT da ~600 righe | Astratta e applicata logica quantitativa di FVG Mitigations via `S04_ICT_ORDERFLOW` |
+| 2026-04-14 | S01_OBV_MACD aggiunto (Pine Script v4) | OBV normalizzato + DEMA(9) − EMA(26) + T-Channel · backtest pendente su dati MT5 | Implementato in strategy.js (_calcOBVMACD) e strategy-engine-v2.py (S15_OBV_MACD) |
+| 2026-04-14 | seInds.adx era fallback statico fill(25) | _adxSma già presente ma mai chiamata in seRefresh | Aggiunta const _adxd = _adxSma(H,L,C,14) · seInds ora usa adx/dip/dim reali · aggiunto mom10:_roc(C,10) |
+| 2026-04-14 | S02_OBV_SELL integrata dopo backtest multi-variante | Backtest 8 varianti su H1 GC=F 730gg: V4 SELL-ONLY vince (WR 42.8% PF 2.037 P&L $2154 MaxDD $486 N=285) | Aggiunta S02_OBV_SELL in SE.strategies, SE_STRATEGY_FNS (oc=-1 + RSI>55 + ADX≥20 + mom10<0), regimePriority TREND_DOWN/WEAK_DOWN/RANGE |
 
 ---
 
@@ -476,6 +502,7 @@ Account: 990.81 EUR (equity=990.81, free margin=990.81)
 ## 12. BACKLOG — PROSSIMI STEP
 
 ### Priorità Alta
+- [ ] **Nuove strategie da indicatori TradingView** (Pine Script → JS) — prossimo step in sviluppo, vedi §0.4
 - [ ] **Notifiche push** (Service Worker) quando Strategy Engine genera un segnale
 - [ ] **Filtro news calendar**: skip 30 min prima/dopo high-impact events (già nel backlog da settimane)
 - [ ] **Fix apostrofo in onclick**: sostituire `onclick='fn(${JSON.stringify(s)})'` con `data-signal` + `addEventListener` per evitare rottura silente su why fields in italiano

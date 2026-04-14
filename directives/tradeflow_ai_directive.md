@@ -324,25 +324,23 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | Architettura strategie semplificata | Decisione utente: tenere solo S00_MFKK e S00_MFKK_HWR · preparare slot per strategie TV | Rimosse S01/S04/S06/S09/S12/S13/S14 da SE.strategies, SE_STRATEGY_FNS, regimePriority |
 | 2026-04-14 | mt5-bot.py aveva vecchie strategie (S01/S06/S09/S12) | STRATEGY_PARAMS e REGIME_PRIORITY non sincronizzati con strategy.js | Aggiornati in mt5-bot.py per usare solo S00_MFKK + S00_MFKK_HWR |
 | 2026-04-14 | Backtester usava solo yfinance GC=F | Nessun modo per usare dati broker reali MT5 | Creato fetch_mt5_history.py + flag --file in strategy-engine-v2.py |
-| 2026-04-14 | Integrazione nuovo indicatore TradingView | Utente ha richiesto indicatore Ultimate RSI [LuxAlgo] | Tradotto in JS via `_calcUltimateRSI` in `strategy.js` come S02_ULTIMATE_RSI |
-| 2026-04-14 | Integrazione indicatore Momentum | Utente ha richiesto indicatore Momentum puro | Aggiunto `S03_MOMENTUM` (Periodo: 10) in `strategy.js` |
-| 2026-04-14 | Integrazione ICT Order Flow | Utente ha fornito script ICT da ~600 righe | Astratta e applicata logica quantitativa di FVG Mitigations via `S04_ICT_ORDERFLOW` |
-| 2026-04-14 | Refactoring UI Tab Strategie | Utente richiede solo 3 card: MFKK Score, MFKK HighWR, MFKK Intraday | Rimossi S01/S02/S03/S04 da SE.strategies · aggiunto S05_MFKK_INTRADAY (OBV+RSI+Mom) · card con 5 periodi (1m/6m/12m/24m/MaxDD) · creato backtest_mfkk_intraday.py |
-| 2026-04-14 | Backtest MT5 GOLD reale — 2 strategie finali | `--mt5` rivela: HighWR produce 3 trade in 24m (PF 0.83) → rimossa. V2 Triple MACD batte V3 SELL ($4.794 vs $2.248) | Rimossa S00_MFKK_HWR da UI · S05 aggiornata a V2 (OBV+RSI+MACD+Mom+ADX≥20) · stats aggiornate con dati MT5 reali · direttive aggiornate · deploy git |
-| 2026-04-14 | Integrazione indicatore Momentum | Utente ha richiesto indicatore Momentum puro | Aggiunto `S03_MOMENTUM` (Periodo: 10) in `strategy.js` |
-| 2026-04-14 | Integrazione ICT Order Flow | Utente ha fornito script ICT da ~600 righe | Astratta e applicata logica quantitativa di FVG Mitigations via `S04_ICT_ORDERFLOW` |
-| 2026-04-14 | S01_OBV_MACD aggiunto (Pine Script v4) | OBV normalizzato + DEMA(9) − EMA(26) + T-Channel · backtest pendente su dati MT5 | Implementato in strategy.js (_calcOBVMACD) e strategy-engine-v2.py (S15_OBV_MACD) |
-| 2026-04-14 | seInds.adx era fallback statico fill(25) | _adxSma già presente ma mai chiamata in seRefresh | Aggiunta const _adxd = _adxSma(H,L,C,14) · seInds ora usa adx/dip/dim reali · aggiunto mom10:_roc(C,10) |
-| 2026-04-14 | S02_OBV_SELL integrata dopo backtest multi-variante | Backtest 8 varianti su H1 GC=F 730gg: V4 SELL-ONLY vince (WR 42.8% PF 2.037 P&L $2154 MaxDD $486 N=285) | Aggiunta S02_OBV_SELL in SE.strategies, SE_STRATEGY_FNS (oc=-1 + RSI>55 + ADX≥20 + mom10<0), regimePriority TREND_DOWN/WEAK_DOWN/RANGE |
+| 2026-04-14 | Integrazione Ultimate RSI, Momentum, ICT Order Flow | Utente ha richiesto 3 indicatori TV | Tradotti in JS (S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW) — logica mantenuta ma non mostrata in UI |
+| 2026-04-14 | Refactoring UI Tab Strategie a 2 card | Utente richiede solo MFKK Score + MFKK Intraday · MFKK HighWR rimossa (3 trade in 24m PF 0.83 su dati MT5 reali) | Rimossi S01/S02/S03/S04/S00_MFKK_HWR da UI · S05_MFKK_INTRADAY = V2 Triple MACD H1 (WR 37% PF 1.24 24m $4.794) |
+| 2026-04-14 | Backtest MT5 GOLD reale — M30 vs H1 verifica | V2 Triple MACD H1 Score=4.149 vs M30 Score=∼2.1 · H1 3.75x più profittevole | Confermato H1 come TF ottimale per MFKK Intraday |
+| 2026-04-14 | UI Strategie: aggiunto trades/day per periodo | Richiesta utente: media trade giornalieri a 1/6/12/24 mesi | Aggiunti td_1m/td_6m/td_12m/td_24m in SE.strategies.stats · backtest_mfkk_intraday.py updated con avg_td nei periods |
+| 2026-04-14 | Bot MT5 offline dopo crash silenzioso | Processo python.exe rimasto bloccato in background (zombie) impediva nuova connessione MT5 (1 connessione Python max) | Fix: `taskkill /f /im python.exe` prima di riavviare · aggiunta logica reconnect automatico in loop · mt5-bot.py aggiornato con `STRATEGY_PARAMS` a 2 strategie reali |
+| 2026-04-14 | Sync Vercel mai aggiornato ("804m fa") | `VERCEL_URL` terminava con `/` → doppio slash in `/api/db` → HTTP 404 silenzioso | Rimosso slash finale da VERCEL_URL · `last_sync_time = -999` per sync immediato al primo ciclo |
 
 ---
 
 ## 7. BACKTESTING & SCORING MFKK — PARAMETRI DEFINITIVI
 
 ### 7.1 Dataset e Metodo
-- **Dataset**: 730 giorni H1 XAU/USD — `GC=F` via yfinance (11.449 candele, apr 2024 – apr 2026)
-- **Spread modello**: $0.30 base, max $2.00, scala su ATR ratio · media applicata: $0.310/trade
-- **Ottimizzazione**: grid search 2.272 combinazioni (pesi) + ATR vs fisso + cooldown
+- **Dataset primario**: MT5 GOLD (XMGlobal-MT5 6) · 730 giorni H1/M30/H4 reali · conto demo #1301224666 · sempre `--mt5`
+- **Dataset fallback**: `xauusd_h1_730d.json` (11.449 candele H1 GC=F yfinance) se MT5 non disponibile
+- **Procedura**: `python scripts/backtest_mfkk_intraday.py --mt5` con MT5 aperto
+- **Bot operativo**: `python scripts/mt5-bot.py` — richiede MT5 aperto su conto #1301224666 (XMGlobal-MT5 6)
+- **Comando kill zombie**: `taskkill /f /im python.exe` prima di ogni riavvio bot
 
 ### 7.2 Parametri Scoring Ottimali (XAU)
 

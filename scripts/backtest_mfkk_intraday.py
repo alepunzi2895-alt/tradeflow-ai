@@ -50,6 +50,7 @@ ap.add_argument('--m30-file',  type=str, default=None)
 ap.add_argument('--h4-file',   type=str, default=None)
 ap.add_argument('--out',       type=str, default='backtest_mfkk_suite.json')
 ap.add_argument('--rm',        action='store_true', help='Abilita simulazione Risk Manager (AI Score adattivo)')
+ap.add_argument('--compound', action='store_true', help='Simula aggregazione e interesse composto per ottimizzare rischio % e MaxDD')
 args = ap.parse_args()
 
 # ── MATH HELPERS ──────────────────────────────────────────────────────────────
@@ -339,7 +340,7 @@ def run_backtest(candles, ind, fn, tp_mode='fixed', tp_val=20.0, sl_val=12.0,
         trades.append({
             'date':day,'hour':hour,'dir':sig,
             'outcome':outcome,'pnl':round(pnl,2),
-            'ts':ts
+            'ts':ts, 'sl_val': round(sl_p_val, 2)
         })
         day_n[day]+=1; last_bar[day]=i
     return trades
@@ -1002,7 +1003,7 @@ def main():
                 score=s['pf']*(s['wr']/100)*math.log(s['n']+1)*min(rr/3,1.5)
                 if score>best_overall_score:
                     best_overall_score=score
-                    best_overall={'variant':vname,'tf':tf_label,'stats':s,'periods':periods,'score':round(score,3)}
+                    best_overall={'variant':vname,'tf':tf_label,'stats':s,'periods':periods,'score':round(score,3),'trades':trades}
             else:
                 n_=s['n'] if s else 0
                 print(f"── {vname:<20} {tf_label:<5} {n_:>5}  (N<20, skip)")
@@ -1073,6 +1074,48 @@ def main():
         tag = ' 🧠' if 'RM' in sid else ''
         print(f"{nm+tag:<22} {tf:<5} {wr:>5.1f}% {pf:>6.3f} {p24:>10.1f} {p12:>10.1f} {p6:>10.1f} {p1:>9.1f}")
 
+    if args.compound:
+        print(f"\n{'='*72}")
+        print("PORTAFOGLIO AGGREGATO & COMPOUND SCALING (Start: $1000)")
+        print("Unione di S00_MFKK_SCORE e la best variante S05_MFKK_INTRADAY")
+        print('='*72)
+        
+        all_trades = trades_mfkk + (best_overall['trades'] if best_overall and 'trades' in best_overall else [])
+        all_trades.sort(key=lambda x: x['ts'])
+        
+        def simulate_portfolio(trades_list, initial_balance=1000.0, risk_pct=0.02, contract_size=100):
+            equity = initial_balance
+            peak_equity = equity
+            max_dd_pct = 0.0
+            compounded = []
+            for t in trades_list:
+                sl_dist = t.get('sl_val', 12.0)
+                risk_usd = equity * risk_pct
+                dollar_risk_1_lot = sl_dist * contract_size
+                lot_size = max(0.01, round(risk_usd / dollar_risk_1_lot, 2))
+                real_pnl = t['pnl'] * contract_size * lot_size
+                equity += real_pnl
+                if equity < 0:
+                    equity = 0; break
+                if equity > peak_equity:
+                    peak_equity = equity
+                dd_pct = (peak_equity - equity) / peak_equity * 100
+                if dd_pct > max_dd_pct:
+                    max_dd_pct = dd_pct
+                compounded.append({'pnl': real_pnl, 'eq': equity})
+                
+            p_tot = equity - initial_balance
+            wins = [x for x in compounded if x['pnl'] > 0]
+            losses = [x for x in compounded if x['pnl'] < 0]
+            wr = len(wins)/len(compounded)*100 if compounded else 0
+            loss_sum = sum(abs(x['pnl']) for x in losses)
+            pf = sum(x['pnl'] for x in wins)/loss_sum if loss_sum > 0 else 999
+            return equity, p_tot, max_dd_pct, wr, pf
+
+        for r_pct in [0.001, 0.0025, 0.005, 0.0075, 0.01]:
+            eq, p_tot, dd_pct, wr, pf = simulate_portfolio(all_trades, 1000.0, r_pct)
+            print(f"  Rischio {r_pct*100:.0f}%: Capitale Finale: ${eq:,.2f} | P&L: +${p_tot:,.2f} | MaxDD: {dd_pct:.1f}% | PF: {pf:.2f}")
+
     # ── SAVE JSON
     out_data={
         'generated': datetime.datetime.utcnow().isoformat(),
@@ -1088,8 +1131,9 @@ def main():
         json.dump(out_data,f,indent=2,ensure_ascii=False)
     print(f"\nSalvato: {args.out}")
     print(f"\nUso:")
-    print(f"  python scripts/backtest_mfkk_intraday.py --mt5         # baseline")
-    print(f"  python scripts/backtest_mfkk_intraday.py --mt5 --rm    # + Risk Manager")
+    print(f"  python scripts/backtest_mfkk_intraday.py --mt5            # baseline")
+    print(f"  python scripts/backtest_mfkk_intraday.py --mt5 --compound # calcola scala PNL aggregata e Drawdown%")
+    print(f"  python scripts/backtest_mfkk_intraday.py --mt5 --rm       # + Risk Manager")
     print('='*72)
 
 if __name__=='__main__':

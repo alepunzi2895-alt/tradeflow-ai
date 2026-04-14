@@ -19,7 +19,7 @@ const SE = {
         pnl_6m: 1600, td_6m: 3.11,
         pnl_12m: 1936, td_12m: 3.61,
         pnl_24m: 3260, td_24m: 3.34,
-        maxdd: 1332, trades_12m: 1316, best_regime: 'TREND'
+        maxdd: 1332, maxdd_pct: '44%', trades_12m: 1316, best_regime: 'TREND'
       } },
     // MFKK Intraday: V2 Triple MACD H1 · WR 37% · PF 1.24 · 24m +$4.833 · MaxDD $1.367 · ~3.3 trade/gg
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.24, wr: '37%', tp: 'ATR×2', sl: 'ATR×1',
@@ -28,17 +28,26 @@ const SE = {
         pnl_6m: 1869, td_6m: 3.25,
         pnl_12m: 4218, td_12m: 3.43,
         pnl_24m: 4833, td_24m: 3.30,
-        maxdd: 1367, trades_12m: 1253, best_regime: 'TUTTI'
+        maxdd: 1367, maxdd_pct: '39%', trades_12m: 1253, best_regime: 'TUTTI'
+      } },
+    // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Capitale di partenza consigliato: $3000-$5000.
+    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.22, wr: '39%', tp: 'Multi', sl: 'Multi',
+      stats: {
+        pnl_1m: 1405, td_1m: 5.90,
+        pnl_6m: 3469, td_6m: 6.36,
+        pnl_12m: 6154, td_12m: 7.04,
+        pnl_24m: 8093, td_24m: 6.64,
+        maxdd: 2450, maxdd_pct: '49%', trades_12m: 2569, best_regime: 'ALL'
       } },
   },
   // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──
   regimePriority: {
-    TREND_UP:   ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    TREND_DOWN: ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    WEAK_UP:    ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    WEAK_DOWN:  ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    RANGE:      ['S05_MFKK_INTRADAY', 'S00_MFKK'],
-    VOLATILE:   ['S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_UP:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_DOWN: ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_UP:    ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_DOWN:  ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    RANGE:      ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    VOLATILE:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 2, TREND_DOWN: 2, WEAK_UP: 2, WEAK_DOWN: 2, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
@@ -816,7 +825,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'
         ? 'OBV MACD T-Channel + RSI + Momentum · TF ottimale da backtest M30/H1/H4 · backtest in corso'
-        : '';
+        : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       return `
       <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'50':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isActive?`<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>`:''}
@@ -829,12 +838,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:8px;text-align:center;margin-bottom:3px">
-          ${[['1 MESE','pnl_1m','td_1m',pnl1col],['6 MESI','pnl_6m','td_6m',pnl6col],['12 MESI','pnl_12m','td_12m',pnl12col],['24 MESI','pnl_24m','td_24m',pnl24col],['MAX DD','maxdd',null,'var(--red)']].map(([label,pkey,tdkey,col])=>{
+          ${[['1 MESE','pnl_1m','td_1m',pnl1col],['6 MESI','pnl_6m','td_6m',pnl6col],['12 MESI','pnl_12m','td_12m',pnl12col],['24 MESI','pnl_24m','td_24m',pnl24col],['MAX DD','maxdd','maxdd_pct','var(--red)']].map(([label,pkey,tdkey,col])=>{
             const v = st[pkey];
             const displayV = pkey==='maxdd'
               ? (v!=null ? '-$'+v : '-$—')
               : (v!=null ? (v>=0?'+':'')+`$${v}` : '+$—');
-            const tdVal = tdkey && st[tdkey]!=null ? `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} td/gg</div>` : '';
+            const tdVal = tdkey && st[tdkey]!=null 
+              ? (tdkey==='maxdd_pct' ? `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} Max DD</div>` : `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} td/gg</div>`)
+              : '';
             return `<div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
               <div style="color:var(--dim);margin-bottom:1px">${label}</div>
               <div style="font-weight:700;color:${col}">${displayV}</div>

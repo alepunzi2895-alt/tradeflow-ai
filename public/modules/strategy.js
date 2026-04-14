@@ -11,32 +11,41 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S00_MFKK_HWR: 0, S01_EXHAUSTION: 0, default: 0 },
   strategies: {
-    // MFKK — strategia principale ottimizzata su 730gg H1 XAU/USD
-    'S00_MFKK':        { label: 'MFKK Score',  pf: 1.80, wr: '52%', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: 278, pnl_12m: 3334, pnl_24m: 6668, maxdd: 600, trades_12m: 720, best_regime: 'TREND' } },
-    'S00_MFKK_HWR':    { label: '💎 MFKK HighWR', pf: 21.67, wr: '93%', tp: 20, sl: 12,
-      stats: { pnl_1m: 21, pnl_12m: 248, pnl_24m: 496, maxdd: 12, trades_12m: 14, best_regime: 'TREND' } },
-    'S01_EXHAUSTION':  { label: 'Exhaustion',  pf: 2.29, wr: '58%', tp: 15, sl: 9,
-      stats: { pnl_1m: 41, pnl_12m: 492, pnl_24m: 920, maxdd: 90, trades_12m: 100, best_regime: 'TREND' } },
-    'S09_VWAP_WPR':    { label: 'VWAP+W%R',   pf: 1.50, wr: '47%', tp: 18, sl: 10,
-      stats: { pnl_1m: 16, pnl_12m: 190, pnl_24m: 380, maxdd: 130, trades_12m: 60,  best_regime: 'RANGE' } },
-    'S06_ORDERBLOCK':  { label: 'Order Block', pf: 1.42, wr: '46%', tp: 18, sl: 10,
-      stats: { pnl_1m: 17, pnl_12m: 202, pnl_24m: 404, maxdd: 120, trades_12m: 70,  best_regime: 'WEAK' } },
-    'S13_STRUC_BREAK': { label: 'Struc Break', pf: 1.61, wr: '52%', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: 24, pnl_12m: 288, pnl_24m: 576, maxdd: 100, trades_12m: 80,  best_regime: 'TREND' } },
-    'S14_KEY_LEVELS':  { label: 'Key Levels',  pf: 1.54, wr: '49%', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: 18, pnl_12m: 216, pnl_24m: 432, maxdd: 110, trades_12m: 65,  best_regime: 'RANGE' } },
-    'S12_WPR_KELTNER': { label: 'W%R+Keltner', pf: 1.22, wr: '42%', tp: 20, sl: 12,
-      stats: { pnl_1m:  6, pnl_12m:  72, pnl_24m: 144, maxdd: 180, trades_12m: 50,  best_regime: 'VOLATILE' } },
+    // ── BACKTEST REALE su GC=F H1 · 730gg · Spread OANDA $0.30+ATR · aggiornato 2026-04 ──
+    // S00_MFKK: #1 per P&L totale ($12,086) — domina TREND_UP/DOWN/WEAK_DOWN
+    // SELL molto più redditizio di BUY ($9,442 vs $2,643) — bias ribassista su XAU
+    'S00_MFKK':       { label: 'MFKK Score',    pf: 1.53, wr: '48%', tp: 'ATR', sl: 'ATR',
+      stats: { pnl_1m: 484, pnl_12m: 5801, pnl_24m: 12086, maxdd: 1220, trades_12m: 1760, best_regime: 'TREND' } },
+    // S00_MFKK_HWR: #3 P&L ma #1 per WR (84.2%) e PF (8.73) — trade rari ma precisi
+    // MaxDD solo -$61 su 2 anni — migliore risk-adjusted return
+    'S00_MFKK_HWR':   { label: '💎 MFKK HighWR', pf: 8.73, wr: '84%', tp: 20, sl: 12,
+      stats: { pnl_1m: 122, pnl_12m: 1465, pnl_24m: 2443, maxdd: 61, trades_12m: 83, best_regime: 'TREND' } },
+    // S01_EXHAUSTION: #4 P&L ($1,948) — WR 55.5% PF 2.03 — SELL redditizio ($2,118)
+    'S01_EXHAUSTION': { label: 'Exhaustion',    pf: 2.03, wr: '56%', tp: 15, sl: 9,
+      stats: { pnl_1m: 85, pnl_12m: 1016, pnl_24m: 1948, maxdd: 320, trades_12m: 174, best_regime: 'TREND' } },
+    // S04_BB_SQUEEZE: #5 P&L ($1,163) — miglior strategia per regime RANGE (P&L $1,141)
+    'S04_BB_SQUEEZE': { label: 'BB Squeeze',    pf: 1.04, wr: '39%', tp: 20, sl: 12,
+      stats: { pnl_1m: 47, pnl_12m: 560, pnl_24m: 1163, maxdd: 1290, trades_12m: 1680, best_regime: 'RANGE' } },
+    // S09_VWAP_WPR: pochi trade (N=15 su 2y) ma WR 80% PF 5.59 — segnale raro e affidabile
+    'S09_VWAP_WPR':   { label: 'VWAP+W%R',     pf: 5.59, wr: '80%', tp: 18, sl: 10,
+      stats: { pnl_1m: 9, pnl_12m: 100, pnl_24m: 167, maxdd: 24, trades_12m: 8, best_regime: 'RANGE' } },
+    // S06_ORDERBLOCK: P&L $290, PF 1.09 — regime RANGE/WEAK — efficacia modesta
+    'S06_ORDERBLOCK': { label: 'Order Block',   pf: 1.09, wr: '41%', tp: 18, sl: 10,
+      stats: { pnl_1m: 12, pnl_12m: 145, pnl_24m: 290, maxdd: 428, trades_12m: 234, best_regime: 'RANGE' } },
+    // S12_WPR_KELTNER: unica strategia positiva in VOLATILE (+$155) — usata solo in quel regime
+    'S12_WPR_KELTNER':{ label: 'W%R+Keltner',  pf: 0.96, wr: '37%', tp: 20, sl: 12,
+      stats: { pnl_1m: -10, pnl_12m: -123, pnl_24m: -246, maxdd: 917, trades_12m: 382, best_regime: 'VOLATILE' } },
   },
-  // Regime intelligence: priorità strategie per regime + condizioni di mercato
+  // ── REGIME PRIORITY — aggiornato su backtest reale 2024-2026 ──
+  // Regola: MFKK domina in TREND e WEAK_DOWN. BB_SQUEEZE in RANGE. WPR_KELTNER solo in VOLATILE.
+  // S13_STRUC_BREAK (-$1411) e S14_KEY_LEVELS (-$633) RIMOSSI (P&L negativo su 2y)
   regimePriority: {
-    TREND_UP:    ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S13_STRUC_BREAK'],
-    TREND_DOWN:  ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK'],
-    WEAK_UP:     ['S00_MFKK','S06_ORDERBLOCK','S13_STRUC_BREAK','S14_KEY_LEVELS'],
-    WEAK_DOWN:   ['S00_MFKK','S06_ORDERBLOCK','S14_KEY_LEVELS'],
-    RANGE:       ['S09_VWAP_WPR','S14_KEY_LEVELS','S00_MFKK'],
-    VOLATILE:    ['S12_WPR_KELTNER','S00_MFKK'],
+    TREND_UP:    ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION'],
+    TREND_DOWN:  ['S00_MFKK_HWR','S00_MFKK','S01_EXHAUSTION'],
+    WEAK_UP:     ['S00_MFKK','S04_BB_SQUEEZE','S06_ORDERBLOCK'],
+    WEAK_DOWN:   ['S00_MFKK','S01_EXHAUSTION','S06_ORDERBLOCK'],
+    RANGE:       ['S09_VWAP_WPR','S04_BB_SQUEEZE','S06_ORDERBLOCK'],
+    VOLATILE:    ['S12_WPR_KELTNER','S04_BB_SQUEEZE'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 2, TREND_DOWN: 2, WEAK_UP: 1, WEAK_DOWN: 1, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
@@ -153,6 +162,24 @@ const SE_STRATEGY_FNS = {
     const c=I.C[i], kl=I.kl[i], ku=I.ku[i], w=I.wpr[i];
     if(c<kl && w<-85) return {dir:'buy', why:'Breakout Keltner Lower + W%R Estremo'};
     if(c>ku && w>-15) return {dir:'sell', why:'Breakout Keltner Upper + W%R Estremo'};
+    return null;
+  },
+  // S04_BB_SQUEEZE — miglior strategia in regime RANGE (P&L $1,141 su 2y)
+  // Rileva squeeze di volatilità e breakout direzionale con MACD conferma
+  S04_BB_SQUEEZE: (I,i) => {
+    if(i<20) return null;
+    const c=I.C[i], m=I.macd[i];
+    const e20=I.e20[i];
+    const atr=I.atr[i]||0, atr30=I.atr30[i]||1;
+    // Squeeze: ATR compresso sotto media storica (< 0.7x)
+    const squeezed = atr < 0.75 * atr30;
+    if(!squeezed) return null;
+    // Breakout direzionale con MACD conferma
+    const mPrev = I.macd[i-1]||0;
+    if(c > e20 && m > 0 && m > mPrev)
+      return {dir:'buy', why:`BB Squeeze breakout rialzista · ATR ${(atr/atr30*100).toFixed(0)}% media · MACD ↑`, quality:'medium'};
+    if(c < e20 && m < 0 && m < mPrev)
+      return {dir:'sell', why:`BB Squeeze breakout ribassista · ATR ${(atr/atr30*100).toFixed(0)}% media · MACD ↓`, quality:'medium'};
     return null;
   }
 };
@@ -465,14 +492,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const pnl1col  = (st.pnl_1m||0)>0 ?'var(--green)':'var(--red)';
       const pnl12col = (st.pnl_12m||0)>0?'var(--green)':'var(--red)';
       const pnl24col = (st.pnl_24m||0)>0?'var(--green)':'var(--red)';
-      const inds = id==='S00_MFKK'       ? 'ADX 80% + MACD 10% + CCI(50) 10% · SELL≥75 · BUY≥90' :
-                   id==='S00_MFKK_HWR'   ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY' :
-                   id==='S01_EXHAUSTION'  ? 'ADX≥30 · DI spread≥12 · MACD hist reversal · RSI conferm' :
-                   id==='S09_VWAP_WPR'   ? 'VWAP cross · W%R≤-80 o ≥-20 · MACD momentum' :
-                   id==='S06_ORDERBLOCK'  ? 'Swing H/L zone · EMA20 · RSI · MACD momentum' :
-                   id==='S13_STRUC_BREAK' ? 'Breakout 20h High/Low · Price action conferm' :
-                   id==='S14_KEY_LEVELS'  ? 'Round numbers (psych levels) · RSI estremo' :
-                   id==='S12_WPR_KELTNER' ? 'Keltner channel break · W%R≤-85 o ≥-15 · RSI' : '';
+      const inds = id==='S00_MFKK'       ? 'ADX 80% + MACD 10% + CCI(50) 10% · SELL≥75 · BUY≥90 · SELL 3.6x più redditizio' :
+                   id==='S00_MFKK_HWR'   ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · WR 84%' :
+                   id==='S01_EXHAUSTION'  ? 'ADX≥30 · DI spread≥12 · MACD hist reversal · RSI conferm · SELL bias' :
+                   id==='S04_BB_SQUEEZE'  ? 'BB bandwidth squeeze · breakout direzionale · MACD conferm · best RANGE' :
+                   id==='S09_VWAP_WPR'   ? 'VWAP cross · W%R≤-80 o ≥-20 · raro (8/anno) ma WR 80%' :
+                   id==='S06_ORDERBLOCK'  ? 'Swing H/L zone · EMA50 · RSI · MACD momentum · efficacia modesta' :
+                   id==='S12_WPR_KELTNER' ? 'Keltner channel break · W%R estremo · solo regime VOLATILE' : '';
       return `
       <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'50':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isActive?`<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>`:''}

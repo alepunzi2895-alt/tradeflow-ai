@@ -158,6 +158,8 @@ async function fetchT(url, opts={}, ms=8000) {
 | 2026-04-14 | Bottone MT5 sempre abilitato anche a bot offline | Nessun check stato bot prima di inviare | seSendTradeToMt5 ora verifica syncAge<30s; se offline mostra messaggio e blocca invio |
 | 2026-04-14 | Segnali MFKK troppo frequenti (soglia 68 troppo bassa) | Score 68+ quasi sempre soddisfatto | Soglia alzata a 75; zona 80-89 (WR 58.8%) evidenziata come ottimale |
 | 2026-04-14 | Catalog strategie senza statistiche di rendimento | Catalog mostrava solo PF e WR | Aggiunte colonne P&L 1M/12M/24M e MaxDD per ogni strategia |
+| 2026-04-14 | Backtest unificato: XAUUSD=X è delisted su Yahoo Finance | `HTTP 404 Not Found` su tutti i chunk | Migrato a `GC=F` (Gold Futures COMEX) via yfinance — pattern identici per backtesting H1 |
+| 2026-04-14 | Strategie S13_STRUC_BREAK e S14_KEY_LEVELS in regimePriority ma P&L negativo | Priorità basate su stime non su dati reali | Rimosse da regimePriority dopo backtest 730gg; sostituite con S04_BB_SQUEEZE (RANGE) |
 
 ---
 
@@ -272,30 +274,41 @@ public/modules/strategy.js     ← monitor real-time: regime + segnali + real MT
 public/index.html              ← tab "⚡ Strategie" (Real account execution monitoring)
 ```
 
-### 9.2 Strategie Attive & Timeframes (Real-time Optimized)
-| Strategia | TF Best | WR% | PF | Note |
-|---|---|---|---|---|
-| **S01_EXHAUSTION** | **1h** | 57.9% | 2.29 | ADX≥30+DI spread≥15+MACD contra-trend |
-| **S09_VWAP_WPR** | **1h** | 47.4% | 1.50 | VWAP cross + W%R oversold/overbought |
-| **S06_ORDERBLOCK** | **1h** | 46.1% | 1.42 | Institutional OB zone + momentum |
-| **S13_STRUC_BREAK** | **1h** | 52.4% | 1.61 | Breakout di Pivot H/L + Retest confermato |
-| **S14_KEY_LEVELS** | **1h** | 49.2% | 1.54 | Bounce o Break out di Daily/Weekly Pivots |
-| **S12_WPR_KELTNER** | **1h** | 42.3% | 1.22 | W%R + Keltner channel breakout |
+### 9.2 Backtest Unificato — Risultati Reali (GC=F H1 · 730gg · Spread OANDA $0.30+ATR)
+> **Data backtest**: 2026-04-14 · Dati: GC=F H1 apr 2024 – apr 2026 (11.449 candele)
+> **Spread modello**: $0.30 base, max $2.00, scala su ATR ratio · spread medio applicato: $0.310/trade
 
-**MTF Test (Gold XAU/USD)**:
-- **1H**: Unico TF profittevole con indicatori standard (WR 38.1% adapt).
-- **5m/15m/30m**: Performance negative (WR < 36%, P&L negativo) causa rumore e spread.
-- **Decisione**: Il motore opera su 1H, ma esegue i controlli ogni 3s.
+| Strategia | N trade | WR% | P&L 24m | PF | MaxDD | Note |
+|---|---|---|---|---|---|---|
+| **S00_MFKK** | 3.663 | 48.4% | **+$12.086** | 1.53 | -$1.220 | #1 P&L · SELL domina ($9.442 vs $2.643 BUY) |
+| **S00_MFKK_HWR** | 165 | **84.2%** | +$2.443 | **8.73** | **-$61** | Elite WR · MaxDD minimo |
+| **REGIME_ADAPTIVE** | 4.881 | 44.3% | +$9.693 | 1.29 | -$1.354 | Selettore dinamico |
+| **S01_EXHAUSTION** | 348 | 55.5% | +$1.948 | 2.03 | -$320 | SELL bias ($2.118) |
+| **S04_BB_SQUEEZE** | 3.506 | 39.0% | +$1.163 | 1.04 | -$1.290 | Best RANGE |
+| **S09_VWAP_WPR** | 15 | 80.0% | +$167 | 5.59 | -$24 | Raro (8/anno) ma WR 80% |
+| **S06_ORDERBLOCK** | 467 | 40.5% | +$290 | 1.09 | -$428 | Efficacia modesta |
+| S12_WPR_KELTNER | 764 | 37.2% | **-$246** | 0.96 | -$917 | Solo VOLATILE (+$155) |
+| S13_STRUC_BREAK | 920 | 33.6% | **-$1.411** | 0.86 | -$1.975 | ❌ RIMOSSA dalla rotation |
+| S14_KEY_LEVELS | 140 | 28.6% | **-$633** | 0.64 | -$676 | ❌ RIMOSSA dalla rotation |
+| S08_OBV_EMA_MOM | 2.048 | 33.4% | **-$3.016** | 0.82 | -$3.484 | ❌ Non inclusa nel motore |
+| S02_ALLIGATOR_OBV | 4.147 | 36.4% | **-$2.223** | 0.93 | -$2.828 | ❌ Non inclusa nel motore |
+| S03_SUPERTREND_EMA | 3.764 | 36.1% | **-$2.397** | 0.92 | -$2.685 | ❌ Non inclusa nel motore |
 
-### 9.3 Regime Detection
-| Regime | Condizione | Strategie priorità |
-|---|---|---|
-| TREND_UP | ADX≥30, DI+>DI- | S01→S06→S10 |
-| TREND_DOWN | ADX≥30, DI->DI+ | S01→S06→S10 |
-| WEAK_UP | 22≤ADX<30, DI+>DI- | S06→S10→S12 |
-| WEAK_DOWN | 22≤ADX<30, DI->DI+ | S06→S10→S12 |
-| RANGE | ADX<22 | S09→S12→S06 |
-| VOLATILE | ADX<22, ATR>1.4x avg | S12→S09 |
+**Insight chiave**:
+1. **MFKK batte REGIME_ADAPTIVE** (+$12.086 vs +$9.693) perché il selettore usa S04_BB_SQUEEZE in RANGE che riduce il P&L complessivo
+2. **SELL 3.6x più redditizio di BUY** su XAU/USD H1 (pattern storico su 2y confermato)
+3. **S00_MFKK_HWR ha MaxDD solo -$61 su 2y** — strategia più sicura per dimensionamento alto
+4. **XAU è fortemente trendante** — strategie mean-reversion (Alligator, OBV_MOM) perdono sistematicamente
+
+### 9.3 Regime Detection & Priorità Aggiornate (basate su backtest 2026-04-14)
+| Regime | Condizione | Strategie priorità | Motivazione |
+|---|---|---|---|
+| TREND_UP | ADX≥28, DI+>DI- | HWR → MFKK → EXHAUSTION | MFKK P&L $2.018 in regime; HWR best risk-adj |
+| TREND_DOWN | ADX≥28, DI->DI+ | HWR → MFKK → EXHAUSTION | MFKK P&L **$7.432** in TREND_DOWN (85% del P&L totale) |
+| WEAK_UP | 20≤ADX<28, DI+>DI- | MFKK → BB_SQUEEZE → ORDERBLOCK | MFKK anche qui positivo |
+| WEAK_DOWN | 20≤ADX<28, DI->DI+ | MFKK → EXHAUSTION → ORDERBLOCK | MFKK P&L $1.528 |
+| RANGE | ADX<20 | VWAP_WPR → BB_SQUEEZE → ORDERBLOCK | BB_SQUEEZE P&L $1.141 in RANGE |
+| VOLATILE | ATR>1.35x avg | WPR_KELTNER → BB_SQUEEZE | WPR_KELTNER unico pos (+$155) in VOLATILE |
 
 ### 9.4 Regole Operative
 - **Max 10 trade/giorno**, cooldown 30 min tra trade

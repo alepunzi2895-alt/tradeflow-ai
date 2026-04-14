@@ -289,9 +289,11 @@ def stats(trades):
 def main():
     print("MFKK Full Optimizer — 2 anni XAU H1")
     print("="*60)
-    print("Download candele...")
-    candles=fetch_candles('GC%3DF', DAYS)
-    print(f"  {len(candles)} candele ({DAYS}gg)")
+    print("Caricamento candele locali...")
+    with open('xauusd_h1_730d.json', 'r') as f:
+        data = json.load(f)
+        candles = data.get('candles', data) if isinstance(data, dict) else data
+    print(f"  {len(candles)} candele locali caricate")
     if len(candles)<500: print("ERRORE: dati insufficienti"); return
 
     print("Calcolo indicatori...")

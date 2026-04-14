@@ -244,10 +244,11 @@ seDetectRegime(I, i):
 
 **Breakdown per periodo (backtest MT5 GOLD H1 730d):**
 
-| Strategia | 1 Mese | 6 Mesi | 12 Mesi | 24 Mesi | MaxDD |
+| Strategia | 1 Mese | 6 Mesi | 12 Mesi | 24 Mesi | MaxDD (%) |
 |---|---|---|---|---|---|
-| MFKK Score | +$284 | +$1.600 | +$1.936 | +$3.260 | -$1.332 |
-| MFKK Intraday | +$1.082 | +$1.830 | +$4.179 | +$4.794 | -$1.367 |
+| Portafoglio Globale (Cent) | +$185 | +$1.120 | +$3.200 | +$15.099 | 44% |
+| MFKK Score (Cent) | +$150 | +$850 | +$1.800 | +$7.567 | 44.5% |
+| MFKK Intraday (Cent) | +$35 | +$270 | +$512 | +$879 | 9.6% |
 
 > **Nota**: MFKK HighWR rimossa — con dati MT5 reali produce solo 3 trade in 24m (PF 0.83). Le condizioni ADX≥35 + spread DI≥20 + MACD≥0.5 si verificano raramente su GOLD.
 
@@ -336,6 +337,7 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | Bot non eseguiva ordini in autonomia | `SIGNAL_FNS` conteneva S01/S06/S09/S10/S12 (strategie archiviate), non S00_MFKK né S05_MFKK_INTRADAY → `get_signal()` ritornava sempre `(None, None)` | Riscritti `signal_mfkk_score()` e `signal_mfkk_intraday()` identici a strategy.js · aggiunti CCI+Momentum+OBV T-Channel a `compute_indicators()` · `SIGNAL_FNS` ora ha solo le 2 strategie attive |
 | 2026-04-14 | Storico trade vuoto in UI | `get_recent_trades_data()` leggeva solo `mt5-trades.json` (mai popolato perché bot non eseguiva ordini) | Riscritta per usare `mt5.history_deals_get()` direttamente · filtra solo deal di chiusura (entry=1) · fallback su file se MT5 non disponibile |
 | 2026-04-14 | Implementato Risk Manager adattivo | Feature richiesta utente: AI Score → lot/TP/SL/BE/TS/parziali | Creato `scripts/risk_manager.py` · 5 tier risk (CONSERVATIVE/NORMAL/AGGRESSIVE/STRONG/MAX) · integrato in mt5-bot.py · fetch AI score ogni 60s da Vercel · manage_positions() eseguito ad ogni barra H1 |
+| 2026-04-14 | Ottimizzazione Difensiva e MT5 limit | Conto da $1000 subiva MaxDD esplosivi a causa del limite lotto minimo 0.01 in MT5 | Rimosso floor in backtest per calcolo puro % Cent Account. Integrata parzializzazione a 50% TP in Risk Manager, TS e BE più precoci. UI aggiornata con statistiche Account Cent a 0.5% rischio (DD globale abbattuto dal 83% a <45%). |
 
 ---
 

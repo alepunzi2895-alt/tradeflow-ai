@@ -210,9 +210,9 @@ def mfkk_score(ind, i):
     if c >= 0:   score_bull += cci_score * 0.10
     else:        score_bear += cci_score * 0.10
 
-    # Thresholds
-    if score_bull >= 90: return 'buy'
-    if score_bear >= 75: return 'sell'
+    score = max(score_bull, score_bear)
+    if score_bull >= 90 and score_bull > score_bear: return 'buy'
+    if score_bear >= 75 and score_bear > score_bull: return 'sell'
     return None
 
 # ── STRATEGIA 2: MFKK HIGH WIN RATE ──────────────────────────────────────────
@@ -266,7 +266,7 @@ def mfkk_intraday_v3(ind, i):
     if i<1: return None
     oc=ind['obv_oc']; r=ind['rsi'][i]; a=ind['adx'][i]; m=ind['mom'][i]
     if None in (r,a,m): return None
-    if oc[i]==-1 and r>55 and a>=20 and m<0: return 'sell'
+    if oc[i]==-1 and r>65 and a>=30 and m<0: return 'sell'
     return None
 
 def mfkk_intraday_v4(ind, i):

@@ -35,11 +35,11 @@ log = logging.getLogger('tf-bot')
 
 # ── CONFIGURAZIONE TIER ────────────────────────────────────────────────────────
 TIERS = [
-    {'score_max': 40,  'lot_mult': 0.5, 'tp_mult': 1.0, 'sl_mult': 0.8, 'be_pct': 0.80, 'ts_step': 1.5, 'partial': False, 'label': '🔵 CONSERVATIVE'},
-    {'score_max': 60,  'lot_mult': 0.8, 'tp_mult': 1.0, 'sl_mult': 1.0, 'be_pct': 0.70, 'ts_step': 1.5, 'partial': False, 'label': '⚪ NORMAL'},
-    {'score_max': 75,  'lot_mult': 1.0, 'tp_mult': 1.5, 'sl_mult': 1.0, 'be_pct': 0.60, 'ts_step': 1.2, 'partial': False, 'label': '🟡 AGGRESSIVE'},
-    {'score_max': 85,  'lot_mult': 1.2, 'tp_mult': 1.8, 'sl_mult': 1.2, 'be_pct': 0.50, 'ts_step': 1.0, 'partial': False, 'label': '🟠 STRONG'},
-    {'score_max': 100, 'lot_mult': 1.5, 'tp_mult': 2.0, 'sl_mult': 1.5, 'be_pct': 0.50, 'ts_step': 1.0, 'partial': False, 'label': '🔴 MAX'},
+    {'score_max': 40,  'lot_mult': 0.4, 'tp_mult': 1.0, 'sl_mult': 0.8, 'be_pct': 0.60, 'ts_step': 1.5, 'partial': True, 'partial_pct': 0.5, 'label': '🔵 CONSERVATIVE'},
+    {'score_max': 60,  'lot_mult': 0.6, 'tp_mult': 1.0, 'sl_mult': 1.0, 'be_pct': 0.50, 'ts_step': 1.5, 'partial': True, 'partial_pct': 0.5, 'label': '⚪ NORMAL'},
+    {'score_max': 75,  'lot_mult': 0.8, 'tp_mult': 1.5, 'sl_mult': 1.0, 'be_pct': 0.40, 'ts_step': 1.2, 'partial': True, 'partial_pct': 0.5, 'label': '🟡 AGGRESSIVE'},
+    {'score_max': 85,  'lot_mult': 1.0, 'tp_mult': 1.8, 'sl_mult': 1.2, 'be_pct': 0.40, 'ts_step': 1.0, 'partial': True, 'partial_pct': 0.5, 'label': '🟠 STRONG'},
+    {'score_max': 100, 'lot_mult': 1.2, 'tp_mult': 2.0, 'sl_mult': 1.5, 'be_pct': 0.35, 'ts_step': 1.0, 'partial': True, 'partial_pct': 0.5, 'label': '🔴 MAX'},
 ]
 
 # TP/SL base in dollari per strategia (fallback se ATR non disponibile)

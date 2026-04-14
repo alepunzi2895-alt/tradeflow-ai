@@ -390,11 +390,11 @@ def simulate_ai_score(ind, i):
 # ── RISK MANAGER TIER (replica da risk_manager.py) ────────────────────────
 RM_TIERS = [
     # max_s, lot_m, tp_m, sl_m, be_pct, ts_s, partial, name
-    (40,  0.5, 1.0, 0.8, 0.80, 2.0, False, 'CONSERVATIVE'),
-    (60,  0.8, 1.0, 1.0, 0.70, 2.0, False, 'NORMAL'),
-    (75,  1.0, 1.5, 1.0, 0.60, 2.0, False, 'AGGRESSIVE'),
-    (85,  1.2, 1.8, 1.2, 0.50, 1.5, False, 'STRONG'),
-    (100, 1.5, 2.0, 1.5, 0.50, 1.5, False, 'MAX'),
+    (40,  0.4, 1.0, 0.8, 0.60, 1.5, True, 'CONSERVATIVE'),
+    (60,  0.6, 1.0, 1.0, 0.50, 1.5, True, 'NORMAL'),
+    (75,  0.8, 1.5, 1.0, 0.40, 1.2, True, 'AGGRESSIVE'),
+    (85,  1.0, 1.8, 1.2, 0.40, 1.0, True, 'STRONG'),
+    (100, 1.2, 2.0, 1.5, 0.35, 1.0, True, 'MAX'),
 ]
 
 def get_rm_tier(score):

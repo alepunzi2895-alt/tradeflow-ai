@@ -18,7 +18,7 @@ def simulate_portfolio(trades_list, initial_balance=1000.0, risk_pct=0.02, contr
             
         risk_usd = equity * risk_pct
         dollar_risk_1_lot = sl_val * contract_size
-        lot_size = max(0.01, round(risk_usd / dollar_risk_1_lot, 2))
+        lot_size = risk_usd / dollar_risk_1_lot
         
         # Pnl in the trades dump is computed with fixed `base_lot`=0.02.
         # We need to scale it to `lot_size`
@@ -66,11 +66,11 @@ if __name__ == '__main__':
     all_trades = trades_s00 + trades_s05
     
     # Simulate single S00 starting 1000
-    eq0, p0, dd0, wr0, pf0 = simulate_portfolio(trades_s00, 1000.0, 0.01)
-    print(f"S00_MFKK (Compound 1%): EQ=${eq0:.0f} PNL=+${p0:.0f} DD={dd0:.1f}% WR={wr0:.1f}% PF={pf0:.2f}")
+    eq0, p0, dd0, wr0, pf0 = simulate_portfolio(trades_s00, 1000.0, 0.005)
+    print(f"S00_MFKK (Compound 0.5%): EQ=${eq0:.0f} PNL=+${p0:.0f} DD={dd0:.1f}% WR={wr0:.1f}% PF={pf0:.2f}")
 
-    eq5, p5, dd5, wr5, pf5 = simulate_portfolio(trades_s05, 1000.0, 0.01)
-    print(f"S05_MFKK (Compound 1%): EQ=${eq5:.0f} PNL=+${p5:.0f} DD={dd5:.1f}% WR={wr5:.1f}% PF={pf5:.2f}")
+    eq5, p5, dd5, wr5, pf5 = simulate_portfolio(trades_s05, 1000.0, 0.005)
+    print(f"S05_MFKK (Compound 0.5%): EQ=${eq5:.0f} PNL=+${p5:.0f} DD={dd5:.1f}% WR={wr5:.1f}% PF={pf5:.2f}")
 
-    eq_all, p_all, dd_all, wr_all, pf_all = simulate_portfolio(all_trades, 1000.0, 0.01)
-    print(f"ALL_BOT (Compound 1%): EQ=${eq_all:.0f} PNL=+${p_all:.0f} DD={dd_all:.1f}% WR={wr_all:.1f}% PF={pf_all:.2f}")
+    eq_all, p_all, dd_all, wr_all, pf_all = simulate_portfolio(all_trades, 1000.0, 0.005)
+    print(f"ALL_BOT (Compound 0.5%): EQ=${eq_all:.0f} PNL=+${p_all:.0f} DD={dd_all:.1f}% WR={wr_all:.1f}% PF={pf_all:.2f}")

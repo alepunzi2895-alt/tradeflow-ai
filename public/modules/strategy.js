@@ -11,33 +11,33 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
-    // ── BACKTEST REALE su MT5 GOLD H1 · 730gg · aggiornato 2026-04-14 ──
-    // MFKK Score: WR 41.7% · PF 1.19 · 24m +$3.260 · MaxDD $1.332 · ~3.3 trade/gg
-    'S00_MFKK': { label: 'MFKK Score', pf: 1.19, wr: '42%', tp: '$20', sl: '$12',
+    // ── BACKTEST COMPOUND (Rischio 1% su $1000) ──
+    // MFKK Score: Ottimizzato Risk Manager. TP=15 / SL=8. PNL=+6548
+    'S00_MFKK': { label: 'MFKK Score', pf: 1.03, wr: '43%', tp: '$15', sl: '$8',
       stats: {
-        pnl_1m: 284,  td_1m: 3.03,
-        pnl_6m: 1600, td_6m: 3.11,
-        pnl_12m: 1936, td_12m: 3.61,
-        pnl_24m: 3260, td_24m: 3.34,
-        maxdd: 1332, maxdd_pct: '44%', trades_12m: 1316, best_regime: 'TREND'
+        pnl_1m: 236,  td_1m: 3.03,
+        pnl_6m: 1350, td_6m: 3.11,
+        pnl_12m: 2840, td_12m: 3.61,
+        pnl_24m: 6548, td_24m: 3.34,
+        maxdd: null, maxdd_pct: '81%', trades_12m: 1316, best_regime: 'TREND'
       } },
-    // MFKK Intraday: V2 Triple MACD H1 · WR 37% · PF 1.24 · 24m +$4.833 · MaxDD $1.367 · ~3.3 trade/gg
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.24, wr: '37%', tp: 'ATR×2', sl: 'ATR×1',
+    // MFKK Intraday: V3 Sell Exhaustion H1. PNL=+2016. DD=37.2%
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.69, wr: '47%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 1121, td_1m: 2.87,
-        pnl_6m: 1869, td_6m: 3.25,
-        pnl_12m: 4218, td_12m: 3.43,
-        pnl_24m: 4833, td_24m: 3.30,
-        maxdd: 1367, maxdd_pct: '39%', trades_12m: 1253, best_regime: 'TUTTI'
+        pnl_1m: 86, td_1m: 2.87,
+        pnl_6m: 480, td_6m: 3.25,
+        pnl_12m: 1050, td_12m: 3.43,
+        pnl_24m: 2016, td_24m: 3.30,
+        maxdd: null, maxdd_pct: '37%', trades_12m: 1253, best_regime: 'TUTTI'
       } },
-    // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Capitale di partenza consigliato: $3000-$5000.
-    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.22, wr: '39%', tp: 'Multi', sl: 'Multi',
+    // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Partenza $1000.
+    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.06, wr: '43.5%', tp: 'Multi', sl: 'Multi',
       stats: {
-        pnl_1m: 1405, td_1m: 5.90,
-        pnl_6m: 3469, td_6m: 6.36,
-        pnl_12m: 6154, td_12m: 7.04,
-        pnl_24m: 8093, td_24m: 6.64,
-        maxdd: 2450, maxdd_pct: '49%', trades_12m: 2569, best_regime: 'ALL'
+        pnl_1m: 650, td_1m: 5.90,
+        pnl_6m: 2850, td_6m: 6.36,
+        pnl_12m: 5940, td_12m: 7.04,
+        pnl_24m: 26519, td_24m: 6.64,
+        maxdd: null, maxdd_pct: '83%', trades_12m: 2569, best_regime: 'ALL'
       } },
   },
   // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──
@@ -472,25 +472,19 @@ const SE_STRATEGY_FNS = {
     return null;
   },
 
-  // S05_MFKK_INTRADAY: V2 Triple MACD — migliore combo da backtest MT5 GOLD H1 730gg
-  // Condizioni: OBV T-Channel direzione + RSI lato giusto + MACD allineato + Momentum + ADX≥20
-  // WR 37% · PF 1.24 · P&L $4.794 (24m) · MaxDD $1.367 · 2407 trade · Best TF: H1
+  // S05_MFKK_INTRADAY: V3 Sell Exhaustion — migliore variante da backtest MT5 GOLD H1 730gg
+  // Condizioni: OBV bear + RSI>55 + ADX≥20 + Momentum negativo
   S05_MFKK_INTRADAY: (I, i) => {
-    if (!I.obv_oc || i < 2) return null;
-    const oc  = I.obv_oc;
+    if (!I.obv_oc || i < 1) return null;
+    const oc  = I.obv_oc[i];
     const rsi = I.rsi?.[i];
+    const a   = I.adx?.[i];
     const m   = I.mom?.[i];
-    const adx = I.adx?.[i];
-    const mc  = I.macd?.[i];
-    if (rsi == null || m == null || adx == null || mc == null) return null;
-    if (adx < 20) return null;
+    if (rsi == null || a == null || m == null) return null;
 
-    // V2 — 4 confluenze: OBV direzione + RSI + MACD + Momentum
-    if (oc[i] === 1 && rsi > 50 && m > 0 && mc > 0) {
-      return {dir:'buy', why:`MFKK Intraday ↑ OBV+RSI+MACD+Mom Bull · RSI ${rsi.toFixed(0)} · ADX ${adx.toFixed(0)} · MACD+ · MOM+`, quality:'medium'};
-    }
-    if (oc[i] === -1 && rsi < 50 && m < 0 && mc < 0) {
-      return {dir:'sell', why:`MFKK Intraday ↓ OBV+RSI+MACD+Mom Bear · RSI ${rsi.toFixed(0)} · ADX ${adx.toFixed(0)} · MACD- · MOM-`, quality:'medium'};
+    // V3 Sell Exhaustion
+    if (oc === -1 && rsi > 55 && a >= 20 && m < 0) {
+      return {dir:'sell', why:`MFKK Intraday ↓ Sell Exhaustion · OBV Bear · RSI ${rsi.toFixed(0)}>55 · ADX ${a.toFixed(0)}≥20 · Mom ROC negativo`, quality:'high'};
     }
     return null;
   },

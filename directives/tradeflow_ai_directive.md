@@ -330,6 +330,9 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | UI Strategie: aggiunto trades/day per periodo | Richiesta utente: media trade giornalieri a 1/6/12/24 mesi | Aggiunti td_1m/td_6m/td_12m/td_24m in SE.strategies.stats · backtest_mfkk_intraday.py updated con avg_td nei periods |
 | 2026-04-14 | Bot MT5 offline dopo crash silenzioso | Processo python.exe rimasto bloccato in background (zombie) impediva nuova connessione MT5 (1 connessione Python max) | Fix: `taskkill /f /im python.exe` prima di riavviare · aggiunta logica reconnect automatico in loop · mt5-bot.py aggiornato con `STRATEGY_PARAMS` a 2 strategie reali |
 | 2026-04-14 | Sync Vercel mai aggiornato ("804m fa") | `VERCEL_URL` terminava con `/` → doppio slash in `/api/db` → HTTP 404 silenzioso | Rimosso slash finale da VERCEL_URL · `last_sync_time = -999` per sync immediato al primo ciclo |
+| 2026-04-14 | Bot online/offline a tratti in UI | Sync ogni 60s ma soglia UI `syncAge < 30s` → falsi negativi con qualsiasi jitter di rete | Ridotto sync bot a **20s** · alzata soglia UI a **90s** (`botOnline = syncAge < 90`) |
+| 2026-04-14 | Bot non eseguiva ordini in autonomia | `SIGNAL_FNS` conteneva S01/S06/S09/S10/S12 (strategie archiviate), non S00_MFKK né S05_MFKK_INTRADAY → `get_signal()` ritornava sempre `(None, None)` | Riscritti `signal_mfkk_score()` e `signal_mfkk_intraday()` identici a strategy.js · aggiunti CCI+Momentum+OBV T-Channel a `compute_indicators()` · `SIGNAL_FNS` ora ha solo le 2 strategie attive |
+| 2026-04-14 | Storico trade vuoto in UI | `get_recent_trades_data()` leggeva solo `mt5-trades.json` (mai popolato perché bot non eseguiva ordini) | Riscritta per usare `mt5.history_deals_get()` direttamente · filtra solo deal di chiusura (entry=1) · fallback su file se MT5 non disponibile |
 
 ---
 

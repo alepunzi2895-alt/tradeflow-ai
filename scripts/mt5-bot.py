@@ -174,6 +174,63 @@ def obv(C,V):
         out.append(out[-1]+(V[i] if C[i]>C[i-1] else -V[i] if C[i]<C[i-1] else 0))
     return out
 
+# ── MATH HELPERS AGGIUNTIVI ──────────────────────────────────────────────────
+def cci(H, L, C, p=50):
+    tp = [(H[i]+L[i]+C[i])/3 for i in range(len(C))]
+    out = [None]*(p-1)
+    for i in range(p-1, len(tp)):
+        sl = tp[i-p+1:i+1]; mn = sum(sl)/p
+        md = sum(abs(x-mn) for x in sl)/p
+        out.append((tp[i]-mn)/(0.015*md) if md > 0 else 0)
+    return out
+
+def mom(src, p=10):
+    out = [None]*p
+    for i in range(p, len(src)):
+        out.append(src[i]-src[i-p])
+    return out
+
+def dema(src, p):
+    m1 = ema(src, p); m2 = ema(m1, p)
+    return [2*m1[i]-m2[i] for i in range(len(src))]
+
+def stdev_arr(src, p):
+    out = [None]*(p-1)
+    for i in range(p-1, len(src)):
+        sl = src[i-p+1:i+1]; mn = sum(sl)/p
+        out.append(math.sqrt(sum((x-mn)**2 for x in sl)/p))
+    return out
+
+def obv_macd_tchannel(H, L, C, V, wl=28, vl=14, ml=9, sl=26):
+    """OBV MACD T-Channel — identico al Pine Script originale"""
+    n = len(C)
+    obv_v = [0.0]
+    for i in range(1, n):
+        s = 1 if C[i] > C[i-1] else (-1 if C[i] < C[i-1] else 0)
+        obv_v.append(obv_v[-1] + s*(V[i] or 0))
+    hl = [H[i]-L[i] for i in range(n)]
+    ps = stdev_arr(hl, wl)
+    sm = sma(obv_v, vl)
+    vd = [obv_v[i]-(sm[i] or 0) for i in range(n)]
+    vs = stdev_arr(vd, wl)
+    out = []
+    for i in range(n):
+        if sm[i] is None or not vs[i] or not ps[i]: out.append(C[i]); continue
+        sh = (obv_v[i]-sm[i])/vs[i]*ps[i]
+        out.append(H[i]+sh if sh > 0 else L[i]+sh)
+    dm = dema(out, ml); slw = ema(C, sl)
+    ml_ = [dm[i]-slw[i] for i in range(n)]
+    b5 = [ml_[0]]; oc = [0]; cd = 0.0
+    for i in range(1, n):
+        cd += abs(ml_[i]-b5[-1]); a = cd/i
+        if   ml_[i] > b5[-1]+a: b5.append(ml_[i])
+        elif ml_[i] < b5[-1]-a: b5.append(ml_[i])
+        else: b5.append(b5[-1])
+        if   b5[-1] > b5[-2]: oc.append(1)
+        elif b5[-1] < b5[-2]: oc.append(-1)
+        else: oc.append(oc[-1])
+    return ml_, b5, oc
+
 # ── COMPUTE INDICATORS ────────────────────────────────────────────────────────
 def compute_indicators(candles):
     H=[c['h'] for c in candles]
@@ -182,19 +239,26 @@ def compute_indicators(candles):
     V=[c['v'] for c in candles]
     n=len(C)
     I={}
-    I['C']=C; I['H']=H; I['L']=L
+    I['C']=C; I['H']=H; I['L']=L; I['V']=V
     I['e20']=ema(C,20); I['e50']=ema(C,50)
     I['e100']=ema(C,100); I['e200']=ema(C,200)
     I['rsi']=rsi(C,14)
     I['atr']=atr(H,L,C,14)
     I['adx'],I['dip'],I['dim']=adx_calc(H,L,C,14)
     I['ml'],I['ms'],I['mh']=macd(C,12,26,9)
+    I['cci']=cci(H,L,C,50)
+    I['mom']=mom(C,10)
     I['bb_mid'],I['bb_up'],I['bb_dn']=bb(C,20,2.0)
     I['wpr']=wpr(H,L,C,14)
     I['km'],I['ku'],I['kl']=keltner(H,L,C,20,2.0)
     I['vwap']=vwap_intraday(candles)
     I['obv']=obv(C,V)
     I['obv_ema']=ema(I['obv'],20)
+    # OBV MACD T-Channel per S05_MFKK_INTRADAY
+    try:
+        _, _, I['obv_oc'] = obv_macd_tchannel(H,L,C,V)
+    except Exception:
+        I['obv_oc'] = [0]*n
     # ATR rolling avg 30 bar
     I['atr_avg']=[None]*n
     for i in range(30,n):
@@ -217,92 +281,65 @@ def detect_regime(I, i):
         return 'VOLATILE'
     return 'RANGE'
 
-# ── STRATEGY SIGNALS ─────────────────────────────────────────────────────────
-def signal_exhaustion(I, i):
-    """S01: Exhaustion — ADX forte + DI spread + MACD contra-trend"""
+# ── STRATEGY SIGNALS (2 STRATEGIE UFFICIALI) ─────────────────────────────────
+def signal_mfkk_score(I, i):
+    """
+    S00_MFKK — MFKK Score ponderato (identico a strategy.js)
+    Score = 80% ADX + 10% MACD + 10% CCI
+    BUY se score_bull >= 90 | SELL se score_bear >= 75
+    """
     if i < 50: return None
-    adx_v=I['adx'][i]; dip=I['dip'][i]; dim=I['dim'][i]
-    mh=I['mh'][i]; mhp=I['mh'][i-1]
-    r=I['rsi'][i]
-    if None in (adx_v,mh,mhp,r): return None
-    if adx_v < 25: return None
-    spread = abs(dip-dim)
-    if spread < 12: return None
-    # BUY exhaustion (trend down, MACD gira su)
-    if dim > dip and mhp < 0 and mh > mhp and r < 45:
-        return 'buy'
-    # SELL exhaustion (trend up, MACD gira giù)
-    if dip > dim and mhp > 0 and mh < mhp and r > 55:
-        return 'sell'
+    a=I['adx'][i]; dp=I['dip'][i]; dm=I['dim'][i]
+    m=I['ml'][i]; c=I['cci'][i] if I['cci'][i] is not None else 0
+    if None in (a, dp, dm, m): return None
+
+    bull = bear = 0.0
+    adx_c = min(a/40*100, 100)
+    if dm > dp: bear += adx_c*0.80
+    else:       bull += adx_c*0.80
+
+    ms = min(abs(m)/0.5*100, 100)
+    if m >= 0: bull += ms*0.10
+    else:      bear += ms*0.10
+
+    cs = min(abs(c)/100*100, 100)
+    if c >= 0: bull += cs*0.10
+    else:      bear += cs*0.10
+
+    if bull >= 90: return 'buy'
+    if bear >= 75: return 'sell'
     return None
 
-def signal_orderblock(I, i):
-    """S06: Order Block — rimbalzo su zone istituzionali"""
-    if i < 50: return None
-    C=I['C']; H=I['H']; L=I['L']
-    e20=I['e20'][i]; e50=I['e50'][i]
-    r=I['rsi'][i]; mh=I['mh'][i]
-    if None in (e20,e50,r,mh): return None
-    # trova ultimo swing high/low (order block)
-    swing_lo = min(L[i-10:i])
-    swing_hi = max(H[i-10:i])
-    dist_lo = (C[i]-swing_lo)/C[i]
-    dist_hi = (swing_hi-C[i])/C[i]
-    if dist_lo < 0.0015 and C[i] > e20 and r < 50 and mh > 0:
-        return 'buy'
-    if dist_hi < 0.0015 and C[i] < e20 and r > 50 and mh < 0:
-        return 'sell'
-    return None
-
-def signal_vwap_wpr(I, i):
-    """S09: VWAP + W%R"""
-    if i < 30: return None
-    v=I['vwap'][i]; w=I['wpr'][i]; mh=I['mh'][i]
-    C=I['C'][i]
-    if None in (v,w,mh): return None
-    if C > v and w < -80 and mh > 0: return 'buy'
-    if C < v and w > -20 and mh < 0: return 'sell'
-    return None
-
-def signal_wpr_keltner(I, i):
-    """S12: W%R + Keltner"""
-    if i < 30: return None
-    w=I['wpr'][i]; ku=I['ku'][i]; kl=I['kl'][i]; km=I['km'][i]
-    r=I['rsi'][i]
-    if None in (w,ku,kl,r): return None
-    if w < -80 and I['C'][i] < kl and r < 40: return 'buy'
-    if w > -20 and I['C'][i] > ku and r > 60: return 'sell'
-    return None
-
-def signal_session_mom(I, i, hour):
-    """S10: Session Momentum — London open"""
-    if i < 50: return None
-    if hour not in range(7, 12): return None
-    e20=I['e20'][i]; e50=I['e50'][i]; mh=I['mh'][i]; mhp=I['mh'][i-1]
-    r=I['rsi'][i]; C=I['C'][i]
-    if None in (e20,e50,mh,mhp,r): return None
-    if C>e20>e50 and mhp<0 and mh>=0 and r>45: return 'buy'
-    if C<e20<e50 and mhp>0 and mh<=0 and r<55: return 'sell'
+def signal_mfkk_intraday(I, i):
+    """
+    S05_MFKK_INTRADAY — V2 Triple MACD (identico a strategy.js)
+    OBV T-Channel direzione + RSI + MACD line + Momentum + ADX >= 20
+    """
+    if i < 2: return None
+    oc  = I.get('obv_oc', [])
+    if not oc or i >= len(oc): return None
+    r   = I['rsi'][i]
+    mo  = I['mom'][i]
+    a   = I['adx'][i]
+    mc  = I['ml'][i]   # MACD line
+    if None in (r, mo, a, mc): return None
+    if a < 20: return None
+    if oc[i] == 1  and r > 50 and mo > 0 and mc > 0: return 'buy'
+    if oc[i] == -1 and r < 50 and mo < 0 and mc < 0: return 'sell'
     return None
 
 SIGNAL_FNS = {
-    'S01_EXHAUSTION':  signal_exhaustion,
-    'S06_ORDERBLOCK':  signal_orderblock,
-    'S09_VWAP_WPR':    signal_vwap_wpr,
-    'S12_WPR_KELTNER': signal_wpr_keltner,
-    'S10_SESSION_MOM': signal_session_mom,
+    'S00_MFKK':          signal_mfkk_score,
+    'S05_MFKK_INTRADAY': signal_mfkk_intraday,
 }
 
 def get_signal(I, i, hour, regime):
     """Restituisce (strategia, direzione) basandosi sul regime corrente"""
-    priority = REGIME_PRIORITY.get(regime, ['S10_SESSION_MOM'])
+    priority = REGIME_PRIORITY.get(regime, ['S00_MFKK'])
     for sname in priority:
         fn = SIGNAL_FNS.get(sname)
         if fn is None: continue
-        if sname == 'S10_SESSION_MOM':
-            direction = fn(I, i, hour)
-        else:
-            direction = fn(I, i)
+        direction = fn(I, i)
         if direction:
             return sname, direction
     return None, None
@@ -492,8 +529,36 @@ def get_open_positions_data():
         })
     return result
 
-def get_recent_trades_data(n=20):
-    """Legge gli ultimi N trade da mt5-trades.json"""
+def get_recent_trades_data(n=30):
+    """
+    Legge gli ultimi N deal chiusi direttamente da MT5 (storico reale).
+    Fallback su mt5-trades.json se MT5 non disponibile.
+    """
+    try:
+        utc = datetime.timezone.utc
+        from_date = datetime.datetime.now(utc) - datetime.timedelta(days=60)
+        to_date   = datetime.datetime.now(utc)
+        deals = mt5.history_deals_get(from_date, to_date)
+        if deals is not None and len(deals) > 0:
+            result = []
+            for d in sorted(deals, key=lambda x: x.time, reverse=True):
+                if d.entry != 1: continue   # solo deal di chiusura (exit)
+                result.append({
+                    'ticket':    d.ticket,
+                    'time':      datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
+                    'direction': 'buy' if d.type == 0 else 'sell',
+                    'strategy':  d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
+                    'price':     round(d.price, 2),
+                    'profit':    round(d.profit, 2),
+                    'volume':    d.volume,
+                })
+                if len(result) >= n: break
+            if result:
+                log.debug(f"🎯 Recuperati {len(result)} deal dallo storico MT5")
+                return result
+    except Exception as e:
+        log.debug(f"MT5 history_deals fallback su JSON: {e}")
+    # Fallback su file locale
     fname = 'mt5-trades.json'
     if not os.path.exists(fname): return []
     with open(fname, encoding='utf-8') as f:
@@ -557,9 +622,9 @@ def run():
                 time.sleep(30)
                 continue
 
-            # ── Sync periodico a Vercel (ogni 60s anche senza nuova barra) ──────
+            # ── Sync periodico a Vercel (ogni 20s) ─────────────────────────
             now_ts = time.time()
-            if now_ts - last_sync_time >= 60:
+            if now_ts - last_sync_time >= 20:
                 # Verifica connessione MT5 — riconnetti se persa
                 if mt5.account_info() is None:
                     log.warning("MT5 connessione persa — tentativo riconnessione...")

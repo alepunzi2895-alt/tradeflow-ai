@@ -647,8 +647,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const history=mt5Data?.trades||[];
   const bs=mt5Data?.bot_status||{};
   const syncAge=mt5Data?.synced_at?Math.round((Date.now()-new Date(mt5Data.synced_at).getTime())/1000):null;
-  // Bot online = sincronizzato negli ultimi 30s
-  const botOnline=syncAge!==null&&syncAge<30;
+  // Bot online = sincronizzato negli ultimi 90s (sync ogni 20s, margine abbondante)
+  const botOnline=syncAge!==null&&syncAge<90;
   const syncLabel=syncAge===null?'Mai sincronizzato':syncAge<5?'Ora':syncAge<60?`${syncAge}s fa`:`${Math.round(syncAge/60)}min fa`;
 
   // ── STATUS BAR — mostra stato reale bot MT5

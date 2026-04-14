@@ -51,7 +51,6 @@ ap.add_argument('--h4-file',   type=str, default=None)
 ap.add_argument('--out',       type=str, default='backtest_mfkk_suite.json')
 ap.add_argument('--rm',        action='store_true', help='Abilita simulazione Risk Manager (AI Score adattivo)')
 ap.add_argument('--compound', action='store_true', help='Simula aggregazione e interesse composto per ottimizzare rischio % e MaxDD')
-args = ap.parse_args()
 
 # ── MATH HELPERS ──────────────────────────────────────────────────────────────
 def ema(src, p):
@@ -1083,58 +1082,142 @@ def main():
         all_trades = trades_mfkk + (best_overall['trades'] if best_overall and 'trades' in best_overall else [])
         all_trades.sort(key=lambda x: x['ts'])
         
-        def simulate_portfolio(trades_list, initial_balance=1000.0, risk_pct=0.02, contract_size=100):
-            equity = initial_balance
+def simulate_portfolio(trades_list, initial_balance=1000.0, risk_pct=0.02, contract_size=100):
+    equity = initial_balance
+    peak_equity = equity
+    max_dd_pct = 0.0
+    compounded = []
+    for t in trades_list:
+        sl_dist = t.get('sl_val', 12.0)
+        risk_usd = equity * risk_pct
+        dollar_risk_1_lot = sl_dist * contract_size
+        lot_size = risk_usd / dollar_risk_1_lot
+        real_pnl = t['pnl'] * contract_size * lot_size
+        equity += real_pnl
+        if equity < 0:
+            equity = 0; break
+        if equity > peak_equity:
             peak_equity = equity
-            max_dd_pct = 0.0
-            compounded = []
-            for t in trades_list:
-                sl_dist = t.get('sl_val', 12.0)
-                risk_usd = equity * risk_pct
-                dollar_risk_1_lot = sl_dist * contract_size
-                lot_size = max(0.01, round(risk_usd / dollar_risk_1_lot, 2))
-                real_pnl = t['pnl'] * contract_size * lot_size
-                equity += real_pnl
-                if equity < 0:
-                    equity = 0; break
-                if equity > peak_equity:
-                    peak_equity = equity
-                dd_pct = (peak_equity - equity) / peak_equity * 100
-                if dd_pct > max_dd_pct:
-                    max_dd_pct = dd_pct
-                compounded.append({'pnl': real_pnl, 'eq': equity})
-                
-            p_tot = equity - initial_balance
-            wins = [x for x in compounded if x['pnl'] > 0]
-            losses = [x for x in compounded if x['pnl'] < 0]
-            wr = len(wins)/len(compounded)*100 if compounded else 0
-            loss_sum = sum(abs(x['pnl']) for x in losses)
-            pf = sum(x['pnl'] for x in wins)/loss_sum if loss_sum > 0 else 999
-            return equity, p_tot, max_dd_pct, wr, pf
+        dd_pct = (peak_equity - equity) / peak_equity * 100
+        if dd_pct > max_dd_pct:
+            max_dd_pct = dd_pct
+        compounded.append({'pnl': real_pnl, 'eq': equity})
+        
+    p_tot = equity - initial_balance
+    wins = [x for x in compounded if x['pnl'] > 0]
+    losses = [x for x in compounded if x['pnl'] < 0]
+    wr = len(wins)/len(compounded)*100 if compounded else 0
+    loss_sum = sum(abs(x['pnl']) for x in losses)
+    pf = sum(x['pnl'] for x in wins)/loss_sum if loss_sum > 0 else 999
+    return equity, p_tot, max_dd_pct, wr, pf
 
-        for r_pct in [0.001, 0.0025, 0.005, 0.0075, 0.01]:
-            eq, p_tot, dd_pct, wr, pf = simulate_portfolio(all_trades, 1000.0, r_pct)
-            print(f"  Rischio {r_pct*100:.0f}%: Capitale Finale: ${eq:,.2f} | P&L: +${p_tot:,.2f} | MaxDD: {dd_pct:.1f}% | PF: {pf:.2f}")
+def main():
+    args = ap.parse_args()
+    print("="*72)
+    print("TradeFlow AI — MFKK Suite Backtest")
+    print("Strategie: MFKK Score · MFKK HighWR · MFKK Intraday Combo")
+    if args.rm:
+        print("🧠 Risk Manager mode ATTIVO (AI Score simulato + TS/BE/Parziali)")
+    print("="*72)
 
-    # ── SAVE JSON
-    out_data={
-        'generated': datetime.datetime.utcnow().isoformat(),
-        'rm_mode': args.rm,
-        'config':{
-            'tp_mfkk':TP_H1,'sl_mfkk':SL_H1,
-            'tp_atr_mult':TP_ATR_MULT,'sl_atr_mult':SL_ATR_MULT,
-            'days':DAYS,'extreme_k':EXTREME_K,
-        },
-        'strategies': results,
-    }
-    with open(args.out,'w',encoding='utf-8') as f:
-        json.dump(out_data,f,indent=2,ensure_ascii=False)
-    print(f"\nSalvato: {args.out}")
-    print(f"\nUso:")
-    print(f"  python scripts/backtest_mfkk_intraday.py --mt5            # baseline")
-    print(f"  python scripts/backtest_mfkk_intraday.py --mt5 --compound # calcola scala PNL aggregata e Drawdown%")
-    print(f"  python scripts/backtest_mfkk_intraday.py --mt5 --rm       # + Risk Manager")
+    # ── CARICAMENTO DATI
+    print("\nCaricamento dati H1...")
+    c_h1=None
+    if args.h1_file:
+        c_h1=load_json(args.h1_file)
+    if c_h1 is None and args.mt5:
+        print("  Fetching H1 da MT5...")
+        c_h1=fetch_mt5('H1')
+
+    if c_h1 is None:
+        print("\nERRORE: specificare --h1-file <file.json> oppure --mt5")
+        sys.exit(1)
+
+    print("\nResampling...")
+    c_m30=load_json(args.m30_file) if args.m30_file else resample(c_h1, 30)
+    c_h4=load_json(args.h4_file) if args.h4_file else resample(c_h1, 240)
+
+    if args.mt5 and not args.m30_file:
+        print("  Fetching M30 da MT5...")
+        c_m30_mt5=fetch_mt5('M30')
+        if c_m30_mt5: c_m30=c_m30_mt5
+    if args.mt5 and not args.h4_file:
+        print("  Fetching H4 da MT5...")
+        c_h4_mt5=fetch_mt5('H4')
+        if c_h4_mt5: c_h4=c_h4_mt5
+
+    print(f"  H1:  {len(c_h1)} candele")
+    print(f"  M30: {len(c_m30)} candele")
+    print(f"  H4:  {len(c_h4)} candele")
+
+    # ── CALCOLO INDICATORI
+    print("\nCalcolo indicatori...")
+    ind_h1  = compute(c_h1)
+    ind_m30 = compute(c_m30)
+    ind_h4  = compute(c_h4)
+    print("  OK")
+
+    results = {}
+
+    # STRATEGIA 1: MFKK SCORE
+    print(f"\n{'='*72}")
+    print("MFKK SCORE — H1 — TP $20 / SL $12")
     print('='*72)
+    trades_mfkk = run_backtest(c_h1, ind_h1, mfkk_score, tp_val=TP_H1, sl_val=SL_H1, session=SESSION_ALL, cooldown_bars=1)
+    s_mfkk = calc_stats(trades_mfkk)
+    periods_mfkk = stats_by_period(trades_mfkk, c_h1)
+    if s_mfkk:
+        print(f"  Trade: {s_mfkk['n']} | WR: {s_mfkk['wr']}% | PF: {s_mfkk['pf']} | P&L: ${s_mfkk['pnl']}")
+    results['S00_MFKK_SCORE'] = {'strategy':'MFKK Score', 'tf':'H1', 'tp':TP_H1, 'sl':SL_H1, 'stats':s_mfkk, 'periods':periods_mfkk}
+
+    if args.rm:
+        print("\n  🧠 MFKK Score + Risk Manager:")
+        trades_mfkk_rm = run_backtest_rm(c_h1, ind_h1, mfkk_score, base_tp=TP_H1, base_sl=SL_H1, session=SESSION_ALL, cooldown_bars=1)
+        s_rm = calc_stats(trades_mfkk_rm)
+        p_rm = stats_by_period(trades_mfkk_rm, c_h1)
+        _print_comparison('BASELINE', s_mfkk, periods_mfkk, 'RiskMgr', s_rm, p_rm)
+        results['S00_MFKK_RM'] = {'strategy':'MFKK Score + RM', 'stats':s_rm, 'periods':p_rm}
+
+    # STRATEGIA 2: HIGHWR
+    trades_hwr = run_backtest(c_h1, ind_h1, mfkk_hwr, tp_val=TP_HWR, sl_val=SL_HWR, session=SESSION_ALL, cooldown_bars=1)
+    s_hwr = calc_stats(trades_hwr)
+    periods_hwr = stats_by_period(trades_hwr, c_h1)
+    results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'tf':'H1', 'tp':TP_HWR, 'sl':SL_HWR, 'stats':s_hwr, 'periods':periods_hwr}
+
+    # STRATEGIA 3: INTRADAY
+    tf_configs = {'M30': (c_m30, ind_m30, SESSION_LDN, 2), 'H1': (c_h1, ind_h1, SESSION_ALL, 1), 'H4': (c_h4, ind_h4, SESSION_ALL, 1)}
+    best_overall = None; best_overall_score = -1; intraday_results = {}
+    for vname, vfn in INTRADAY_VARIANTS.items():
+        intraday_results[vname] = {}
+        for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
+            trades = run_backtest(candles, ind, vfn, use_atr=True, session=session, cooldown_bars=cooldown, label=tf_label)
+            s = calc_stats(trades); periods = stats_by_period(trades, candles)
+            intraday_results[vname][tf_label] = {'stats':s, 'periods':periods, 'trades_count':len(trades)}
+            if s and s['n']>=20:
+                sc = s['pf'] * s['wr']
+                if sc > best_overall_score: best_overall_score = sc; best_overall = {'variant':vname, 'tf':tf_label, 'stats':s, 'periods':periods, 'trades':trades}
+    
+    results['S05_MFKK_INTRADAY'] = {'strategy':'MFKK Intraday', 'best':best_overall, 'all_variants':intraday_results}
+
+    if best_overall:
+        print(f"\n🏆 BEST MFKK INTRADAY: {best_overall['variant']} su {best_overall['tf']}")
+
+    # COMPOUND
+    if args.compound:
+        print(f"\n{'='*72}")
+        print("PORTAFOGLIO AGGREGATO & COMPOUND SCALING (Start: $1000)")
+        print('='*72)
+        all_trades = trades_mfkk + (best_overall['trades'] if best_overall and 'trades' in best_overall else [])
+        all_trades.sort(key=lambda x: x['ts'])
+        for r_pct in [0.001, 0.0025, 0.003, 0.005, 0.01]:
+            eq, p_tot, dd_pct, wr, pf = simulate_portfolio(all_trades, 1000.0, r_pct)
+            print(f"  Rischio {r_pct*100:.2f}%: Capitale Finale: ${eq:,.2f} | P&L: +${p_tot:,.2f} | MaxDD: {dd_pct:.1f}% | PF: {pf:.2f}")
+
+    # SAVE
+    out_data = {'generated': datetime.datetime.utcnow().isoformat(), 'config':{'days':DAYS}, 'strategies': results}
+    with open(args.out,'w',encoding='utf-8') as f:
+        json.dump(out_data, f, indent=2, ensure_ascii=False)
+    print(f"\nSalvato: {args.out}")
 
 if __name__=='__main__':
     main()

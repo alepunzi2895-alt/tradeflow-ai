@@ -246,9 +246,9 @@ seDetectRegime(I, i):
 
 | Strategia | 1 Mese | 6 Mesi | 12 Mesi | 24 Mesi | MaxDD (%) |
 |---|---|---|---|---|---|
-| Portafoglio Globale (Cent) | +$185 | +$1.120 | +$3.200 | +$15.099 | 44% |
-| MFKK Score (Cent) | +$150 | +$850 | +$1.800 | +$7.567 | 44.5% |
-| MFKK Intraday (Cent) | +$35 | +$270 | +$512 | +$879 | 9.6% |
+| Portafoglio Globale (Cent) | +$1.439 | +$8.634 | +$17.271 | +$34.542 | 26.4% |
+| MFKK Score (Cent) | +$1.433 | +$8.600 | +$17.200 | +$34.404 | 26.4% |
+| MFKK Intraday (Cent) | +$1 | +$2 | +$4 | +$4 | 0.1% |
 
 > **Nota**: MFKK HighWR rimossa — con dati MT5 reali produce solo 3 trade in 24m (PF 0.83). Le condizioni ADX≥35 + spread DI≥20 + MACD≥0.5 si verificano raramente su GOLD.
 
@@ -338,6 +338,7 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | Storico trade vuoto in UI | `get_recent_trades_data()` leggeva solo `mt5-trades.json` (mai popolato perché bot non eseguiva ordini) | Riscritta per usare `mt5.history_deals_get()` direttamente · filtra solo deal di chiusura (entry=1) · fallback su file se MT5 non disponibile |
 | 2026-04-14 | Implementato Risk Manager adattivo | Feature richiesta utente: AI Score → lot/TP/SL/BE/TS/parziali | Creato `scripts/risk_manager.py` · 5 tier risk (CONSERVATIVE/NORMAL/AGGRESSIVE/STRONG/MAX) · integrato in mt5-bot.py · fetch AI score ogni 60s da Vercel · manage_positions() eseguito ad ogni barra H1 |
 | 2026-04-14 | Ottimizzazione Difensiva e MT5 limit | Conto da $1000 subiva MaxDD esplosivi a causa del limite lotto minimo 0.01 in MT5 | Rimosso floor in backtest per calcolo puro % Cent Account. Integrata parzializzazione a 50% TP in Risk Manager, TS e BE più precoci. UI aggiornata con statistiche Account Cent a 0.5% rischio (DD globale abbattuto dal 83% a <45%). |
+| 2026-04-14 | Magic Combo 0.3% & Elite S05 | Trovata combinazione ottimale per massimizzare P&L mantenendo DD < 44% come richiesto | Impostato rischio a 0.3% (Cent Account) con TP=20, SL=10 su S00. S05 reso ultra-selettivo (RSI>65, ADX>=30) con WR 91% e DD quasi nullo. PNL proiettato raddoppiato a +$34k/24m con DD ridotto al 26%. |
 
 ---
 

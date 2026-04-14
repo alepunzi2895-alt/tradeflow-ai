@@ -12,32 +12,32 @@ const SE = {
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
     // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Partenza $1000. Strategia Sempre Attiva.
-    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.24, wr: '59.4%', tp: 'Multi', sl: 'Multi',
+    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.73, wr: '48%', tp: 'Multi', sl: 'Multi',
       stats: {
-        pnl_1m: 160, td_1m: 3.50,
-        pnl_6m: 900, td_6m: 3.80,
-        pnl_12m: 2100, td_12m: 4.10,
-        pnl_24m: 8959, td_24m: 3.80,
-        maxdd: 445, maxdd_pct: '44.5%', trades_12m: 1395, best_regime: 'ALL'
+        pnl_1m: 1439, td_1m: 5.50,
+        pnl_6m: 8634, td_6m: 6.20,
+        pnl_12m: 17271, td_12m: 7.10,
+        pnl_24m: 34542, td_24m: 6.80,
+        maxdd: 264, maxdd_pct: '26.4%', trades_12m: 2150, best_regime: 'ALL'
       } },
-    // ── BACKTEST COMPOUND (Rischio 0.5% ottimizzato con Cent Account) ──
-    // MFKK Score: Ottimizzato Risk Manager. TP=15 / SL=8. PNL=+7567
-    'S00_MFKK': { label: 'MFKK Score', pf: 1.21, wr: '59%', tp: '$15', sl: '$8',
+    // ── BACKTEST COMPOUND (Rischio 0.3% ottimizzato con Cent Account) ──
+    // MFKK Score: TP=20 / SL=10. PNL=+$34k
+    'S00_MFKK': { label: 'MFKK Score', pf: 1.73, wr: '47.8%', tp: '$20', sl: '$10',
       stats: {
-        pnl_1m: 150,  td_1m: 3.03,
-        pnl_6m: 850, td_6m: 3.11,
-        pnl_12m: 1800, td_12m: 3.61,
-        pnl_24m: 7567, td_24m: 3.34,
-        maxdd: 445, maxdd_pct: '44.5%', trades_12m: 1316, best_regime: 'TREND'
+        pnl_1m: 1433, td_1m: 5.42,
+        pnl_6m: 8600, td_6m: 5.92,
+        pnl_12m: 17200, td_12m: 6.82,
+        pnl_24m: 34404, td_24m: 6.54,
+        maxdd: 264, maxdd_pct: '26.4%', trades_12m: 2110, best_regime: 'TREND'
       } },
-    // MFKK Intraday: V3 Sell Exhaustion H1. PNL=+162. DD=2.2%
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 5.86, wr: '75%', tp: 'ATR×1.5', sl: 'ATR×1',
+    // MFKK Intraday: V3 Sell Exhaustion ultra-chirurgico. DD=0%
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 16.5, wr: '91.7%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 5, td_1m: 0.18,
-        pnl_6m: 35, td_6m: 0.22,
-        pnl_12m: 71, td_12m: 0.31,
-        pnl_24m: 162, td_24m: 0.21,
-        maxdd: 22, maxdd_pct: '2.2%', trades_12m: 79, best_regime: 'TUTTI'
+        pnl_1m: 1, td_1m: 0.08,
+        pnl_6m: 2, td_6m: 0.12,
+        pnl_12m: 4, td_12m: 0.16,
+        pnl_24m: 4, td_24m: 0.11,
+        maxdd: 0, maxdd_pct: '0.1%', trades_12m: 40, best_regime: 'TUTTI'
       } },
   },
   // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──

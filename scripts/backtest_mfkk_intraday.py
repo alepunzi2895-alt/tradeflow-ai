@@ -49,6 +49,7 @@ ap.add_argument('--h1-file',   type=str, default=None)
 ap.add_argument('--m30-file',  type=str, default=None)
 ap.add_argument('--h4-file',   type=str, default=None)
 ap.add_argument('--out',       type=str, default='backtest_mfkk_suite.json')
+ap.add_argument('--rm',        action='store_true', help='Abilita simulazione Risk Manager (AI Score adattivo)')
 args = ap.parse_args()
 
 # ── MATH HELPERS ──────────────────────────────────────────────────────────────
@@ -290,7 +291,7 @@ INTRADAY_VARIANTS = {
     'V4_Strong_5cond':      mfkk_intraday_v4,
 }
 
-# ── BACKTEST ENGINE ───────────────────────────────────────────────────────────
+# ── BACKTEST ENGINE (BASELINE: TP/SL fisso) ───────────────────────────────────
 def run_backtest(candles, ind, fn, tp_mode='fixed', tp_val=20.0, sl_val=12.0,
                  session=(0,24), cooldown_bars=1, use_atr=False, label='H1'):
     n=len(candles); warmup=max(80, int(n*0.05))
@@ -339,6 +340,189 @@ def run_backtest(candles, ind, fn, tp_mode='fixed', tp_val=20.0, sl_val=12.0,
             'date':day,'hour':hour,'dir':sig,
             'outcome':outcome,'pnl':round(pnl,2),
             'ts':ts
+        })
+        day_n[day]+=1; last_bar[day]=i
+    return trades
+
+# ── AI SCORE SIMULATOR ───────────────────────────────────────────────────
+def simulate_ai_score(ind, i):
+    """
+    Simula l'AI Score del tab Dashboard basandosi sugli indicatori (0-100).
+    Replica la logica di dashboard.js AI Confidence Score:
+      - ADX / Trend strength  (30%)
+      - RSI dal centro (50)   (20%)
+      - MACD allineamento     (20%)
+      - Regime qualità        (30%)
+
+    Score alto = mercato ben strutturato = rischia di più.
+    """
+    a=ind['adx'][i]; dp=ind['dip'][i]; dm=ind['dim'][i]
+    r=ind['rsi'][i]; m=ind['macd'][i]; c=ind['cci'][i]
+    atr=ind['atr'][i]; atr30=ind['atr30'][i]
+    if None in (a, dp, dm, r, m, c): return 50.0
+
+    score = 0.0
+
+    # 1. ADX strength (0-30): ADX > 30 → max, ADX < 15 → 0
+    adx_contrib = min(max((a - 15) / 25, 0), 1.0) * 30
+    score += adx_contrib
+
+    # 2. RSI distanza dal centro (0-20): RSI 30 o 70 → max, RSI 50 → 0
+    rsi_dist = abs(r - 50) / 20  # normalizzato 0-1 per ±20 da 50
+    score += min(rsi_dist, 1.0) * 20
+
+    # 3. MACD abs value (0-20): MACD > 1 → max
+    macd_contrib = min(abs(m) / 1.0, 1.0) * 20
+    score += macd_contrib
+
+    # 4. Regime quality (0-30): TREND > WEAK > RANGE > VOLATILE
+    if atr and atr30:
+        if a >= 30:     score += 30   # trend forte
+        elif a >= 22:   score += 18   # trend debole
+        elif atr > 1.4 * atr30: score += 5   # volatile
+        else:           score += 10   # range
+    else:
+        score += 10
+
+    return round(min(max(score, 0), 100), 1)
+
+# ── RISK MANAGER TIER (replica da risk_manager.py) ────────────────────────
+RM_TIERS = [
+    (40,  0.5, 1.0, 0.8, 0.50, 0.8,  False, 'CONSERVATIVE'),
+    (60,  1.0, 1.5, 1.0, 0.60, 0.6,  False, 'NORMAL'),
+    (75,  1.5, 2.0, 1.0, 0.50, 0.5,  True,  'AGGRESSIVE'),
+    (85,  2.0, 2.5, 1.2, 0.40, 0.4,  True,  'STRONG'),
+    (100, 2.5, 3.0, 1.5, 0.35, 0.35, True,  'MAX'),
+]
+
+def get_rm_tier(score):
+    for max_s, lot_m, tp_m, sl_m, be_pct, ts_s, partial, name in RM_TIERS:
+        if score <= max_s:
+            return lot_m, tp_m, sl_m, be_pct, ts_s, partial, name
+    return 2.5, 3.0, 1.5, 0.35, 0.35, True, 'MAX'
+
+# ── BACKTEST ENGINE (RISK MANAGER MODE) ───────────────────────────────
+def run_backtest_rm(candles, ind, fn, use_atr=False, base_tp=20.0, base_sl=12.0,
+                   session=(0,24), cooldown_bars=1):
+    """
+    Backtest con AI Score simulato + Risk Manager:
+    - Lot size adattivo per tier
+    - TP/SL moltiplicati per tier
+    - Simulazione trailing stop (step = ts_step × ATR)
+    - Simulazione parzializzazione 50% al 50% del TP
+    - Break Even automatico al be_pct del TP
+    Restituisce trade con pnl scalato per lot e trailing.
+    """
+    n=len(candles); warmup=max(80, int(n*0.05))
+    sess_s, sess_e = session
+    trades=[]; day_n=defaultdict(int); last_bar=defaultdict(lambda:-9999)
+    BASE_LOT = LOT  # lotto base di riferimento (normalizzato)
+
+    for i in range(warmup, n-1):
+        c=candles[i]; ts=c['t']
+        dt=datetime.datetime.utcfromtimestamp(ts)
+        hour=dt.hour; day=dt.strftime('%Y-%m-%d')
+
+        if not (sess_s<=hour<sess_e): continue
+        av=ind['atr'][i]; aa=ind['atr30'][i]
+        if av and aa and av>EXTREME_K*aa: continue
+        if day_n[day]>=MAX_TRADES: continue
+        if i-last_bar[day]<cooldown_bars: continue
+
+        sig=fn(ind, i)
+        if sig is None: continue
+
+        entry=c['c']
+        atr_val = av if av else 10.0
+
+        # Calcola AI Score e tier
+        ai_sc = simulate_ai_score(ind, i)
+        lot_m, tp_m, sl_m, be_pct, ts_step_mult, partial, tier_name = get_rm_tier(ai_sc)
+
+        # TP/SL base
+        if use_atr:
+            base_tp_v = atr_val * TP_ATR_MULT
+            base_sl_v = atr_val * SL_ATR_MULT
+        else:
+            base_tp_v = base_tp
+            base_sl_v = base_sl
+
+        # Applica moltiplicatori tier
+        tp_v = base_tp_v * tp_m
+        sl_v = base_sl_v * sl_m
+        lot  = round(BASE_LOT * lot_m, 3)
+        ts_step = atr_val * ts_step_mult
+        be_trigger = tp_v * be_pct
+        tp2_v = tp_v * 0.5  # TP parziale
+
+        tp_p  = entry + tp_v  if sig=='buy' else entry - tp_v
+        sl_p  = entry - sl_v  if sig=='buy' else entry + sl_v
+        tp2_p = entry + tp2_v if sig=='buy' else entry - tp2_v
+        be_p  = entry + be_trigger if sig=='buy' else entry - be_trigger
+
+        # Simula barra per barra
+        outcome     = 'open'
+        current_sl  = sl_p
+        partial_done = False
+        be_done      = False
+        pnl          = 0.0
+        remaining_lot = lot
+
+        for j in range(i+1, min(i+120, n)):
+            jh=candles[j]['h']; jl=candles[j]['l']
+            jmid=(jh+jl)/2
+
+            # 1. Parzializzazione: chiudi il 50% al TP2
+            if partial and not partial_done:
+                if (sig=='buy' and jh>=tp2_p) or (sig=='sell' and jl<=tp2_p):
+                    partial_pnl = tp2_v * (lot * 0.5) * 100
+                    pnl += partial_pnl
+                    remaining_lot *= 0.5
+                    partial_done = True
+                    # sposta SL a BE immediatamente
+                    be_done = True
+                    current_sl = entry + 0.02 if sig=='buy' else entry - 0.02
+
+            # 2. Break Even (senza parziale o dopo parziale)
+            if not be_done:
+                dist = (jmid - entry) if sig=='buy' else (entry - jmid)
+                if dist >= be_trigger:
+                    be_done = True
+                    current_sl = entry + 0.02 if sig=='buy' else entry - 0.02
+
+            # 3. Trailing Stop (attivo dopo BE)
+            if be_done:
+                ideal_sl = (jmid - ts_step) if sig=='buy' else (jmid + ts_step)
+                if sig=='buy'  and ideal_sl > current_sl: current_sl = ideal_sl
+                if sig=='sell' and ideal_sl < current_sl: current_sl = ideal_sl
+
+            # 4. Check TP/SL
+            if sig=='buy':
+                if jl<=current_sl:
+                    pnl += (current_sl - entry) * remaining_lot * 100
+                    outcome = 'win' if current_sl >= entry else 'loss'
+                    break
+                if jh>=tp_p:
+                    pnl += tp_v * remaining_lot * 100
+                    outcome = 'win'; break
+            else:
+                if jh>=current_sl:
+                    pnl += (entry - current_sl) * remaining_lot * 100
+                    outcome = 'win' if current_sl <= entry else 'loss'
+                    break
+                if jl<=tp_p:
+                    pnl += tp_v * remaining_lot * 100
+                    outcome = 'win'; break
+
+        if outcome == 'open': continue
+        if outcome == 'loss' and pnl == 0.0:
+            pnl = -sl_v * lot * 100  # SL pieno
+
+        trades.append({
+            'date':    day, 'hour': hour, 'dir': sig,
+            'outcome': outcome, 'pnl': round(pnl, 2),
+            'ts':      ts, 'lot': lot, 'ai_score': ai_sc,
+            'tier':    tier_name,
         })
         day_n[day]+=1; last_bar[day]=i
     return trades
@@ -634,12 +818,239 @@ def main():
         'all_variants':intraday_results,
     }
 
+def _print_comparison(label_a, sa, pa, label_b, sb, pb):
+    """Stampa tabella comparativa BASELINE vs Risk Manager."""
+    print(f"\n  {'Metrico':<18} {'BASELINE':>12} {'+ RiskMgr':>12} {'Delta':>10}")
+    print(f"  {'-'*52}")
+    metrics = [
+        ('P&L 24m ($)', pa.get('24m',{}).get('pnl',0), pb.get('24m',{}).get('pnl',0)),
+        ('P&L 12m ($)', pa.get('12m',{}).get('pnl',0), pb.get('12m',{}).get('pnl',0)),
+        ('P&L 6m ($)',  pa.get('6m',{}).get('pnl',0),  pb.get('6m',{}).get('pnl',0)),
+        ('P&L 1m ($)',  pa.get('1m',{}).get('pnl',0),  pb.get('1m',{}).get('pnl',0)),
+        ('MaxDD ($)',   sa.get('dd',0) if sa else 0,   sb.get('dd',0) if sb else 0),
+        ('WR (%)',      sa.get('wr',0) if sa else 0,   sb.get('wr',0) if sb else 0),
+        ('PF',         sa.get('pf',0) if sa else 0,   sb.get('pf',0) if sb else 0),
+        ('N Trade',    sa.get('n',0) if sa else 0,     sb.get('n',0) if sb else 0),
+    ]
+    for name, va, vb in metrics:
+        delta = vb - va
+        arrow = '↑' if delta > 0 else ('↓' if delta < 0 else ' ')
+        sign  = '+' if delta >= 0 else ''
+        print(f"  {name:<18} {va:>12.2f} {vb:>12.2f} {sign}{delta:>8.2f} {arrow}")
+    print()
+
+
+def main():
+    print("="*72)
+    print("TradeFlow AI — MFKK Suite Backtest")
+    print("Strategie: MFKK Score · MFKK HighWR · MFKK Intraday Combo")
+    if args.rm:
+        print("🧠 Risk Manager mode ATTIVO (AI Score simulato + TS/BE/Parziali)")
+    print("="*72)
+
+    # ── CARICAMENTO DATI
+    print("\nCaricamento dati H1...")
+    c_h1=None
+    if args.h1_file:
+        c_h1=load_json(args.h1_file)
+    if c_h1 is None and args.mt5:
+        print("  Fetching H1 da MT5...")
+        c_h1=fetch_mt5('H1')
+
+    if c_h1 is None:
+        print("\nERRORE: specificare --h1-file <file.json> oppure --mt5")
+        sys.exit(1)
+
+    # Resample H1 → M30 e H4 se non forniti
+    print("\nResampling...")
+    c_m30=load_json(args.m30_file) if args.m30_file else resample(c_h1, 30)
+    c_h4=load_json(args.h4_file) if args.h4_file else resample(c_h1, 240)
+
+    if args.mt5 and not args.m30_file:
+        print("  Fetching M30 da MT5...")
+        c_m30_mt5=fetch_mt5('M30')
+        if c_m30_mt5: c_m30=c_m30_mt5
+    if args.mt5 and not args.h4_file:
+        print("  Fetching H4 da MT5...")
+        c_h4_mt5=fetch_mt5('H4')
+        if c_h4_mt5: c_h4=c_h4_mt5
+
+    print(f"  H1:  {len(c_h1)} candele")
+    print(f"  M30: {len(c_m30)} candele")
+    print(f"  H4:  {len(c_h4)} candele")
+
+    # ── CALCOLO INDICATORI
+    print("\nCalcolo indicatori...")
+    ind_h1  = compute(c_h1)
+    ind_m30 = compute(c_m30)
+    ind_h4  = compute(c_h4)
+    print("  OK")
+
+    results = {}
+
+    # ════════════════════════════════════════════════════════════════════════
+    # STRATEGIA 1: MFKK SCORE (H1)
+    # ════════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*72}")
+    print("MFKK SCORE — H1 — TP $20 / SL $12")
+    print('='*72)
+
+    trades_mfkk = run_backtest(c_h1, ind_h1, mfkk_score,
+                               tp_val=TP_H1, sl_val=SL_H1,
+                               session=SESSION_ALL, cooldown_bars=1)
+    s_mfkk = calc_stats(trades_mfkk)
+    periods_mfkk = stats_by_period(trades_mfkk, c_h1)
+
+    if s_mfkk:
+        print(f"  Trade: {s_mfkk['n']} | WR: {s_mfkk['wr']}% | PF: {s_mfkk['pf']} | P&L: ${s_mfkk['pnl']}")
+        print(f"  MaxDD: ${s_mfkk['dd']} | BUY WR: {s_mfkk['buy_wr']}% | SELL WR: {s_mfkk['sell_wr']}%")
+        print(f"  Mesi positivi: {s_mfkk['pos_months']}")
+    print(f"\n  Breakdown per periodo:")
+    print(f"    {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
+    for p,ps in periods_mfkk.items():
+        print(f"    {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
+
+    results['S00_MFKK_SCORE'] = {
+        'strategy':'MFKK Score', 'tf':'H1', 'tp':TP_H1, 'sl':SL_H1,
+        'stats':s_mfkk, 'periods':periods_mfkk,
+    }
+
+    # ── MFKK SCORE + RISK MANAGER
+    if args.rm:
+        print("\n  🧠 MFKK Score + Risk Manager:")
+        trades_mfkk_rm = run_backtest_rm(c_h1, ind_h1, mfkk_score,
+                                         base_tp=TP_H1, base_sl=SL_H1,
+                                         session=SESSION_ALL, cooldown_bars=1)
+        s_rm = calc_stats(trades_mfkk_rm)
+        p_rm = stats_by_period(trades_mfkk_rm, c_h1)
+        if s_rm:
+            print(f"  Trade: {s_rm['n']} | WR: {s_rm['wr']}% | PF: {s_rm['pf']} | P&L: ${s_rm['pnl']}")
+            print(f"  MaxDD: ${s_rm['dd']}")
+        print("\n  Confronto BASELINE vs RiskManager:")
+        _print_comparison('BASELINE', s_mfkk, periods_mfkk, 'RiskMgr', s_rm, p_rm)
+        # AI Score distribution
+        if trades_mfkk_rm:
+            scores = [t['ai_score'] for t in trades_mfkk_rm]
+            tiers = defaultdict(int)
+            for t in trades_mfkk_rm: tiers[t['tier']] += 1
+            print(f"  AI Score medio: {sum(scores)/len(scores):.1f} | Range: {min(scores):.0f}–{max(scores):.0f}")
+            print(f"  Distribuzione tier: {dict(sorted(tiers.items()))}")
+        results['S00_MFKK_RM'] = {'strategy':'MFKK Score + RM', 'stats':s_rm, 'periods':p_rm}
+
+    # ════════════════════════════════════════════════════════════════════════
+    # STRATEGIA 2: MFKK HIGH WIN RATE (H1 SELL ONLY)
+    # ════════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*72}")
+    print("MFKK HIGH WIN RATE — H1 — SELL ONLY — TP $20 / SL $12")
+    print('='*72)
+
+    trades_hwr = run_backtest(c_h1, ind_h1, mfkk_hwr,
+                              tp_val=TP_HWR, sl_val=SL_HWR,
+                              session=SESSION_ALL, cooldown_bars=1)
+    s_hwr = calc_stats(trades_hwr)
+    periods_hwr = stats_by_period(trades_hwr, c_h1)
+
+    if s_hwr:
+        print(f"  Trade: {s_hwr['n']} | WR: {s_hwr['wr']}% | PF: {s_hwr['pf']} | P&L: ${s_hwr['pnl']}")
+        print(f"  MaxDD: ${s_hwr['dd']} | SELL WR: {s_hwr['sell_wr']}%")
+        print(f"  Mesi positivi: {s_hwr['pos_months']}")
+    print(f"\n  Breakdown per periodo:")
+    print(f"    {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
+    for p,ps in periods_hwr.items():
+        print(f"    {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
+
+    results['S00_MFKK_HWR'] = {
+        'strategy':'MFKK HighWR', 'tf':'H1', 'tp':TP_HWR, 'sl':SL_HWR,
+        'stats':s_hwr, 'periods':periods_hwr,
+    }
+
+    # ════════════════════════════════════════════════════════════════════════
+    # STRATEGIA 3: MFKK INTRADAY COMBO — Multi-TF sweep
+    # ════════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*72}")
+    print("MFKK INTRADAY COMBO — OBV MACD + RSI + MOMENTUM")
+    print("Multi-TF: M30 / H1 / H4")
+    print('='*72)
+
+    tf_configs = {
+        'M30': (c_m30, ind_m30, SESSION_LDN,   2),
+        'H1':  (c_h1,  ind_h1,  SESSION_ALL,   1),
+        'H4':  (c_h4,  ind_h4,  SESSION_ALL,   1),
+    }
+
+    best_overall_score = -1
+    best_overall = None
+    intraday_results = {}
+
+    print(f"\n{'Variante':<22} {'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'BuyWR':>7} {'SellWR':>8}")
+    print('-'*75)
+
+    for vname, vfn in INTRADAY_VARIANTS.items():
+        intraday_results[vname] = {}
+        for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
+            trades = run_backtest(candles, ind, vfn, use_atr=True,
+                                  session=session, cooldown_bars=cooldown, label=tf_label)
+            s = calc_stats(trades)
+            periods = stats_by_period(trades, candles)
+            intraday_results[vname][tf_label] = {'stats':s,'periods':periods,'trades_count':len(trades) if trades else 0}
+
+            if s and s['n']>=20:
+                status = '✅' if s['pf']>=1.5 else ('⚠️' if s['pf']>=1.1 else '❌')
+                print(f"{status} {vname:<20} {tf_label:<5} {s['n']:>5} {s['wr']:>5.1f}% {s['pf']:>6.3f} {s['pnl']:>9.1f} {s['dd']:>8.1f} {s['buy_wr']:>6.1f}% {s['sell_wr']:>7.1f}%")
+                rr=(s['pnl']/s['dd']) if s['dd']>0 else s['pnl']
+                score=s['pf']*(s['wr']/100)*math.log(s['n']+1)*min(rr/3,1.5)
+                if score>best_overall_score:
+                    best_overall_score=score
+                    best_overall={'variant':vname,'tf':tf_label,'stats':s,'periods':periods,'score':round(score,3)}
+            else:
+                n_=s['n'] if s else 0
+                print(f"── {vname:<20} {tf_label:<5} {n_:>5}  (N<20, skip)")
+
+    # ── Best INTRADAY + Risk Manager
+    if args.rm and best_overall:
+        bv = best_overall['variant']; btf = best_overall['tf']
+        bc, bi, bsess, bcool = tf_configs[btf]
+        bfn = INTRADAY_VARIANTS[bv]
+        print(f"\n  🧠 {bv} {btf} + Risk Manager:")
+        trades_intr_rm = run_backtest_rm(bc, bi, bfn, use_atr=True,
+                                         session=bsess, cooldown_bars=bcool)
+        s_intr_rm = calc_stats(trades_intr_rm)
+        p_intr_rm = stats_by_period(trades_intr_rm, bc)
+        if s_intr_rm:
+            print(f"  Trade: {s_intr_rm['n']} | WR: {s_intr_rm['wr']}% | PF: {s_intr_rm['pf']} | P&L: ${s_intr_rm['pnl']}")
+        print("\n  Confronto BASELINE vs RiskManager:")
+        _print_comparison('BASELINE', best_overall['stats'], best_overall['periods'],
+                          'RiskMgr', s_intr_rm, p_intr_rm)
+        results['S05_MFKK_INTRADAY_RM'] = {'strategy':'MFKK Intraday + RM', 'stats':s_intr_rm, 'periods':p_intr_rm}
+
+    # Raccomandazione
+    print(f"\n{'='*72}")
+    if best_overall:
+        b=best_overall
+        print(f"🏆 BEST MFKK INTRADAY: {b['variant']} su {b['tf']} (Score={b['score']:.3f})")
+        s=b['stats']
+        print(f"   WR={s['wr']}% | PF={s['pf']} | P&L=${s['pnl']} | MaxDD=${s['dd']}")
+        print(f"   Trade={s['n']} | BUY WR={s['buy_wr']}% | SELL WR={s['sell_wr']}%")
+        print(f"\n   Breakdown per periodo (best combo):")
+        print(f"     {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
+        for p,ps in b['periods'].items():
+            print(f"     {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
+    else:
+        print("⚠️  Nessuna variante MFKK Intraday con N>=20. Usa più dati storici.")
+        best_overall={'variant':'V1_OBV_RSI_MOM','tf':'H1','stats':None,'periods':{},'score':0}
+
+    results['S05_MFKK_INTRADAY'] = {
+        'strategy':'MFKK Intraday',
+        'best':best_overall,
+        'all_variants':intraday_results,
+    }
+
     # ── RIEPILOGO FINALE
     print(f"\n{'='*72}")
     print("RIEPILOGO FINALE — 3 Strategie Ufficiali")
     print('='*72)
-    print(f"{'Strategia':<20} {'TF':<5} {'WR':>6} {'PF':>6} {'24m P&L':>10} {'12m P&L':>10} {'6m P&L':>10} {'1m P&L':>9}")
-    print('-'*78)
+    print(f"{'Strategia':<22} {'TF':<5} {'WR':>6} {'PF':>6} {'24m P&L':>10} {'12m P&L':>10} {'6m P&L':>10} {'1m P&L':>9}")
+    print('-'*80)
 
     for sid, r in results.items():
         if sid == 'S05_MFKK_INTRADAY':
@@ -648,21 +1059,23 @@ def main():
             tf = r['best']['tf']
             nm = r['strategy']
         else:
-            s  = r['stats'] or {}
-            ps = r['periods']
-            tf = r['tf']
-            nm = r['strategy']
+            s  = r.get('stats') or {}
+            ps = r.get('periods', {})
+            tf = r.get('tf', 'H1')
+            nm = r.get('strategy', sid)
         wr  = s.get('wr',0)
         pf  = s.get('pf',0)
         p24 = ps.get('24m',{}).get('pnl',0)
         p12 = ps.get('12m',{}).get('pnl',0)
         p6  = ps.get('6m',{}).get('pnl',0)
         p1  = ps.get('1m',{}).get('pnl',0)
-        print(f"{nm:<20} {tf:<5} {wr:>5.1f}% {pf:>6.3f} {p24:>10.1f} {p12:>10.1f} {p6:>10.1f} {p1:>9.1f}")
+        tag = ' 🧠' if 'RM' in sid else ''
+        print(f"{nm+tag:<22} {tf:<5} {wr:>5.1f}% {pf:>6.3f} {p24:>10.1f} {p12:>10.1f} {p6:>10.1f} {p1:>9.1f}")
 
     # ── SAVE JSON
-    out={
+    out_data={
         'generated': datetime.datetime.utcnow().isoformat(),
+        'rm_mode': args.rm,
         'config':{
             'tp_mfkk':TP_H1,'sl_mfkk':SL_H1,
             'tp_atr_mult':TP_ATR_MULT,'sl_atr_mult':SL_ATR_MULT,
@@ -671,11 +1084,11 @@ def main():
         'strategies': results,
     }
     with open(args.out,'w',encoding='utf-8') as f:
-        json.dump(out,f,indent=2,ensure_ascii=False)
+        json.dump(out_data,f,indent=2,ensure_ascii=False)
     print(f"\nSalvato: {args.out}")
-    print(f"\nProssimo step:")
-    print(f"  python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_mt5.json")
-    print(f"  python scripts/backtest_mfkk_intraday.py --mt5  (richiede MT5 aperto)")
+    print(f"\nUso:")
+    print(f"  python scripts/backtest_mfkk_intraday.py --mt5         # baseline")
+    print(f"  python scripts/backtest_mfkk_intraday.py --mt5 --rm    # + Risk Manager")
     print('='*72)
 
 if __name__=='__main__':

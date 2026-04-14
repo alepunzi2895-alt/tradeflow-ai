@@ -21,14 +21,14 @@ const SE = {
         pnl_24m: 3260, td_24m: 3.34,
         maxdd: 1332, trades_12m: 1316, best_regime: 'TREND'
       } },
-    // MFKK Intraday: V2 Triple MACD H1 · WR 37% · PF 1.24 · 24m +$4.794 · MaxDD $1.367 · ~3.3 trade/gg
+    // MFKK Intraday: V2 Triple MACD H1 · WR 37% · PF 1.24 · 24m +$4.833 · MaxDD $1.367 · ~3.3 trade/gg
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.24, wr: '37%', tp: 'ATR×2', sl: 'ATR×1',
       stats: {
-        pnl_1m: 1082, td_1m: 2.83,
-        pnl_6m: 1830, td_6m: 3.24,
-        pnl_12m: 4179, td_12m: 3.43,
-        pnl_24m: 4794, td_24m: 3.30,
-        maxdd: 1367, trades_12m: 1252, best_regime: 'TUTTI'
+        pnl_1m: 1121, td_1m: 2.87,
+        pnl_6m: 1869, td_6m: 3.25,
+        pnl_12m: 4218, td_12m: 3.43,
+        pnl_24m: 4833, td_24m: 3.30,
+        maxdd: 1367, trades_12m: 1253, best_regime: 'TUTTI'
       } },
   },
   // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──

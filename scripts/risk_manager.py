@@ -4,14 +4,14 @@ TradeFlow AI — Risk Manager Module
 Gestione rischio adattiva basata sull'AI Score del tab Dashboard.
 
 LOGICA PRINCIPALE:
-  AI Score 0-100  →  determina lot size, TP/SL multipli, BE e trailing
-
-TIER DI RISCHIO:
-  CONSERVATIVE  score <  40  →  LOT × 0.5   TP×1.0  SL×0.8   BE@50%  TS leggero
-  NORMAL        score 40-60  →  LOT × 1.0   TP×1.5  SL×1.0   BE@60%  TS normale
-  AGGRESSIVE    score 60-75  →  LOT × 1.5   TP×2.0  SL×1.0   BE@50%  TS aggressivo
-  STRONG        score 75-85  →  LOT × 2.0   TP×2.5  SL×1.2   BE@40%  TS forte
-  MAX           score >  85  →  LOT × 2.5   TP×3.0  SL×1.5   BE@35%  TS max + parziale
+  AI Score 0-100    # (max_score, lot_mult, tp_mult, sl_mult, be_trigger_pct, ts_step_atr_mult, partial_close)
+    TIERS = [
+        (40,  0.5, 1.0, 0.8, 0.80, 1.5, False, 'CONSERVATIVE'), # 🔵 Basso rischio
+        (60,  0.8, 1.0, 1.0, 0.70, 1.5, False, 'NORMAL'),       # ⚪ Normale
+        (75,  1.0, 1.5, 1.0, 0.60, 1.2, False, 'AGGRESSIVE'),   # 🟡 Conferme multiple
+        (85,  1.2, 1.8, 1.2, 0.50, 1.0, False, 'STRONG'),       # 🟠 Setup istituzionale
+        (100, 1.5, 2.0, 1.5, 0.50, 1.0, False, 'MAX'),          # 🔴 Massima confluenza
+    ]
 
 PARZIALIZZAZIONI:
   Al raggiungimento del 50% del TP → chiudi il 50% del lotto e sposta SL a BE
@@ -34,61 +34,13 @@ import logging
 log = logging.getLogger('tf-bot')
 
 # ── CONFIGURAZIONE TIER ────────────────────────────────────────────────────────
-RISK_TIERS = {
-    'CONSERVATIVE': {
-        'score_max':  40,
-        'lot_mult':   0.5,
-        'tp_mult':    1.0,   # × ATR base TP
-        'sl_mult':    0.8,   # × ATR base SL
-        'be_pct':     0.50,  # BE quando prezzo raggiunge 50% del TP
-        'ts_step':    0.8,   # trailing step × ATR
-        'partial':    False, # nessuna parzializzazione
-        'label':      '🔵 CONSERVATIVE',
-    },
-    'NORMAL': {
-        'score_max':  60,
-        'lot_mult':   1.0,
-        'tp_mult':    1.5,
-        'sl_mult':    1.0,
-        'be_pct':     0.60,
-        'ts_step':    0.6,
-        'partial':    False,
-        'label':      '⚪ NORMAL',
-    },
-    'AGGRESSIVE': {
-        'score_max':  75,
-        'lot_mult':   1.5,
-        'tp_mult':    2.0,
-        'sl_mult':    1.0,
-        'be_pct':     0.50,
-        'ts_step':    0.5,
-        'partial':    True,
-        'partial_pct': 0.50,  # chiudi il 50% del lotto al 50% del TP
-        'label':      '🟡 AGGRESSIVE',
-    },
-    'STRONG': {
-        'score_max':  85,
-        'lot_mult':   2.0,
-        'tp_mult':    2.5,
-        'sl_mult':    1.2,
-        'be_pct':     0.40,
-        'ts_step':    0.4,
-        'partial':    True,
-        'partial_pct': 0.50,
-        'label':      '🟠 STRONG',
-    },
-    'MAX': {
-        'score_max':  100,
-        'lot_mult':   2.5,
-        'tp_mult':    3.0,
-        'sl_mult':    1.5,
-        'be_pct':     0.35,
-        'ts_step':    0.35,
-        'partial':    True,
-        'partial_pct': 0.50,
-        'label':      '🔴 MAX',
-    },
-}
+TIERS = [
+    {'score_max': 40,  'lot_mult': 0.5, 'tp_mult': 1.0, 'sl_mult': 0.8, 'be_pct': 0.80, 'ts_step': 1.5, 'partial': False, 'label': '🔵 CONSERVATIVE'},
+    {'score_max': 60,  'lot_mult': 0.8, 'tp_mult': 1.0, 'sl_mult': 1.0, 'be_pct': 0.70, 'ts_step': 1.5, 'partial': False, 'label': '⚪ NORMAL'},
+    {'score_max': 75,  'lot_mult': 1.0, 'tp_mult': 1.5, 'sl_mult': 1.0, 'be_pct': 0.60, 'ts_step': 1.2, 'partial': False, 'label': '🟡 AGGRESSIVE'},
+    {'score_max': 85,  'lot_mult': 1.2, 'tp_mult': 1.8, 'sl_mult': 1.2, 'be_pct': 0.50, 'ts_step': 1.0, 'partial': False, 'label': '🟠 STRONG'},
+    {'score_max': 100, 'lot_mult': 1.5, 'tp_mult': 2.0, 'sl_mult': 1.5, 'be_pct': 0.50, 'ts_step': 1.0, 'partial': False, 'label': '🔴 MAX'},
+]
 
 # TP/SL base in dollari per strategia (fallback se ATR non disponibile)
 STRATEGY_BASE = {
@@ -116,10 +68,10 @@ class RiskManager:
     # ── TIER DETECTION ─────────────────────────────────────────────────────────
     def get_tier(self, ai_score: float) -> dict:
         """Restituisce il tier di rischio corrispondente all'AI Score."""
-        for name, tier in RISK_TIERS.items():
+        for tier in TIERS:
             if ai_score <= tier['score_max']:
-                return {**tier, 'name': name}
-        return {**RISK_TIERS['MAX'], 'name': 'MAX'}
+                return tier
+        return TIERS[-1]
 
     # ── ORDER PARAMS ────────────────────────────────────────────────────────────
     def get_order_params(self, ai_score: float, atr: float, strategy: str,
@@ -177,7 +129,7 @@ class RiskManager:
             'partial':     tier.get('partial', False),
             'partial_lot': partial_lot,
             'tp2_usd':     tp2_usd,
-            'tier':        tier['name'],
+            'tier':        tier['label'],
             'tier_label':  tier['label'],
             'ai_score':    round(ai_score, 1),
         }

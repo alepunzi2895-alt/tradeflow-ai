@@ -345,11 +345,11 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 
 | Tier | AI Score | Lot Mult | TP Mult | SL Mult | BE trigger | TS Step | Parziale |
 |---|---|---|---|---|---|---|---|
-| 🔵 CONSERVATIVE | < 40 | ×0.5 | ×1.0 | ×0.8 | 50% TP | 0.8×ATR | No |
-| ⚪ NORMAL | 40-60 | ×1.0 | ×1.5 | ×1.0 | 60% TP | 0.6×ATR | No |
-| 🟡 AGGRESSIVE | 60-75 | ×1.5 | ×2.0 | ×1.0 | 50% TP | 0.5×ATR | Sì 50% |
-| 🟠 STRONG | 75-85 | ×2.0 | ×2.5 | ×1.2 | 40% TP | 0.4×ATR | Sì 50% |
-| 🔴 MAX | > 85 | ×2.5 | ×3.0 | ×1.5 | 35% TP | 0.35×ATR | Sì 50% |
+| 🔵 CONSERVATIVE | < 40 | ×0.5 | ×1.0 | ×0.8 | 80% TP | 1.5×ATR | No |
+| ⚪ NORMAL | 40-60 | ×0.8 | ×1.0 | ×1.0 | 70% TP | 1.5×ATR | No |
+| 🟡 AGGRESSIVE | 60-75 | ×1.0 | ×1.5 | ×1.0 | 60% TP | 1.2×ATR | No |
+| 🟠 STRONG | 75-85 | ×1.2 | ×1.8 | ×1.2 | 50% TP | 1.0×ATR | No |
+| 🔴 MAX | > 85 | ×1.5 | ×2.0 | ×1.5 | 50% TP | 1.0×ATR | No |
 
 ### 8.2 Flusso operativo
 1. **Ogni 60s**: fetch AI Score da Vercel DB (`/api/db?action=mt5_get`)

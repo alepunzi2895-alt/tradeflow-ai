@@ -363,23 +363,23 @@ def simulate_ai_score(ind, i):
 
     score = 0.0
 
-    # 1. ADX strength (0-30): ADX > 30 → max, ADX < 15 → 0
-    adx_contrib = min(max((a - 15) / 25, 0), 1.0) * 30
+    # 1. ADX strength (0-30): ADX > 40 → max, ADX < 20 → 0
+    adx_contrib = min(max((a - 20) / 20, 0), 1.0) * 30
     score += adx_contrib
 
-    # 2. RSI distanza dal centro (0-20): RSI 30 o 70 → max, RSI 50 → 0
-    rsi_dist = abs(r - 50) / 20  # normalizzato 0-1 per ±20 da 50
-    score += min(rsi_dist, 1.0) * 20
+    # 2. RSI distanza dal centro (0-20): ±15 da 50 → max
+    rsi_dist = min(abs(r - 50) / 15, 1.0) * 20
+    score += rsi_dist
 
-    # 3. MACD abs value (0-20): MACD > 1 → max
-    macd_contrib = min(abs(m) / 1.0, 1.0) * 20
+    # 3. MACD abs value (0-20): MACD > 2.0 → max
+    macd_contrib = min(abs(m) / 2.0, 1.0) * 20
     score += macd_contrib
 
     # 4. Regime quality (0-30): TREND > WEAK > RANGE > VOLATILE
     if atr and atr30:
-        if a >= 30:     score += 30   # trend forte
-        elif a >= 22:   score += 18   # trend debole
-        elif atr > 1.4 * atr30: score += 5   # volatile
+        if a >= 35:     score += 30   # trend forte
+        elif a >= 25:   score += 15   # trend debole
+        elif atr > 1.2 * atr30: score += 5   # volatile
         else:           score += 10   # range
     else:
         score += 10
@@ -388,18 +388,19 @@ def simulate_ai_score(ind, i):
 
 # ── RISK MANAGER TIER (replica da risk_manager.py) ────────────────────────
 RM_TIERS = [
-    (40,  0.5, 1.0, 0.8, 0.50, 0.8,  False, 'CONSERVATIVE'),
-    (60,  1.0, 1.5, 1.0, 0.60, 0.6,  False, 'NORMAL'),
-    (75,  1.5, 2.0, 1.0, 0.50, 0.5,  True,  'AGGRESSIVE'),
-    (85,  2.0, 2.5, 1.2, 0.40, 0.4,  True,  'STRONG'),
-    (100, 2.5, 3.0, 1.5, 0.35, 0.35, True,  'MAX'),
+    # max_s, lot_m, tp_m, sl_m, be_pct, ts_s, partial, name
+    (40,  0.5, 1.0, 0.8, 0.80, 2.0, False, 'CONSERVATIVE'),
+    (60,  0.8, 1.0, 1.0, 0.70, 2.0, False, 'NORMAL'),
+    (75,  1.0, 1.5, 1.0, 0.60, 2.0, False, 'AGGRESSIVE'),
+    (85,  1.2, 1.8, 1.2, 0.50, 1.5, False, 'STRONG'),
+    (100, 1.5, 2.0, 1.5, 0.50, 1.5, False, 'MAX'),
 ]
 
 def get_rm_tier(score):
     for max_s, lot_m, tp_m, sl_m, be_pct, ts_s, partial, name in RM_TIERS:
         if score <= max_s:
             return lot_m, tp_m, sl_m, be_pct, ts_s, partial, name
-    return 2.5, 3.0, 1.5, 0.35, 0.35, True, 'MAX'
+    return 1.5, 3.0, 1.5, 0.50, 0.6, False, 'MAX'
 
 # ── BACKTEST ENGINE (RISK MANAGER MODE) ───────────────────────────────
 def run_backtest_rm(candles, ind, fn, use_atr=False, base_tp=20.0, base_sl=12.0,

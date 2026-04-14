@@ -11,6 +11,15 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
+    // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Partenza $1000. Strategia Sempre Attiva.
+    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.06, wr: '43.5%', tp: 'Multi', sl: 'Multi',
+      stats: {
+        pnl_1m: 322, td_1m: 5.90,
+        pnl_6m: 1830, td_6m: 6.36,
+        pnl_12m: 3890, td_12m: 7.04,
+        pnl_24m: 26519, td_24m: 6.64,
+        maxdd: 838, maxdd_pct: '83%', trades_12m: 2569, best_regime: 'ALL'
+      } },
     // ── BACKTEST COMPOUND (Rischio 1% su $1000) ──
     // MFKK Score: Ottimizzato Risk Manager. TP=15 / SL=8. PNL=+6548
     'S00_MFKK': { label: 'MFKK Score', pf: 1.03, wr: '43%', tp: '$15', sl: '$8',
@@ -19,7 +28,7 @@ const SE = {
         pnl_6m: 1350, td_6m: 3.11,
         pnl_12m: 2840, td_12m: 3.61,
         pnl_24m: 6548, td_24m: 3.34,
-        maxdd: null, maxdd_pct: '81%', trades_12m: 1316, best_regime: 'TREND'
+        maxdd: 810, maxdd_pct: '81%', trades_12m: 1316, best_regime: 'TREND'
       } },
     // MFKK Intraday: V3 Sell Exhaustion H1. PNL=+2016. DD=37.2%
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.69, wr: '47%', tp: 'ATR×1.5', sl: 'ATR×1',
@@ -28,16 +37,7 @@ const SE = {
         pnl_6m: 480, td_6m: 3.25,
         pnl_12m: 1050, td_12m: 3.43,
         pnl_24m: 2016, td_24m: 3.30,
-        maxdd: null, maxdd_pct: '37%', trades_12m: 1253, best_regime: 'TUTTI'
-      } },
-    // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Partenza $1000.
-    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.06, wr: '43.5%', tp: 'Multi', sl: 'Multi',
-      stats: {
-        pnl_1m: 650, td_1m: 5.90,
-        pnl_6m: 2850, td_6m: 6.36,
-        pnl_12m: 5940, td_12m: 7.04,
-        pnl_24m: 26519, td_24m: 6.64,
-        maxdd: null, maxdd_pct: '83%', trades_12m: 2569, best_regime: 'ALL'
+        maxdd: 372, maxdd_pct: '37%', trades_12m: 1253, best_regime: 'TUTTI'
       } },
   },
   // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──

@@ -22,7 +22,9 @@
       "Bash(python -c \"import yfinance as yf; d=yf.download\\('GC=F',period='2y',interval='1h',progress=False\\); print\\(len\\(d\\),'rows'\\)\")",
       "Bash(python -X utf8 scripts/strategy-engine-v2.py)",
       "Bash(python -X utf8 scripts/strategy-mtf.py)",
-      "Bash(python -X utf8 scripts/strategy-scalping.py)"
+      "Bash(python -X utf8 scripts/strategy-scalping.py)",
+      "Bash(python:*)",
+      "Bash(del xauusd_h1_730d.json)"
     ]
   }
 }

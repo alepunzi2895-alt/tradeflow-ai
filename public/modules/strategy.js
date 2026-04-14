@@ -9,38 +9,24 @@ const SE = {
   extremeMult: 3.5,
   session: { start: 0, end: 24 },
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
-  minQuality: { S00_MFKK: 75, S00_MFKK_HWR: 0, default: 0 },
+  minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
-    // ── BACKTEST REALE su GC=F H1 · 730gg · Spread OANDA $0.30+ATR · aggiornato 2026-04 ──
-    // S00_MFKK: #1 per P&L totale ($12,086) — domina TREND_UP/DOWN/WEAK_DOWN
-    // SELL molto più redditizio di BUY ($9,442 vs $2,643) — bias ribassista su XAU
-    'S00_MFKK':     { label: 'MFKK Score',    pf: 1.53, wr: '48%', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: 484, pnl_12m: 5801, pnl_24m: 12086, maxdd: 1220, trades_12m: 1760, best_regime: 'TREND' } },
-    // S00_MFKK_HWR: WR 84.2% PF 8.73 — trade rari ma precisi · MaxDD -$61 su 2 anni
-    'S00_MFKK_HWR': { label: '💎 MFKK HighWR', pf: 8.73, wr: '84%', tp: 20, sl: 12,
-      stats: { pnl_1m: 122, pnl_12m: 1465, pnl_24m: 2443, maxdd: 61, trades_12m: 83, best_regime: 'TREND' } },
-    // S01_OBV_MACD: OBV normalizzato + DEMA(9) − EMA(26) → T-Channel · segnale su inversione canale
-    'S01_OBV_MACD': { label: 'OBV MACD', pf: 0, wr: '?', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: null, pnl_12m: null, pnl_24m: null, maxdd: null, trades_12m: null, best_regime: '?' } },
-    // S02_OBV_SELL: V4 SELL ONLY — OBV ribassista + RSI>55 + ADX≥20 + Momentum negativo
-    // Backtest H1 GC=F 730gg: WR 42.8% · PF 2.037 · P&L +$2,154 · MaxDD $486 · 285 trade · Mesi pos 13/23
-    'S02_OBV_SELL': { label: 'OBV SELL', pf: 2.04, wr: '43%', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: null, pnl_12m: null, pnl_24m: 2154, maxdd: 486, trades_12m: null, best_regime: 'TREND_DOWN' } },
-    'S02_ULTIMATE_RSI': { label: 'Ultimate RSI', pf: 0, wr: '?', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: null, pnl_12m: null, pnl_24m: null, maxdd: null, trades_12m: null, best_regime: '?' } },
-    'S03_MOMENTUM': { label: 'Momentum', pf: 0, wr: '?', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: null, pnl_12m: null, pnl_24m: null, maxdd: null, trades_12m: null, best_regime: '?' } },
-    'S04_ICT_ORDERFLOW': { label: 'ICT Order Flow', pf: 0, wr: '?', tp: 'ATR', sl: 'ATR',
-      stats: { pnl_1m: null, pnl_12m: null, pnl_24m: null, maxdd: null, trades_12m: null, best_regime: '?' } },
+    // ── BACKTEST REALE su MT5 GOLD H1 · 730gg · aggiornato 2026-04-14 ──
+    // MFKK Score: WR 41.7% · PF 1.19 · 24m +$3.260 · MaxDD $1.332 · 2435 trade
+    'S00_MFKK': { label: 'MFKK Score', pf: 1.19, wr: '42%', tp: '$20', sl: '$12',
+      stats: { pnl_1m: 284, pnl_6m: 1600, pnl_12m: 1936, pnl_24m: 3260, maxdd: 1332, trades_12m: 1316, best_regime: 'TREND' } },
+    // MFKK Intraday: V2 Triple MACD H1 · OBV + RSI + MACD + Momentum · WR 37% · PF 1.24 · 24m +$4.794
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.24, wr: '37%', tp: 'ATR×2', sl: 'ATR×1',
+      stats: { pnl_1m: 1082, pnl_6m: 1830, pnl_12m: 4179, pnl_24m: 4794, maxdd: 1367, trades_12m: 1252, best_regime: 'TUTTI' } },
   },
-  // ── REGIME PRIORITY — S02_OBV_SELL validato H1 (WR 43% PF 2.04) · solo SELL · priorità TREND_DOWN/WEAK_DOWN ──
+  // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──
   regimePriority: {
-    TREND_UP:   ['S00_MFKK_HWR', 'S00_MFKK', 'S01_OBV_MACD', 'S02_ULTIMATE_RSI', 'S03_MOMENTUM', 'S04_ICT_ORDERFLOW'],
-    TREND_DOWN: ['S00_MFKK_HWR', 'S02_OBV_SELL', 'S00_MFKK', 'S01_OBV_MACD', 'S02_ULTIMATE_RSI', 'S03_MOMENTUM', 'S04_ICT_ORDERFLOW'],
-    WEAK_UP:    ['S00_MFKK', 'S01_OBV_MACD', 'S02_ULTIMATE_RSI', 'S03_MOMENTUM', 'S04_ICT_ORDERFLOW'],
-    WEAK_DOWN:  ['S00_MFKK_HWR', 'S02_OBV_SELL', 'S00_MFKK', 'S01_OBV_MACD', 'S02_ULTIMATE_RSI', 'S03_MOMENTUM', 'S04_ICT_ORDERFLOW'],
-    RANGE:      ['S04_ICT_ORDERFLOW', 'S02_OBV_SELL', 'S01_OBV_MACD', 'S02_ULTIMATE_RSI', 'S03_MOMENTUM', 'S00_MFKK'],
-    VOLATILE:   ['S04_ICT_ORDERFLOW', 'S01_OBV_MACD', 'S02_ULTIMATE_RSI', 'S03_MOMENTUM', 'S00_MFKK'],
+    TREND_UP:   ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    TREND_DOWN: ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    WEAK_UP:    ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    WEAK_DOWN:  ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    RANGE:      ['S05_MFKK_INTRADAY', 'S00_MFKK'],
+    VOLATILE:   ['S05_MFKK_INTRADAY', 'S00_MFKK'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 2, TREND_DOWN: 2, WEAK_UP: 2, WEAK_DOWN: 2, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
@@ -464,7 +450,31 @@ const SE_STRATEGY_FNS = {
     }
     return null;
   },
+
+  // S05_MFKK_INTRADAY: V2 Triple MACD — migliore combo da backtest MT5 GOLD H1 730gg
+  // Condizioni: OBV T-Channel direzione + RSI lato giusto + MACD allineato + Momentum + ADX≥20
+  // WR 37% · PF 1.24 · P&L $4.794 (24m) · MaxDD $1.367 · 2407 trade · Best TF: H1
+  S05_MFKK_INTRADAY: (I, i) => {
+    if (!I.obv_oc || i < 2) return null;
+    const oc  = I.obv_oc;
+    const rsi = I.rsi?.[i];
+    const m   = I.mom?.[i];
+    const adx = I.adx?.[i];
+    const mc  = I.macd?.[i];
+    if (rsi == null || m == null || adx == null || mc == null) return null;
+    if (adx < 20) return null;
+
+    // V2 — 4 confluenze: OBV direzione + RSI + MACD + Momentum
+    if (oc[i] === 1 && rsi > 50 && m > 0 && mc > 0) {
+      return {dir:'buy', why:`MFKK Intraday ↑ OBV+RSI+MACD+Mom Bull · RSI ${rsi.toFixed(0)} · ADX ${adx.toFixed(0)} · MACD+ · MOM+`, quality:'medium'};
+    }
+    if (oc[i] === -1 && rsi < 50 && m < 0 && mc < 0) {
+      return {dir:'sell', why:`MFKK Intraday ↓ OBV+RSI+MACD+Mom Bear · RSI ${rsi.toFixed(0)} · ADX ${adx.toFixed(0)} · MACD- · MOM-`, quality:'medium'};
+    }
+    return null;
+  },
 };
+
 
 function seDetectRegime(I, i) {
   const adx = I.adx[i] || 25;
@@ -777,22 +787,24 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 <div style="margin-top:20px; padding-top:15px; border-top:1px dashed var(--border)">
   <div style="font-size:11px; color:var(--fg); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px">
     <span>📚 LIBRERIA STRATEGIE</span>
-    <span style="font-size:9px; font-weight:400; color:var(--dim)">Backtest H1 XAU/USD 2024-2026</span>
+    <span style="font-size:9px; font-weight:400; color:var(--dim)">Backtest H1 XAU/USD 2024…2026 · Lotto 0.01 = $1/punto</span>
   </div>
-  <div style="font-size:8px;color:var(--dim);margin-bottom:10px">P&L su lotto 0.01 (= $1/punto) · Regime attivo: <b style="color:${rm.col}">${rm.label}</b></div>
+  <div style="font-size:8px;color:var(--dim);margin-bottom:10px">Regime attivo: <b style="color:${rm.col}">${rm.label}</b></div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
       const isActive = activeList.includes(id);
       const st = s.stats || {};
-      const pnl1col  = (st.pnl_1m||0)>0 ?'var(--green)':'var(--red)';
-      const pnl12col = (st.pnl_12m||0)>0?'var(--green)':'var(--red)';
-      const pnl24col = (st.pnl_24m||0)>0?'var(--green)':'var(--red)';
-      const inds = id==='S00_MFKK'     ? 'ADX 80% + MACD 10% + CCI(50) 10% · SELL≥75 · BUY≥90 · SELL 3.6x più redditizio · zona 80-89 WR 58.8%' :
-                   id==='S00_MFKK_HWR' ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61' :
-                   id==='S01_OBV_MACD' ? 'OBV normalizzato a price-scale · DEMA(9) − EMA(26) · T-Channel · segnale su inversione canale · backtest in corso' :
-                   id==='S02_ULTIMATE_RSI' ? 'Ultimate RSI (14, 14, RMA/EMA) LuxAlgo · Crossover con Signal Line in zone estreme' :
-                   id==='S03_MOMENTUM' ? 'Momentum puro (Len=10) · Crossover linea dello zero' :
-                   id==='S04_ICT_ORDERFLOW' ? 'FVG Mitigation + Displacement (Stdev 100x2) base ICT' : '';
+      const pnl1col   = (st.pnl_1m||0)>0  ?'var(--green)':'var(--red)';
+      const pnl6col   = (st.pnl_6m||0)>0  ?'var(--green)':'var(--red)';
+      const pnl12col  = (st.pnl_12m||0)>0 ?'var(--green)':'var(--red)';
+      const pnl24col  = (st.pnl_24m||0)>0 ?'var(--green)':'var(--red)';
+      const inds = id==='S00_MFKK'
+        ? 'ADX 80% + MACD 10% + CCI(50) 10% · SELL≥75 · BUY≥90 · SELL 3.6x più redditizio · zona 80-89 WR 58.8%'
+        : id==='S00_MFKK_HWR'
+        ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
+        : id==='S05_MFKK_INTRADAY'
+        ? 'OBV MACD T-Channel + RSI + Momentum · TF ottimale da backtest M30/H1/H4 · backtest in corso'
+        : '';
       return `
       <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'50':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isActive?`<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>`:''}
@@ -804,27 +816,31 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:8px;text-align:center">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:8px;text-align:center">
           <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
             <div style="color:var(--dim);margin-bottom:1px">1 MESE</div>
-            <div style="font-weight:700;color:${pnl1col}">${(st.pnl_1m||0)>=0?'+':''}$${st.pnl_1m||'—'}</div>
+            <div style="font-weight:700;color:${pnl1col}">${st.pnl_1m!=null ? ((st.pnl_1m>=0?'+':'')+'$'+st.pnl_1m) : '+$—'}</div>
+          </div>
+          <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
+            <div style="color:var(--dim);margin-bottom:1px">6 MESI</div>
+            <div style="font-weight:700;color:${pnl6col}">${st.pnl_6m!=null ? ((st.pnl_6m>=0?'+':'')+'$'+st.pnl_6m) : '+$—'}</div>
           </div>
           <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
             <div style="color:var(--dim);margin-bottom:1px">12 MESI</div>
-            <div style="font-weight:700;color:${pnl12col}">${(st.pnl_12m||0)>=0?'+':''}$${st.pnl_12m||'—'}</div>
+            <div style="font-weight:700;color:${pnl12col}">${st.pnl_12m!=null ? ((st.pnl_12m>=0?'+':'')+'$'+st.pnl_12m) : '+$—'}</div>
           </div>
           <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
             <div style="color:var(--dim);margin-bottom:1px">24 MESI</div>
-            <div style="font-weight:700;color:${pnl24col}">${(st.pnl_24m||0)>=0?'+':''}$${st.pnl_24m||'—'}</div>
+            <div style="font-weight:700;color:${pnl24col}">${st.pnl_24m!=null ? ((st.pnl_24m>=0?'+':'')+'$'+st.pnl_24m) : '+$—'}</div>
           </div>
           <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
             <div style="color:var(--dim);margin-bottom:1px">MAX DD</div>
-            <div style="font-weight:700;color:var(--red)">-$${st.maxdd||'—'}</div>
+            <div style="font-weight:700;color:var(--red)">${st.maxdd!=null ? '-$'+st.maxdd : '-$—'}</div>
           </div>
         </div>
         <div style="margin-top:4px;font-size:8px;color:var(--dim);display:flex;gap:8px">
           <span>~${st.trades_12m||'?'} trade/anno</span>
-          <span>Target: TP $${s.tp} · SL $${s.sl}</span>
+          <span>Target: TP ${s.tp} · SL ${s.sl}</span>
           <span style="margin-left:auto;color:var(--dim)">Best: ${st.best_regime||'?'}</span>
         </div>
       </div>`;

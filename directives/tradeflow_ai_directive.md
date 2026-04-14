@@ -234,17 +234,23 @@ seDetectRegime(I, i):
   default → RANGE
 ```
 
-### 5.2 Strategie Attive (post-backtest 730gg GC=F H1 · aggiornato 2026-04-14)
+### 5.2 Strategie Attive (backtest MT5 GOLD H1 · 730gg · aggiornato 2026-04-14)
 | ID | Label | WR | PF | P&L 24m | Regimi |
 |---|---|---|---|---|---|
-| S00_MFKK | MFKK Score | 48% | 1.53 | +$12.086 | Tutti |
-| S00_MFKK_HWR | 💎 MFKK HighWR | 84% | 8.73 | +$2.443 | TREND/WEAK_DOWN |
-| S02_ULTIMATE_RSI | Ultimate RSI | ? | ? | In backtest | Tutti |
-| S03_MOMENTUM | Momentum(10) | ? | ? | In backtest | Tutti |
-| S04_ICT_ORDERFLOW | ICT Order Flow | ? | ? | In backtest | Tutti |
+| S00_MFKK | MFKK Score | 42% | 1.19 | +$3.260 | Tutti |
+| S05_MFKK_INTRADAY | MFKK Intraday | 37% | 1.24 | +$4.794 | Tutti |
 
-**Strategie RIMOSSE** (focus su MFKK · nuove strategie verranno da indicatori TV personalizzati):
-- S01_EXHAUSTION: rimossa per semplificare — sostituita da MFKK che copre lo stesso segnale
+**Breakdown per periodo (backtest MT5 GOLD H1 730d):**
+
+| Strategia | 1 Mese | 6 Mesi | 12 Mesi | 24 Mesi | MaxDD |
+|---|---|---|---|---|---|
+| MFKK Score | +$284 | +$1.600 | +$1.936 | +$3.260 | -$1.332 |
+| MFKK Intraday | +$1.082 | +$1.830 | +$4.179 | +$4.794 | -$1.367 |
+
+> **Nota**: MFKK HighWR rimossa — con dati MT5 reali produce solo 3 trade in 24m (PF 0.83). Le condizioni ADX≥35 + spread DI≥20 + MACD≥0.5 si verificano raramente su GOLD.
+
+**Strategie ARCHIVIATE** (logica JS mantenuta, non mostrate in UI):
+- S00_MFKK_HWR, S01_OBV_MACD, S02_OBV_SELL, S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW
 - S04_BB_SQUEEZE: rimossa — PF 1.04 non sufficiente, MaxDD alto ($1.290)
 - S09_VWAP_WPR: rimossa — troppo rara (8 trade/anno), difficile da integrare
 - S06_ORDERBLOCK: rimossa — PF 1.09 con 234 trade/anno, efficienza bassa
@@ -255,22 +261,35 @@ seDetectRegime(I, i):
 
 > **Prossimo step**: aggiungere strategie basate su indicatori TradingView personalizzati (Pine Script) → vedi §0.4 per il protocollo.
 
+### 5.2 Strategie Archiviate (NON mostrate nell'UI, logica mantenuta nel codice)
+
+Gli indicatori sviluppati in precedenza (Ultimate RSI, Momentum, ICT Order Flow, OBV MACD, OBV SELL, MFKK HighWR) sono stati mantenuti nelle loro funzioni JS ma **rimossi dalla UI** e dal catalogo `SE.strategies`. Possono essere riabilitati se il backtesting MT5 lo giustificasse.
+
 ### 5.3 Regime Priority (aggiornata 2026-04-14)
 | Regime | Strategie priorità |
 |---|---|
-| TREND_UP | HWR → MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
-| TREND_DOWN | HWR → MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
-| WEAK_UP | MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
-| WEAK_DOWN | HWR → MFKK → OBV_MACD → ULTIMATE_RSI → MOMENTUM |
-| RANGE | OBV_MACD → ULTIMATE_RSI → MOMENTUM → MFKK |
-| VOLATILE | OBV_MACD → ULTIMATE_RSI → MOMENTUM → MFKK |
+| TREND_UP | MFKK Score → MFKK Intraday |
+| TREND_DOWN | MFKK Score → MFKK Intraday |
+| WEAK_UP | MFKK Score → MFKK Intraday |
+| WEAK_DOWN | MFKK Score → MFKK Intraday |
+| RANGE | MFKK Intraday → MFKK Score |
+| VOLATILE | MFKK Intraday → MFKK Score |
 
 ### 5.4 Parametri Operativi
 - Max **10 trade/giorno**, cooldown **30 min** tra trade
-- Giorno estremo: ATR > **3.5x** media 30gg → trading sospeso
-- Sessione: **24h** (continua, per massimizzare profitti)
-- TP/SL dinamici ATR-based per S00_MFKK (TP=2x ATR, SL=1x ATR)
-- Bot controlla apertura posizioni esistenti prima di aprirne altre
+- ATR filter: sospendi se ATR > 3.5x media 30 barre
+- TP/SL: MFKK Score = $20/$12 fissi · MFKK Intraday = 2×ATR/1×ATR dinamici
+- Sessione: 24h (MFKK Score e Intraday attivi tutto il giorno)
+
+### 5.5 Procedura Backtest (Standard)
+```bash
+# Sempre usare --mt5 con MT5 aperto (dati broker reali GOLD)
+python scripts/backtest_mfkk_intraday.py --mt5
+
+# Fallback se MT5 non disponibile (dati storici salvati)
+python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
+```
+> ⚠️ **Regola**: i risultati del backtest con `--mt5` sono la fonte di verità ufficiale. I valori nelle `stats` di `SE.strategies` devono sempre riflettere l'ultimo run MT5.
 
 ---
 
@@ -306,6 +325,10 @@ seDetectRegime(I, i):
 | 2026-04-14 | mt5-bot.py aveva vecchie strategie (S01/S06/S09/S12) | STRATEGY_PARAMS e REGIME_PRIORITY non sincronizzati con strategy.js | Aggiornati in mt5-bot.py per usare solo S00_MFKK + S00_MFKK_HWR |
 | 2026-04-14 | Backtester usava solo yfinance GC=F | Nessun modo per usare dati broker reali MT5 | Creato fetch_mt5_history.py + flag --file in strategy-engine-v2.py |
 | 2026-04-14 | Integrazione nuovo indicatore TradingView | Utente ha richiesto indicatore Ultimate RSI [LuxAlgo] | Tradotto in JS via `_calcUltimateRSI` in `strategy.js` come S02_ULTIMATE_RSI |
+| 2026-04-14 | Integrazione indicatore Momentum | Utente ha richiesto indicatore Momentum puro | Aggiunto `S03_MOMENTUM` (Periodo: 10) in `strategy.js` |
+| 2026-04-14 | Integrazione ICT Order Flow | Utente ha fornito script ICT da ~600 righe | Astratta e applicata logica quantitativa di FVG Mitigations via `S04_ICT_ORDERFLOW` |
+| 2026-04-14 | Refactoring UI Tab Strategie | Utente richiede solo 3 card: MFKK Score, MFKK HighWR, MFKK Intraday | Rimossi S01/S02/S03/S04 da SE.strategies · aggiunto S05_MFKK_INTRADAY (OBV+RSI+Mom) · card con 5 periodi (1m/6m/12m/24m/MaxDD) · creato backtest_mfkk_intraday.py |
+| 2026-04-14 | Backtest MT5 GOLD reale — 2 strategie finali | `--mt5` rivela: HighWR produce 3 trade in 24m (PF 0.83) → rimossa. V2 Triple MACD batte V3 SELL ($4.794 vs $2.248) | Rimossa S00_MFKK_HWR da UI · S05 aggiornata a V2 (OBV+RSI+MACD+Mom+ADX≥20) · stats aggiornate con dati MT5 reali · direttive aggiornate · deploy git |
 | 2026-04-14 | Integrazione indicatore Momentum | Utente ha richiesto indicatore Momentum puro | Aggiunto `S03_MOMENTUM` (Periodo: 10) in `strategy.js` |
 | 2026-04-14 | Integrazione ICT Order Flow | Utente ha fornito script ICT da ~600 righe | Astratta e applicata logica quantitativa di FVG Mitigations via `S04_ICT_ORDERFLOW` |
 | 2026-04-14 | S01_OBV_MACD aggiunto (Pine Script v4) | OBV normalizzato + DEMA(9) − EMA(26) + T-Channel · backtest pendente su dati MT5 | Implementato in strategy.js (_calcOBVMACD) e strategy-engine-v2.py (S15_OBV_MACD) |

@@ -866,7 +866,7 @@ async function seSendTradeToMt5(s) {
   // Verifica stato bot prima di inviare
   const mt5Live = await seFetchMt5Data();
   const syncAge = mt5Live?.synced_at ? Math.round((Date.now()-new Date(mt5Live.synced_at).getTime())/1000) : null;
-  const botOk = syncAge !== null && syncAge < 30;
+  const botOk = syncAge !== null && syncAge < 90;
 
   if (!botOk) {
     seToast('🔴 Bot MT5 offline — avvia python scripts/mt5-bot.py', '#ff4757');

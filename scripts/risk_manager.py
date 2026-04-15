@@ -44,8 +44,12 @@ TIERS = [
 
 # TP/SL base in dollari per strategia (fallback se ATR non disponibile)
 STRATEGY_BASE = {
-    'S00_MFKK':          {'base_tp': 15.0, 'base_sl': 8.0, 'use_atr': False},
-    'S05_MFKK_INTRADAY': {'base_tp': None, 'base_sl': None,  'use_atr': True},  # ATR-based
+    'S00_MFKK':            {'base_tp': 15.0, 'base_sl': 8.0,  'use_atr': False},
+    'S05_MFKK_INTRADAY':   {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S09_MFKK_SCALPING':   {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S05_V3_Sell_Exhaust': {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S01_EXHAUSTION':      {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S13_STRUC_BREAK':     {'base_tp': None, 'base_sl': None,  'use_atr': True},
 }
 ATR_TP_MULT_BASE = 1.5   # moltiplicatore ATR per TP base (ottimizzato su H1)
 ATR_SL_MULT_BASE = 1.0   # moltiplicatore ATR per SL base (ottimizzato su H1)

@@ -39,25 +39,56 @@ const SE = {
         pnl_24m: 4, td_24m: 0.11,
         maxdd: 0, maxdd_pct: '0.1%', trades_12m: 40, best_regime: 'TUTTI'
       } },
-    // MFKK Scalping — EMA stack H1 (20>50>100>200) + FVG M15 + OB H1 confluence
-    // Backtest H1 2 anni: WR 46% · PF 1.06 · 136 trade · ATR×1.5/ATR×1 TP/SL
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 1.06, wr: '46%', tp: 'ATR×1.5', sl: 'ATR×1',
+    // MFKK Scalping — EMA stack + FVG retest · regime-ottimale: WEAK_UP H1 + WEAK_DOWN/VOLATILE M30
+    // Backtest multi-TF 2026-04-15: 163 trade/24m · WR 40% · PF 2.44 · ATR×1.5/ATR×1 TP/SL
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 2.44, wr: '40%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 1, td_1m: 0.19,
-        pnl_6m: 8, td_6m: 0.19,
-        pnl_12m: 17, td_12m: 0.19,
-        pnl_24m: 34, td_24m: 0.19,
-        maxdd: 80, maxdd_pct: '8.0%', trades_12m: 68, best_regime: 'TREND'
+        pnl_1m: 22, td_1m: 0.32,
+        pnl_6m: 133, td_6m: 0.32,
+        pnl_12m: 265, td_12m: 0.32,
+        pnl_24m: 531, td_24m: 0.32,
+        maxdd: 75, maxdd_pct: '14%', trades_12m: 82, best_regime: 'WEAK'
+      } },
+    // Sell Exhaust — OBV bear + RSI>65 + ADX≥30 + MOM< · regime: TREND_UP H1
+    // Backtest TREND_UP H1: WR 60.9% · PF 3.11 · 23 trade/24m · ATR×1.5/×1
+    'S05_V3_Sell_Exhaust': { label: 'Sell Exhaust', pf: 3.11, wr: '60.9%', tp: 'ATR×1.5', sl: 'ATR×1',
+      stats: {
+        pnl_1m: 11, td_1m: 0.05,
+        pnl_6m: 68, td_6m: 0.05,
+        pnl_12m: 136, td_12m: 0.05,
+        pnl_24m: 272, td_24m: 0.05,
+        maxdd: 48, maxdd_pct: '5.5%', trades_12m: 12, best_regime: 'TREND_UP'
+      } },
+    // Exhaustion — ADX/DI spread + MACD crossover · regime: TREND_DOWN (M15 sul bot)
+    // Backtest TREND_DOWN M15: WR 42% · PF 1.76 · 143 trade/24m · ATR×1.5/×1
+    'S01_EXHAUSTION': { label: 'Exhaustion', pf: 1.76, wr: '42%', tp: 'ATR×1.5', sl: 'ATR×1',
+      stats: {
+        pnl_1m: 35, td_1m: 0.29,
+        pnl_6m: 211, td_6m: 0.29,
+        pnl_12m: 423, td_12m: 0.29,
+        pnl_24m: 845, td_24m: 0.29,
+        maxdd: 474, maxdd_pct: '56%', trades_12m: 72, best_regime: 'TREND_DOWN'
+      } },
+    // Struc Break — breakout 40-bar high/low con retest · regime: RANGE H1
+    // Backtest RANGE H1: WR 42% · PF 1.87 · 50 trade/24m · ATR×1.5/×1
+    'S13_STRUC_BREAK': { label: 'Struc Break', pf: 1.87, wr: '42%', tp: 'ATR×1.5', sl: 'ATR×1',
+      stats: {
+        pnl_1m: 5, td_1m: 0.10,
+        pnl_6m: 30, td_6m: 0.10,
+        pnl_12m: 60, td_12m: 0.10,
+        pnl_24m: 120, td_24m: 0.10,
+        maxdd: 37, maxdd_pct: '3.7%', trades_12m: 25, best_regime: 'RANGE'
       } },
   },
   // ── REGIME PRIORITY ──
+  // Allineato con regime_playbook.json (backtest multi-TF 2026-04-15)
   regimePriority: {
-    TREND_UP:   ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    TREND_DOWN: ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_UP:    ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_DOWN:  ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    RANGE:      ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    VOLATILE:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_UP:   ['S05_V3_Sell_Exhaust', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    TREND_DOWN: ['S01_EXHAUSTION',       'S09_MFKK_SCALPING', 'S00_MFKK'],
+    WEAK_UP:    ['S09_MFKK_SCALPING',   'S00_MFKK'],
+    WEAK_DOWN:  ['S09_MFKK_SCALPING',   'S00_MFKK'],
+    VOLATILE:   ['S09_MFKK_SCALPING',   'S05_MFKK_INTRADAY'],
+    RANGE:      ['S13_STRUC_BREAK',      'S05_MFKK_INTRADAY'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },
@@ -674,6 +705,52 @@ const SE_STRATEGY_FNS = {
 
     return null;
   },
+
+  // S05_V3_Sell_Exhaust — OBV T-Channel bear + RSI>65 + ADX≥30 + MOM< (TREND_UP exhaustion)
+  S05_V3_Sell_Exhaust: (I, i) => {
+    if (!I.obv_oc || i < 1) return null;
+    const oc  = I.obv_oc[i];
+    const rsi = I.rsi?.[i];
+    const adx = I.adx?.[i];
+    const mom = I.mom?.[i];
+    if (rsi == null || adx == null || mom == null) return null;
+    if (oc === -1 && rsi > 65 && adx >= 30 && mom < 0) {
+      return { dir: 'sell', why: `Sell Exhaust ↓ OBV Bear · RSI ${rsi.toFixed(0)}>65 · ADX ${adx.toFixed(0)}≥30 · Mom<0`, quality: 'high' };
+    }
+    return null;
+  },
+
+  // S01_EXHAUSTION — ADX/DI divergenza + MACD vs signal (approssimazione H1 della strategia M15)
+  S01_EXHAUSTION: (I, i) => {
+    const adx = I.adx?.[i], dp = I.dip?.[i], dm = I.dim?.[i];
+    const ml  = I.macd?.[i], ms = I.macd_sig?.[i] ?? I.macd_signal?.[i];
+    if (adx == null || dp == null || dm == null || ml == null || ms == null) return null;
+    const diff = ml - ms; const spread = Math.abs(dp - dm);
+    if (adx >= 30 && dm > dp && spread >= 15 && diff >= 1.0) {
+      return { dir: 'sell', why: `Exhaustion ↓ ADX ${adx.toFixed(0)}≥30 · DM>DP spread ${spread.toFixed(0)} · MACD diff +${diff.toFixed(1)}`, quality: 'medium' };
+    }
+    if (adx >= 28 && dp > dm && spread >= 15 && diff <= -1.0) {
+      return { dir: 'buy', why: `Exhaustion ↑ ADX ${adx.toFixed(0)}≥28 · DP>DM spread ${spread.toFixed(0)} · MACD diff ${diff.toFixed(1)}`, quality: 'medium' };
+    }
+    return null;
+  },
+
+  // S13_STRUC_BREAK — breakout 40-bar high/low con retest immediato (RANGE)
+  S13_STRUC_BREAK: (I, i) => {
+    if (i < 60) return null;
+    const H = I.H, L = I.L, C = I.C;
+    if (!H || !L || !C) return null;
+    const hh = Math.max(...H.slice(i-40, i));
+    const ll  = Math.min(...L.slice(i-40, i));
+    const c   = C[i], lo = L[i], hi = H[i];
+    if (c > hh && lo <= hh * 1.001 && lo >= hh * 0.999) {
+      return { dir: 'buy', why: `Struc Break ↑ Breakout + retest max 40 barre $${hh.toFixed(2)}`, quality: 'high' };
+    }
+    if (c < ll && hi >= ll * 0.999 && hi <= ll * 1.001) {
+      return { dir: 'sell', why: `Struc Break ↓ Breakout + retest min 40 barre $${ll.toFixed(2)}`, quality: 'high' };
+    }
+    return null;
+  },
 };
 
 
@@ -788,6 +865,7 @@ async function seRefresh() {
       return sum / (idx - Math.max(0,idx-19) + 1);
     }),
     macd: _ema(C, 12).map((v,idx) => v - _ema(C, 26)[idx]),
+    macd_sig: (() => { const ml = _ema(C,12).map((v,idx)=>v-_ema(C,26)[idx]); return _ema(ml,9); })(),
     adx: _adxd.adx,
     dip: _adxd.dip,
     dim: _adxd.dim,
@@ -1136,6 +1214,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'
         ? 'OBV MACD T-Channel + RSI>65 + Momentum + ADX≥30 · Setup chirurgico estremo WR 75%'
+        : id==='S09_MFKK_SCALPING'
+        ? 'EMA stack (20>50>100>200) + FVG retest · H1 su WEAK_UP · M30 su WEAK_DOWN/VOLATILE'
+        : id==='S05_V3_Sell_Exhaust'
+        ? 'OBV T-Channel bear + RSI>65 + ADX≥30 + MOM<0 · Sell exhaustion su TREND_UP H1'
+        : id==='S01_EXHAUSTION'
+        ? 'ADX/DI spread≥15 + MACD vs signal crossover · TREND_DOWN M15 (bot) / H1 (UI)'
+        : id==='S13_STRUC_BREAK'
+        ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       return `
       <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'50':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">

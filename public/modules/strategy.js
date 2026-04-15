@@ -57,13 +57,22 @@ const SE = {
         pnl_24m: null, td_24m: null,
         maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'ALL'
       } },
+    // ICT M15 Scalping — FVG + Displacement + EMA20/50 + OB confluence su M15 (© fadizeidan MPL 2.0)
+    'S08_ICT_M15': { label: 'ICT M15 Scalp', pf: '—', wr: '—', tp: 'ATR×1.5', sl: 'ATR×1',
+      stats: {
+        pnl_1m: null, td_1m: null,
+        pnl_6m: null, td_6m: null,
+        pnl_12m: null, td_12m: null,
+        pnl_24m: null, td_24m: null,
+        maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'TREND/WEAK'
+      } },
   },
   // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    TREND_DOWN: ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_UP:    ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_DOWN:  ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_UP:   ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_DOWN: ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_UP:    ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_DOWN:  ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     RANGE:      ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     VOLATILE:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
   },
@@ -413,6 +422,65 @@ function _calcOrderBlocks(O, H, L, C, periods=5, threshold=0.0) {
   return { bullOBs: activeBull, bearOBs: activeBear, latestBull, latestBear };
 }
 
+/**
+ * ICT Institutional Order Flow — FVG + Displacement (© fadizeidan MPL 2.0, adattato)
+ * Estrae i pattern tradabili dal Pine Script:
+ *   - FVG Bullish:  L[i] > H[i-2]  (gap rialzista tra candela corrente e 2 fa)
+ *   - FVG Bearish:  H[i] < L[i-2]  (gap ribassista)
+ *   - Displacement: body[i-1] > stdev(body, stdLen) * factor (candela centrale grande)
+ * Tiene traccia degli FVG attivi non ancora mitigati.
+ * Segnale: prezzo entra nella zona FVG non mitigata.
+ */
+function _calcICTFVG(O, H, L, C, stdLen=100, displFactor=2) {
+  const n = C.length;
+  const body = C.map((c, i) => Math.abs(O[i] - c));
+  const bodyStd = _stdev(body, stdLen);
+
+  const activeBullFVG = [];  // {open, close, mid, bar} — open=high[i-2], close=low[i]
+  const activeBearFVG = [];  // {open, close, mid, bar} — open=low[i-2], close=high[i]
+  const signalsBull = new Array(n).fill(null);
+  const signalsBear = new Array(n).fill(null);
+
+  for (let i = 2; i < n; i++) {
+    // Displacement: la candela centrale (i-1) è > factor * stdev
+    const displaced = bodyStd[i-1] != null && body[i-1] > bodyStd[i-1] * displFactor;
+
+    // Bullish FVG: gap tra H[i-2] e L[i]
+    if (L[i] > H[i-2]) {
+      activeBullFVG.push({ open: H[i-2], close: L[i], mid: (H[i-2]+L[i])/2, bar: i, displaced });
+    }
+    // Bearish FVG: gap tra L[i-2] e H[i]
+    if (H[i] < L[i-2]) {
+      activeBearFVG.push({ open: L[i-2], close: H[i], mid: (L[i-2]+H[i])/2, bar: i, displaced });
+    }
+
+    // Verifica mitigazione e genera segnale
+    for (let j = activeBullFVG.length - 1; j >= 0; j--) {
+      const fvg = activeBullFVG[j];
+      if (fvg.bar === i) continue; // appena creato
+      if (L[i] <= fvg.open) { activeBullFVG.splice(j, 1); continue; } // mitigato
+      if (C[i] <= fvg.close && C[i] >= fvg.open) { // prezzo entra nella zona FVG
+        signalsBull[i] = fvg;
+      }
+    }
+    for (let j = activeBearFVG.length - 1; j >= 0; j--) {
+      const fvg = activeBearFVG[j];
+      if (fvg.bar === i) continue;
+      if (H[i] >= fvg.open) { activeBearFVG.splice(j, 1); continue; } // mitigato
+      if (C[i] >= fvg.close && C[i] <= fvg.open) { // prezzo entra nella zona FVG
+        signalsBear[i] = fvg;
+      }
+    }
+    if (activeBullFVG.length > 20) activeBullFVG.shift();
+    if (activeBearFVG.length > 20) activeBearFVG.shift();
+  }
+
+  // Latest active (non-mitigated) FVGs for UI display
+  const latestBullFVG = activeBullFVG.length ? activeBullFVG[activeBullFVG.length-1] : null;
+  const latestBearFVG = activeBearFVG.length ? activeBearFVG[activeBearFVG.length-1] : null;
+  return { signalsBull, signalsBear, latestBullFVG, latestBearFVG, activeBullFVG, activeBearFVG };
+}
+
 // ── STRATEGY LOGIC ───────────────────────────────────────────────────────────
 // Solo MFKK Score e MFKK HighWR attive.
 // Nuove strategie da indicatori TradingView verranno aggiunte qui come S01_*, S02_*, ecc.
@@ -602,6 +670,59 @@ const SE_STRATEGY_FNS = {
     return null;
   },
 
+  // S08_ICT_M15: ICT Institutional Order Flow M15 Scalping (© fadizeidan, adattato)
+  // Combina: FVG M15 (con Displacement) + EMA20/50 M15 alignment + OB H1 proximity
+  // BUY:  Bullish FVG M15 + Displacement + EMA20>EMA50 (M15) + prezzo > EMA200 M15
+  // SELL: Bearish FVG M15 + Displacement + EMA20<EMA50 (M15) + prezzo < EMA200 M15
+  // Qualità ELITE se anche in zona OB H1 (confluenza multi-TF)
+  S08_ICT_M15: (I, i) => {
+    const m15 = I.m15;
+    if (!m15 || !m15.fvg) return null;
+    const fvg = m15.fvg;
+    const mi  = m15.n - 1;  // ultimo indice M15
+    const price = m15.C[mi];
+
+    // EMA M15 alignment
+    const e20  = m15.e20?.[mi],  e50  = m15.e50?.[mi];
+    const e200 = m15.e200?.[mi];
+    if (e20==null || e50==null || e200==null) return null;
+
+    // FVG signal sul bar corrente M15
+    const bullSig = fvg.signalsBull[mi];
+    const bearSig = fvg.signalsBear[mi];
+
+    // Controlla OB H1 per confluenza extra (optional)
+    const ob = I.ob;
+    const nearBullOB = ob?.latestBull && price >= ob.latestBull.low && price <= ob.latestBull.high * 1.002;
+    const nearBearOB = ob?.latestBear && price >= ob.latestBear.low * 0.998 && price <= ob.latestBear.high;
+
+    // BUY: FVG bullish + EMA20>EMA50 + prezzo > EMA200
+    if (bullSig && e20 > e50 && price > e200) {
+      const hasDispl = bullSig.displaced;
+      const quality  = nearBullOB ? 'elite' : hasDispl ? 'high' : 'medium';
+      const confluNote = nearBullOB ? ' + OB H1 ✦' : '';
+      return {
+        dir: 'buy',
+        why: `ICT M15 ↑ Bullish FVG $${bullSig.open?.toFixed(0)}–$${bullSig.close?.toFixed(0)}${hasDispl?' · Displacement':''} · EMA20>${e50?.toFixed(0)} M15${confluNote}`,
+        quality,
+      };
+    }
+
+    // SELL: FVG bearish + EMA20<EMA50 + prezzo < EMA200
+    if (bearSig && e20 < e50 && price < e200) {
+      const hasDispl = bearSig.displaced;
+      const quality  = nearBearOB ? 'elite' : hasDispl ? 'high' : 'medium';
+      const confluNote = nearBearOB ? ' + OB H1 ✦' : '';
+      return {
+        dir: 'sell',
+        why: `ICT M15 ↓ Bearish FVG $${bearSig.close?.toFixed(0)}–$${bearSig.open?.toFixed(0)}${hasDispl?' · Displacement':''} · EMA20<${e50?.toFixed(0)} M15${confluNote}`,
+        quality,
+      };
+    }
+
+    return null;
+  },
+
   // S06_EMA_CROSS: EMA 20/50 Crossover con filtro EMA200
   // BUY:  EMA20 crosses above EMA50  + prezzo > EMA200 (trend rialzista)
   // SELL: EMA20 crosses below EMA50  + prezzo < EMA200 (trend ribassista)
@@ -690,6 +811,35 @@ async function seRefresh() {
   const _adxd = _adxSma(H, L, C, 14);
   const _ob   = _calcOrderBlocks(O, H, L, C, 5, 0.0);
 
+  // M15 candles — cache 15 min (non ri-fetchiamo ogni secondo)
+  const M15_TTL = 15 * 60 * 1000;
+  let _m15 = null;
+  if (!window._seM15Cache || Date.now() - (window._seM15CacheTime||0) > M15_TTL) {
+    try {
+      const rm15 = await fetch('/api/price?type=candles&asset=XAU&interval=15m&range=5d');
+      const jm15 = await rm15.json();
+      if (jm15.ok && jm15.candles?.length > 50) {
+        window._seM15Cache    = jm15.candles;
+        window._seM15CacheTime = Date.now();
+      }
+    } catch(e) { /* silenzioso — usa cache vecchia se disponibile */ }
+  }
+  if (window._seM15Cache?.length > 50) {
+    const m15c = window._seM15Cache;
+    const mO = m15c.map(c=>c.o||c.c), mC = m15c.map(c=>c.c);
+    const mH = m15c.map(c=>c.h), mL = m15c.map(c=>c.l);
+    const m15n = mC.length;
+    _m15 = {
+      n: m15n, O: mO, C: mC, H: mH, L: mL,
+      e20:  _ema(mC, 20),
+      e50:  _ema(mC, 50),
+      e200: _ema(mC, 200),
+      fvg:  _calcICTFVG(mO, mH, mL, mC, 100, 2),
+      ob:   _calcOrderBlocks(mO, mH, mL, mC, 5, 0.0),
+      atr:  _sma((() => { const t=[0]; for(let i=1;i<m15n;i++) t.push(Math.max(mH[i]-mL[i],Math.abs(mH[i]-mC[i-1]),Math.abs(mL[i]-mC[i-1]))); return t; })(), 14),
+    };
+  }
+
   seInds = {
     n, C, H, L, V,
     ict: _ict,
@@ -721,6 +871,7 @@ async function seRefresh() {
     dip: _adxd.dip,
     dim: _adxd.dim,
     ob:  _ob,
+    m15: _m15,
   };
 
   const I=seInds, i=I.n-1;
@@ -916,6 +1067,41 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
   }
 
+  // ── ICT M15 FVG PANEL
+  const _m15ui = seInds?.m15 || null;
+  let m15PanelHtml = '';
+  if (_m15ui?.fvg) {
+    const fvg    = _m15ui.fvg;
+    const mi     = _m15ui.n - 1;
+    const m15p   = _m15ui.C[mi];
+    const bFVG   = fvg.latestBullFVG;
+    const brFVG  = fvg.latestBearFVG;
+    const m15e20 = _m15ui.e20?.[mi], m15e50 = _m15ui.e50?.[mi];
+    const emaDir = m15e20 && m15e50 ? (m15e20>m15e50?'↑ BULL':'↓ BEAR') : '—';
+    const emaDirCol = m15e20 && m15e50 ? (m15e20>m15e50?'var(--green)':'var(--red)') : 'var(--dim)';
+    const inBullFVG = bFVG && m15p >= bFVG.open && m15p <= bFVG.close;
+    const inBearFVG = brFVG && m15p >= brFVG.close && m15p <= brFVG.open;
+    m15PanelHtml = `
+<div style="margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <span style="font-size:9px;color:var(--dim);letter-spacing:.08em">ICT M15 — FVG ATTIVI</span>
+    <span style="font-size:9px;font-weight:700;color:${emaDirCol}">EMA20/50 M15 ${emaDir}${m15e20?' · $'+m15e20.toFixed(0):''}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+    ${bFVG ? `<div style="background:${inBullFVG?'#00e67618':'#00e67608'};border:1px solid ${inBullFVG?'#00e676':'#00e67630'};border-radius:6px;padding:6px 8px">
+      <div style="font-size:8px;color:var(--green);font-weight:700;margin-bottom:3px">▲ Bull FVG${bFVG.displaced?' ⚡':''}${inBullFVG?' 🎯':''}</div>
+      <div style="font-size:9px">$${bFVG.open.toFixed(1)} → $${bFVG.close.toFixed(1)}</div>
+      <div style="font-size:8px;color:var(--dim)">Mid: $${bFVG.mid.toFixed(1)}</div>
+    </div>` : `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:8px;color:var(--dim);text-align:center">Nessun Bull FVG</div>`}
+    ${brFVG ? `<div style="background:${inBearFVG?'#ff475718':'#ff475708'};border:1px solid ${inBearFVG?'#ff4757':'#ff475730'};border-radius:6px;padding:6px 8px">
+      <div style="font-size:8px;color:var(--red);font-weight:700;margin-bottom:3px">▼ Bear FVG${brFVG.displaced?' ⚡':''}${inBearFVG?' 🎯':''}</div>
+      <div style="font-size:9px">$${brFVG.open.toFixed(1)} → $${brFVG.close.toFixed(1)}</div>
+      <div style="font-size:8px;color:var(--dim)">Mid: $${brFVG.mid.toFixed(1)}</div>
+    </div>` : `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:8px;color:var(--dim);text-align:center">Nessun Bear FVG</div>`}
+  </div>
+</div>`;
+  }
+
   // ── SEGNALI ATTIVI
   let pendingHtml='';
   if(pending.length>0&&!isExtreme){
@@ -1067,7 +1253,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
-  el.innerHTML=statusHtml+regimeHtml+indSnap+obPanelHtml+pendingHtml+posHtml+histHtml+catalogHtml;
+  el.innerHTML=statusHtml+regimeHtml+indSnap+obPanelHtml+m15PanelHtml+pendingHtml+posHtml+histHtml+catalogHtml;
 }
 
 async function seSendTradeToMt5(s) {

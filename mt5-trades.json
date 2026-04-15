@@ -1,0 +1,13 @@
+[
+  {
+    "time": "2026-04-15T07:01:08.706759+00:00",
+    "direction": "buy",
+    "strategy": "S00_MFKK",
+    "price": 4813.52,
+    "tp": 4828.52,
+    "sl": 4805.52,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=247120428, order=231035689, volume=0.01, price=4813.52, bid=0.0, ask=0.0, comment='Request executed', request_id=644390762, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.01, price=4813.56, stoplimit=0.0, sl=4805.56, tp=4828.56, deviation=20, type=0, type_filling=1, type_time=0, expiration=0, comment='TF-AI S00_MFKK', position=0, position_by=0))"
+  }
+]

@@ -1,3414 +1,1481 @@
 {
-  "generated": "2026-04-14T21:43:14.955658",
-  "rm_mode": true,
+  "generated": "2026-04-15T21:55:03.745173",
   "config": {
-    "tp_mfkk": 20.0,
-    "sl_mfkk": 12.0,
-    "tp_atr_mult": 2.0,
-    "sl_atr_mult": 1.0,
-    "days": 730,
-    "extreme_k": 3.5
+    "days": 730
   },
   "strategies": {
     "S00_MFKK_SCORE": {
       "strategy": "MFKK Score",
-      "tf": "H1",
+      "best_tf": "H1",
       "tp": 20.0,
       "sl": 12.0,
       "stats": {
-        "n": 2760,
-        "wr": 51.4,
-        "pnl": 12320.0,
-        "pf": 1.766,
-        "dd": 1264.0,
-        "avg_day": 34.22,
-        "pos_months": "18/24",
-        "n_buy": 888,
-        "n_sell": 1872,
-        "buy_wr": 43.0,
-        "sell_wr": 55.4
+        "n": 223,
+        "wr": 43.5,
+        "pnl": 428.0,
+        "pf": 1.283,
+        "dd": 136.0,
+        "avg_day": 14.27,
+        "pos_months": "3/3",
+        "n_buy": 43,
+        "n_sell": 180,
+        "buy_wr": 37.2,
+        "sell_wr": 45.0
       },
       "periods": {
         "1m": {
-          "n": 93,
-          "pnl": 324.0,
-          "wr": 48.4,
-          "pf": 1.562,
-          "dd": 76.0,
-          "avg_td": 3.1,
-          "avg_td_active": 7.75
+          "n": 86,
+          "pnl": 216.0,
+          "wr": 45.3,
+          "pf": 1.383,
+          "dd": 84.0,
+          "avg_td": 2.87,
+          "avg_td_active": 7.17
         },
         "6m": {
-          "n": 615,
-          "pnl": 2668.0,
-          "wr": 51.1,
-          "pf": 1.739,
-          "dd": 260.0,
-          "avg_td": 3.42,
-          "avg_td_active": 7.5
+          "n": 223,
+          "pnl": 428.0,
+          "wr": 43.5,
+          "pf": 1.283,
+          "dd": 136.0,
+          "avg_td": 1.24,
+          "avg_td_active": 7.43
         },
         "12m": {
-          "n": 1403,
-          "pnl": 4860.0,
-          "wr": 48.3,
-          "pf": 1.559,
-          "dd": 644.0,
-          "avg_td": 3.84,
-          "avg_td_active": 7.71
+          "n": 223,
+          "pnl": 428.0,
+          "wr": 43.5,
+          "pf": 1.283,
+          "dd": 136.0,
+          "avg_td": 0.61,
+          "avg_td_active": 7.43
         },
         "24m": {
-          "n": 2760,
-          "pnl": 12320.0,
-          "wr": 51.4,
-          "pf": 1.766,
-          "dd": 1264.0,
-          "avg_td": 3.78,
-          "avg_td_active": 7.67
-        }
-      }
-    },
-    "S00_MFKK_RM": {
-      "strategy": "MFKK Score + RM",
-      "stats": {
-        "n": 2765,
-        "wr": 44.0,
-        "pnl": 3808.8,
-        "pf": 1.108,
-        "dd": 2864.8,
-        "avg_day": 10.55,
-        "pos_months": "11/24",
-        "n_buy": 893,
-        "n_sell": 1872,
-        "buy_wr": 44.7,
-        "sell_wr": 43.6
-      },
-      "periods": {
-        "1m": {
-          "n": 93,
-          "pnl": 95.5,
-          "wr": 37.6,
-          "pf": 1.074,
-          "dd": 462.2,
-          "avg_td": 3.1,
-          "avg_td_active": 7.75
-        },
-        "6m": {
-          "n": 615,
-          "pnl": -518.3,
-          "wr": 37.6,
-          "pf": 0.942,
-          "dd": 2087.9,
-          "avg_td": 3.42,
-          "avg_td_active": 7.5
-        },
-        "12m": {
-          "n": 1403,
-          "pnl": -447.0,
-          "wr": 39.6,
-          "pf": 0.977,
-          "dd": 2545.2,
-          "avg_td": 3.84,
-          "avg_td_active": 7.71
-        },
-        "24m": {
-          "n": 2765,
-          "pnl": 3808.8,
-          "wr": 44.0,
-          "pf": 1.108,
-          "dd": 2864.8,
-          "avg_td": 3.79,
-          "avg_td_active": 7.66
+          "n": 223,
+          "pnl": 428.0,
+          "wr": 43.5,
+          "pf": 1.283,
+          "dd": 136.0,
+          "avg_td": 0.31,
+          "avg_td_active": 7.43
         }
       }
     },
     "S00_MFKK_HWR": {
       "strategy": "MFKK HighWR",
-      "tf": "H1",
-      "tp": 20.0,
-      "sl": 12.0,
-      "stats": {
-        "n": 215,
-        "wr": 91.2,
-        "pnl": 3692.0,
-        "pf": 17.193,
-        "dd": 48.0,
-        "avg_day": 97.16,
-        "pos_months": "7/9",
-        "n_buy": 0,
-        "n_sell": 215,
-        "buy_wr": 0,
-        "sell_wr": 91.2
-      },
-      "periods": {
-        "1m": {
-          "n": 0,
-          "pnl": 0,
-          "wr": 0,
-          "pf": 0,
-          "dd": 0,
-          "avg_td": 0.0,
-          "avg_td_active": 0.0
-        },
-        "6m": {
-          "n": 19,
-          "pnl": 220.0,
-          "wr": 73.7,
-          "pf": 4.667,
-          "dd": 36.0,
-          "avg_td": 0.11,
-          "avg_td_active": 3.17
-        },
-        "12m": {
-          "n": 35,
-          "pnl": 316.0,
-          "wr": 65.7,
-          "pf": 3.194,
-          "dd": 48.0,
-          "avg_td": 0.1,
-          "avg_td_active": 3.18
-        },
-        "24m": {
-          "n": 215,
-          "pnl": 3692.0,
-          "wr": 91.2,
-          "pf": 17.193,
-          "dd": 48.0,
-          "avg_td": 0.29,
-          "avg_td_active": 5.66
-        }
-      }
-    },
-    "S05_MFKK_INTRADAY_RM": {
-      "strategy": "MFKK Intraday + RM",
-      "stats": {
-        "n": 290,
-        "wr": 38.3,
-        "pnl": 476.4,
-        "pf": 1.13,
-        "dd": 1081.9,
-        "avg_day": 4.45,
-        "pos_months": "12/24",
-        "n_buy": 0,
-        "n_sell": 290,
-        "buy_wr": 0,
-        "sell_wr": 38.3
-      },
-      "periods": {
-        "1m": {
-          "n": 8,
-          "pnl": 278.3,
-          "wr": 75.0,
-          "pf": 5.605,
-          "dd": 60.4,
-          "avg_td": 0.27,
-          "avg_td_active": 2.67
-        },
-        "6m": {
-          "n": 49,
-          "pnl": 1214.8,
-          "wr": 55.1,
-          "pf": 2.512,
-          "dd": 301.2,
-          "avg_td": 0.27,
-          "avg_td_active": 2.23
-        },
-        "12m": {
-          "n": 139,
-          "pnl": 823.2,
-          "wr": 38.8,
-          "pf": 1.4,
-          "dd": 470.9,
-          "avg_td": 0.38,
-          "avg_td_active": 2.67
-        },
-        "24m": {
-          "n": 290,
-          "pnl": 476.4,
-          "wr": 38.3,
-          "pf": 1.13,
-          "dd": 1081.9,
-          "avg_td": 0.4,
-          "avg_td_active": 2.71
-        }
-      }
+      "stats": null,
+      "periods": {}
     },
     "S05_MFKK_INTRADAY": {
       "strategy": "MFKK Intraday",
       "best": {
-        "variant": "V3_Sell_Exhaustion",
-        "tf": "H1",
+        "variant": "V2_Triple_MACD",
+        "tf": "H4",
         "stats": {
-          "n": 290,
-          "wr": 42.1,
-          "pnl": 2247.7,
-          "pf": 2.074,
-          "dd": 559.0,
-          "avg_day": 21.01,
-          "pos_months": "15/24",
-          "n_buy": 0,
-          "n_sell": 290,
-          "buy_wr": 0,
-          "sell_wr": 42.1
+          "n": 82,
+          "wr": 42.7,
+          "pnl": 1101.5,
+          "pf": 1.365,
+          "dd": 781.3,
+          "avg_day": 44.06,
+          "pos_months": "1/3",
+          "n_buy": 25,
+          "n_sell": 57,
+          "buy_wr": 20.0,
+          "sell_wr": 52.6
         },
         "periods": {
           "1m": {
-            "n": 8,
-            "pnl": 333.8,
-            "wr": 75.0,
-            "pf": 5.419,
-            "dd": 75.5,
-            "avg_td": 0.27,
+            "n": 24,
+            "pnl": 723.5,
+            "wr": 54.2,
+            "pf": 1.812,
+            "dd": 623.3,
+            "avg_td": 0.8,
             "avg_td_active": 2.67
           },
           "6m": {
-            "n": 49,
-            "pnl": 1133.2,
-            "wr": 55.1,
-            "pf": 2.758,
-            "dd": 184.6,
-            "avg_td": 0.27,
-            "avg_td_active": 2.23
+            "n": 82,
+            "pnl": 1101.5,
+            "wr": 42.7,
+            "pf": 1.365,
+            "dd": 781.3,
+            "avg_td": 0.46,
+            "avg_td_active": 3.28
           },
           "12m": {
-            "n": 135,
-            "pnl": 1044.4,
-            "wr": 37.8,
-            "pf": 1.804,
-            "dd": 276.1,
-            "avg_td": 0.37,
-            "avg_td_active": 2.65
+            "n": 82,
+            "pnl": 1101.5,
+            "wr": 42.7,
+            "pf": 1.365,
+            "dd": 781.3,
+            "avg_td": 0.22,
+            "avg_td_active": 3.28
           },
           "24m": {
-            "n": 290,
-            "pnl": 2247.7,
-            "wr": 42.1,
-            "pf": 2.074,
-            "dd": 559.0,
-            "avg_td": 0.4,
-            "avg_td_active": 2.71
+            "n": 82,
+            "pnl": 1101.5,
+            "wr": 42.7,
+            "pf": 1.365,
+            "dd": 781.3,
+            "avg_td": 0.11,
+            "avg_td_active": 3.28
           }
         },
-        "score": 6.639,
         "trades": [
           {
-            "date": "2024-05-20",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 19.11,
-            "ts": 1716202800,
-            "sl_val": 9.56
-          },
-          {
-            "date": "2024-05-29",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 13.04,
-            "ts": 1716948000,
-            "sl_val": 6.52
-          },
-          {
-            "date": "2024-05-29",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 9.87,
-            "ts": 1716958800,
-            "sl_val": 4.94
-          },
-          {
-            "date": "2024-06-04",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.54,
-            "ts": 1717470000,
-            "sl_val": 5.77
-          },
-          {
-            "date": "2024-06-04",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 9.84,
-            "ts": 1717477200,
-            "sl_val": 4.92
-          },
-          {
-            "date": "2024-06-06",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.63,
-            "ts": 1717671600,
-            "sl_val": 5.63
-          },
-          {
-            "date": "2024-06-16",
-            "hour": 22,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 14.03,
-            "ts": 1718575200,
-            "sl_val": 7.01
-          },
-          {
-            "date": "2024-06-16",
+            "date": "2026-02-16",
             "hour": 23,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 13.31,
-            "ts": 1718578800,
-            "sl_val": 6.66
+            "pnl": 101.42,
+            "ts": 1771282800,
+            "sl_val": 50.71
           },
           {
-            "date": "2024-06-21",
-            "hour": 6,
+            "date": "2026-02-17",
+            "hour": 3,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -3.73,
-            "ts": 1718949600,
-            "sl_val": 3.73
+            "pnl": -55.03,
+            "ts": 1771297200,
+            "sl_val": 55.03
           },
           {
-            "date": "2024-06-21",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.34,
-            "ts": 1718964000,
-            "sl_val": 4.34
-          },
-          {
-            "date": "2024-06-28",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.82,
-            "ts": 1719532800,
-            "sl_val": 4.82
-          },
-          {
-            "date": "2024-06-28",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.96,
-            "ts": 1719540000,
-            "sl_val": 4.96
-          },
-          {
-            "date": "2024-06-28",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.08,
-            "ts": 1719550800,
-            "sl_val": 4.08
-          },
-          {
-            "date": "2024-06-28",
+            "date": "2026-02-17",
             "hour": 7,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -3.84,
-            "ts": 1719558000,
-            "sl_val": 3.84
+            "pnl": -51.09,
+            "ts": 1771311600,
+            "sl_val": 51.09
           },
           {
-            "date": "2024-07-11",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.76,
-            "ts": 1720663200,
-            "sl_val": 4.76
-          },
-          {
-            "date": "2024-07-11",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.64,
-            "ts": 1720666800,
-            "sl_val": 4.64
-          },
-          {
-            "date": "2024-07-12",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.12,
-            "ts": 1720746000,
-            "sl_val": 9.12
-          },
-          {
-            "date": "2024-07-12",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 18.21,
-            "ts": 1720749600,
-            "sl_val": 9.11
-          },
-          {
-            "date": "2024-07-12",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 13.83,
-            "ts": 1720753200,
-            "sl_val": 6.91
-          },
-          {
-            "date": "2024-07-12",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.59,
-            "ts": 1720756800,
-            "sl_val": 5.79
-          },
-          {
-            "date": "2024-07-12",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 10.27,
-            "ts": 1720760400,
-            "sl_val": 5.14
-          },
-          {
-            "date": "2024-07-12",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 8.86,
-            "ts": 1720771200,
-            "sl_val": 4.43
-          },
-          {
-            "date": "2024-07-16",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.11,
-            "ts": 1721091600,
-            "sl_val": 6.11
-          },
-          {
-            "date": "2024-07-16",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.0,
-            "ts": 1721095200,
-            "sl_val": 6.0
-          },
-          {
-            "date": "2024-07-16",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.81,
-            "ts": 1721098800,
-            "sl_val": 5.81
-          },
-          {
-            "date": "2024-07-17",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.39,
-            "ts": 1721192400,
-            "sl_val": 7.39
-          },
-          {
-            "date": "2024-07-17",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.86,
-            "ts": 1721196000,
-            "sl_val": 6.86
-          },
-          {
-            "date": "2024-07-17",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.55,
-            "ts": 1721210400,
-            "sl_val": 7.55
-          },
-          {
-            "date": "2024-07-17",
+            "date": "2026-02-17",
             "hour": 11,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -7.79,
-            "ts": 1721214000,
-            "sl_val": 7.79
+            "pnl": -52.64,
+            "ts": 1771326000,
+            "sl_val": 52.64
           },
           {
-            "date": "2024-07-17",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.0,
-            "ts": 1721217600,
-            "sl_val": 8.0
-          },
-          {
-            "date": "2024-07-29",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.83,
-            "ts": 1722240000,
-            "sl_val": 5.91
-          },
-          {
-            "date": "2024-07-29",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.86,
-            "ts": 1722243600,
-            "sl_val": 5.93
-          },
-          {
-            "date": "2024-07-29",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.69,
-            "ts": 1722247200,
-            "sl_val": 5.84
-          },
-          {
-            "date": "2024-08-01",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 77.01,
-            "ts": 1722495600,
-            "sl_val": 38.51
-          },
-          {
-            "date": "2024-08-01",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -34.14,
-            "ts": 1722510000,
-            "sl_val": 34.14
-          },
-          {
-            "date": "2024-08-01",
-            "hour": 15,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 78.33,
-            "ts": 1722524400,
-            "sl_val": 39.16
-          },
-          {
-            "date": "2024-08-01",
-            "hour": 16,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 83.47,
-            "ts": 1722528000,
-            "sl_val": 41.74
-          },
-          {
-            "date": "2024-08-02",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 85.51,
-            "ts": 1722560400,
-            "sl_val": 42.76
-          },
-          {
-            "date": "2024-08-09",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 26.37,
-            "ts": 1723183200,
-            "sl_val": 13.19
-          },
-          {
-            "date": "2024-08-12",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -19.79,
-            "ts": 1723431600,
-            "sl_val": 19.79
-          },
-          {
-            "date": "2024-08-13",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 41.26,
-            "ts": 1723521600,
-            "sl_val": 20.63
-          },
-          {
-            "date": "2024-08-13",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 40.47,
-            "ts": 1723525200,
-            "sl_val": 20.24
-          },
-          {
-            "date": "2024-08-13",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 45.76,
-            "ts": 1723528800,
-            "sl_val": 22.88
-          },
-          {
-            "date": "2024-08-13",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 40.13,
-            "ts": 1723532400,
-            "sl_val": 20.06
-          },
-          {
-            "date": "2024-08-13",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 51.63,
-            "ts": 1723543200,
-            "sl_val": 25.81
-          },
-          {
-            "date": "2024-08-19",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 44.17,
-            "ts": 1724043600,
-            "sl_val": 22.09
-          },
-          {
-            "date": "2024-08-19",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 48.8,
-            "ts": 1724047200,
-            "sl_val": 24.4
-          },
-          {
-            "date": "2024-08-21",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 47.93,
-            "ts": 1724202000,
-            "sl_val": 23.96
-          },
-          {
-            "date": "2024-08-26",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 37.6,
-            "ts": 1724644800,
-            "sl_val": 18.8
-          },
-          {
-            "date": "2024-08-26",
-            "hour": 17,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 42.09,
-            "ts": 1724691600,
-            "sl_val": 21.04
-          },
-          {
-            "date": "2024-08-26",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 42.57,
-            "ts": 1724698800,
-            "sl_val": 21.29
-          },
-          {
-            "date": "2024-08-26",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 42.01,
-            "ts": 1724702400,
-            "sl_val": 21.01
-          },
-          {
-            "date": "2024-09-05",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.27,
-            "ts": 1725562800,
-            "sl_val": 6.27
-          },
-          {
-            "date": "2024-09-05",
-            "hour": 23,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.09,
-            "ts": 1725577200,
-            "sl_val": 5.09
-          },
-          {
-            "date": "2024-09-06",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -3.05,
-            "ts": 1725606000,
-            "sl_val": 3.05
-          },
-          {
-            "date": "2024-09-16",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.76,
-            "ts": 1726488000,
-            "sl_val": 4.76
-          },
-          {
-            "date": "2024-09-16",
-            "hour": 16,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.86,
-            "ts": 1726502400,
-            "sl_val": 5.93
-          },
-          {
-            "date": "2024-09-19",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.21,
-            "ts": 1726772400,
-            "sl_val": 8.21
-          },
-          {
-            "date": "2024-09-19",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.13,
-            "ts": 1726776000,
-            "sl_val": 8.13
-          },
-          {
-            "date": "2024-09-19",
-            "hour": 22,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.52,
-            "ts": 1726783200,
-            "sl_val": 7.52
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.9,
-            "ts": 1727240400,
-            "sl_val": 6.9
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.66,
-            "ts": 1727244000,
-            "sl_val": 6.66
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.26,
-            "ts": 1727247600,
-            "sl_val": 6.26
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.18,
-            "ts": 1727251200,
-            "sl_val": 6.18
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.22,
-            "ts": 1727254800,
-            "sl_val": 6.22
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.92,
-            "ts": 1727258400,
-            "sl_val": 5.92
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.71,
-            "ts": 1727262000,
-            "sl_val": 5.71
-          },
-          {
-            "date": "2024-09-25",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.84,
-            "ts": 1727265600,
-            "sl_val": 5.84
-          },
-          {
-            "date": "2024-10-02",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 16.63,
-            "ts": 1727834400,
-            "sl_val": 8.31
-          },
-          {
-            "date": "2024-10-14",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.66,
-            "ts": 1728871200,
-            "sl_val": 6.66
-          },
-          {
-            "date": "2024-10-14",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.23,
-            "ts": 1728874800,
-            "sl_val": 6.23
-          },
-          {
-            "date": "2024-10-14",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.89,
-            "ts": 1728878400,
-            "sl_val": 5.89
-          },
-          {
-            "date": "2024-10-16",
-            "hour": 16,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.05,
-            "ts": 1729094400,
-            "sl_val": 7.05
-          },
-          {
-            "date": "2024-10-16",
-            "hour": 17,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.01,
-            "ts": 1729098000,
-            "sl_val": 7.01
-          },
-          {
-            "date": "2024-10-16",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.97,
-            "ts": 1729101600,
-            "sl_val": 6.97
-          },
-          {
-            "date": "2024-10-16",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.84,
-            "ts": 1729105200,
-            "sl_val": 6.84
-          },
-          {
-            "date": "2024-10-16",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.21,
-            "ts": 1729108800,
-            "sl_val": 6.21
-          },
-          {
-            "date": "2024-10-29",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.8,
-            "ts": 1730199600,
-            "sl_val": 5.8
-          },
-          {
-            "date": "2024-10-30",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.05,
-            "ts": 1730286000,
-            "sl_val": 5.05
-          },
-          {
-            "date": "2024-10-30",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.68,
-            "ts": 1730293200,
-            "sl_val": 6.68
-          },
-          {
-            "date": "2024-10-30",
-            "hour": 14,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.82,
-            "ts": 1730296800,
-            "sl_val": 6.82
-          },
-          {
-            "date": "2024-10-31",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 9.34,
-            "ts": 1730350800,
-            "sl_val": 4.67
-          },
-          {
-            "date": "2024-11-19",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.74,
-            "ts": 1732046400,
-            "sl_val": 7.74
-          },
-          {
-            "date": "2024-11-19",
-            "hour": 23,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.09,
-            "ts": 1732057200,
-            "sl_val": 7.09
-          },
-          {
-            "date": "2024-11-21",
-            "hour": 21,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.98,
-            "ts": 1732222800,
-            "sl_val": 6.98
-          },
-          {
-            "date": "2024-11-22",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.35,
-            "ts": 1732305600,
-            "sl_val": 8.35
-          },
-          {
-            "date": "2024-12-11",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -16.66,
-            "ts": 1733914800,
-            "sl_val": 16.66
-          },
-          {
-            "date": "2024-12-11",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -16.71,
-            "ts": 1733918400,
-            "sl_val": 16.71
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 36.64,
-            "ts": 1733968800,
-            "sl_val": 18.32
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 36.57,
-            "ts": 1733972400,
-            "sl_val": 18.29
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 32.66,
-            "ts": 1733976000,
-            "sl_val": 16.33
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 28.56,
-            "ts": 1733979600,
-            "sl_val": 14.28
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 24.59,
-            "ts": 1733983200,
-            "sl_val": 12.29
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 20.83,
-            "ts": 1733986800,
-            "sl_val": 10.41
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 17.9,
-            "ts": 1733990400,
-            "sl_val": 8.95
-          },
-          {
-            "date": "2024-12-12",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 20.89,
-            "ts": 1733994000,
-            "sl_val": 10.44
-          },
-          {
-            "date": "2024-12-23",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 15.79,
-            "ts": 1734919200,
-            "sl_val": 7.89
-          },
-          {
-            "date": "2024-12-23",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 15.86,
-            "ts": 1734922800,
-            "sl_val": 7.93
-          },
-          {
-            "date": "2024-12-23",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 14.07,
-            "ts": 1734926400,
-            "sl_val": 7.04
-          },
-          {
-            "date": "2024-12-23",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 12.9,
-            "ts": 1734930000,
-            "sl_val": 6.45
-          },
-          {
-            "date": "2024-12-23",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.37,
-            "ts": 1734933600,
-            "sl_val": 5.69
-          },
-          {
-            "date": "2024-12-23",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 10.16,
-            "ts": 1734944400,
-            "sl_val": 5.08
-          },
-          {
-            "date": "2025-01-03",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 10.26,
-            "ts": 1735887600,
-            "sl_val": 5.13
-          },
-          {
-            "date": "2025-01-03",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.07,
-            "ts": 1735891200,
-            "sl_val": 5.07
-          },
-          {
-            "date": "2025-01-03",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.94,
-            "ts": 1735894800,
-            "sl_val": 4.94
-          },
-          {
-            "date": "2025-01-03",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 10.11,
-            "ts": 1735898400,
-            "sl_val": 5.06
-          },
-          {
-            "date": "2025-01-03",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 9.59,
-            "ts": 1735902000,
-            "sl_val": 4.79
-          },
-          {
-            "date": "2025-01-03",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 9.69,
-            "ts": 1735905600,
-            "sl_val": 4.84
-          },
-          {
-            "date": "2025-01-17",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 12.56,
-            "ts": 1737075600,
-            "sl_val": 6.28
-          },
-          {
-            "date": "2025-01-17",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.83,
-            "ts": 1737079200,
-            "sl_val": 5.91
-          },
-          {
-            "date": "2025-01-17",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 11.44,
-            "ts": 1737082800,
-            "sl_val": 5.72
-          },
-          {
-            "date": "2025-01-17",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 9.06,
-            "ts": 1737086400,
-            "sl_val": 4.53
-          },
-          {
-            "date": "2025-01-22",
-            "hour": 15,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 14.3,
-            "ts": 1737558000,
-            "sl_val": 7.15
-          },
-          {
-            "date": "2025-01-24",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 13.83,
-            "ts": 1737741600,
-            "sl_val": 6.91
-          },
-          {
-            "date": "2025-01-29",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -3.61,
-            "ts": 1738126800,
-            "sl_val": 3.61
-          },
-          {
-            "date": "2025-01-29",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -3.36,
-            "ts": 1738130400,
-            "sl_val": 3.36
-          },
-          {
-            "date": "2025-01-29",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -3.59,
-            "ts": 1738148400,
-            "sl_val": 3.59
-          },
-          {
-            "date": "2025-01-29",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -3.74,
-            "ts": 1738152000,
-            "sl_val": 3.74
-          },
-          {
-            "date": "2025-01-31",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 57.5,
-            "ts": 1738288800,
-            "sl_val": 28.75
-          },
-          {
-            "date": "2025-01-31",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 51.29,
-            "ts": 1738310400,
-            "sl_val": 25.64
-          },
-          {
-            "date": "2025-01-31",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 51.2,
-            "ts": 1738314000,
-            "sl_val": 25.6
-          },
-          {
-            "date": "2025-01-31",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 51.46,
-            "ts": 1738317600,
-            "sl_val": 25.73
-          },
-          {
-            "date": "2025-01-31",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 51.23,
-            "ts": 1738321200,
-            "sl_val": 25.61
-          },
-          {
-            "date": "2025-01-31",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 51.24,
-            "ts": 1738324800,
-            "sl_val": 25.62
-          },
-          {
-            "date": "2025-02-06",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 49.91,
-            "ts": 1738803600,
-            "sl_val": 24.96
-          },
-          {
-            "date": "2025-02-14",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 28.64,
-            "ts": 1739516400,
-            "sl_val": 14.32
-          },
-          {
-            "date": "2025-02-19",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -15.49,
-            "ts": 1739934000,
-            "sl_val": 15.49
-          },
-          {
-            "date": "2025-02-19",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -14.25,
-            "ts": 1739941200,
-            "sl_val": 14.25
-          },
-          {
-            "date": "2025-02-19",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -13.93,
-            "ts": 1739944800,
-            "sl_val": 13.93
-          },
-          {
-            "date": "2025-02-19",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 32.11,
-            "ts": 1739962800,
-            "sl_val": 16.06
-          },
-          {
-            "date": "2025-03-04",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -10.63,
-            "ts": 1741111200,
-            "sl_val": 10.63
-          },
-          {
-            "date": "2025-03-04",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 21.2,
-            "ts": 1741114800,
-            "sl_val": 10.6
-          },
-          {
-            "date": "2025-03-04",
-            "hour": 21,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 20.26,
-            "ts": 1741122000,
-            "sl_val": 10.13
-          },
-          {
-            "date": "2025-03-04",
-            "hour": 23,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 17.61,
-            "ts": 1741129200,
-            "sl_val": 8.81
-          },
-          {
-            "date": "2025-03-05",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.45,
-            "ts": 1741132800,
-            "sl_val": 8.45
-          },
-          {
-            "date": "2025-03-12",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.99,
-            "ts": 1741737600,
-            "sl_val": 5.99
-          },
-          {
-            "date": "2025-03-12",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.06,
-            "ts": 1741744800,
-            "sl_val": 6.06
-          },
-          {
-            "date": "2025-03-12",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.94,
-            "ts": 1741748400,
-            "sl_val": 5.94
-          },
-          {
-            "date": "2025-03-12",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.95,
-            "ts": 1741752000,
-            "sl_val": 4.95
-          },
-          {
-            "date": "2025-03-12",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.54,
-            "ts": 1741755600,
-            "sl_val": 4.54
-          },
-          {
-            "date": "2025-03-13",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.76,
-            "ts": 1741867200,
-            "sl_val": 5.76
-          },
-          {
-            "date": "2025-03-14",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.49,
-            "ts": 1741935600,
-            "sl_val": 6.49
-          },
-          {
-            "date": "2025-03-14",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.2,
-            "ts": 1741957200,
-            "sl_val": 8.2
-          },
-          {
-            "date": "2025-03-14",
-            "hour": 14,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.83,
-            "ts": 1741960800,
-            "sl_val": 8.83
-          },
-          {
-            "date": "2025-03-14",
+            "date": "2026-02-17",
             "hour": 15,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -8.81,
-            "ts": 1741964400,
-            "sl_val": 8.81
+            "pnl": -54.2,
+            "ts": 1771340400,
+            "sl_val": 54.2
           },
           {
-            "date": "2025-03-14",
-            "hour": 17,
+            "date": "2026-02-17",
+            "hour": 19,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -8.65,
-            "ts": 1741971600,
-            "sl_val": 8.65
+            "pnl": -52.92,
+            "ts": 1771354800,
+            "sl_val": 52.92
           },
           {
-            "date": "2025-03-16",
-            "hour": 22,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.56,
-            "ts": 1742162400,
-            "sl_val": 8.56
-          },
-          {
-            "date": "2025-03-18",
+            "date": "2026-02-17",
             "hour": 23,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -6.62,
-            "ts": 1742338800,
-            "sl_val": 6.62
+            "pnl": -50.72,
+            "ts": 1771369200,
+            "sl_val": 50.72
           },
           {
-            "date": "2025-03-19",
-            "hour": 0,
+            "date": "2026-02-18",
+            "hour": 3,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -6.18,
-            "ts": 1742342400,
-            "sl_val": 6.18
+            "pnl": -52.39,
+            "ts": 1771383600,
+            "sl_val": 52.39
           },
           {
-            "date": "2025-03-28",
-            "hour": 17,
+            "date": "2026-02-18",
+            "hour": 7,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -32.81,
-            "ts": 1743181200,
-            "sl_val": 32.81
+            "pnl": -50.75,
+            "ts": 1771398000,
+            "sl_val": 50.75
           },
           {
-            "date": "2025-03-28",
-            "hour": 18,
+            "date": "2026-02-19",
+            "hour": 11,
+            "dir": "buy",
+            "outcome": "win",
+            "pnl": 89.03,
+            "ts": 1771498800,
+            "sl_val": 44.51
+          },
+          {
+            "date": "2026-02-19",
+            "hour": 15,
+            "dir": "buy",
+            "outcome": "win",
+            "pnl": 90.85,
+            "ts": 1771513200,
+            "sl_val": 45.43
+          },
+          {
+            "date": "2026-02-19",
+            "hour": 19,
+            "dir": "buy",
+            "outcome": "win",
+            "pnl": 84.37,
+            "ts": 1771527600,
+            "sl_val": 42.18
+          },
+          {
+            "date": "2026-02-23",
+            "hour": 11,
+            "dir": "buy",
+            "outcome": "win",
+            "pnl": 82.79,
+            "ts": 1771844400,
+            "sl_val": 41.4
+          },
+          {
+            "date": "2026-02-23",
+            "hour": 15,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -44.88,
+            "ts": 1771858800,
+            "sl_val": 44.88
+          },
+          {
+            "date": "2026-02-23",
+            "hour": 19,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -45.75,
+            "ts": 1771873200,
+            "sl_val": 45.75
+          },
+          {
+            "date": "2026-02-23",
+            "hour": 23,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -49.01,
+            "ts": 1771887600,
+            "sl_val": 49.01
+          },
+          {
+            "date": "2026-02-24",
+            "hour": 3,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -49.15,
+            "ts": 1771902000,
+            "sl_val": 49.15
+          },
+          {
+            "date": "2026-02-24",
+            "hour": 7,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -49.08,
+            "ts": 1771916400,
+            "sl_val": 49.08
+          },
+          {
+            "date": "2026-02-24",
+            "hour": 11,
+            "dir": "buy",
+            "outcome": "win",
+            "pnl": 103.88,
+            "ts": 1771930800,
+            "sl_val": 51.94
+          },
+          {
+            "date": "2026-03-02",
+            "hour": 7,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -48.21,
+            "ts": 1772434800,
+            "sl_val": 48.21
+          },
+          {
+            "date": "2026-03-02",
+            "hour": 11,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -48.94,
+            "ts": 1772449200,
+            "sl_val": 48.94
+          },
+          {
+            "date": "2026-03-02",
+            "hour": 15,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -56.29,
+            "ts": 1772463600,
+            "sl_val": 56.29
+          },
+          {
+            "date": "2026-03-02",
+            "hour": 19,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -58.04,
+            "ts": 1772478000,
+            "sl_val": 58.04
+          },
+          {
+            "date": "2026-03-02",
+            "hour": 23,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -57.72,
+            "ts": 1772492400,
+            "sl_val": 57.72
+          },
+          {
+            "date": "2026-03-03",
+            "hour": 19,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -35.04,
-            "ts": 1743184800,
-            "sl_val": 35.04
+            "pnl": -89.75,
+            "ts": 1772564400,
+            "sl_val": 89.75
           },
           {
-            "date": "2025-03-31",
-            "hour": 0,
+            "date": "2026-03-03",
+            "hour": 23,
             "dir": "sell",
-            "outcome": "loss",
-            "pnl": -38.11,
-            "ts": 1743379200,
-            "sl_val": 38.11
+            "outcome": "win",
+            "pnl": 186.72,
+            "ts": 1772578800,
+            "sl_val": 93.36
           },
           {
-            "date": "2025-03-31",
+            "date": "2026-03-04",
+            "hour": 3,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 185.49,
+            "ts": 1772593200,
+            "sl_val": 92.74
+          },
+          {
+            "date": "2026-03-04",
+            "hour": 7,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 178.18,
+            "ts": 1772607600,
+            "sl_val": 89.09
+          },
+          {
+            "date": "2026-03-04",
+            "hour": 11,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 178.12,
+            "ts": 1772622000,
+            "sl_val": 89.06
+          },
+          {
+            "date": "2026-03-04",
             "hour": 15,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -37.78,
-            "ts": 1743433200,
-            "sl_val": 37.78
+            "pnl": -89.72,
+            "ts": 1772636400,
+            "sl_val": 89.72
           },
           {
-            "date": "2025-03-31",
-            "hour": 17,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -37.4,
-            "ts": 1743440400,
-            "sl_val": 37.4
-          },
-          {
-            "date": "2025-03-31",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -37.07,
-            "ts": 1743444000,
-            "sl_val": 37.07
-          },
-          {
-            "date": "2025-04-17",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 27.11,
-            "ts": 1744866000,
-            "sl_val": 13.56
-          },
-          {
-            "date": "2025-04-17",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -12.51,
-            "ts": 1744869600,
-            "sl_val": 12.51
-          },
-          {
-            "date": "2025-04-17",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -12.92,
-            "ts": 1744884000,
-            "sl_val": 12.92
-          },
-          {
-            "date": "2025-05-21",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -13.79,
-            "ts": 1747832400,
-            "sl_val": 13.79
-          },
-          {
-            "date": "2025-05-26",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 26.46,
-            "ts": 1748224800,
-            "sl_val": 13.23
-          },
-          {
-            "date": "2025-05-26",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 24.96,
-            "ts": 1748228400,
-            "sl_val": 12.48
-          },
-          {
-            "date": "2025-05-29",
-            "hour": 23,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -35.94,
-            "ts": 1748559600,
-            "sl_val": 35.94
-          },
-          {
-            "date": "2025-05-30",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -35.93,
-            "ts": 1748563200,
-            "sl_val": 35.93
-          },
-          {
-            "date": "2025-05-30",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -35.46,
-            "ts": 1748566800,
-            "sl_val": 35.46
-          },
-          {
-            "date": "2025-06-03",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -33.29,
-            "ts": 1748916000,
-            "sl_val": 33.29
-          },
-          {
-            "date": "2025-06-03",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -31.21,
-            "ts": 1748926800,
-            "sl_val": 31.21
-          },
-          {
-            "date": "2025-07-01",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.11,
-            "ts": 1751392800,
-            "sl_val": 8.11
-          },
-          {
-            "date": "2025-07-01",
+            "date": "2026-03-04",
             "hour": 19,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -7.75,
-            "ts": 1751396400,
-            "sl_val": 7.75
+            "pnl": -89.44,
+            "ts": 1772650800,
+            "sl_val": 89.44
           },
           {
-            "date": "2025-07-01",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.32,
-            "ts": 1751400000,
-            "sl_val": 7.32
-          },
-          {
-            "date": "2025-07-01",
-            "hour": 22,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 14.34,
-            "ts": 1751407200,
-            "sl_val": 7.17
-          },
-          {
-            "date": "2025-07-01",
-            "hour": 23,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.16,
-            "ts": 1751410800,
-            "sl_val": 7.16
-          },
-          {
-            "date": "2025-07-02",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.22,
-            "ts": 1751414400,
-            "sl_val": 7.22
-          },
-          {
-            "date": "2025-07-02",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.72,
-            "ts": 1751425200,
-            "sl_val": 7.72
-          },
-          {
-            "date": "2025-07-02",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.12,
-            "ts": 1751428800,
-            "sl_val": 7.12
-          },
-          {
-            "date": "2025-07-02",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.86,
-            "ts": 1751432400,
-            "sl_val": 6.86
-          },
-          {
-            "date": "2025-07-21",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.96,
-            "ts": 1753056000,
-            "sl_val": 5.96
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.87,
-            "ts": 1753146000,
-            "sl_val": 7.87
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.48,
-            "ts": 1753149600,
-            "sl_val": 7.48
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.75,
-            "ts": 1753153200,
-            "sl_val": 6.75
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.15,
-            "ts": 1753156800,
-            "sl_val": 6.15
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.37,
-            "ts": 1753160400,
-            "sl_val": 5.37
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.06,
-            "ts": 1753167600,
-            "sl_val": 5.06
-          },
-          {
-            "date": "2025-07-22",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.06,
-            "ts": 1753171200,
-            "sl_val": 5.06
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.6,
-            "ts": 1753232400,
-            "sl_val": 9.6
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 19.23,
-            "ts": 1753236000,
-            "sl_val": 9.61
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 17.34,
-            "ts": 1753239600,
-            "sl_val": 8.67
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.86,
-            "ts": 1753243200,
-            "sl_val": 7.86
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.49,
-            "ts": 1753246800,
-            "sl_val": 6.49
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.22,
-            "ts": 1753250400,
-            "sl_val": 6.22
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.39,
-            "ts": 1753254000,
-            "sl_val": 6.39
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 12.74,
-            "ts": 1753257600,
-            "sl_val": 6.37
-          },
-          {
-            "date": "2025-07-23",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -7.11,
-            "ts": 1753264800,
-            "sl_val": 7.11
-          },
-          {
-            "date": "2025-08-05",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 68.97,
-            "ts": 1754359200,
-            "sl_val": 34.49
-          },
-          {
-            "date": "2025-08-05",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 52.56,
-            "ts": 1754366400,
-            "sl_val": 26.28
-          },
-          {
-            "date": "2025-08-05",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 52.34,
-            "ts": 1754370000,
-            "sl_val": 26.17
-          },
-          {
-            "date": "2025-08-08",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -17.14,
-            "ts": 1754640000,
-            "sl_val": 17.14
-          },
-          {
-            "date": "2025-08-08",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 35.09,
-            "ts": 1754643600,
-            "sl_val": 17.54
-          },
-          {
-            "date": "2025-08-21",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 12.2,
-            "ts": 1755734400,
-            "sl_val": 6.1
-          },
-          {
-            "date": "2025-08-21",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 12.37,
-            "ts": 1755738000,
-            "sl_val": 6.19
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.51,
-            "ts": 1756083600,
-            "sl_val": 9.51
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.56,
-            "ts": 1756087200,
-            "sl_val": 9.56
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.24,
-            "ts": 1756090800,
-            "sl_val": 9.24
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.56,
-            "ts": 1756094400,
-            "sl_val": 8.56
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.49,
-            "ts": 1756098000,
-            "sl_val": 5.49
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.05,
-            "ts": 1756101600,
-            "sl_val": 5.05
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.77,
-            "ts": 1756105200,
-            "sl_val": 4.77
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.6,
-            "ts": 1756108800,
-            "sl_val": 4.6
-          },
-          {
-            "date": "2025-08-25",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.76,
-            "ts": 1756112400,
-            "sl_val": 4.76
-          },
-          {
-            "date": "2025-08-28",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -6.31,
-            "ts": 1756350000,
-            "sl_val": 6.31
-          },
-          {
-            "date": "2025-08-28",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.84,
-            "ts": 1756353600,
-            "sl_val": 5.84
-          },
-          {
-            "date": "2025-08-28",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.17,
-            "ts": 1756357200,
-            "sl_val": 5.17
-          },
-          {
-            "date": "2025-08-28",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.57,
-            "ts": 1756364400,
-            "sl_val": 4.57
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -5.56,
-            "ts": 1756436400,
-            "sl_val": 5.56
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.63,
-            "ts": 1756440000,
-            "sl_val": 4.63
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 5,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.36,
-            "ts": 1756443600,
-            "sl_val": 4.36
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.02,
-            "ts": 1756447200,
-            "sl_val": 4.02
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 7.34,
-            "ts": 1756450800,
-            "sl_val": 3.67
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 8,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 7.29,
-            "ts": 1756454400,
-            "sl_val": 3.64
-          },
-          {
-            "date": "2025-08-29",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -4.16,
-            "ts": 1756465200,
-            "sl_val": 4.16
-          },
-          {
-            "date": "2025-09-02",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -14.18,
-            "ts": 1756814400,
-            "sl_val": 14.18
-          },
-          {
-            "date": "2025-09-03",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.65,
-            "ts": 1756882800,
-            "sl_val": 8.65
-          },
-          {
-            "date": "2025-09-03",
+            "date": "2026-03-04",
             "hour": 23,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 20.91,
-            "ts": 1756940400,
-            "sl_val": 10.46
+            "pnl": 166.07,
+            "ts": 1772665200,
+            "sl_val": 83.03
           },
           {
-            "date": "2025-09-04",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 21.91,
-            "ts": 1756944000,
-            "sl_val": 10.96
-          },
-          {
-            "date": "2025-09-09",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.34,
-            "ts": 1757415600,
-            "sl_val": 9.34
-          },
-          {
-            "date": "2025-09-09",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.71,
-            "ts": 1757419200,
-            "sl_val": 9.71
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -9.84,
-            "ts": 1757988000,
-            "sl_val": 9.84
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.29,
-            "ts": 1757995200,
-            "sl_val": 8.29
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 16,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 18.31,
-            "ts": 1758038400,
-            "sl_val": 9.16
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 18.19,
-            "ts": 1758045600,
-            "sl_val": 9.09
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 18.09,
-            "ts": 1758049200,
-            "sl_val": 9.04
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 17.01,
-            "ts": 1758052800,
-            "sl_val": 8.51
-          },
-          {
-            "date": "2025-09-16",
-            "hour": 22,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 16.49,
-            "ts": 1758060000,
-            "sl_val": 8.24
-          },
-          {
-            "date": "2025-09-17",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 15.21,
-            "ts": 1758067200,
-            "sl_val": 7.61
-          },
-          {
-            "date": "2025-09-23",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -8.64,
-            "ts": 1758600000,
-            "sl_val": 8.64
-          },
-          {
-            "date": "2025-09-29",
-            "hour": 1,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -13.12,
-            "ts": 1759107600,
-            "sl_val": 13.12
-          },
-          {
-            "date": "2025-10-07",
-            "hour": 6,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -11.48,
-            "ts": 1759816800,
-            "sl_val": 11.48
-          },
-          {
-            "date": "2025-10-07",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -11.73,
-            "ts": 1759831200,
-            "sl_val": 11.73
-          },
-          {
-            "date": "2025-10-08",
-            "hour": 19,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 29.44,
-            "ts": 1759950000,
-            "sl_val": 14.72
-          },
-          {
-            "date": "2025-10-14",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -21.56,
-            "ts": 1760432400,
-            "sl_val": 21.56
-          },
-          {
-            "date": "2025-10-14",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -21.94,
-            "ts": 1760439600,
-            "sl_val": 21.94
-          },
-          {
-            "date": "2025-10-15",
-            "hour": 16,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -19.16,
-            "ts": 1760544000,
-            "sl_val": 19.16
-          },
-          {
-            "date": "2025-10-17",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 70.03,
-            "ts": 1760691600,
-            "sl_val": 35.01
-          },
-          {
-            "date": "2025-10-21",
-            "hour": 3,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 46.4,
-            "ts": 1761015600,
-            "sl_val": 23.2
-          },
-          {
-            "date": "2025-10-21",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 43.97,
-            "ts": 1761019200,
-            "sl_val": 21.99
-          },
-          {
-            "date": "2025-10-31",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 38.76,
-            "ts": 1761894000,
-            "sl_val": 19.38
-          },
-          {
-            "date": "2025-11-11",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -10.79,
-            "ts": 1762862400,
-            "sl_val": 10.79
-          },
-          {
-            "date": "2025-11-11",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 22.33,
-            "ts": 1762866000,
-            "sl_val": 11.16
-          },
-          {
-            "date": "2025-11-11",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -12.4,
-            "ts": 1762891200,
-            "sl_val": 12.4
-          },
-          {
-            "date": "2025-11-25",
-            "hour": 7,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -15.98,
-            "ts": 1764054000,
-            "sl_val": 15.98
-          },
-          {
-            "date": "2025-11-26",
-            "hour": 0,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -54.96,
-            "ts": 1764115200,
-            "sl_val": 54.96
-          },
-          {
-            "date": "2025-11-26",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -50.77,
-            "ts": 1764158400,
-            "sl_val": 50.77
-          },
-          {
-            "date": "2025-11-26",
-            "hour": 21,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -50.46,
-            "ts": 1764190800,
-            "sl_val": 50.46
-          },
-          {
-            "date": "2025-12-01",
-            "hour": 11,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 77.41,
-            "ts": 1764586800,
-            "sl_val": 38.71
-          },
-          {
-            "date": "2025-12-01",
-            "hour": 14,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 78.5,
-            "ts": 1764597600,
-            "sl_val": 39.25
-          },
-          {
-            "date": "2025-12-01",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 88.14,
-            "ts": 1764619200,
-            "sl_val": 44.07
-          },
-          {
-            "date": "2025-12-05",
-            "hour": 4,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -21.38,
-            "ts": 1764907200,
-            "sl_val": 21.38
-          },
-          {
-            "date": "2025-12-23",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 25.24,
-            "ts": 1766491200,
-            "sl_val": 12.62
-          },
-          {
-            "date": "2025-12-23",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 26.84,
-            "ts": 1766494800,
-            "sl_val": 13.42
-          },
-          {
-            "date": "2026-01-06",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -16.22,
-            "ts": 1767704400,
-            "sl_val": 16.22
-          },
-          {
-            "date": "2026-01-12",
-            "hour": 20,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -18.35,
-            "ts": 1768248000,
-            "sl_val": 18.35
-          },
-          {
-            "date": "2026-01-13",
-            "hour": 2,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -20.21,
-            "ts": 1768269600,
-            "sl_val": 20.21
-          },
-          {
-            "date": "2026-01-13",
+            "date": "2026-03-05",
             "hour": 3,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -19.82,
-            "ts": 1768273200,
-            "sl_val": 19.82
+            "pnl": -82.31,
+            "ts": 1772679600,
+            "sl_val": 82.31
           },
           {
-            "date": "2026-01-13",
-            "hour": 4,
+            "date": "2026-03-05",
+            "hour": 15,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -17.93,
-            "ts": 1768276800,
-            "sl_val": 17.93
+            "pnl": -81.22,
+            "ts": 1772722800,
+            "sl_val": 81.22
           },
           {
-            "date": "2026-01-21",
-            "hour": 14,
+            "date": "2026-03-05",
+            "hour": 19,
             "dir": "sell",
-            "outcome": "win",
-            "pnl": 53.67,
-            "ts": 1769004000,
-            "sl_val": 26.84
+            "outcome": "loss",
+            "pnl": -69.09,
+            "ts": 1772737200,
+            "sl_val": 69.09
           },
           {
-            "date": "2026-01-21",
+            "date": "2026-03-05",
+            "hour": 23,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -61.81,
+            "ts": 1772751600,
+            "sl_val": 61.81
+          },
+          {
+            "date": "2026-03-06",
+            "hour": 3,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -58.78,
+            "ts": 1772766000,
+            "sl_val": 58.78
+          },
+          {
+            "date": "2026-03-06",
+            "hour": 7,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -54.86,
+            "ts": 1772780400,
+            "sl_val": 54.86
+          },
+          {
+            "date": "2026-03-06",
+            "hour": 11,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -56.17,
+            "ts": 1772794800,
+            "sl_val": 56.17
+          },
+          {
+            "date": "2026-03-06",
             "hour": 15,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 53.41,
-            "ts": 1769007600,
-            "sl_val": 26.71
+            "pnl": 116.21,
+            "ts": 1772809200,
+            "sl_val": 58.1
           },
           {
-            "date": "2026-01-21",
-            "hour": 16,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 55.16,
-            "ts": 1769011200,
-            "sl_val": 27.58
-          },
-          {
-            "date": "2026-01-21",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 56.1,
-            "ts": 1769018400,
-            "sl_val": 28.05
-          },
-          {
-            "date": "2026-01-23",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -21.81,
-            "ts": 1769162400,
-            "sl_val": 21.81
-          },
-          {
-            "date": "2026-01-23",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -21.8,
-            "ts": 1769169600,
-            "sl_val": 21.8
-          },
-          {
-            "date": "2026-01-23",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -21.28,
-            "ts": 1769173200,
-            "sl_val": 21.28
-          },
-          {
-            "date": "2026-01-26",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 55.79,
-            "ts": 1769428800,
-            "sl_val": 27.89
-          },
-          {
-            "date": "2026-01-26",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -25.69,
-            "ts": 1769432400,
-            "sl_val": 25.69
-          },
-          {
-            "date": "2026-01-26",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 56.06,
-            "ts": 1769450400,
-            "sl_val": 28.03
-          },
-          {
-            "date": "2026-01-28",
-            "hour": 18,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -35.74,
-            "ts": 1769623200,
-            "sl_val": 35.74
-          },
-          {
-            "date": "2026-01-29",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -62.8,
-            "ts": 1769680800,
-            "sl_val": 62.8
-          },
-          {
-            "date": "2026-01-29",
+            "date": "2026-03-10",
             "hour": 11,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 123.77,
-            "ts": 1769684400,
-            "sl_val": 61.89
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -65.47,
+            "ts": 1773140400,
+            "sl_val": 65.47
           },
           {
-            "date": "2026-01-29",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 121.01,
-            "ts": 1769688000,
-            "sl_val": 60.51
+            "date": "2026-03-10",
+            "hour": 15,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -66.43,
+            "ts": 1773154800,
+            "sl_val": 66.43
           },
           {
-            "date": "2026-01-29",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 101.54,
-            "ts": 1769691600,
-            "sl_val": 50.77
+            "date": "2026-03-10",
+            "hour": 19,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -66.4,
+            "ts": 1773169200,
+            "sl_val": 66.4
           },
           {
-            "date": "2026-01-29",
-            "hour": 14,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 99.89,
-            "ts": 1769695200,
-            "sl_val": 49.94
+            "date": "2026-03-10",
+            "hour": 23,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -62.78,
+            "ts": 1773183600,
+            "sl_val": 62.78
           },
           {
-            "date": "2026-02-04",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 74.5,
-            "ts": 1770210000,
-            "sl_val": 37.25
+            "date": "2026-03-11",
+            "hour": 3,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -62.28,
+            "ts": 1773198000,
+            "sl_val": 62.28
           },
           {
-            "date": "2026-02-09",
-            "hour": 9,
+            "date": "2026-03-11",
+            "hour": 7,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -51.64,
+            "ts": 1773212400,
+            "sl_val": 51.64
+          },
+          {
+            "date": "2026-03-12",
+            "hour": 19,
             "dir": "sell",
             "outcome": "loss",
-            "pnl": -36.75,
-            "ts": 1770627600,
-            "sl_val": 36.75
+            "pnl": -45.17,
+            "ts": 1773342000,
+            "sl_val": 45.17
           },
           {
-            "date": "2026-02-09",
-            "hour": 13,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -33.99,
-            "ts": 1770642000,
-            "sl_val": 33.99
-          },
-          {
-            "date": "2026-03-25",
-            "hour": 10,
+            "date": "2026-03-12",
+            "hour": 23,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 70.16,
-            "ts": 1774432800,
-            "sl_val": 35.08
+            "pnl": 90.15,
+            "ts": 1773356400,
+            "sl_val": 45.08
           },
           {
-            "date": "2026-03-25",
-            "hour": 12,
-            "dir": "sell",
-            "outcome": "loss",
-            "pnl": -33.12,
-            "ts": 1774440000,
-            "sl_val": 33.12
-          },
-          {
-            "date": "2026-03-30",
+            "date": "2026-03-13",
             "hour": 3,
             "dir": "sell",
-            "outcome": "loss",
-            "pnl": -42.4,
-            "ts": 1774839600,
+            "outcome": "win",
+            "pnl": 84.81,
+            "ts": 1773370800,
             "sl_val": 42.4
           },
           {
-            "date": "2026-04-08",
-            "hour": 8,
+            "date": "2026-03-13",
+            "hour": 7,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 72.46,
-            "ts": 1775635200,
-            "sl_val": 36.23
+            "pnl": 85.73,
+            "ts": 1773385200,
+            "sl_val": 42.87
           },
           {
-            "date": "2026-04-08",
-            "hour": 9,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 72.66,
-            "ts": 1775638800,
-            "sl_val": 36.33
-          },
-          {
-            "date": "2026-04-08",
-            "hour": 10,
-            "dir": "sell",
-            "outcome": "win",
-            "pnl": 67.81,
-            "ts": 1775642400,
-            "sl_val": 33.91
-          },
-          {
-            "date": "2026-04-08",
+            "date": "2026-03-13",
             "hour": 11,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 68.29,
-            "ts": 1775646000,
-            "sl_val": 34.14
+            "pnl": 87.4,
+            "ts": 1773399600,
+            "sl_val": 43.7
           },
           {
-            "date": "2026-04-08",
-            "hour": 12,
+            "date": "2026-03-13",
+            "hour": 15,
             "dir": "sell",
             "outcome": "win",
-            "pnl": 57.9,
-            "ts": 1775649600,
-            "sl_val": 28.95
+            "pnl": 95.05,
+            "ts": 1773414000,
+            "sl_val": 47.53
+          },
+          {
+            "date": "2026-03-13",
+            "hour": 19,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 94.25,
+            "ts": 1773428400,
+            "sl_val": 47.13
+          },
+          {
+            "date": "2026-03-15",
+            "hour": 23,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 97.41,
+            "ts": 1773615600,
+            "sl_val": 48.71
+          },
+          {
+            "date": "2026-03-16",
+            "hour": 3,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 99.41,
+            "ts": 1773630000,
+            "sl_val": 49.7
+          },
+          {
+            "date": "2026-03-16",
+            "hour": 7,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -50.09,
+            "ts": 1773644400,
+            "sl_val": 50.09
+          },
+          {
+            "date": "2026-03-16",
+            "hour": 11,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 103.95,
+            "ts": 1773658800,
+            "sl_val": 51.97
+          },
+          {
+            "date": "2026-03-16",
+            "hour": 15,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 106.93,
+            "ts": 1773673200,
+            "sl_val": 53.46
+          },
+          {
+            "date": "2026-03-16",
+            "hour": 19,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 104.92,
+            "ts": 1773687600,
+            "sl_val": 52.46
+          },
+          {
+            "date": "2026-03-16",
+            "hour": 23,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 100.91,
+            "ts": 1773702000,
+            "sl_val": 50.46
+          },
+          {
+            "date": "2026-03-17",
+            "hour": 3,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 96.2,
+            "ts": 1773716400,
+            "sl_val": 48.1
+          },
+          {
+            "date": "2026-03-17",
+            "hour": 7,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 92.28,
+            "ts": 1773730800,
+            "sl_val": 46.14
+          },
+          {
+            "date": "2026-03-18",
+            "hour": 11,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 92.98,
+            "ts": 1773831600,
+            "sl_val": 46.49
+          },
+          {
+            "date": "2026-03-18",
+            "hour": 15,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 90.0,
+            "ts": 1773846000,
+            "sl_val": 45.0
+          },
+          {
+            "date": "2026-03-18",
+            "hour": 19,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -47.02,
+            "ts": 1773860400,
+            "sl_val": 47.02
+          },
+          {
+            "date": "2026-03-18",
+            "hour": 23,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 93.87,
+            "ts": 1773874800,
+            "sl_val": 46.93
+          },
+          {
+            "date": "2026-03-19",
+            "hour": 3,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 94.94,
+            "ts": 1773889200,
+            "sl_val": 47.47
+          },
+          {
+            "date": "2026-03-19",
+            "hour": 7,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 112.4,
+            "ts": 1773903600,
+            "sl_val": 56.2
+          },
+          {
+            "date": "2026-03-19",
+            "hour": 11,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -69.96,
+            "ts": 1773918000,
+            "sl_val": 69.96
+          },
+          {
+            "date": "2026-03-19",
+            "hour": 15,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -74.14,
+            "ts": 1773932400,
+            "sl_val": 74.14
+          },
+          {
+            "date": "2026-03-19",
+            "hour": 19,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -76.1,
+            "ts": 1773946800,
+            "sl_val": 76.1
+          },
+          {
+            "date": "2026-03-19",
+            "hour": 23,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 154.82,
+            "ts": 1773961200,
+            "sl_val": 77.41
+          },
+          {
+            "date": "2026-03-20",
+            "hour": 19,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 175.76,
+            "ts": 1774033200,
+            "sl_val": 87.88
+          },
+          {
+            "date": "2026-03-22",
+            "hour": 23,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 200.56,
+            "ts": 1774220400,
+            "sl_val": 100.28
+          },
+          {
+            "date": "2026-03-23",
+            "hour": 3,
+            "dir": "sell",
+            "outcome": "win",
+            "pnl": 204.42,
+            "ts": 1774234800,
+            "sl_val": 102.21
+          },
+          {
+            "date": "2026-03-23",
+            "hour": 7,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -112.83,
+            "ts": 1774249200,
+            "sl_val": 112.83
+          },
+          {
+            "date": "2026-03-23",
+            "hour": 11,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -128.0,
+            "ts": 1774263600,
+            "sl_val": 128.0
+          },
+          {
+            "date": "2026-03-23",
+            "hour": 15,
+            "dir": "sell",
+            "outcome": "loss",
+            "pnl": -128.46,
+            "ts": 1774278000,
+            "sl_val": 128.46
+          },
+          {
+            "date": "2026-04-01",
+            "hour": 14,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -62.97,
+            "ts": 1775052000,
+            "sl_val": 62.97
+          },
+          {
+            "date": "2026-04-01",
+            "hour": 18,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -62.53,
+            "ts": 1775066400,
+            "sl_val": 62.53
+          },
+          {
+            "date": "2026-04-01",
+            "hour": 22,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -61.19,
+            "ts": 1775080800,
+            "sl_val": 61.19
+          },
+          {
+            "date": "2026-04-02",
+            "hour": 2,
+            "dir": "buy",
+            "outcome": "loss",
+            "pnl": -67.34,
+            "ts": 1775095200,
+            "sl_val": 67.34
           }
         ]
       },
       "all_variants": {
         "V1_OBV_RSI_MOM": {
-          "M30": {
+          "M5": {
             "stats": {
               "n": 151,
-              "wr": 35.8,
-              "pnl": 324.1,
-              "pf": 1.182,
-              "dd": 495.0,
-              "avg_day": 2.72,
-              "pos_months": "10/23",
-              "n_buy": 63,
-              "n_sell": 88,
-              "buy_wr": 27.0,
-              "sell_wr": 42.0
-            },
-            "periods": {
-              "1m": {
-                "n": 8,
-                "pnl": -227.7,
-                "wr": 12.5,
-                "pf": 0.118,
-                "dd": 227.7,
-                "avg_td": 0.27,
-                "avg_td_active": 1.6
-              },
-              "6m": {
-                "n": 43,
-                "pnl": 570.6,
-                "wr": 44.2,
-                "pf": 1.844,
-                "dd": 326.4,
-                "avg_td": 0.24,
-                "avg_td_active": 1.23
-              },
-              "12m": {
-                "n": 75,
-                "pnl": 432.3,
-                "wr": 37.3,
-                "pf": 1.408,
-                "dd": 326.4,
-                "avg_td": 0.21,
-                "avg_td_active": 1.23
-              },
-              "24m": {
-                "n": 151,
-                "pnl": 324.1,
-                "wr": 35.8,
-                "pf": 1.182,
-                "dd": 495.0,
-                "avg_td": 0.21,
-                "avg_td_active": 1.27
-              }
-            },
-            "trades_count": 151
-          },
-          "H1": {
-            "stats": {
-              "n": 220,
-              "wr": 35.5,
-              "pnl": 555.7,
-              "pf": 1.202,
-              "dd": 650.8,
-              "avg_day": 3.7,
-              "pos_months": "12/23",
-              "n_buy": 99,
-              "n_sell": 121,
-              "buy_wr": 28.3,
-              "sell_wr": 41.3
-            },
-            "periods": {
-              "1m": {
-                "n": 12,
-                "pnl": -110.3,
-                "wr": 25.0,
-                "pf": 0.619,
-                "dd": 212.8,
-                "avg_td": 0.4,
-                "avg_td_active": 1.71
-              },
-              "6m": {
-                "n": 65,
-                "pnl": 828.5,
-                "wr": 41.5,
-                "pf": 1.852,
-                "dd": 339.9,
-                "avg_td": 0.36,
-                "avg_td_active": 1.48
-              },
-              "12m": {
-                "n": 109,
-                "pnl": 721.8,
-                "wr": 37.6,
-                "pf": 1.482,
-                "dd": 340.0,
-                "avg_td": 0.3,
-                "avg_td_active": 1.43
-              },
-              "24m": {
-                "n": 220,
-                "pnl": 555.7,
-                "wr": 35.5,
-                "pf": 1.202,
-                "dd": 650.8,
-                "avg_td": 0.3,
-                "avg_td_active": 1.47
-              }
-            },
-            "trades_count": 220
-          },
-          "H4": {
-            "stats": {
-              "n": 40,
-              "wr": 40.0,
-              "pnl": -48.8,
-              "pf": 0.95,
-              "dd": 480.0,
-              "avg_day": -1.29,
-              "pos_months": "8/17",
-              "n_buy": 20,
-              "n_sell": 20,
-              "buy_wr": 40.0,
+              "wr": 34.4,
+              "pnl": -11.8,
+              "pf": 0.988,
+              "dd": 212.8,
+              "avg_day": -0.18,
+              "pos_months": "2/4",
+              "n_buy": 71,
+              "n_sell": 80,
+              "buy_wr": 28.2,
               "sell_wr": 40.0
             },
             "periods": {
               "1m": {
-                "n": 0,
-                "pnl": 0,
-                "wr": 0,
-                "pf": 0,
-                "dd": 0,
-                "avg_td": 0.0,
-                "avg_td_active": 0.0
+                "n": 50,
+                "pnl": -120.5,
+                "wr": 26.0,
+                "pf": 0.647,
+                "dd": 212.8,
+                "avg_td": 1.67,
+                "avg_td_active": 2.38
               },
               "6m": {
-                "n": 13,
-                "pnl": -460.3,
-                "wr": 15.4,
-                "pf": 0.274,
-                "dd": 460.3,
-                "avg_td": 0.07,
-                "avg_td_active": 1.08
+                "n": 151,
+                "pnl": -11.8,
+                "wr": 34.4,
+                "pf": 0.988,
+                "dd": 212.8,
+                "avg_td": 0.84,
+                "avg_td_active": 2.32
               },
               "12m": {
-                "n": 19,
-                "pnl": -408.6,
-                "wr": 26.3,
-                "pf": 0.434,
-                "dd": 480.0,
-                "avg_td": 0.05,
-                "avg_td_active": 1.06
+                "n": 151,
+                "pnl": -11.8,
+                "wr": 34.4,
+                "pf": 0.988,
+                "dd": 212.8,
+                "avg_td": 0.41,
+                "avg_td_active": 2.32
               },
               "24m": {
-                "n": 40,
-                "pnl": -48.8,
-                "wr": 40.0,
-                "pf": 0.95,
-                "dd": 480.0,
-                "avg_td": 0.05,
-                "avg_td_active": 1.05
+                "n": 151,
+                "pnl": -11.8,
+                "wr": 34.4,
+                "pf": 0.988,
+                "dd": 212.8,
+                "avg_td": 0.21,
+                "avg_td_active": 2.32
               }
             },
-            "trades_count": 40
+            "trades_count": 151
+          },
+          "M15": {
+            "stats": {
+              "n": 86,
+              "wr": 34.9,
+              "pnl": 206.9,
+              "pf": 1.23,
+              "dd": 243.9,
+              "avg_day": 4.14,
+              "pos_months": "3/5",
+              "n_buy": 42,
+              "n_sell": 44,
+              "buy_wr": 40.5,
+              "sell_wr": 29.5
+            },
+            "periods": {
+              "1m": {
+                "n": 18,
+                "pnl": -60.2,
+                "wr": 33.3,
+                "pf": 0.772,
+                "dd": 243.9,
+                "avg_td": 0.6,
+                "avg_td_active": 1.5
+              },
+              "6m": {
+                "n": 86,
+                "pnl": 206.9,
+                "wr": 34.9,
+                "pf": 1.23,
+                "dd": 243.9,
+                "avg_td": 0.48,
+                "avg_td_active": 1.72
+              },
+              "12m": {
+                "n": 86,
+                "pnl": 206.9,
+                "wr": 34.9,
+                "pf": 1.23,
+                "dd": 243.9,
+                "avg_td": 0.24,
+                "avg_td_active": 1.72
+              },
+              "24m": {
+                "n": 86,
+                "pnl": 206.9,
+                "wr": 34.9,
+                "pf": 1.23,
+                "dd": 243.9,
+                "avg_td": 0.12,
+                "avg_td_active": 1.72
+              }
+            },
+            "trades_count": 86
+          },
+          "M30": {
+            "stats": {
+              "n": 52,
+              "wr": 40.4,
+              "pnl": 238.9,
+              "pf": 1.429,
+              "dd": 135.1,
+              "avg_day": 6.64,
+              "pos_months": "3/6",
+              "n_buy": 25,
+              "n_sell": 27,
+              "buy_wr": 40.0,
+              "sell_wr": 40.7
+            },
+            "periods": {
+              "1m": {
+                "n": 6,
+                "pnl": -117.0,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 117.0,
+                "avg_td": 0.2,
+                "avg_td_active": 1.0
+              },
+              "6m": {
+                "n": 52,
+                "pnl": 238.9,
+                "wr": 40.4,
+                "pf": 1.429,
+                "dd": 135.1,
+                "avg_td": 0.29,
+                "avg_td_active": 1.44
+              },
+              "12m": {
+                "n": 52,
+                "pnl": 238.9,
+                "wr": 40.4,
+                "pf": 1.429,
+                "dd": 135.1,
+                "avg_td": 0.14,
+                "avg_td_active": 1.44
+              },
+              "24m": {
+                "n": 52,
+                "pnl": 238.9,
+                "wr": 40.4,
+                "pf": 1.429,
+                "dd": 135.1,
+                "avg_td": 0.07,
+                "avg_td_active": 1.44
+              }
+            },
+            "trades_count": 52
+          },
+          "H1": {
+            "stats": {
+              "n": 15,
+              "wr": 26.7,
+              "pnl": -78.5,
+              "pf": 0.745,
+              "dd": 223.8,
+              "avg_day": -5.23,
+              "pos_months": "2/3",
+              "n_buy": 6,
+              "n_sell": 9,
+              "buy_wr": 33.3,
+              "sell_wr": 22.2
+            },
+            "periods": {
+              "1m": {
+                "n": 6,
+                "pnl": 19.6,
+                "wr": 33.3,
+                "pf": 1.209,
+                "dd": 75.9,
+                "avg_td": 0.2,
+                "avg_td_active": 1.0
+              },
+              "6m": {
+                "n": 15,
+                "pnl": -78.5,
+                "wr": 26.7,
+                "pf": 0.745,
+                "dd": 223.8,
+                "avg_td": 0.08,
+                "avg_td_active": 1.0
+              },
+              "12m": {
+                "n": 15,
+                "pnl": -78.5,
+                "wr": 26.7,
+                "pf": 0.745,
+                "dd": 223.8,
+                "avg_td": 0.04,
+                "avg_td_active": 1.0
+              },
+              "24m": {
+                "n": 15,
+                "pnl": -78.5,
+                "wr": 26.7,
+                "pf": 0.745,
+                "dd": 223.8,
+                "avg_td": 0.02,
+                "avg_td_active": 1.0
+              }
+            },
+            "trades_count": 15
+          },
+          "H4": {
+            "stats": {
+              "n": 3,
+              "wr": 33.3,
+              "pnl": -27.5,
+              "pf": 0.787,
+              "dd": 128.9,
+              "avg_day": -9.17,
+              "pos_months": "1/3",
+              "n_buy": 1,
+              "n_sell": 2,
+              "buy_wr": 0.0,
+              "sell_wr": 50.0
+            },
+            "periods": {
+              "1m": {
+                "n": 1,
+                "pnl": -71.7,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 71.7,
+                "avg_td": 0.03,
+                "avg_td_active": 1.0
+              },
+              "6m": {
+                "n": 3,
+                "pnl": -27.5,
+                "wr": 33.3,
+                "pf": 0.787,
+                "dd": 128.9,
+                "avg_td": 0.02,
+                "avg_td_active": 1.0
+              },
+              "12m": {
+                "n": 3,
+                "pnl": -27.5,
+                "wr": 33.3,
+                "pf": 0.787,
+                "dd": 128.9,
+                "avg_td": 0.01,
+                "avg_td_active": 1.0
+              },
+              "24m": {
+                "n": 3,
+                "pnl": -27.5,
+                "wr": 33.3,
+                "pf": 0.787,
+                "dd": 128.9,
+                "avg_td": 0.0,
+                "avg_td_active": 1.0
+              }
+            },
+            "trades_count": 3
           }
         },
         "V2_Triple_MACD": {
-          "M30": {
+          "M5": {
             "stats": {
-              "n": 1183,
-              "wr": 31.8,
-              "pnl": -2165.8,
-              "pf": 0.844,
-              "dd": 2673.0,
-              "avg_day": -6.17,
-              "pos_months": "8/24",
-              "n_buy": 657,
-              "n_sell": 526,
-              "buy_wr": 30.0,
-              "sell_wr": 34.0
+              "n": 509,
+              "wr": 34.6,
+              "pnl": 293.6,
+              "pf": 1.098,
+              "dd": 455.9,
+              "avg_day": 4.25,
+              "pos_months": "3/4",
+              "n_buy": 231,
+              "n_sell": 278,
+              "buy_wr": 33.3,
+              "sell_wr": 35.6
             },
             "periods": {
               "1m": {
-                "n": 41,
-                "pnl": -117.9,
-                "wr": 34.1,
-                "pf": 0.881,
-                "dd": 451.8,
-                "avg_td": 1.37,
-                "avg_td_active": 3.42
+                "n": 158,
+                "pnl": 379.9,
+                "wr": 39.9,
+                "pf": 1.446,
+                "dd": 169.0,
+                "avg_td": 5.27,
+                "avg_td_active": 7.52
               },
               "6m": {
-                "n": 265,
-                "pnl": -49.1,
-                "wr": 34.3,
-                "pf": 0.99,
-                "dd": 821.2,
-                "avg_td": 1.47,
-                "avg_td_active": 3.35
+                "n": 509,
+                "pnl": 293.6,
+                "wr": 34.6,
+                "pf": 1.098,
+                "dd": 455.9,
+                "avg_td": 2.83,
+                "avg_td_active": 7.38
               },
               "12m": {
-                "n": 566,
-                "pnl": -176.7,
-                "wr": 34.8,
-                "pf": 0.978,
-                "dd": 987.9,
-                "avg_td": 1.55,
-                "avg_td_active": 3.25
+                "n": 509,
+                "pnl": 293.6,
+                "wr": 34.6,
+                "pf": 1.098,
+                "dd": 455.9,
+                "avg_td": 1.39,
+                "avg_td_active": 7.38
               },
               "24m": {
-                "n": 1183,
-                "pnl": -2165.8,
-                "wr": 31.8,
-                "pf": 0.844,
-                "dd": 2673.0,
-                "avg_td": 1.62,
-                "avg_td_active": 3.37
+                "n": 509,
+                "pnl": 293.6,
+                "wr": 34.6,
+                "pf": 1.098,
+                "dd": 455.9,
+                "avg_td": 0.7,
+                "avg_td_active": 7.38
               }
             },
-            "trades_count": 1183
+            "trades_count": 509
+          },
+          "M15": {
+            "stats": {
+              "n": 414,
+              "wr": 31.6,
+              "pnl": -54.1,
+              "pf": 0.987,
+              "dd": 837.8,
+              "avg_day": -0.64,
+              "pos_months": "2/5",
+              "n_buy": 197,
+              "n_sell": 217,
+              "buy_wr": 30.5,
+              "sell_wr": 32.7
+            },
+            "periods": {
+              "1m": {
+                "n": 109,
+                "pnl": -286.2,
+                "wr": 31.2,
+                "pf": 0.792,
+                "dd": 680.9,
+                "avg_td": 3.63,
+                "avg_td_active": 5.19
+              },
+              "6m": {
+                "n": 414,
+                "pnl": -54.1,
+                "wr": 31.6,
+                "pf": 0.987,
+                "dd": 837.8,
+                "avg_td": 2.3,
+                "avg_td_active": 4.93
+              },
+              "12m": {
+                "n": 414,
+                "pnl": -54.1,
+                "wr": 31.6,
+                "pf": 0.987,
+                "dd": 837.8,
+                "avg_td": 1.13,
+                "avg_td_active": 4.93
+              },
+              "24m": {
+                "n": 414,
+                "pnl": -54.1,
+                "wr": 31.6,
+                "pf": 0.987,
+                "dd": 837.8,
+                "avg_td": 0.57,
+                "avg_td_active": 4.93
+              }
+            },
+            "trades_count": 414
+          },
+          "M30": {
+            "stats": {
+              "n": 396,
+              "wr": 34.3,
+              "pnl": 333.3,
+              "pf": 1.064,
+              "dd": 1036.4,
+              "avg_day": 3.7,
+              "pos_months": "4/6",
+              "n_buy": 207,
+              "n_sell": 189,
+              "buy_wr": 34.3,
+              "sell_wr": 34.4
+            },
+            "periods": {
+              "1m": {
+                "n": 74,
+                "pnl": 533.9,
+                "wr": 43.2,
+                "pf": 1.492,
+                "dd": 459.9,
+                "avg_td": 2.47,
+                "avg_td_active": 4.62
+              },
+              "6m": {
+                "n": 396,
+                "pnl": 333.3,
+                "wr": 34.3,
+                "pf": 1.064,
+                "dd": 1036.4,
+                "avg_td": 2.2,
+                "avg_td_active": 4.4
+              },
+              "12m": {
+                "n": 396,
+                "pnl": 333.3,
+                "wr": 34.3,
+                "pf": 1.064,
+                "dd": 1036.4,
+                "avg_td": 1.08,
+                "avg_td_active": 4.4
+              },
+              "24m": {
+                "n": 396,
+                "pnl": 333.3,
+                "wr": 34.3,
+                "pf": 1.064,
+                "dd": 1036.4,
+                "avg_td": 0.54,
+                "avg_td_active": 4.4
+              }
+            },
+            "trades_count": 396
           },
           "H1": {
             "stats": {
-              "n": 2608,
-              "wr": 33.8,
-              "pnl": -2997.1,
-              "pf": 0.904,
-              "dd": 4815.6,
-              "avg_day": -7.27,
-              "pos_months": "8/24",
-              "n_buy": 1480,
-              "n_sell": 1128,
-              "buy_wr": 30.8,
-              "sell_wr": 37.7
+              "n": 258,
+              "wr": 34.9,
+              "pnl": 543.5,
+              "pf": 1.095,
+              "dd": 1320.6,
+              "avg_day": 13.26,
+              "pos_months": "2/3",
+              "n_buy": 116,
+              "n_sell": 142,
+              "buy_wr": 32.8,
+              "sell_wr": 36.6
             },
             "periods": {
               "1m": {
-                "n": 90,
-                "pnl": 24.0,
-                "wr": 33.3,
-                "pf": 1.011,
-                "dd": 983.4,
-                "avg_td": 3.0,
-                "avg_td_active": 6.0
+                "n": 103,
+                "pnl": 704.7,
+                "wr": 38.8,
+                "pf": 1.335,
+                "dd": 844.6,
+                "avg_td": 3.43,
+                "avg_td_active": 6.87
               },
               "6m": {
-                "n": 631,
-                "pnl": 446.8,
-                "wr": 33.4,
-                "pf": 1.035,
-                "dd": 1729.5,
-                "avg_td": 3.51,
-                "avg_td_active": 6.07
+                "n": 258,
+                "pnl": 543.5,
+                "wr": 34.9,
+                "pf": 1.095,
+                "dd": 1320.6,
+                "avg_td": 1.43,
+                "avg_td_active": 6.29
               },
               "12m": {
-                "n": 1321,
-                "pnl": 1092.7,
-                "wr": 36.5,
-                "pf": 1.057,
-                "dd": 1740.4,
-                "avg_td": 3.62,
-                "avg_td_active": 6.09
+                "n": 258,
+                "pnl": 543.5,
+                "wr": 34.9,
+                "pf": 1.095,
+                "dd": 1320.6,
+                "avg_td": 0.71,
+                "avg_td_active": 6.29
               },
               "24m": {
-                "n": 2608,
-                "pnl": -2997.1,
-                "wr": 33.8,
-                "pf": 0.904,
-                "dd": 4815.6,
-                "avg_td": 3.57,
-                "avg_td_active": 6.33
+                "n": 258,
+                "pnl": 543.5,
+                "wr": 34.9,
+                "pf": 1.095,
+                "dd": 1320.6,
+                "avg_td": 0.35,
+                "avg_td_active": 6.29
               }
             },
-            "trades_count": 2608
+            "trades_count": 258
           },
           "H4": {
             "stats": {
-              "n": 868,
-              "wr": 31.8,
-              "pnl": -2465.3,
-              "pf": 0.861,
-              "dd": 3672.0,
-              "avg_day": -8.44,
-              "pos_months": "9/24",
-              "n_buy": 575,
-              "n_sell": 293,
-              "buy_wr": 32.3,
-              "sell_wr": 30.7
+              "n": 82,
+              "wr": 42.7,
+              "pnl": 1101.5,
+              "pf": 1.365,
+              "dd": 781.3,
+              "avg_day": 44.06,
+              "pos_months": "1/3",
+              "n_buy": 25,
+              "n_sell": 57,
+              "buy_wr": 20.0,
+              "sell_wr": 52.6
             },
             "periods": {
               "1m": {
-                "n": 30,
-                "pnl": 979.8,
-                "wr": 53.3,
-                "pf": 1.931,
-                "dd": 922.5,
-                "avg_td": 1.0,
-                "avg_td_active": 3.33
-              },
-              "6m": {
-                "n": 196,
-                "pnl": -482.8,
-                "wr": 33.2,
-                "pf": 0.936,
-                "dd": 2255.6,
-                "avg_td": 1.09,
-                "avg_td_active": 2.97
-              },
-              "12m": {
-                "n": 387,
-                "pnl": -569.0,
-                "wr": 34.4,
-                "pf": 0.945,
-                "dd": 2255.6,
-                "avg_td": 1.06,
-                "avg_td_active": 2.91
-              },
-              "24m": {
-                "n": 868,
-                "pnl": -2465.3,
-                "wr": 31.8,
-                "pf": 0.861,
-                "dd": 3672.0,
-                "avg_td": 1.19,
-                "avg_td_active": 2.97
-              }
-            },
-            "trades_count": 868
-          }
-        },
-        "V3_Sell_Exhaustion": {
-          "M30": {
-            "stats": {
-              "n": 114,
-              "wr": 41.2,
-              "pnl": 1068.7,
-              "pf": 2.102,
-              "dd": 289.9,
-              "avg_day": 15.05,
-              "pos_months": "13/23",
-              "n_buy": 0,
-              "n_sell": 114,
-              "buy_wr": 0,
-              "sell_wr": 41.2
-            },
-            "periods": {
-              "1m": {
-                "n": 5,
-                "pnl": 235.2,
-                "wr": 80.0,
-                "pf": 8.102,
-                "dd": 33.1,
-                "avg_td": 0.17,
-                "avg_td_active": 2.5
-              },
-              "6m": {
-                "n": 32,
-                "pnl": 797.6,
-                "wr": 56.2,
-                "pf": 2.895,
-                "dd": 140.4,
-                "avg_td": 0.18,
-                "avg_td_active": 1.78
-              },
-              "12m": {
-                "n": 56,
-                "pnl": 685.2,
-                "wr": 41.1,
-                "pf": 2.099,
-                "dd": 144.0,
-                "avg_td": 0.15,
-                "avg_td_active": 1.6
-              },
-              "24m": {
-                "n": 114,
-                "pnl": 1068.7,
-                "wr": 41.2,
-                "pf": 2.102,
-                "dd": 289.9,
-                "avg_td": 0.16,
-                "avg_td_active": 1.61
-              }
-            },
-            "trades_count": 114
-          },
-          "H1": {
-            "stats": {
-              "n": 290,
-              "wr": 42.1,
-              "pnl": 2247.7,
-              "pf": 2.074,
-              "dd": 559.0,
-              "avg_day": 21.01,
-              "pos_months": "15/24",
-              "n_buy": 0,
-              "n_sell": 290,
-              "buy_wr": 0,
-              "sell_wr": 42.1
-            },
-            "periods": {
-              "1m": {
-                "n": 8,
-                "pnl": 333.8,
-                "wr": 75.0,
-                "pf": 5.419,
-                "dd": 75.5,
-                "avg_td": 0.27,
+                "n": 24,
+                "pnl": 723.5,
+                "wr": 54.2,
+                "pf": 1.812,
+                "dd": 623.3,
+                "avg_td": 0.8,
                 "avg_td_active": 2.67
               },
               "6m": {
-                "n": 49,
-                "pnl": 1133.2,
-                "wr": 55.1,
-                "pf": 2.758,
-                "dd": 184.6,
-                "avg_td": 0.27,
-                "avg_td_active": 2.23
+                "n": 82,
+                "pnl": 1101.5,
+                "wr": 42.7,
+                "pf": 1.365,
+                "dd": 781.3,
+                "avg_td": 0.46,
+                "avg_td_active": 3.28
               },
               "12m": {
-                "n": 135,
-                "pnl": 1044.4,
-                "wr": 37.8,
-                "pf": 1.804,
-                "dd": 276.1,
-                "avg_td": 0.37,
-                "avg_td_active": 2.65
+                "n": 82,
+                "pnl": 1101.5,
+                "wr": 42.7,
+                "pf": 1.365,
+                "dd": 781.3,
+                "avg_td": 0.22,
+                "avg_td_active": 3.28
               },
               "24m": {
-                "n": 290,
-                "pnl": 2247.7,
-                "wr": 42.1,
-                "pf": 2.074,
-                "dd": 559.0,
-                "avg_td": 0.4,
-                "avg_td_active": 2.71
+                "n": 82,
+                "pnl": 1101.5,
+                "wr": 42.7,
+                "pf": 1.365,
+                "dd": 781.3,
+                "avg_td": 0.11,
+                "avg_td_active": 3.28
               }
             },
-            "trades_count": 290
-          },
-          "H4": {
+            "trades_count": 82
+          }
+        },
+        "V3_Sell_Exhaustion": {
+          "M5": {
             "stats": {
-              "n": 73,
-              "wr": 28.8,
-              "pnl": -987.0,
-              "pf": 0.43,
-              "dd": 1256.2,
-              "avg_day": -21.93,
-              "pos_months": "8/19",
+              "n": 7,
+              "wr": 42.9,
+              "pnl": 18.7,
+              "pf": 1.607,
+              "dd": 23.8,
+              "avg_day": 3.12,
+              "pos_months": "1/3",
               "n_buy": 0,
-              "n_sell": 73,
+              "n_sell": 7,
               "buy_wr": 0,
-              "sell_wr": 28.8
+              "sell_wr": 42.9
             },
             "periods": {
               "1m": {
                 "n": 1,
-                "pnl": -72.0,
-                "wr": 0.0,
-                "pf": 0.0,
-                "dd": 72.0,
+                "pnl": 25.8,
+                "wr": 100.0,
+                "pf": 25790.0,
+                "dd": 0,
                 "avg_td": 0.03,
                 "avg_td_active": 1.0
               },
               "6m": {
-                "n": 15,
-                "pnl": -354.6,
-                "wr": 26.7,
-                "pf": 0.431,
-                "dd": 354.6,
-                "avg_td": 0.08,
-                "avg_td_active": 1.67
+                "n": 7,
+                "pnl": 18.7,
+                "wr": 42.9,
+                "pf": 1.607,
+                "dd": 23.8,
+                "avg_td": 0.04,
+                "avg_td_active": 1.17
               },
               "12m": {
-                "n": 35,
-                "pnl": -925.1,
-                "wr": 14.3,
-                "pf": 0.244,
-                "dd": 925.1,
-                "avg_td": 0.1,
-                "avg_td_active": 1.75
+                "n": 7,
+                "pnl": 18.7,
+                "wr": 42.9,
+                "pf": 1.607,
+                "dd": 23.8,
+                "avg_td": 0.02,
+                "avg_td_active": 1.17
               },
               "24m": {
-                "n": 73,
-                "pnl": -987.0,
-                "wr": 28.8,
-                "pf": 0.43,
-                "dd": 1256.2,
-                "avg_td": 0.1,
-                "avg_td_active": 1.62
+                "n": 7,
+                "pnl": 18.7,
+                "wr": 42.9,
+                "pf": 1.607,
+                "dd": 23.8,
+                "avg_td": 0.01,
+                "avg_td_active": 1.17
               }
             },
-            "trades_count": 73
-          }
-        },
-        "V4_Strong_5cond": {
-          "M30": {
+            "trades_count": 7
+          },
+          "M15": {
             "stats": {
-              "n": 23,
-              "wr": 30.4,
-              "pnl": 23.2,
-              "pf": 1.069,
-              "dd": 263.4,
-              "avg_day": 1.11,
-              "pos_months": "4/10",
-              "n_buy": 12,
-              "n_sell": 11,
-              "buy_wr": 8.3,
-              "sell_wr": 54.5
+              "n": 3,
+              "wr": 66.7,
+              "pnl": 26.3,
+              "pf": 4.768,
+              "dd": 7.0,
+              "avg_day": 13.15,
+              "pos_months": "2/2",
+              "n_buy": 0,
+              "n_sell": 3,
+              "buy_wr": 0,
+              "sell_wr": 66.7
             },
             "periods": {
               "1m": {
@@ -3421,102 +1488,102 @@
                 "avg_td_active": 0.0
               },
               "6m": {
-                "n": 10,
-                "pnl": 222.3,
-                "wr": 60.0,
-                "pf": 2.807,
-                "dd": 106.3,
-                "avg_td": 0.06,
-                "avg_td_active": 1.11
+                "n": 3,
+                "pnl": 26.3,
+                "wr": 66.7,
+                "pf": 4.768,
+                "dd": 7.0,
+                "avg_td": 0.02,
+                "avg_td_active": 1.5
               },
               "12m": {
-                "n": 11,
-                "pnl": 209.9,
-                "wr": 54.5,
-                "pf": 2.55,
-                "dd": 106.3,
-                "avg_td": 0.03,
-                "avg_td_active": 1.1
+                "n": 3,
+                "pnl": 26.3,
+                "wr": 66.7,
+                "pf": 4.768,
+                "dd": 7.0,
+                "avg_td": 0.01,
+                "avg_td_active": 1.5
               },
               "24m": {
-                "n": 23,
-                "pnl": 23.2,
-                "wr": 30.4,
-                "pf": 1.069,
-                "dd": 263.4,
-                "avg_td": 0.03,
-                "avg_td_active": 1.1
+                "n": 3,
+                "pnl": 26.3,
+                "wr": 66.7,
+                "pf": 4.768,
+                "dd": 7.0,
+                "avg_td": 0.0,
+                "avg_td_active": 1.5
               }
             },
-            "trades_count": 23
+            "trades_count": 3
+          },
+          "M30": {
+            "stats": {
+              "n": 9,
+              "wr": 22.2,
+              "pnl": -48.8,
+              "pf": 0.586,
+              "dd": 75.0,
+              "avg_day": -6.97,
+              "pos_months": "1/4",
+              "n_buy": 0,
+              "n_sell": 9,
+              "buy_wr": 0,
+              "sell_wr": 22.2
+            },
+            "periods": {
+              "1m": {
+                "n": 2,
+                "pnl": -56.8,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 56.8,
+                "avg_td": 0.07,
+                "avg_td_active": 2.0
+              },
+              "6m": {
+                "n": 9,
+                "pnl": -48.8,
+                "wr": 22.2,
+                "pf": 0.586,
+                "dd": 75.0,
+                "avg_td": 0.05,
+                "avg_td_active": 1.29
+              },
+              "12m": {
+                "n": 9,
+                "pnl": -48.8,
+                "wr": 22.2,
+                "pf": 0.586,
+                "dd": 75.0,
+                "avg_td": 0.02,
+                "avg_td_active": 1.29
+              },
+              "24m": {
+                "n": 9,
+                "pnl": -48.8,
+                "wr": 22.2,
+                "pf": 0.586,
+                "dd": 75.0,
+                "avg_td": 0.01,
+                "avg_td_active": 1.29
+              }
+            },
+            "trades_count": 9
           },
           "H1": {
             "stats": {
-              "n": 37,
-              "wr": 35.1,
-              "pnl": 284.7,
-              "pf": 1.522,
-              "dd": 281.5,
-              "avg_day": 9.49,
-              "pos_months": "6/13",
-              "n_buy": 15,
-              "n_sell": 22,
-              "buy_wr": 26.7,
-              "sell_wr": 40.9
-            },
-            "periods": {
-              "1m": {
-                "n": 1,
-                "pnl": 82.4,
-                "wr": 100.0,
-                "pf": 82430.0,
-                "dd": 0,
-                "avg_td": 0.03,
-                "avg_td_active": 1.0
-              },
-              "6m": {
-                "n": 15,
-                "pnl": 508.2,
-                "wr": 60.0,
-                "pf": 3.937,
-                "dd": 79.0,
-                "avg_td": 0.08,
-                "avg_td_active": 1.15
-              },
-              "12m": {
-                "n": 17,
-                "pnl": 443.5,
-                "wr": 52.9,
-                "pf": 2.865,
-                "dd": 122.7,
-                "avg_td": 0.05,
-                "avg_td_active": 1.13
-              },
-              "24m": {
-                "n": 37,
-                "pnl": 284.7,
-                "wr": 35.1,
-                "pf": 1.522,
-                "dd": 281.5,
-                "avg_td": 0.05,
-                "avg_td_active": 1.23
-              }
-            },
-            "trades_count": 37
-          },
-          "H4": {
-            "stats": {
               "n": 2,
-              "wr": 50.0,
-              "pnl": 19.9,
-              "pf": 1.966,
-              "dd": 20.6,
-              "avg_day": 9.97,
-              "pos_months": "1/2",
-              "n_buy": 2,
-              "n_sell": 0,
-              "buy_wr": 50.0,
-              "sell_wr": 0
+              "wr": 0.0,
+              "pnl": -47.5,
+              "pf": 0.0,
+              "dd": 47.5,
+              "avg_day": -47.55,
+              "pos_months": "0/1",
+              "n_buy": 0,
+              "n_sell": 2,
+              "buy_wr": 0,
+              "sell_wr": 0.0
             },
             "periods": {
               "1m": {
@@ -3529,34 +1596,213 @@
                 "avg_td_active": 0.0
               },
               "6m": {
-                "n": 0,
-                "pnl": 0,
-                "wr": 0,
-                "pf": 0,
-                "dd": 0,
-                "avg_td": 0.0,
-                "avg_td_active": 0.0
+                "n": 2,
+                "pnl": -47.5,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 47.5,
+                "avg_td": 0.01,
+                "avg_td_active": 2.0
               },
               "12m": {
-                "n": 1,
-                "pnl": 40.6,
-                "wr": 100.0,
-                "pf": 40560.0,
-                "dd": 0,
-                "avg_td": 0.0,
-                "avg_td_active": 1.0
+                "n": 2,
+                "pnl": -47.5,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 47.5,
+                "avg_td": 0.01,
+                "avg_td_active": 2.0
               },
               "24m": {
                 "n": 2,
-                "pnl": 19.9,
-                "wr": 50.0,
-                "pf": 1.966,
-                "dd": 20.6,
+                "pnl": -47.5,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 47.5,
                 "avg_td": 0.0,
-                "avg_td_active": 1.0
+                "avg_td_active": 2.0
               }
             },
             "trades_count": 2
+          },
+          "H4": {
+            "stats": null,
+            "periods": {},
+            "trades_count": 0
+          }
+        },
+        "V4_Strong_5cond": {
+          "M5": {
+            "stats": {
+              "n": 12,
+              "wr": 33.3,
+              "pnl": -68.2,
+              "pf": 0.493,
+              "dd": 107.5,
+              "avg_day": -6.2,
+              "pos_months": "2/4",
+              "n_buy": 1,
+              "n_sell": 11,
+              "buy_wr": 0.0,
+              "sell_wr": 36.4
+            },
+            "periods": {
+              "1m": {
+                "n": 3,
+                "pnl": 32.8,
+                "wr": 66.7,
+                "pf": 6.107,
+                "dd": 6.4,
+                "avg_td": 0.1,
+                "avg_td_active": 1.0
+              },
+              "6m": {
+                "n": 12,
+                "pnl": -68.2,
+                "wr": 33.3,
+                "pf": 0.493,
+                "dd": 107.5,
+                "avg_td": 0.07,
+                "avg_td_active": 1.09
+              },
+              "12m": {
+                "n": 12,
+                "pnl": -68.2,
+                "wr": 33.3,
+                "pf": 0.493,
+                "dd": 107.5,
+                "avg_td": 0.03,
+                "avg_td_active": 1.09
+              },
+              "24m": {
+                "n": 12,
+                "pnl": -68.2,
+                "wr": 33.3,
+                "pf": 0.493,
+                "dd": 107.5,
+                "avg_td": 0.02,
+                "avg_td_active": 1.09
+              }
+            },
+            "trades_count": 12
+          },
+          "M15": {
+            "stats": {
+              "n": 13,
+              "wr": 23.1,
+              "pnl": -113.5,
+              "pf": 0.449,
+              "dd": 148.9,
+              "avg_day": -8.73,
+              "pos_months": "1/5",
+              "n_buy": 2,
+              "n_sell": 11,
+              "buy_wr": 50.0,
+              "sell_wr": 18.2
+            },
+            "periods": {
+              "1m": {
+                "n": 3,
+                "pnl": -72.2,
+                "wr": 0.0,
+                "pf": 0.0,
+                "dd": 72.2,
+                "avg_td": 0.1,
+                "avg_td_active": 1.0
+              },
+              "6m": {
+                "n": 13,
+                "pnl": -113.5,
+                "wr": 23.1,
+                "pf": 0.449,
+                "dd": 148.9,
+                "avg_td": 0.07,
+                "avg_td_active": 1.0
+              },
+              "12m": {
+                "n": 13,
+                "pnl": -113.5,
+                "wr": 23.1,
+                "pf": 0.449,
+                "dd": 148.9,
+                "avg_td": 0.04,
+                "avg_td_active": 1.0
+              },
+              "24m": {
+                "n": 13,
+                "pnl": -113.5,
+                "wr": 23.1,
+                "pf": 0.449,
+                "dd": 148.9,
+                "avg_td": 0.02,
+                "avg_td_active": 1.0
+              }
+            },
+            "trades_count": 13
+          },
+          "M30": {
+            "stats": {
+              "n": 4,
+              "wr": 50.0,
+              "pnl": 21.7,
+              "pf": 1.638,
+              "dd": 17.9,
+              "avg_day": 7.23,
+              "pos_months": "1/1",
+              "n_buy": 0,
+              "n_sell": 4,
+              "buy_wr": 0,
+              "sell_wr": 50.0
+            },
+            "periods": {
+              "1m": {
+                "n": 0,
+                "pnl": 0,
+                "wr": 0,
+                "pf": 0,
+                "dd": 0,
+                "avg_td": 0.0,
+                "avg_td_active": 0.0
+              },
+              "6m": {
+                "n": 4,
+                "pnl": 21.7,
+                "wr": 50.0,
+                "pf": 1.638,
+                "dd": 17.9,
+                "avg_td": 0.02,
+                "avg_td_active": 1.33
+              },
+              "12m": {
+                "n": 4,
+                "pnl": 21.7,
+                "wr": 50.0,
+                "pf": 1.638,
+                "dd": 17.9,
+                "avg_td": 0.01,
+                "avg_td_active": 1.33
+              },
+              "24m": {
+                "n": 4,
+                "pnl": 21.7,
+                "wr": 50.0,
+                "pf": 1.638,
+                "dd": 17.9,
+                "avg_td": 0.01,
+                "avg_td_active": 1.33
+              }
+            },
+            "trades_count": 4
+          },
+          "H1": {
+            "stats": null,
+            "periods": {},
+            "trades_count": 0
+          },
+          "H4": {
+            "stats": null,
+            "periods": {},
+            "trades_count": 0
           }
         }
       }

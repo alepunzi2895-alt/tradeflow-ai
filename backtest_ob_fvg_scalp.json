@@ -1,0 +1,52 @@
+{
+  "strategy": "S10_OB_FVG_SCALP",
+  "mode": "strict",
+  "tp_mult": 1.0,
+  "sl_mult": 0.6,
+  "results": [
+    {
+      "tf": "M5",
+      "trades": 58,
+      "wins": 17,
+      "losses": 41,
+      "wr": 29.3,
+      "pf": 0.78,
+      "pnl_total": -29.72,
+      "max_dd": 57.27,
+      "avg_win": 6.05,
+      "avg_loss": 3.23,
+      "tp_mult": 1.0,
+      "sl_mult": 0.6
+    },
+    {
+      "tf": "M15",
+      "trades": 21,
+      "wins": 8,
+      "losses": 13,
+      "wr": 38.1,
+      "pf": 0.72,
+      "pnl_total": -18.71,
+      "max_dd": 38.19,
+      "avg_win": 5.88,
+      "avg_loss": 5.06,
+      "tp_mult": 1.0,
+      "sl_mult": 0.6
+    },
+    {
+      "tf": "M30",
+      "trades": 6,
+      "wins": 3,
+      "losses": 3,
+      "wr": 50.0,
+      "pf": 1.76,
+      "pnl_total": 18.57,
+      "max_dd": 12.87,
+      "avg_win": 14.32,
+      "avg_loss": 8.13,
+      "tp_mult": 1.0,
+      "sl_mult": 0.6
+    }
+  ],
+  "best_tf": "M5",
+  "generated": "2026-04-15T21:45:14.384639"
+}

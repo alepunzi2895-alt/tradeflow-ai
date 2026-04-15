@@ -228,6 +228,30 @@ def s_sell_exhaust(I, i):
     if oc[i]==-1 and r>65 and a>=30 and m<0: return 'sell'
     return None
 
+def s_mfkk_intraday(I, i):
+    if i<2: return None
+    oc=I.get('obv_oc', [])
+    if not oc or i>=len(oc): return None
+    r=I['rsi'][i]; mo=I['mom'][i]; a=I['adx'][i]; mc=I['macd'][i]
+    if None in (r, mo, a, mc): return None
+    if a < 20: return None
+    if oc[i] == 1  and r > 50 and mo > 0 and mc > 0: return 'buy'
+    if oc[i] == -1 and r < 50 and mo < 0 and mc < 0: return 'sell'
+    return None
+
+def s_ob_fvg_scalp(I, i):
+    e20=I['e20'][i]; e50=I['e50'][i]
+    if None in (e20, e50): return None
+    ob_b=I.get('ob_bull'); ob_s=I.get('ob_bear')
+    fvg_b=I.get('fvg_bull'); fvg_s=I.get('fvg_bear')
+    if ob_b is None or fvg_b is None: return None
+    C=I['C']; O=I['O']
+    bull_c = C[i] > O[i]
+    bear_c = C[i] < O[i]
+    if e20 > e50 and ob_b[i] and fvg_b[i] and bull_c: return 'buy'
+    if e20 < e50 and ob_s[i] and fvg_s[i] and bear_c: return 'sell'
+    return None
+
 def s_exhaustion(I, i):
     a=I['adx'][i]; dp=I['dip'][i]; dm=I['dim'][i]
     ml=I['macd'][i]; ms=I['macd_sig'][i]
@@ -239,8 +263,8 @@ def s_exhaustion(I, i):
 
 def s_mfkk_scalping(I, i):
     e20=I['e20'][i]; e50=I['e50'][i]; e100=I['e100'][i]; e200=I['e200'][i]
-    fb=I['fvg_bull']; fs=I['fvg_bear']
-    if None in (e20,e50,e100,e200): return None
+    fb=I.get('fvg_bull'); fs=I.get('fvg_bear')
+    if None in (e20,e50,e100,e200) or fb is None: return None
     if e20>e50>e100>e200 and fb[i]: return 'buy'
     if e20<e50<e100<e200 and fs[i]: return 'sell'
     return None
@@ -274,6 +298,8 @@ def s_mfkk_score(I, i):
 
 SIGNAL_FNS = {
     'S05_V3_Sell_Exhaust': s_sell_exhaust,
+    'S05_MFKK_INTRADAY':   s_mfkk_intraday,
+    'S10_OB_FVG_SCALP':    s_ob_fvg_scalp,
     'S01_EXHAUSTION':      s_exhaustion,
     'S09_MFKK_SCALPING':   s_mfkk_scalping,
     'S13_STRUC_BREAK':     s_struc_break,

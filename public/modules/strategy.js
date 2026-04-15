@@ -84,12 +84,12 @@ const SE = {
   // ── REGIME PRIORITY ──
   // Allineato con regime_playbook.json (backtest multi-TF 2026-04-15)
   regimePriority: {
-    TREND_UP:   ['S10_OB_FVG_SCALP', 'S05_V3_Sell_Exhaust', 'S09_MFKK_SCALPING'],
-    TREND_DOWN: ['S10_OB_FVG_SCALP',    'S01_EXHAUSTION',      'S09_MFKK_SCALPING'],
-    WEAK_UP:    ['S10_OB_FVG_SCALP',    'S09_MFKK_SCALPING',   'S00_MFKK'],
-    WEAK_DOWN:  ['S10_OB_FVG_SCALP',    'S09_MFKK_SCALPING',   'S00_MFKK'],
-    VOLATILE:   ['S09_MFKK_SCALPING',   'S10_OB_FVG_SCALP'],
-    RANGE:      ['S10_OB_FVG_SCALP',    'S13_STRUC_BREAK'],
+    TREND_UP:   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S05_V3_Sell_Exhaust'],
+    TREND_DOWN: ['S01_EXHAUSTION',    'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    WEAK_UP:    ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
+    WEAK_DOWN:  ['S05_MFKK_INTRADAY', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    VOLATILE:   ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
+    RANGE:      ['S10_OB_FVG_SCALP',  'S13_STRUC_BREAK'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },
@@ -1257,12 +1257,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const activeSname = activeList[0] || 'S00_MFKK';
   const activeSt    = SE.strategies[activeSname] || {};
   const activeTF    = (() => {
-    const pb = { TREND_UP:'H1', TREND_DOWN:'M15', WEAK_UP:'H1', WEAK_DOWN:'M30', VOLATILE:'M30', RANGE:'H1' };
+    const pb = { TREND_UP:'M30', TREND_DOWN:'M15', WEAK_UP:'M15', WEAK_DOWN:'H1', VOLATILE:'M15', RANGE:'M30' };
     return pb[seRegime] || 'H1';
   })();
   // Stats aggregate sistema (somma backtest regime-aware 24m)
   // Aggiornato da backtest_combined.py — simulazione esatta flusso bot reale
-  const BOT_STATS = { pnl_1m:57.79, pnl_6m:459.03, pnl_12m:521.93, pnl_24m:607.57, maxdd:96.34, maxdd_pct:'15.9%', trades_12m:45, pf:2.64, wr:'58.1%', n_strat:6 };
+  const BOT_STATS = { pnl_1m:-51.42, pnl_6m:-88.82, pnl_12m:-88.82, pnl_24m:-88.82, maxdd:101.75, maxdd_pct:'114.6%', trades_12m:24, pf:0.756, wr:'29.2%', n_strat:6 };
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;

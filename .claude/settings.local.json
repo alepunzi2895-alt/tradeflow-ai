@@ -24,7 +24,9 @@
       "Bash(python -X utf8 scripts/strategy-mtf.py)",
       "Bash(python -X utf8 scripts/strategy-scalping.py)",
       "Bash(python:*)",
-      "Bash(del xauusd_h1_730d.json)"
+      "Bash(del xauusd_h1_730d.json)",
+      "Bash(ping github.com -n 2)",
+      "Bash(curl -s --max-time 5 https://github.com)"
     ]
   }
 }

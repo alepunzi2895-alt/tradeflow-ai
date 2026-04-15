@@ -505,29 +505,27 @@ def s_key_levels(ind,i,h=None):
     if cl<r1 and H[i]>=r1*0.999 and r>60: return 'sell'
     return None
 
+def s_ob_fvg_scalp(ind,i,h=None):
+    e20=ind['e20'][i]; e50=ind['e50'][i]
+    if None in (e20, e50): return None
+    ob_b=ind.get('ob_bull'); ob_s=ind.get('ob_bear')
+    fvg_b=ind.get('fvg_bull'); fvg_s=ind.get('fvg_bear')
+    if ob_b is None or fvg_b is None: return None
+    C=ind['C']; O=ind['O']
+    bull_c = C[i] > O[i]
+    bear_c = C[i] < O[i]
+    if e20 > e50 and ob_b[i] and fvg_b[i] and bull_c: return 'buy'
+    if e20 < e50 and ob_s[i] and fvg_s[i] and bear_c: return 'sell'
+    return None
+
 STRATEGIES = {
-    'S00_MFKK_SCORE':     s_mfkk_score,
-    'S00_MFKK_HWR':       s_mfkk_hwr,
-    'S05_V1_OBV_RSI_MOM': s_intraday_v1,
-    'S05_V2_Triple_MACD': s_intraday_v2,
+    'S00_MFKK':           s_mfkk_score,
+    'S05_MFKK_INTRADAY':  s_intraday_v2,
     'S05_V3_Sell_Exhaust': s_intraday_v3,
-    'S05_V4_Strong_5cond': s_intraday_v4,
     'S01_EXHAUSTION':     s_exhaustion,
-    'S02_ALLIGATOR_OBV':  s_alligator_obv,
-    'S03_SUPERTREND_EMA': s_supertrend_ema,
-    'S04_BB_SQUEEZE':     s_bb_squeeze,
-    'S05_RSI_DIV':        s_rsi_div,
-    'S06_ORDERBLOCK':     s_orderblock,
-    'S07_STOCHRSI_BB':    s_stochrsi_bb,
-    'S08_OBV_EMA_MOM':    s_obv_ema_mom,
-    'S09_VWAP_MOM':       s_vwap_mom,
-    'S10_ST_MACD_SESSION':s_st_macd_session,
-    'S11_ALLIG_AWAKEN':   s_alligator_awaken,
-    'S12_WPR_KELT':       s_wpr_kelt,
     'S13_STRUC_BREAK':    s_struc_break,
-    'S14_KEY_LEVELS':     s_key_levels,
-    'S15_OBV_MACD':       s_obv_macd,
     'S09_MFKK_SCALPING':  s_mfkk_scalping,
+    'S10_OB_FVG_SCALP':   s_ob_fvg_scalp,
 }
 
 # ── BACKTEST RUNNER ───────────────────────────────────────────────────────────

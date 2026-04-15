@@ -236,47 +236,36 @@ seDetectRegime(I, i):
   default → RANGE
 ```
 
-### 5.2 Strategie Attive (backtest MT5 GOLD H1 · 730gg · aggiornato 2026-04-14)
-| ID | Label | WR | PF | P&L 24m | Regimi |
-|---|---|---|---|---|---|
-| S00_MFKK | MFKK Score | 42% | 1.19 | +$3.260 | Tutti |
-| S05_MFKK_INTRADAY | MFKK Intraday | 37% | 1.24 | +$4.794 | Tutti |
+### 5.2 Strategie Attive (backtest MT5 GOLD Multi-TF · aggiornato 2026-04-15)
+Il sistema è ora gestito dal `backtest_combined.py` (che orchestra `regime_playbook.json`).
 
-**Breakdown per periodo (backtest MT5 GOLD H1 730d):**
+| ID | Label | WR | PF | Regimi ottimali |
+|---|---|---|---|---|
+| S00_MFKK | MFKK Score | 43.5% | 1.28 | Tutte |
+| S05_MFKK_INTRADAY | MFKK Intraday | 45.5% | 1.39 | WEAK_DOWN, VOLATILE |
+| S09_MFKK_SCALPING | MFKK Scalping | 44.2% | 1.67 | TREND_UP, WEAK_UP |
+| S05_V3_Sell_Exhaust | Sell Exhaust | 60.9% | 3.11 | TREND_UP H1 |
+| S01_EXHAUSTION | Exhaustion | 44.3% | 2.09 | TREND_DOWN M15 |
+| S13_STRUC_BREAK | Struc Break | 41.5% | 1.32 | TREND_UP M15 |
+| S10_OB_FVG_SCALP | OB+FVG Scalp | 80.0% | 34.19| RANGE M30 |
 
-| Strategia | 1 Mese | 6 Mesi | 12 Mesi | 24 Mesi | MaxDD (%) |
-|---|---|---|---|---|---|
-| Portafoglio Globale (Cent) | +$1.439 | +$8.634 | +$17.271 | +$34.542 | 26.4% |
-| MFKK Score (Cent) | +$1.433 | +$8.600 | +$17.200 | +$34.404 | 26.4% |
-| MFKK Intraday (Cent) | +$1 | +$2 | +$4 | +$4 | 0.1% |
-
-> **Nota**: MFKK HighWR rimossa — con dati MT5 reali produce solo 3 trade in 24m (PF 0.83). Le condizioni ADX≥35 + spread DI≥20 + MACD≥0.5 si verificano raramente su GOLD.
+> **⚠️ Nota dati**: Il backtest combinato produce trade bassi (es. 24 trade totali nell'ultimo run, WR 29%、PF 0.75) perché la depth storica di `M15` e `M30` incrociata nei log MT5 è molto corta (~30-60gg). Per stats profonde su 24m, lanciare il server MT5 localmente.
 
 **Strategie ARCHIVIATE** (logica JS mantenuta, non mostrate in UI):
 - S00_MFKK_HWR, S01_OBV_MACD, S02_OBV_SELL, S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW
-- S04_BB_SQUEEZE: rimossa — PF 1.04 non sufficiente, MaxDD alto ($1.290)
-- S09_VWAP_WPR: rimossa — troppo rara (8 trade/anno), difficile da integrare
-- S06_ORDERBLOCK: rimossa — PF 1.09 con 234 trade/anno, efficienza bassa
-- S12_WPR_KELTNER: rimossa — P&L negativo (-$246) su 2 anni
-- S13_STRUC_BREAK: rimossa — P&L -$1.411 ❌
-- S14_KEY_LEVELS: rimossa — P&L -$633 ❌
-- S08_OBV_EMA_MOM: rimossa — P&L -$3.016 ❌
+- S04_BB_SQUEEZE, S09_VWAP_WPR, S06_ORDERBLOCK, S12_WPR_KELTNER, S14_KEY_LEVELS, S08_OBV_EMA_MOM
 
-> **Prossimo step**: aggiungere strategie basate su indicatori TradingView personalizzati (Pine Script) → vedi §0.4 per il protocollo.
+> **Prossimo step**: mantenere le 7 strategie sincronizzate nel backtest locale Python e in TypeScript/JS UI.
 
-### 5.2 Strategie Archiviate (NON mostrate nell'UI, logica mantenuta nel codice)
-
-Gli indicatori sviluppati in precedenza (Ultimate RSI, Momentum, ICT Order Flow, OBV MACD, OBV SELL, MFKK HighWR) sono stati mantenuti nelle loro funzioni JS ma **rimossi dalla UI** e dal catalogo `SE.strategies`. Possono essere riabilitati se il backtesting MT5 lo giustificasse.
-
-### 5.3 Regime Priority (aggiornata 2026-04-14)
-| Regime | Strategie priorità |
+### 5.3 Regime Priority (ottimale via backtest MTF 2026-04-15)
+| Regime | Strategie priorità configurate nel Bot e Strategy.js |
 |---|---|
-| TREND_UP | MFKK Score → MFKK Intraday |
-| TREND_DOWN | MFKK Score → MFKK Intraday |
-| WEAK_UP | MFKK Score → MFKK Intraday |
-| WEAK_DOWN | MFKK Score → MFKK Intraday |
-| RANGE | MFKK Intraday → MFKK Score |
-| VOLATILE | MFKK Intraday → MFKK Score |
+| TREND_UP | S09_MFKK_SCALPING → S10_OB_FVG_SCALP → S05_V3_Sell_Exhaust |
+| TREND_DOWN | S01_EXHAUSTION → S10_OB_FVG_SCALP → S09_MFKK_SCALPING |
+| WEAK_UP | S09_MFKK_SCALPING → S10_OB_FVG_SCALP → S00_MFKK |
+| WEAK_DOWN | S05_MFKK_INTRADAY → S10_OB_FVG_SCALP → S09_MFKK_SCALPING |
+| VOLATILE | S05_MFKK_INTRADAY → S09_MFKK_SCALPING → S10_OB_FVG_SCALP |
+| RANGE | S10_OB_FVG_SCALP → S13_STRUC_BREAK |
 
 ### 5.4 Parametri Operativi
 - Max **10 trade/giorno**, cooldown **30 min** tra trade
@@ -339,6 +328,7 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | Implementato Risk Manager adattivo | Feature richiesta utente: AI Score → lot/TP/SL/BE/TS/parziali | Creato `scripts/risk_manager.py` · 5 tier risk (CONSERVATIVE/NORMAL/AGGRESSIVE/STRONG/MAX) · integrato in mt5-bot.py · fetch AI score ogni 60s da Vercel · manage_positions() eseguito ad ogni barra H1 |
 | 2026-04-14 | Ottimizzazione Difensiva e MT5 limit | Conto da $1000 subiva MaxDD esplosivi a causa del limite lotto minimo 0.01 in MT5 | Rimosso floor in backtest per calcolo puro % Cent Account. Integrata parzializzazione a 50% TP in Risk Manager, TS e BE più precoci. UI aggiornata con statistiche Account Cent a 0.5% rischio (DD globale abbattuto dal 83% a <45%). |
 | 2026-04-14 | Magic Combo 0.3% & Elite S05 | Trovata combinazione ottimale per massimizzare P&L mantenendo DD < 44% come richiesto | Impostato rischio a 0.3% (Cent Account) con TP=20, SL=10 su S00. S05 reso ultra-selettivo (RSI>65, ADX>=30) con WR 91% e DD quasi nullo. PNL proiettato raddoppiato a +$34k/24m con DD ridotto al 26%. |
+| 2026-04-15 | Backtest aggiornato su dati MT5 reali (~6m) | `xauusd_h1_mt5.json` copre solo ~6 mesi di candele H1 reali (non 730gg). S00_MFKK: 223 trade, WR 43.5%, PF 1.283, P&L +$428, MaxDD $136. S05 best = V2_Triple_MACD su H4: 82 trade, WR 42.7%, PF 1.365, P&L +$1.102, MaxDD $781. S00_MFKK_HWR: 0 trade (condizioni troppo stringenti nel dataset corrente). | Aggiornato §5.2. Per 730gg usare `--mt5` con MT5 aperto. |
 
 ---
 

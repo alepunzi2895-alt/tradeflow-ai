@@ -46,6 +46,8 @@ PIP_VALUE   = 1.0          # $1/punto su XAU (lotto 0.01)
 ap = argparse.ArgumentParser()
 ap.add_argument('--mt5',       action='store_true')
 ap.add_argument('--h1-file',   type=str, default=None)
+ap.add_argument('--m5-file',   type=str, default=None)
+ap.add_argument('--m15-file',  type=str, default=None)
 ap.add_argument('--m30-file',  type=str, default=None)
 ap.add_argument('--h4-file',   type=str, default=None)
 ap.add_argument('--out',       type=str, default='backtest_mfkk_suite.json')
@@ -622,7 +624,7 @@ def fetch_mt5(tf_name, days=DAYS):
     except ImportError:
         print("  SKIP (MetaTrader5 non installato)")
         return None
-    tf_map={'M30':mt5.TIMEFRAME_M30,'H1':mt5.TIMEFRAME_H1,'H4':mt5.TIMEFRAME_H4}
+    tf_map={'M5':mt5.TIMEFRAME_M5,'M15':mt5.TIMEFRAME_M15,'M30':mt5.TIMEFRAME_M30,'H1':mt5.TIMEFRAME_H1,'H4':mt5.TIMEFRAME_H4}
     if tf_name not in tf_map: return None
     if not mt5.initialize():
         print(f"  ERRORE mt5.initialize(): {mt5.last_error()}")
@@ -673,100 +675,129 @@ def main():
         print("\nERRORE: specificare --h1-file <file.json> oppure --mt5")
         sys.exit(1)
 
-    # Resample H1 → M30 e H4 se non forniti
-    print("\nResampling...")
+    print("\nResampling / Loading other TFs...")
+    c_m5=load_json(args.m5_file) if args.m5_file else None
+    c_m15=load_json(args.m15_file) if args.m15_file else None
     c_m30=load_json(args.m30_file) if args.m30_file else resample(c_h1, 30)
     c_h4=load_json(args.h4_file) if args.h4_file else resample(c_h1, 240)
 
-    if args.mt5 and not args.m30_file:
-        print("  Fetching M30 da MT5...")
-        c_m30_mt5=fetch_mt5('M30')
-        if c_m30_mt5: c_m30=c_m30_mt5
-    if args.mt5 and not args.h4_file:
-        print("  Fetching H4 da MT5...")
-        c_h4_mt5=fetch_mt5('H4')
-        if c_h4_mt5: c_h4=c_h4_mt5
+    if args.mt5:
+        if not args.m5_file: c_m5=fetch_mt5('M5') or c_m5
+        if not args.m15_file: c_m15=fetch_mt5('M15') or c_m15
+        if not args.m30_file: c_m30=fetch_mt5('M30') or c_m30
+        if not args.h4_file: c_h4=fetch_mt5('H4') or c_h4
 
+    if c_m5: print(f"  M5:  {len(c_m5)} candele")
+    if c_m15: print(f"  M15: {len(c_m15)} candele")
     print(f"  H1:  {len(c_h1)} candele")
     print(f"  M30: {len(c_m30)} candele")
     print(f"  H4:  {len(c_h4)} candele")
 
     # ── CALCOLO INDICATORI
     print("\nCalcolo indicatori...")
-    ind_h1  = compute(c_h1)
+    ind_m5  = compute(c_m5) if c_m5 else None
+    ind_m15 = compute(c_m15) if c_m15 else None
     ind_m30 = compute(c_m30)
+    ind_h1  = compute(c_h1)
     ind_h4  = compute(c_h4)
     print("  OK")
+
+    tf_configs = {}
+    if c_m5:  tf_configs['M5']  = (c_m5,  ind_m5,  SESSION_LDN, 12)
+    if c_m15: tf_configs['M15'] = (c_m15, ind_m15, SESSION_LDN, 4)
+    tf_configs['M30'] = (c_m30, ind_m30, SESSION_LDN, 2)
+    tf_configs['H1']  = (c_h1,  ind_h1,  SESSION_ALL, 1)
+    tf_configs['H4']  = (c_h4,  ind_h4,  SESSION_ALL, 1)
 
     results = {}
 
     # ════════════════════════════════════════════════════════════════════════════
-    # STRATEGIA 1: MFKK SCORE (H1)
+    # STRATEGIA 1: MFKK SCORE (Sweep Multi-TF)
     # ════════════════════════════════════════════════════════════════════════════
     print(f"\n{'='*72}")
-    print("MFKK SCORE — H1 — TP $20 / SL $12")
+    print("MFKK SCORE — Multi-TF sweep (TP $20 / SL $12)")
     print('='*72)
 
-    trades_mfkk = run_backtest(c_h1, ind_h1, mfkk_score,
-                               tp_val=TP_H1, sl_val=SL_H1,
-                               session=SESSION_ALL, cooldown_bars=1)
-    s_mfkk = calc_stats(trades_mfkk)
-    periods_mfkk = stats_by_period(trades_mfkk, c_h1)
+    best_score_val = -1
+    best_score_tf = 'H1'
+    best_score_data = None
+    
+    print(f"\n{'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'BuyWR':>7} {'SellWR':>8}")
+    print('-'*70)
 
-    if s_mfkk:
-        print(f"  Trade: {s_mfkk['n']} | WR: {s_mfkk['wr']}% | PF: {s_mfkk['pf']} | P&L: ${s_mfkk['pnl']}")
-        print(f"  MaxDD: ${s_mfkk['dd']} | BUY WR: {s_mfkk['buy_wr']}% | SELL WR: {s_mfkk['sell_wr']}%")
-        print(f"  Mesi positivi: {s_mfkk['pos_months']}")
-    print(f"\n  Breakdown per periodo:")
-    print(f"    {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
-    for p,ps in periods_mfkk.items():
-        print(f"    {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
+    for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
+        if tf_label in ['H4']: continue # Salta H4 per scalping
+        trades_mfkk = run_backtest(candles, ind, mfkk_score,
+                                   tp_val=TP_H1, sl_val=SL_H1,
+                                   session=session, cooldown_bars=cooldown)
+        s_mfkk = calc_stats(trades_mfkk)
+        periods_mfkk = stats_by_period(trades_mfkk, candles)
+        if s_mfkk and s_mfkk['n'] >= 10:
+            print(f"{tf_label:<5} {s_mfkk['n']:>5} {s_mfkk['wr']:>5.1f}% {s_mfkk['pf']:>6.3f} {s_mfkk['pnl']:>9.1f} {s_mfkk['dd']:>8.1f} {s_mfkk['buy_wr']:>6.1f}% {s_mfkk['sell_wr']:>7.1f}%")
+            score = s_mfkk['pf'] * (s_mfkk['wr'] / 100) * math.log(s_mfkk['n'] + 1)
+            if score > best_score_val:
+                best_score_val = score
+                best_score_tf = tf_label
+                best_score_data = {'stats': s_mfkk, 'periods': periods_mfkk, 'trades': trades_mfkk}
 
-    results['S00_MFKK_SCORE'] = {
-        'strategy':'MFKK Score', 'tf':'H1', 'tp':TP_H1, 'sl':SL_H1,
-        'stats':s_mfkk, 'periods':periods_mfkk,
-    }
+    if best_score_data:
+        print(f"\n🏆 BEST MFKK SCORE: {best_score_tf}")
+        s = best_score_data['stats']
+        print(f"  Trade: {s['n']} | WR: {s['wr']}% | PF: {s['pf']} | P&L: ${s['pnl']} | MaxDD: ${s['dd']}")
+        results['S00_MFKK_SCORE'] = {
+            'strategy':'MFKK Score', 'best_tf':best_score_tf, 'tp':TP_H1, 'sl':SL_H1,
+            'stats':s, 'periods':best_score_data['periods'],
+        }
 
     # ════════════════════════════════════════════════════════════════════════════
-    # STRATEGIA 2: MFKK HIGH WIN RATE (H1 SELL ONLY)
+    # STRATEGIA 2: MFKK HIGH WIN RATE (Sweep Multi-TF SELL ONLY)
     # ════════════════════════════════════════════════════════════════════════════
     print(f"\n{'='*72}")
-    print("MFKK HIGH WIN RATE — H1 — SELL ONLY — TP $20 / SL $12")
+    print("MFKK HIGH WIN RATE — Multi-TF sweep (SELL ONLY) (TP $20 / SL $12)")
     print('='*72)
 
-    trades_hwr = run_backtest(c_h1, ind_h1, mfkk_hwr,
-                              tp_val=TP_HWR, sl_val=SL_HWR,
-                              session=SESSION_ALL, cooldown_bars=1)
-    s_hwr = calc_stats(trades_hwr)
-    periods_hwr = stats_by_period(trades_hwr, c_h1)
+    best_hwr_val = -1
+    best_hwr_tf = 'H1'
+    best_hwr_data = None
+    
+    print(f"\n{'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'SellWR':>8}")
+    print('-'*70)
 
-    if s_hwr:
-        print(f"  Trade: {s_hwr['n']} | WR: {s_hwr['wr']}% | PF: {s_hwr['pf']} | P&L: ${s_hwr['pnl']}")
-        print(f"  MaxDD: ${s_hwr['dd']} | SELL WR: {s_hwr['sell_wr']}%")
-        print(f"  Mesi positivi: {s_hwr['pos_months']}")
-    print(f"\n  Breakdown per periodo:")
-    print(f"    {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
-    for p,ps in periods_hwr.items():
-        print(f"    {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
+    for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
+        if tf_label in ['H4']: continue # Salta H4 per scalping
+        trades_hwr = run_backtest(candles, ind, mfkk_hwr,
+                                  tp_val=TP_HWR, sl_val=SL_HWR,
+                                  session=session, cooldown_bars=cooldown)
+        s_hwr = calc_stats(trades_hwr)
+        periods_hwr = stats_by_period(trades_hwr, candles)
+        if s_hwr and s_hwr['n'] >= 5:
+            print(f"{tf_label:<5} {s_hwr['n']:>5} {s_hwr['wr']:>5.1f}% {s_hwr['pf']:>6.3f} {s_hwr['pnl']:>9.1f} {s_hwr['dd']:>8.1f} {s_hwr['sell_wr']:>7.1f}%")
+            score = s_hwr['pf'] * (s_hwr['wr'] / 100) * math.log(s_hwr['n'] + 1)
+            if score > best_hwr_val:
+                best_hwr_val = score
+                best_hwr_tf = tf_label
+                best_hwr_data = {'stats': s_hwr, 'periods': periods_hwr, 'trades': trades_hwr}
 
-    results['S00_MFKK_HWR'] = {
-        'strategy':'MFKK HighWR', 'tf':'H1', 'tp':TP_HWR, 'sl':SL_HWR,
-        'stats':s_hwr, 'periods':periods_hwr,
-    }
+    if best_hwr_data:
+        print(f"\n🏆 BEST MFKK HIGH WR: {best_hwr_tf}")
+        s = best_hwr_data['stats']
+        print(f"  Trade: {s['n']} | WR: {s['wr']}% | PF: {s['pf']} | P&L: ${s['pnl']} | MaxDD: ${s['dd']}")
+        results['S00_MFKK_HWR'] = {
+            'strategy':'MFKK HighWR', 'best_tf':best_hwr_tf, 'tp':TP_HWR, 'sl':SL_HWR,
+            'stats':s, 'periods':best_hwr_data['periods'],
+        }
+    else:
+        results['S00_MFKK_HWR'] = {
+            'strategy':'MFKK HighWR', 'stats':None, 'periods':{}
+        }
 
     # ════════════════════════════════════════════════════════════════════════════
     # STRATEGIA 3: MFKK INTRADAY COMBO — Multi-TF sweep
     # ════════════════════════════════════════════════════════════════════════════
     print(f"\n{'='*72}")
     print("MFKK INTRADAY COMBO — OBV MACD + RSI + MOMENTUM")
-    print("Multi-TF: M30 / H1 / H4")
+    print("Multi-TF: Sweep All Available")
     print('='*72)
-
-    tf_configs = {
-        'M30': (c_m30, ind_m30, SESSION_LDN,   2),   # London/NY, cooldown 2 bar
-        'H1':  (c_h1,  ind_h1,  SESSION_ALL,   1),   # 24h, cooldown 1 bar
-        'H4':  (c_h4,  ind_h4,  SESSION_ALL,   1),   # 24h, cooldown 1 bar
-    }
 
     best_overall_score = -1
     best_overall = None
@@ -1133,59 +1164,110 @@ def main():
         print("\nERRORE: specificare --h1-file <file.json> oppure --mt5")
         sys.exit(1)
 
-    print("\nResampling...")
+    print("\nResampling / Loading other TFs...")
+    c_m5=load_json(args.m5_file) if args.m5_file else None
+    c_m15=load_json(args.m15_file) if args.m15_file else None
     c_m30=load_json(args.m30_file) if args.m30_file else resample(c_h1, 30)
     c_h4=load_json(args.h4_file) if args.h4_file else resample(c_h1, 240)
 
-    if args.mt5 and not args.m30_file:
-        print("  Fetching M30 da MT5...")
-        c_m30_mt5=fetch_mt5('M30')
-        if c_m30_mt5: c_m30=c_m30_mt5
-    if args.mt5 and not args.h4_file:
-        print("  Fetching H4 da MT5...")
-        c_h4_mt5=fetch_mt5('H4')
-        if c_h4_mt5: c_h4=c_h4_mt5
+    if args.mt5:
+        if not args.m5_file: c_m5=fetch_mt5('M5') or c_m5
+        if not args.m15_file: c_m15=fetch_mt5('M15') or c_m15
+        if not args.m30_file: c_m30=fetch_mt5('M30') or c_m30
+        if not args.h4_file: c_h4=fetch_mt5('H4') or c_h4
 
+    if c_m5: print(f"  M5:  {len(c_m5)} candele")
+    if c_m15: print(f"  M15: {len(c_m15)} candele")
     print(f"  H1:  {len(c_h1)} candele")
     print(f"  M30: {len(c_m30)} candele")
     print(f"  H4:  {len(c_h4)} candele")
 
     # ── CALCOLO INDICATORI
     print("\nCalcolo indicatori...")
-    ind_h1  = compute(c_h1)
+    ind_m5  = compute(c_m5) if c_m5 else None
+    ind_m15 = compute(c_m15) if c_m15 else None
     ind_m30 = compute(c_m30)
+    ind_h1  = compute(c_h1)
     ind_h4  = compute(c_h4)
     print("  OK")
 
+    tf_configs = {}
+    if c_m5:  tf_configs['M5']  = (c_m5,  ind_m5,  SESSION_LDN, 12)
+    if c_m15: tf_configs['M15'] = (c_m15, ind_m15, SESSION_LDN, 4)
+    tf_configs['M30'] = (c_m30, ind_m30, SESSION_LDN, 2)
+    tf_configs['H1']  = (c_h1,  ind_h1,  SESSION_ALL, 1)
+    tf_configs['H4']  = (c_h4,  ind_h4,  SESSION_ALL, 1)
+
     results = {}
 
-    # STRATEGIA 1: MFKK SCORE
+    # STRATEGIA 1: MFKK SCORE (Sweep Multi-TF)
     print(f"\n{'='*72}")
-    print("MFKK SCORE — H1 — TP $20 / SL $12")
+    print("MFKK SCORE — Multi-TF sweep (TP $20 / SL $12)")
     print('='*72)
-    trades_mfkk = run_backtest(c_h1, ind_h1, mfkk_score, tp_val=TP_H1, sl_val=SL_H1, session=SESSION_ALL, cooldown_bars=1)
-    s_mfkk = calc_stats(trades_mfkk)
-    periods_mfkk = stats_by_period(trades_mfkk, c_h1)
-    if s_mfkk:
-        print(f"  Trade: {s_mfkk['n']} | WR: {s_mfkk['wr']}% | PF: {s_mfkk['pf']} | P&L: ${s_mfkk['pnl']}")
-    results['S00_MFKK_SCORE'] = {'strategy':'MFKK Score', 'tf':'H1', 'tp':TP_H1, 'sl':SL_H1, 'stats':s_mfkk, 'periods':periods_mfkk}
 
-    if args.rm:
-        print("\n  🧠 MFKK Score + Risk Manager:")
-        trades_mfkk_rm = run_backtest_rm(c_h1, ind_h1, mfkk_score, base_tp=TP_H1, base_sl=SL_H1, session=SESSION_ALL, cooldown_bars=1)
-        s_rm = calc_stats(trades_mfkk_rm)
-        p_rm = stats_by_period(trades_mfkk_rm, c_h1)
-        _print_comparison('BASELINE', s_mfkk, periods_mfkk, 'RiskMgr', s_rm, p_rm)
-        results['S00_MFKK_RM'] = {'strategy':'MFKK Score + RM', 'stats':s_rm, 'periods':p_rm}
+    best_score_val = -1
+    best_score_tf = 'H1'
+    best_score_data = None
+    trades_mfkk = []
+    
+    print(f"\n{'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'BuyWR':>7} {'SellWR':>8}")
+    print('-'*70)
 
-    # STRATEGIA 2: HIGHWR
-    trades_hwr = run_backtest(c_h1, ind_h1, mfkk_hwr, tp_val=TP_HWR, sl_val=SL_HWR, session=SESSION_ALL, cooldown_bars=1)
-    s_hwr = calc_stats(trades_hwr)
-    periods_hwr = stats_by_period(trades_hwr, c_h1)
-    results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'tf':'H1', 'tp':TP_HWR, 'sl':SL_HWR, 'stats':s_hwr, 'periods':periods_hwr}
+    for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
+        if tf_label in ['H4']: continue
+        trades_tf = run_backtest(candles, ind, mfkk_score, tp_val=TP_H1, sl_val=SL_H1, session=session, cooldown_bars=cooldown)
+        s_tf = calc_stats(trades_tf)
+        periods_tf = stats_by_period(trades_tf, candles)
+        if s_tf and s_tf['n'] >= 10:
+            print(f"{tf_label:<5} {s_tf['n']:>5} {s_tf['wr']:>5.1f}% {s_tf['pf']:>6.3f} {s_tf['pnl']:>9.1f} {s_tf['dd']:>8.1f} {s_tf['buy_wr']:>6.1f}% {s_tf['sell_wr']:>7.1f}%")
+            score = s_tf['pf'] * (s_tf['wr'] / 100) * math.log(s_tf['n'] + 1)
+            if score > best_score_val:
+                best_score_val = score
+                best_score_tf = tf_label
+                best_score_data = {'stats': s_tf, 'periods': periods_tf, 'trades': trades_tf}
+
+    if best_score_data:
+        print(f"\n🏆 BEST MFKK SCORE: {best_score_tf}")
+        s = best_score_data['stats']
+        print(f"  Trade: {s['n']} | WR: {s['wr']}% | PF: {s['pf']} | P&L: ${s['pnl']} | MaxDD: ${s['dd']}")
+        results['S00_MFKK_SCORE'] = {'strategy':'MFKK Score', 'best_tf':best_score_tf, 'tp':TP_H1, 'sl':SL_H1, 'stats':s, 'periods':best_score_data['periods']}
+        trades_mfkk = best_score_data['trades']
+
+    # STRATEGIA 2: HIGHWR (Sweep Multi-TF SELL ONLY)
+    print(f"\n{'='*72}")
+    print("MFKK HIGH WIN RATE — Multi-TF sweep (SELL ONLY) (TP $20 / SL $12)")
+    print('='*72)
+
+    best_hwr_val = -1
+    best_hwr_tf = 'H1'
+    best_hwr_data = None
+    
+    print(f"\n{'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'SellWR':>8}")
+    print('-'*70)
+
+    for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
+        if tf_label in ['H4']: continue
+        trades_tf = run_backtest(candles, ind, mfkk_hwr, tp_val=TP_HWR, sl_val=SL_HWR, session=session, cooldown_bars=cooldown)
+        s_tf = calc_stats(trades_tf)
+        periods_tf = stats_by_period(trades_tf, candles)
+        if s_tf and s_tf['n'] >= 5:
+            print(f"{tf_label:<5} {s_tf['n']:>5} {s_tf['wr']:>5.1f}% {s_tf['pf']:>6.3f} {s_tf['pnl']:>9.1f} {s_tf['dd']:>8.1f} {s_tf['sell_wr']:>7.1f}%")
+            score = s_tf['pf'] * (s_tf['wr'] / 100) * math.log(s_tf['n'] + 1)
+            if score > best_hwr_val:
+                best_hwr_val = score
+                best_hwr_tf = tf_label
+                best_hwr_data = {'stats': s_tf, 'periods': periods_tf, 'trades': trades_tf}
+
+    if best_hwr_data:
+        print(f"\n🏆 BEST MFKK HIGH WR: {best_hwr_tf}")
+        s = best_hwr_data['stats']
+        print(f"  Trade: {s['n']} | WR: {s['wr']}% | PF: {s['pf']} | P&L: ${s['pnl']} | MaxDD: ${s['dd']}")
+        results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'best_tf':best_hwr_tf, 'tp':TP_HWR, 'sl':SL_HWR, 'stats':s, 'periods':best_hwr_data['periods']}
+    else:
+        results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'stats':None, 'periods':{}}
 
     # STRATEGIA 3: INTRADAY
-    tf_configs = {'M30': (c_m30, ind_m30, SESSION_LDN, 2), 'H1': (c_h1, ind_h1, SESSION_ALL, 1), 'H4': (c_h4, ind_h4, SESSION_ALL, 1)}
+
     best_overall = None; best_overall_score = -1; intraday_results = {}
     for vname, vfn in INTRADAY_VARIANTS.items():
         intraday_results[vname] = {}

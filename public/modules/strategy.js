@@ -617,6 +617,7 @@ async function seRefresh() {
 
   // Fetch real MT5 data and render
   const mt5Data = await seFetchMt5Data();
+  window._seLastMt5Data = mt5Data; // cache per seSendTradeToMt5
   seRender(mt5Data, pending, snap, isExtreme, inSession, hour);
 }
 
@@ -863,10 +864,16 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 async function seSendTradeToMt5(s) {
   const btn = event?.target;
 
-  // Verifica stato bot prima di inviare
-  const mt5Live = await seFetchMt5Data();
+  // Usa i dati già fetchati dal ciclo di render (evita double-check che causa falsi offline)
+  // Se seLastMt5Data è troppo vecchio, facciamo un refetch
+  let mt5Live = window._seLastMt5Data || null;
+  if (!mt5Live) {
+    mt5Live = await seFetchMt5Data();
+  }
+  
   const syncAge = mt5Live?.synced_at ? Math.round((Date.now()-new Date(mt5Live.synced_at).getTime())/1000) : null;
-  const botOk = syncAge !== null && syncAge < 90;
+  // Soglia più generosa: 3 minuti (il bot synca ogni 20s ma potrebbe essere in un ciclo lungo)
+  const botOk = syncAge !== null && syncAge < 180;
 
   if (!botOk) {
     seToast('🔴 Bot MT5 offline — avvia python scripts/mt5-bot.py', '#ff4757');

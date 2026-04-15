@@ -1191,7 +1191,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     return pb[seRegime] || 'H1';
   })();
   // Stats aggregate sistema (somma backtest regime-aware 24m)
-  const BOT_STATS = { pnl_1m:74, pnl_6m:442, pnl_12m:884, pnl_24m:1768, maxdd:474, maxdd_pct:'27%', trades_12m:191, pf:2.15, wr:'42%', n_strat:6 };
+  // Aggiornato da backtest_combined.py — simulazione esatta flusso bot reale
+  const BOT_STATS = { pnl_1m:57.79, pnl_6m:459.03, pnl_12m:521.93, pnl_24m:607.57, maxdd:96.34, maxdd_pct:'15.9%', trades_12m:45, pf:2.64, wr:'58.1%', n_strat:6 };
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;

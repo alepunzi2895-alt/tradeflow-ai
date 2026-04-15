@@ -423,34 +423,18 @@ SIGNAL_FNS = {
 }
 
 def get_signal(I, i, hour, regime):
-    """Restituisce (strategia, direzione) consultando il playbook regime → (strategia, TF).
-    Se il playbook indica un TF diverso da H1, scarica e ricalcola gli indicatori per quel TF.
+    """Restituisce (strategia, direzione) per strategie H1.
+    Le strategie M15/M30 sono gestite direttamente nel loop principale.
     """
     entry = PLAYBOOK.get(regime) or PLAYBOOK.get('UNKNOWN', {'strategy': 'S00_MFKK', 'tf': 'H1'})
+    if entry.get('tf', 'H1') != 'H1':
+        return None, None   # gestito dal blocco M15/M30 nel loop
     sname = entry['strategy']
-    tf    = entry.get('tf', 'H1')
-
-    # Se il TF del playbook è diverso da H1, scarica candele ad hoc
-    if tf != 'H1':
-        n_bars = 450  # sufficiente warmup per M15/M30
-        candles_tf = get_candles_tf(tf, n_bars)
-        if candles_tf and len(candles_tf) >= 100:
-            I_tf = compute_indicators(candles_tf)
-            i_tf = len(candles_tf) - 2
-        else:
-            log.warning(f"Impossibile ottenere candele {tf} per {sname} — skip")
-            return None, None
-        use_I = I_tf; use_i = i_tf
-    else:
-        use_I = I; use_i = i
-
     fn = SIGNAL_FNS.get(sname)
     if fn is None:
         return None, None
-    direction = fn(use_I, use_i)
-    if direction:
-        return sname, direction
-    return None, None
+    direction = fn(I, i)
+    return (sname, direction) if direction else (None, None)
 
 # ── STATO GIORNALIERO ─────────────────────────────────────────────────────────
 class DailyState:
@@ -791,7 +775,11 @@ def run():
         log.info(f"Account: {acc['balance']:.2f} {acc['currency']} "
                  f"(equity={acc['equity']:.2f}, free margin={acc['margin_free']:.2f})")
 
-    last_bar_time = None   # per rilevare nuova candela H1
+    last_bar_time      = None   # per rilevare nuova candela H1
+    last_bar_time_m15  = None   # per rilevare nuova candela M15
+    last_bar_time_m30  = None   # per rilevare nuova candela M30
+    current_regime     = 'UNKNOWN'
+    current_is_extreme = False
     last_sync_time = -999  # forza sync immediato al primo ciclo
     last_ai_score  = 50.0  # default neutro
     last_score_ts  = 0     # timestamp ultimo fetch score
@@ -877,7 +865,7 @@ def run():
                     'lot': LOT_SIZE,
                     'trades_today': state.trades_today,
                     'pnl_today': round(state.pnl_today, 2),
-                    'regime': 'UNKNOWN',
+                    'regime': current_regime,
                     'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
@@ -885,110 +873,184 @@ def run():
 
             # ── Controlla nuova candela H1 ────────────────────────────────────
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
-            if latest_bar_time == last_bar_time:
-                # Nessuna nuova barra chiusa, aspetta
-                time.sleep(CHECK_SEC)
-                continue
-            last_bar_time = latest_bar_time
-            bar_dt = datetime.datetime.fromtimestamp(latest_bar_time, tz=datetime.timezone.utc)
-            log.info(f"─── Nuova barra H1 chiusa: {bar_dt.strftime('%Y-%m-%d %H:%M')} UTC ───")
+            new_h1_bar = (latest_bar_time != last_bar_time)
 
-            # ── Calcola indicatori ────────────────────────────────────────────
-            I = compute_indicators(candles)
-            i = len(candles) - 2   # ultima barra chiusa
+            if new_h1_bar:
+                last_bar_time = latest_bar_time
+                bar_dt = datetime.datetime.fromtimestamp(latest_bar_time, tz=datetime.timezone.utc)
+                log.info(f"─── Nuova barra H1 chiusa: {bar_dt.strftime('%Y-%m-%d %H:%M')} UTC ───")
 
-            # ── Gestione posizioni: BE + Trailing + Parziali ──────────────────
-            if rm:
-                atr_now = I['atr'][i] if I['atr'][i] else 10.0
-                rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
+                # ── Calcola indicatori ────────────────────────────────────────
+                I_h1 = compute_indicators(candles)
+                i_h1 = len(candles) - 2
 
-            # ── Regime ───────────────────────────────────────────────────────
-            regime = detect_regime(I, i)
+                # ── Gestione posizioni: BE + Trailing ─────────────────────────
+                if rm:
+                    atr_now = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else 10.0
+                    rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
 
-            # ── Controllo giorno estremo ──────────────────────────────────────
-            atr_v   = I['atr'][i]
-            atr_avg = I['atr_avg'][i]
-            if atr_v and atr_avg and atr_v > EXTREME_MULT * atr_avg:
-                log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip")
-                time.sleep(CHECK_SEC)
-                continue
+                # ── Regime ───────────────────────────────────────────────────
+                current_regime = detect_regime(I_h1, i_h1)
 
-            # ── Controllo sessione e limiti giornalieri ───────────────────────
-            can, reason = state.can_trade(now_utc)
-            if not can:
-                log.debug(f"Trade non permesso: {reason}")
-                time.sleep(CHECK_SEC)
-                continue
+                # ── Controllo giorno estremo ──────────────────────────────────
+                atr_v   = I_h1['atr'][i_h1]
+                atr_avg = I_h1['atr_avg'][i_h1]
+                current_is_extreme = bool(atr_v and atr_avg and atr_v > EXTREME_MULT * atr_avg)
+                if current_is_extreme:
+                    log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip H1")
+                else:
+                    can, reason = state.can_trade(now_utc)
+                    if not can:
+                        log.debug(f"Trade non permesso: {reason}")
+                    elif count_open_positions() > 0:
+                        log.debug(f"Posizione già aperta, attendo chiusura")
+                    else:
+                        # ── Segnale strategia H1 ──────────────────────────────
+                        hour = bar_dt.hour
+                        strategy_name, direction = get_signal(I_h1, i_h1, hour, current_regime)
 
-            # ── Controlla posizioni aperte ────────────────────────────────────
-            open_pos = count_open_positions()
-            if open_pos > 0:
-                log.debug(f"Posizione già aperta ({open_pos}), attendo chiusura")
-                time.sleep(CHECK_SEC)
-                continue
+                        if strategy_name is None:
+                            log.info(f"Regime: {current_regime} | Nessun segnale H1 su {bar_dt.strftime('%H:%M')}")
+                        else:
+                            params = STRATEGY_PARAMS[strategy_name]
+                            atr_i = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else None
+                            if rm:
+                                rp = rm.get_order_params(
+                                    ai_score=last_ai_score, atr=atr_i,
+                                    strategy=strategy_name, direction=direction
+                                )
+                                lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                log.info(
+                                    f"★ SEGNALE H1: {direction.upper()} | {params['label']} | Regime: {current_regime} "
+                                    f"| ADX={I_h1['adx'][i_h1]:.1f} | RSI={I_h1['rsi'][i_h1]:.1f} "
+                                    f"| score={last_ai_score:.0f} | {rp['tier_label']} "
+                                    f"| lot={lot_use} | TP=${tp_use} | SL=${sl_use} "
+                                    f"| BE@+${rp['be_trigger']} | TS step=${rp['ts_step']}"
+                                )
+                            else:
+                                lot_use = LOT_SIZE
+                                tp_use  = params['tp_usd'] if isinstance(params['tp_usd'], float) else 20.0
+                                sl_use  = params['sl_usd'] if isinstance(params['sl_usd'], float) else 12.0
+                                log.info(
+                                    f"★ SEGNALE H1: {direction.upper()} | {params['label']} | Regime: {current_regime} "
+                                    f"| ADX={I_h1['adx'][i_h1]:.1f} | RSI={I_h1['rsi'][i_h1]:.1f} "
+                                    f"| TP=${tp_use} SL=${sl_use}"
+                                )
+                            result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
+                            if result:
+                                tick = mt5.symbol_info_tick(SYMBOL)
+                                price = tick.ask if direction=='buy' else tick.bid if tick else 0
+                                log_trade_to_json(direction, strategy_name, price,
+                                                  round(price+(tp_use if direction=='buy' else -tp_use),2),
+                                                  round(price-(sl_use if direction=='buy' else -sl_use),2), result)
+                                state.record_trade(0, now_utc)
+                                acc = get_account_info()
+                                if acc:
+                                    log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
+                                sync_to_vercel(
+                                    acc, get_open_positions_data(), get_recent_trades_data(20),
+                                    {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
+                                     'trades_today':state.trades_today,'pnl_today':state.pnl_today,
+                                     'regime':current_regime,'last_signal':strategy_name}
+                                )
+                                last_sync_time = time.time()
 
-            # ── Segnale strategia ─────────────────────────────────────────────
-            hour = bar_dt.hour
-            strategy_name, direction = get_signal(I, i, hour, regime)
+            # ── Controlla nuova candela M15 (es. S01_EXHAUSTION in TREND_DOWN) ─
+            pb_entry = PLAYBOOK.get(current_regime, {})
+            if pb_entry.get('tf') == 'M15' and not current_is_extreme:
+                candles_m15 = get_candles_tf('M15', 450)
+                if candles_m15 and len(candles_m15) >= 50:
+                    latest_m15 = candles_m15[-2]['t']
+                    if latest_m15 != last_bar_time_m15:
+                        last_bar_time_m15 = latest_m15
+                        bar_dt_m15 = datetime.datetime.fromtimestamp(latest_m15, tz=datetime.timezone.utc)
+                        log.info(f"─── Nuova barra M15 chiusa: {bar_dt_m15.strftime('%Y-%m-%d %H:%M')} UTC ───")
+                        can, reason = state.can_trade(now_utc)
+                        if not can:
+                            log.debug(f"[M15] Trade non permesso: {reason}")
+                        elif count_open_positions() > 0:
+                            log.debug(f"[M15] Posizione già aperta, attendo chiusura")
+                        else:
+                            I_m15 = compute_indicators(candles_m15)
+                            idx = len(candles_m15) - 2
+                            sname = pb_entry['strategy']
+                            fn    = SIGNAL_FNS.get(sname)
+                            direction = fn(I_m15, idx) if fn else None
+                            if direction:
+                                params = STRATEGY_PARAMS[sname]
+                                atr_i = I_m15['atr'][idx] if I_m15['atr'][idx] else None
+                                if rm:
+                                    rp = rm.get_order_params(ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction)
+                                    lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                    log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use} | SL=${sl_use}")
+                                else:
+                                    lot_use, tp_use, sl_use = LOT_SIZE, 15.0, 10.0
+                                    log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime}")
+                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use)
+                                if result:
+                                    tick = mt5.symbol_info_tick(SYMBOL)
+                                    price = tick.ask if direction=='buy' else tick.bid if tick else 0
+                                    log_trade_to_json(direction, sname, price,
+                                                      round(price+(tp_use if direction=='buy' else -tp_use),2),
+                                                      round(price-(sl_use if direction=='buy' else -sl_use),2), result)
+                                    state.record_trade(0, now_utc)
+                                    acc = get_account_info()
+                                    if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
+                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(20),
+                                                   {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
+                                                    'trades_today':state.trades_today,'pnl_today':state.pnl_today,
+                                                    'regime':current_regime,'last_signal':sname})
+                                    last_sync_time = time.time()
+                            else:
+                                log.info(f"[M15] Regime: {current_regime} | Nessun segnale su {bar_dt_m15.strftime('%H:%M')}")
 
-            if strategy_name is None:
-                log.info(f"Regime: {regime} | Nessun segnale su {bar_dt.strftime('%H:%M')}")
-                time.sleep(CHECK_SEC)
-                continue
-
-            params = STRATEGY_PARAMS[strategy_name]
-
-            # ── Calcola parametri adattativi con RiskManager ──────────────────
-            atr_i = I['atr'][i] if I['atr'][i] else None
-            if rm:
-                rp = rm.get_order_params(
-                    ai_score=last_ai_score,
-                    atr=atr_i,
-                    strategy=strategy_name,
-                    direction=direction
-                )
-                lot_use = rp['lot']
-                tp_use  = rp['tp_usd']
-                sl_use  = rp['sl_usd']
-                log.info(
-                    f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
-                    f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
-                    f"| score={last_ai_score:.0f} | {rp['tier_label']} "
-                    f"| lot={lot_use} | TP=${tp_use} | SL=${sl_use} "
-                    f"| BE@+${rp['be_trigger']} | TS step=${rp['ts_step']}"
-                )
-            else:
-                lot_use = LOT_SIZE
-                tp_use  = params['tp_usd'] if isinstance(params['tp_usd'], float) else 20.0
-                sl_use  = params['sl_usd'] if isinstance(params['sl_usd'], float) else 12.0
-                log.info(
-                    f"★ SEGNALE: {direction.upper()} | {params['label']} | Regime: {regime} "
-                    f"| ADX={I['adx'][i]:.1f} | RSI={I['rsi'][i]:.1f} "
-                    f"| TP=${tp_use} SL=${sl_use}"
-                )
-
-            # ── Invia ordine ────────────────────────────────────────
-            result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
-
-            if result:
-                tick = mt5.symbol_info_tick(SYMBOL)
-                price = tick.ask if direction=='buy' else tick.bid if tick else 0
-                log_trade_to_json(direction, strategy_name, price,
-                                  round(price + (tp_use if direction=='buy' else -tp_use), 2),
-                                  round(price - (sl_use if direction=='buy' else -sl_use), 2),
-                                  result)
-                state.record_trade(0, now_utc)  # PnL reale verrà da MT5
-                acc = get_account_info()
-                if acc:
-                    log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
-                # Sync immediato dopo trade
-                sync_to_vercel(
-                    acc, get_open_positions_data(), get_recent_trades_data(20),
-                    {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
-                     'trades_today':state.trades_today,'pnl_today':state.pnl_today,
-                     'regime':regime,'last_signal':strategy_name}
-                )
-                last_sync_time = time.time()
+            # ── Controlla nuova candela M30 (es. S09 in WEAK/VOLATILE) ──────────
+            elif pb_entry.get('tf') == 'M30' and not current_is_extreme:
+                candles_m30 = get_candles_tf('M30', 450)
+                if candles_m30 and len(candles_m30) >= 50:
+                    latest_m30 = candles_m30[-2]['t']
+                    if latest_m30 != last_bar_time_m30:
+                        last_bar_time_m30 = latest_m30
+                        bar_dt_m30 = datetime.datetime.fromtimestamp(latest_m30, tz=datetime.timezone.utc)
+                        log.info(f"─── Nuova barra M30 chiusa: {bar_dt_m30.strftime('%Y-%m-%d %H:%M')} UTC ───")
+                        can, reason = state.can_trade(now_utc)
+                        if not can:
+                            log.debug(f"[M30] Trade non permesso: {reason}")
+                        elif count_open_positions() > 0:
+                            log.debug(f"[M30] Posizione già aperta, attendo chiusura")
+                        else:
+                            I_m30 = compute_indicators(candles_m30)
+                            idx = len(candles_m30) - 2
+                            sname = pb_entry['strategy']
+                            fn    = SIGNAL_FNS.get(sname)
+                            direction = fn(I_m30, idx) if fn else None
+                            if direction:
+                                params = STRATEGY_PARAMS[sname]
+                                atr_i = I_m30['atr'][idx] if I_m30['atr'][idx] else None
+                                if rm:
+                                    rp = rm.get_order_params(ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction)
+                                    lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use} | SL=${sl_use}")
+                                else:
+                                    lot_use, tp_use, sl_use = LOT_SIZE, 15.0, 10.0
+                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime}")
+                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use)
+                                if result:
+                                    tick = mt5.symbol_info_tick(SYMBOL)
+                                    price = tick.ask if direction=='buy' else tick.bid if tick else 0
+                                    log_trade_to_json(direction, sname, price,
+                                                      round(price+(tp_use if direction=='buy' else -tp_use),2),
+                                                      round(price-(sl_use if direction=='buy' else -sl_use),2), result)
+                                    state.record_trade(0, now_utc)
+                                    acc = get_account_info()
+                                    if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
+                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(20),
+                                                   {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
+                                                    'trades_today':state.trades_today,'pnl_today':state.pnl_today,
+                                                    'regime':current_regime,'last_signal':sname})
+                                    last_sync_time = time.time()
+                            else:
+                                log.info(f"[M30] Regime: {current_regime} | Nessun segnale su {bar_dt_m30.strftime('%H:%M')}")
 
             time.sleep(CHECK_SEC)
 

@@ -27,7 +27,7 @@ SYMBOL_CANDIDATES = ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"]
 parser = argparse.ArgumentParser(description='Fetch storico GOLD da MT5 (multi-TF)')
 parser.add_argument('--days', type=int, default=730, help='Giorni di storia (default 730)')
 parser.add_argument('--tf',   type=str, default='H1',
-    choices=['M15','M30','H1','H4','D1'], help='Timeframe (default H1)')
+    choices=['M5','M15','M30','H1','H4','D1'], help='Timeframe (default H1)')
 parser.add_argument('--out',  type=str, default=None,
     help='File output (default xauusd_{tf}_mt5.json)')
 args = parser.parse_args()
@@ -37,6 +37,7 @@ TF_NAME  = args.tf.upper()
 OUT_FILE = args.out or f"xauusd_{TF_NAME.lower()}_mt5.json"
 
 TF_MAP = {
+    'M5':  ('TIMEFRAME_M5',   5),
     'M15': ('TIMEFRAME_M15', 15),
     'M30': ('TIMEFRAME_M30', 30),
     'H1':  ('TIMEFRAME_H1',  60),
@@ -90,40 +91,51 @@ def find_symbol():
     mt5.shutdown()
     sys.exit(1)
 
-def fetch_candles(symbol, days):
-    """Scarica candele H1 per gli ultimi `days` giorni."""
-    date_to   = datetime.datetime.now(datetime.timezone.utc)
-    date_from = date_to - datetime.timedelta(days=days + 5)  # +5 buffer per weekend/festivi
-
-    print(f"Scaricando {symbol} H1 dal {date_from.strftime('%Y-%m-%d')} al {date_to.strftime('%Y-%m-%d')}...")
-
-    tf_attr = getattr(mt5, TF_MAP[TF_NAME][0])
-    rates = mt5.copy_rates_range(
-        symbol,
-        tf_attr,
-        date_from,
-        date_to
-    )
-
-    if rates is None or len(rates) == 0:
-        print(f"ERRORE: Nessuna candela ricevuta — {mt5.last_error()}")
-        mt5.shutdown()
-        sys.exit(1)
-
-    # Filtra solo gli ultimi `days` giorni effettivi
-    cutoff = (date_to - datetime.timedelta(days=days)).timestamp()
+def rates_to_candles(rates, cutoff):
+    """Converte numpy structured array MT5 → lista dict, filtrando per cutoff."""
     candles = []
     for r in rates:
         if float(r['time']) < cutoff:
             continue
         o = float(r['open']);  h = float(r['high'])
         l = float(r['low']);   c = float(r['close'])
-        v = float(r.get('tick_volume', 0) or r.get('real_volume', 0) or 0)
+        try:
+            v = float(r['tick_volume']) or float(r['real_volume'])
+        except Exception:
+            v = 0.0
         if math.isnan(c) or c <= 0:
             continue
         candles.append({'t': int(r['time']), 'o': o, 'h': h, 'l': l, 'c': c, 'v': v})
-
     return candles
+
+def fetch_candles(symbol, days):
+    """Scarica candele per gli ultimi `days` giorni."""
+    tf_attr   = getattr(mt5, TF_MAP[TF_NAME][0])
+    tf_min    = TF_MAP[TF_NAME][1]
+    date_to   = datetime.datetime.now(datetime.timezone.utc)
+    date_from = date_to - datetime.timedelta(days=days + 5)  # +5 buffer weekend/festivi
+    cutoff    = (date_to - datetime.timedelta(days=days)).timestamp()
+
+    print(f"Scaricando {symbol} {TF_NAME} dal {date_from.strftime('%Y-%m-%d')} al {date_to.strftime('%Y-%m-%d')}...")
+
+    rates = mt5.copy_rates_range(symbol, tf_attr, date_from, date_to)
+
+    # Fallback per TF brevi (M5/M15): il terminal potrebbe non avere la storia
+    # pre-caricata → chiediamo per count dal bar corrente.
+    if rates is None or len(rates) == 0:
+        bars_per_day = (24 * 60) / tf_min          # gold ~24h/day
+        trading_days = days * (5 / 7)              # ~5 giorni/settimana
+        max_bars     = min(int(trading_days * bars_per_day * 1.2), 99_999)
+        print(f"  copy_rates_range vuoto ({mt5.last_error()}), provo copy_rates_from_pos ({max_bars} bar)...")
+        rates = mt5.copy_rates_from_pos(symbol, tf_attr, 0, max_bars)
+
+    if rates is None or len(rates) == 0:
+        print(f"ERRORE: Nessuna candela ricevuta — {mt5.last_error()}")
+        print("  Per M5/M15: apri il grafico in MT5 e scorri indietro per pre-caricare la storia.")
+        mt5.shutdown()
+        sys.exit(1)
+
+    return rates_to_candles(rates, cutoff)
 
 def save(candles, path):
     """Salva in formato compatibile con il backtester."""

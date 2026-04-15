@@ -45,22 +45,28 @@ LOG_FILE     = "mt5-bot.log"
 
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
-# 2 strategie MFKK attive post-backtest MT5 2026-04-14
+# Strategie attive da regime_playbook.json (backtest multi-TF 2026-04-15)
 STRATEGY_PARAMS = {
-    'S00_MFKK':          {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK Score'},
-    'S05_MFKK_INTRADAY': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday'},
-    'S09_MFKK_SCALPING': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping'},
+    'S00_MFKK':            {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK Score'},
+    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday'},
+    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping'},
+    'S05_V3_Sell_Exhaust': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Sell Exhaust'},
+    'S01_EXHAUSTION':      {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Exhaustion'},
+    'S13_STRUC_BREAK':     {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Struc Break'},
 }
-# Allineato con strategy.js regimePriority (aggiornato 2026-04-15)
-REGIME_PRIORITY = {
-    'TREND_UP':   ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'TREND_DOWN': ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'WEAK_UP':    ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'WEAK_DOWN':  ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'RANGE':      ['S05_MFKK_INTRADAY', 'S00_MFKK'],
-    'VOLATILE':   ['S05_MFKK_INTRADAY', 'S00_MFKK'],
-    'UNKNOWN':    ['S00_MFKK'],
+
+# Playbook caricato da regime_playbook.json al boot; fallback hardcoded
+PLAYBOOK_FILE = "regime_playbook.json"
+FALLBACK_PLAYBOOK = {
+    'TREND_UP':   {'strategy': 'S05_V3_Sell_Exhaust', 'tf': 'H1'},
+    'TREND_DOWN': {'strategy': 'S01_EXHAUSTION',       'tf': 'M15'},
+    'WEAK_UP':    {'strategy': 'S09_MFKK_SCALPING',    'tf': 'H1'},
+    'WEAK_DOWN':  {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
+    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
+    'RANGE':      {'strategy': 'S13_STRUC_BREAK',       'tf': 'H1'},
+    'UNKNOWN':    {'strategy': 'S00_MFKK',              'tf': 'H1'},
 }
+PLAYBOOK = FALLBACK_PLAYBOOK  # verrà sovrascritta da load_playbook()
 
 # ── LOGGING ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -208,6 +214,33 @@ def stdev_arr(src, p):
         out.append(math.sqrt(sum((x-mn)**2 for x in sl)/p))
     return out
 
+def calc_fvg(O, H, L, C, std_len=100, df=2):
+    """Fair Value Gap — rileva zone FVG bullish/bearish per S09_MFKK_SCALPING."""
+    n = len(C)
+    body = [abs(O[i]-C[i]) for i in range(n)]
+    bs = stdev_arr(body, std_len)
+    fb = [False]*n; fs = [False]*n
+    ab = []; as_ = []
+    for i in range(2, n):
+        disp = bs[i-1] is not None and bs[i-1] > 0 and body[i-1] > bs[i-1]*df
+        if L[i] > H[i-2]: ab.append({'lo': H[i-2], 'hi': L[i], 'bar': i, 'd': disp})
+        if H[i] < L[i-2]: as_.append({'lo': H[i], 'hi': L[i-2], 'bar': i, 'd': disp})
+        sb = []
+        for fvg in ab:
+            if fvg['bar'] == i: sb.append(fvg); continue
+            if L[i] < fvg['lo']: continue
+            if C[i] <= fvg['hi'] and C[i] >= fvg['lo']: fb[i] = True
+            sb.append(fvg)
+        ab = sb[-20:]
+        sb2 = []
+        for fvg in as_:
+            if fvg['bar'] == i: sb2.append(fvg); continue
+            if H[i] > fvg['hi']: continue
+            if C[i] >= fvg['lo'] and C[i] <= fvg['hi']: fs[i] = True
+            sb2.append(fvg)
+        as_ = sb2[-20:]
+    return fb, fs
+
 def obv_macd_tchannel(H, L, C, V, wl=28, vl=14, ml=9, sl=26):
     """OBV MACD T-Channel — identico al Pine Script originale"""
     n = len(C)
@@ -240,19 +273,21 @@ def obv_macd_tchannel(H, L, C, V, wl=28, vl=14, ml=9, sl=26):
 
 # ── COMPUTE INDICATORS ────────────────────────────────────────────────────────
 def compute_indicators(candles):
+    O=[c['o'] for c in candles]
     H=[c['h'] for c in candles]
     L=[c['l'] for c in candles]
     C=[c['c'] for c in candles]
     V=[c['v'] for c in candles]
     n=len(C)
     I={}
-    I['C']=C; I['H']=H; I['L']=L; I['V']=V
+    I['O']=O; I['C']=C; I['H']=H; I['L']=L; I['V']=V
     I['e20']=ema(C,20); I['e50']=ema(C,50)
     I['e100']=ema(C,100); I['e200']=ema(C,200)
     I['rsi']=rsi(C,14)
     I['atr']=atr(H,L,C,14)
     I['adx'],I['dip'],I['dim']=adx_calc(H,L,C,14)
     I['ml'],I['ms'],I['mh']=macd(C,12,26,9)
+    I['macd_sig']=I['ms']   # alias usato da s_exhaustion
     I['cci']=cci(H,L,C,50)
     I['mom']=mom(C,10)
     I['bb_mid'],I['bb_up'],I['bb_dn']=bb(C,20,2.0)
@@ -261,11 +296,16 @@ def compute_indicators(candles):
     I['vwap']=vwap_intraday(candles)
     I['obv']=obv(C,V)
     I['obv_ema']=ema(I['obv'],20)
-    # OBV MACD T-Channel per S05_MFKK_INTRADAY
+    # OBV MACD T-Channel per S05_MFKK_INTRADAY / S05_V3_Sell_Exhaust
     try:
         _, _, I['obv_oc'] = obv_macd_tchannel(H,L,C,V)
     except Exception:
         I['obv_oc'] = [0]*n
+    # FVG per S09_MFKK_SCALPING
+    try:
+        I['fvg_bull'], I['fvg_bear'] = calc_fvg(O,H,L,C)
+    except Exception:
+        I['fvg_bull'] = [False]*n; I['fvg_bear'] = [False]*n
     # ATR rolling avg 30 bar
     I['atr_avg']=[None]*n
     for i in range(30,n):
@@ -288,7 +328,7 @@ def detect_regime(I, i):
         return 'VOLATILE'
     return 'RANGE'
 
-# ── STRATEGY SIGNALS (2 STRATEGIE UFFICIALI) ─────────────────────────────────
+# ── STRATEGY SIGNALS (playbook regime-aware) ─────────────────────────────────
 def signal_mfkk_score(I, i):
     """
     S00_MFKK — MFKK Score ponderato (identico a strategy.js)
@@ -335,20 +375,81 @@ def signal_mfkk_intraday(I, i):
     if oc[i] == -1 and r < 50 and mo < 0 and mc < 0: return 'sell'
     return None
 
+def signal_sell_exhaust(I, i):
+    """S05_V3_Sell_Exhaust — OBV T-Channel bear + RSI > 65 + ADX >= 30 + MOM < 0 (TREND_UP)"""
+    if i < 1: return None
+    oc = I.get('obv_oc', [])
+    if not oc or i >= len(oc): return None
+    r = I['rsi'][i]; a = I['adx'][i]; m = I['mom'][i]
+    if None in (r, a, m): return None
+    if oc[i] == -1 and r > 65 and a >= 30 and m < 0: return 'sell'
+    return None
+
+def signal_exhaustion(I, i):
+    """S01_EXHAUSTION — ADX/DI divergenza + MACD vs signal (TREND_DOWN)"""
+    a = I['adx'][i]; dp = I['dip'][i]; dm = I['dim'][i]
+    ml = I['ml'][i]; ms = I['ms'][i]
+    if None in (a, dp, dm, ml, ms): return None
+    diff = ml - ms; spread = abs(dp - dm)
+    if a >= 30 and dm > dp and spread >= 15 and diff >= 1.0: return 'sell'
+    if a >= 28 and dp > dm and spread >= 15 and diff <= -1.0: return 'buy'
+    return None
+
+def signal_mfkk_scalping(I, i):
+    """S09_MFKK_SCALPING — EMA stack bullish/bearish + FVG retest"""
+    e20 = I['e20'][i]; e50 = I['e50'][i]; e100 = I['e100'][i]; e200 = I['e200'][i]
+    fb = I.get('fvg_bull'); fs = I.get('fvg_bear')
+    if None in (e20, e50, e100, e200) or fb is None: return None
+    if e20 > e50 > e100 > e200 and fb[i]: return 'buy'
+    if e20 < e50 < e100 < e200 and fs[i]: return 'sell'
+    return None
+
+def signal_struc_break(I, i):
+    """S13_STRUC_BREAK — break e retest del massimo/minimo delle ultime 40 barre (RANGE)"""
+    if i < 60: return None
+    H = I['H']; L = I['L']; C = I['C']
+    hh = max(H[i-40:i]); ll = min(L[i-40:i]); c = C[i]
+    if c > hh and L[i] <= hh*1.001 and L[i] >= hh*0.999: return 'buy'
+    if c < ll and H[i] >= ll*0.999 and H[i] <= ll*1.001: return 'sell'
+    return None
+
 SIGNAL_FNS = {
-    'S00_MFKK':          signal_mfkk_score,
-    'S05_MFKK_INTRADAY': signal_mfkk_intraday,
+    'S00_MFKK':            signal_mfkk_score,
+    'S05_MFKK_INTRADAY':   signal_mfkk_intraday,
+    'S05_V3_Sell_Exhaust': signal_sell_exhaust,
+    'S01_EXHAUSTION':      signal_exhaustion,
+    'S09_MFKK_SCALPING':   signal_mfkk_scalping,
+    'S13_STRUC_BREAK':     signal_struc_break,
 }
 
 def get_signal(I, i, hour, regime):
-    """Restituisce (strategia, direzione) basandosi sul regime corrente"""
-    priority = REGIME_PRIORITY.get(regime, ['S00_MFKK'])
-    for sname in priority:
-        fn = SIGNAL_FNS.get(sname)
-        if fn is None: continue
-        direction = fn(I, i)
-        if direction:
-            return sname, direction
+    """Restituisce (strategia, direzione) consultando il playbook regime → (strategia, TF).
+    Se il playbook indica un TF diverso da H1, scarica e ricalcola gli indicatori per quel TF.
+    """
+    entry = PLAYBOOK.get(regime) or PLAYBOOK.get('UNKNOWN', {'strategy': 'S00_MFKK', 'tf': 'H1'})
+    sname = entry['strategy']
+    tf    = entry.get('tf', 'H1')
+
+    # Se il TF del playbook è diverso da H1, scarica candele ad hoc
+    if tf != 'H1':
+        n_bars = 450  # sufficiente warmup per M15/M30
+        candles_tf = get_candles_tf(tf, n_bars)
+        if candles_tf and len(candles_tf) >= 100:
+            I_tf = compute_indicators(candles_tf)
+            i_tf = len(candles_tf) - 2
+        else:
+            log.warning(f"Impossibile ottenere candele {tf} per {sname} — skip")
+            return None, None
+        use_I = I_tf; use_i = i_tf
+    else:
+        use_I = I; use_i = i
+
+    fn = SIGNAL_FNS.get(sname)
+    if fn is None:
+        return None, None
+    direction = fn(use_I, use_i)
+    if direction:
+        return sname, direction
     return None, None
 
 # ── STATO GIORNALIERO ─────────────────────────────────────────────────────────
@@ -408,11 +509,19 @@ def mt5_connect():
         log.info(f"MT5 connesso — conto #{info.login} ({info.name}) @ {info.server}")
     return True
 
-def get_candles(n=300):
-    """Recupera le ultime N candele H1 da MT5"""
-    rates = mt5.copy_rates_from_pos(SYMBOL, mt5.TIMEFRAME_H1, 0, n)
-    if rates is None or len(rates) == 0:
-        return None
+_TF_MT5_MAP = None  # popolato lazy dopo mt5.initialize()
+
+def _tf_enum(tf):
+    return {
+        'M5':  mt5.TIMEFRAME_M5,
+        'M15': mt5.TIMEFRAME_M15,
+        'M30': mt5.TIMEFRAME_M30,
+        'H1':  mt5.TIMEFRAME_H1,
+        'H4':  mt5.TIMEFRAME_H4,
+        'D1':  mt5.TIMEFRAME_D1,
+    }.get(tf, mt5.TIMEFRAME_H1)
+
+def _rates_to_list(rates):
     candles = []
     for r in rates:
         candles.append({
@@ -424,6 +533,38 @@ def get_candles(n=300):
             'v': float(r['tick_volume']),
         })
     return candles
+
+def get_candles(n=300):
+    """Recupera le ultime N candele H1 da MT5"""
+    rates = mt5.copy_rates_from_pos(SYMBOL, mt5.TIMEFRAME_H1, 0, n)
+    if rates is None or len(rates) == 0:
+        return None
+    return _rates_to_list(rates)
+
+def get_candles_tf(tf, n=450):
+    """Recupera le ultime N candele per qualsiasi timeframe (M5/M15/M30/H1/H4/D1)."""
+    rates = mt5.copy_rates_from_pos(SYMBOL, _tf_enum(tf), 0, n)
+    if rates is None or len(rates) == 0:
+        log.warning(f"get_candles_tf({tf}): nessun dato — {mt5.last_error()}")
+        return None
+    return _rates_to_list(rates)
+
+def load_playbook():
+    """Carica regime_playbook.json; aggiorna PLAYBOOK globale."""
+    global PLAYBOOK
+    try:
+        with open(PLAYBOOK_FILE, encoding='utf-8') as f:
+            data = json.load(f)
+        pb_raw = data.get('playbook', {})
+        pb = {}
+        for regime, info in pb_raw.items():
+            pb[regime] = {'strategy': info['strategy'], 'tf': info.get('tf', 'H1')}
+        pb.setdefault('UNKNOWN', {'strategy': 'S00_MFKK', 'tf': 'H1'})
+        PLAYBOOK = pb
+        entries = ', '.join(f"{r}→{v['strategy']}/{v['tf']}" for r, v in pb.items() if r != 'UNKNOWN')
+        log.info(f"Playbook caricato ({len(pb)-1} regimi): {entries}")
+    except Exception as e:
+        log.warning(f"Playbook non caricato ({e}) — uso fallback hardcoded")
 
 def get_account_info():
     info = mt5.account_info()
@@ -642,6 +783,8 @@ def run():
     if not mt5_connect():
         log.error("Connessione MT5 fallita. Assicurati che MT5 sia aperto e configurato.")
         sys.exit(1)
+
+    load_playbook()
 
     acc = get_account_info()
     if acc:

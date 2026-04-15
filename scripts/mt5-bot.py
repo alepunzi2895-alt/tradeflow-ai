@@ -53,18 +53,19 @@ STRATEGY_PARAMS = {
     'S05_V3_Sell_Exhaust': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Sell Exhaust'},
     'S01_EXHAUSTION':      {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Exhaustion'},
     'S13_STRUC_BREAK':     {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Struc Break'},
+    'S10_OB_FVG_SCALP':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp', 'tp_mult': 1.0, 'sl_mult': 0.6},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
 PLAYBOOK_FILE = "regime_playbook.json"
 FALLBACK_PLAYBOOK = {
-    'TREND_UP':   {'strategy': 'S05_V3_Sell_Exhaust', 'tf': 'H1'},
-    'TREND_DOWN': {'strategy': 'S01_EXHAUSTION',       'tf': 'M15'},
-    'WEAK_UP':    {'strategy': 'S09_MFKK_SCALPING',    'tf': 'H1'},
-    'WEAK_DOWN':  {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
+    'TREND_UP':   {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
+    'TREND_DOWN': {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
+    'WEAK_UP':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
+    'WEAK_DOWN':  {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
     'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
-    'RANGE':      {'strategy': 'S13_STRUC_BREAK',       'tf': 'H1'},
-    'UNKNOWN':    {'strategy': 'S00_MFKK',              'tf': 'H1'},
+    'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
+    'UNKNOWN':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
 }
 PLAYBOOK = FALLBACK_PLAYBOOK  # verrà sovrascritta da load_playbook()
 
@@ -241,6 +242,37 @@ def calc_fvg(O, H, L, C, std_len=100, df=2):
         as_ = sb2[-20:]
     return fb, fs
 
+def calc_order_blocks(O, H, L, C, lookback=20):
+    """
+    Order Block detection per S10_OB_FVG_SCALP.
+    Bullish OB: ultima candela bearish prima di un impulso rialzista (2+ barre bull),
+                prezzo che torna nel corpo dell'OB senza averlo mitigato.
+    Bearish OB: opposto.
+    Returns: (ob_bull[i], ob_bear[i]) — bool lists
+    """
+    n = len(C)
+    ob_bull = [False]*n
+    ob_bear = [False]*n
+    for i in range(lookback + 4, n):
+        c_now = C[i]
+        # ── Bullish OB ───────────────────────────────────────────────────────
+        for j in range(i - 3, max(i - lookback - 1, 2), -1):
+            if C[j] >= O[j]: continue                    # deve essere bearish
+            ob_lo = min(O[j], C[j]); ob_hi = max(O[j], C[j])
+            if not (j+2 < n and C[j+1] > O[j+1] and C[j+2] > O[j+2]): continue
+            if any(L[k] < ob_lo * 0.999 for k in range(j+1, i)): continue  # mitigato
+            if ob_lo * 0.999 <= c_now <= ob_hi * 1.002:
+                ob_bull[i] = True; break
+        # ── Bearish OB ───────────────────────────────────────────────────────
+        for j in range(i - 3, max(i - lookback - 1, 2), -1):
+            if C[j] <= O[j]: continue                    # deve essere bullish
+            ob_lo = min(O[j], C[j]); ob_hi = max(O[j], C[j])
+            if not (j+2 < n and C[j+1] < O[j+1] and C[j+2] < O[j+2]): continue
+            if any(H[k] > ob_hi * 1.001 for k in range(j+1, i)): continue  # mitigato
+            if ob_lo * 0.998 <= c_now <= ob_hi * 1.001:
+                ob_bear[i] = True; break
+    return ob_bull, ob_bear
+
 def obv_macd_tchannel(H, L, C, V, wl=28, vl=14, ml=9, sl=26):
     """OBV MACD T-Channel — identico al Pine Script originale"""
     n = len(C)
@@ -301,11 +333,16 @@ def compute_indicators(candles):
         _, _, I['obv_oc'] = obv_macd_tchannel(H,L,C,V)
     except Exception:
         I['obv_oc'] = [0]*n
-    # FVG per S09_MFKK_SCALPING
+    # FVG per S09_MFKK_SCALPING e S10_OB_FVG_SCALP
     try:
         I['fvg_bull'], I['fvg_bear'] = calc_fvg(O,H,L,C)
     except Exception:
         I['fvg_bull'] = [False]*n; I['fvg_bear'] = [False]*n
+    # Order Blocks per S10_OB_FVG_SCALP
+    try:
+        I['ob_bull'], I['ob_bear'] = calc_order_blocks(O,H,L,C)
+    except Exception:
+        I['ob_bull'] = [False]*n; I['ob_bear'] = [False]*n
     # ATR rolling avg 30 bar
     I['atr_avg']=[None]*n
     for i in range(30,n):
@@ -413,6 +450,25 @@ def signal_struc_break(I, i):
     if c < ll and H[i] >= ll*0.999 and H[i] <= ll*1.001: return 'sell'
     return None
 
+def signal_ob_fvg_scalp(I, i):
+    """
+    S10_OB_FVG_SCALP — ICT Order Block + FVG Confluence Scalping (M15/M30)
+    LONG : EMA20>EMA50 + price in Bullish OB zone + Bull FVG attivo + candle bullish
+    SHORT: EMA20<EMA50 + price in Bearish OB zone + Bear FVG attivo + candle bearish
+    TP=1.0×ATR | SL=0.6×ATR (scalping tight)
+    """
+    e20 = I['e20'][i]; e50 = I['e50'][i]
+    if None in (e20, e50): return None
+    ob_b = I.get('ob_bull'); ob_s = I.get('ob_bear')
+    fvg_b = I.get('fvg_bull'); fvg_s = I.get('fvg_bear')
+    if ob_b is None or fvg_b is None: return None
+    C = I['C']; O = I['O']
+    bull_c = C[i] > O[i]
+    bear_c = C[i] < O[i]
+    if e20 > e50 and ob_b[i] and fvg_b[i] and bull_c: return 'buy'
+    if e20 < e50 and ob_s[i] and fvg_s[i] and bear_c: return 'sell'
+    return None
+
 SIGNAL_FNS = {
     'S00_MFKK':            signal_mfkk_score,
     'S05_MFKK_INTRADAY':   signal_mfkk_intraday,
@@ -420,6 +476,7 @@ SIGNAL_FNS = {
     'S01_EXHAUSTION':      signal_exhaustion,
     'S09_MFKK_SCALPING':   signal_mfkk_scalping,
     'S13_STRUC_BREAK':     signal_struc_break,
+    'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
 }
 
 def get_signal(I, i, hour, regime):

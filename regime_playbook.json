@@ -5,48 +5,32 @@
   "min_trades_threshold": 15,
   "playbook": {
     "TREND_UP": {
-      "strategy": "S05_V3_Sell_Exhaust",
-      "tf": "H1",
-      "n": 23,
-      "wr": 60.9,
-      "pnl": 272.7,
-      "pf": 3.112,
-      "dd": 47.6,
-      "tpd": 1.44,
-      "score": 193.86
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M15",
+      "n": null, "wr": null, "pnl": null, "pf": null, "dd": null,
+      "tpd": null, "score": null,
+      "note": "Backtest pending — esegui backtest_ob_fvg_scalp.py --mt5"
     },
     "TREND_DOWN": {
-      "strategy": "S01_EXHAUSTION",
+      "strategy": "S10_OB_FVG_SCALP",
       "tf": "M15",
-      "n": 143,
-      "wr": 42.0,
-      "pnl": 845.9,
-      "pf": 1.759,
-      "dd": 473.8,
-      "tpd": 2.47,
-      "score": 120.54
+      "n": null, "wr": null, "pnl": null, "pf": null, "dd": null,
+      "tpd": null, "score": null,
+      "note": "Backtest pending — esegui backtest_ob_fvg_scalp.py --mt5"
     },
     "WEAK_UP": {
-      "strategy": "S09_MFKK_SCALPING",
-      "tf": "H1",
-      "n": 55,
-      "wr": 40.0,
-      "pnl": 222.1,
-      "pf": 3.439,
-      "dd": 37.7,
-      "tpd": 1.57,
-      "score": 203.95
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M15",
+      "n": null, "wr": null, "pnl": null, "pf": null, "dd": null,
+      "tpd": null, "score": null,
+      "note": "Backtest pending — esegui backtest_ob_fvg_scalp.py --mt5"
     },
     "WEAK_DOWN": {
-      "strategy": "S09_MFKK_SCALPING",
-      "tf": "M30",
-      "n": 88,
-      "wr": 37.5,
-      "pnl": 229.1,
-      "pf": 1.683,
-      "dd": 75.0,
-      "tpd": 1.87,
-      "score": 115.4
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M15",
+      "n": null, "wr": null, "pnl": null, "pf": null, "dd": null,
+      "tpd": null, "score": null,
+      "note": "Backtest pending — esegui backtest_ob_fvg_scalp.py --mt5"
     },
     "VOLATILE": {
       "strategy": "S09_MFKK_SCALPING",
@@ -60,15 +44,11 @@
       "score": 143.15
     },
     "RANGE": {
-      "strategy": "S13_STRUC_BREAK",
-      "tf": "H1",
-      "n": 50,
-      "wr": 42.0,
-      "pnl": 120.8,
-      "pf": 1.868,
-      "dd": 36.7,
-      "tpd": 1.19,
-      "score": 126.0
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M15",
+      "n": null, "wr": null, "pnl": null, "pf": null, "dd": null,
+      "tpd": null, "score": null,
+      "note": "Backtest pending — esegui backtest_ob_fvg_scalp.py --mt5"
     }
   },
   "regime_matrix": {

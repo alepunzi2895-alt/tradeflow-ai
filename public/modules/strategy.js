@@ -70,16 +70,26 @@ const SE = {
         pnl_24m: 120, td_24m: 0.10,
         maxdd: 37, maxdd_pct: '3.7%', trades_12m: 25, best_regime: 'RANGE'
       } },
+    // OB+FVG Scalp — Order Block + FVG confluence · M15 · sempre attiva
+    // Stats pending: esegui backtest_ob_fvg_scalp.py --mt5 per dati reali
+    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp', pf: null, wr: 'N/A', tp: 'ATR×1.0', sl: 'ATR×0.6',
+      stats: {
+        pnl_1m: null, td_1m: null,
+        pnl_6m: null, td_6m: null,
+        pnl_12m: null, td_12m: null,
+        pnl_24m: null, td_24m: null,
+        maxdd: null, maxdd_pct: 'N/A', trades_12m: null, best_regime: 'ALL'
+      } },
   },
   // ── REGIME PRIORITY ──
   // Allineato con regime_playbook.json (backtest multi-TF 2026-04-15)
   regimePriority: {
-    TREND_UP:   ['S05_V3_Sell_Exhaust', 'S09_MFKK_SCALPING', 'S00_MFKK'],
-    TREND_DOWN: ['S01_EXHAUSTION',       'S09_MFKK_SCALPING', 'S00_MFKK'],
-    WEAK_UP:    ['S09_MFKK_SCALPING',   'S00_MFKK'],
-    WEAK_DOWN:  ['S09_MFKK_SCALPING',   'S00_MFKK'],
-    VOLATILE:   ['S09_MFKK_SCALPING',   'S05_MFKK_INTRADAY'],
-    RANGE:      ['S13_STRUC_BREAK',      'S05_MFKK_INTRADAY'],
+    TREND_UP:   ['S10_OB_FVG_SCALP', 'S05_V3_Sell_Exhaust', 'S09_MFKK_SCALPING'],
+    TREND_DOWN: ['S10_OB_FVG_SCALP',    'S01_EXHAUSTION',      'S09_MFKK_SCALPING'],
+    WEAK_UP:    ['S10_OB_FVG_SCALP',    'S09_MFKK_SCALPING',   'S00_MFKK'],
+    WEAK_DOWN:  ['S10_OB_FVG_SCALP',    'S09_MFKK_SCALPING',   'S00_MFKK'],
+    VOLATILE:   ['S09_MFKK_SCALPING',   'S10_OB_FVG_SCALP'],
+    RANGE:      ['S10_OB_FVG_SCALP',    'S13_STRUC_BREAK'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },
@@ -740,6 +750,54 @@ const SE_STRATEGY_FNS = {
     }
     if (c < ll && hi >= ll * 0.999 && hi <= ll * 1.001) {
       return { dir: 'sell', why: `Struc Break ↓ Breakout + retest min 40 barre $${ll.toFixed(2)}`, quality: 'high' };
+    }
+    return null;
+  },
+
+  // S10_OB_FVG_SCALP — ICT Order Block + FVG Confluence Scalping · M15 always-on
+  // LONG : EMA20>EMA50 + price in Bullish OB body + Bull FVG attivo + candela bullish
+  // SHORT: EMA20<EMA50 + price in Bearish OB body + Bear FVG attivo + candela bearish
+  S10_OB_FVG_SCALP: (I, i) => {
+    const {O, H, L, C, e20, e50, fvg_bull, fvg_bear} = I;
+    if (!e20?.[i] || !e50?.[i] || !C || !O) return null;
+
+    const LB = 20;
+    let ob_b = false, ob_s = false;
+
+    // ── Bullish OB detection ────────────────────────────────────────────────
+    for (let j = i - 3; j >= Math.max(i - LB - 1, 2); j--) {
+      if (C[j] >= O[j]) continue;                       // deve essere bearish
+      const ob_lo = Math.min(O[j], C[j]);
+      const ob_hi = Math.max(O[j], C[j]);
+      if (!(C[j+1] > O[j+1] && j+2 <= i && C[j+2] > O[j+2])) continue; // impulso bullish
+      let mitig = false;
+      for (let k = j+1; k < i; k++) { if (L[k] < ob_lo * 0.999) { mitig = true; break; } }
+      if (mitig) continue;
+      if (C[i] >= ob_lo * 0.999 && C[i] <= ob_hi * 1.002) { ob_b = true; break; }
+    }
+
+    // ── Bearish OB detection ────────────────────────────────────────────────
+    for (let j = i - 3; j >= Math.max(i - LB - 1, 2); j--) {
+      if (C[j] <= O[j]) continue;                       // deve essere bullish
+      const ob_lo = Math.min(O[j], C[j]);
+      const ob_hi = Math.max(O[j], C[j]);
+      if (!(C[j+1] < O[j+1] && j+2 <= i && C[j+2] < O[j+2])) continue; // impulso bearish
+      let mitig = false;
+      for (let k = j+1; k < i; k++) { if (H[k] > ob_hi * 1.001) { mitig = true; break; } }
+      if (mitig) continue;
+      if (C[i] >= ob_lo * 0.998 && C[i] <= ob_hi * 1.001) { ob_s = true; break; }
+    }
+
+    const fvg_b = fvg_bull?.[i];
+    const fvg_s = fvg_bear?.[i];
+    const bull_c = C[i] > O[i];
+    const bear_c = C[i] < O[i];
+
+    if (e20[i] > e50[i] && ob_b && fvg_b && bull_c) {
+      return { dir: 'buy', why: `OB+FVG Bull ▲ EMA20>${e20[i].toFixed(0)} prezzo in Bullish OB + Bull FVG`, quality: 'high', score: 88 };
+    }
+    if (e20[i] < e50[i] && ob_s && fvg_s && bear_c) {
+      return { dir: 'sell', why: `OB+FVG Bear ▼ EMA20<${e20[i].toFixed(0)} prezzo in Bearish OB + Bear FVG`, quality: 'high', score: 88 };
     }
     return null;
   },

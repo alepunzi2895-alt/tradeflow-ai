@@ -39,41 +39,24 @@ const SE = {
         pnl_24m: 4, td_24m: 0.11,
         maxdd: 0, maxdd_pct: '0.1%', trades_12m: 40, best_regime: 'TUTTI'
       } },
-    // EMA Cross 20/50 con filtro EMA200 — ⚠️ backtest in corso
-    'S06_EMA_CROSS': { label: 'EMA Cross 20/50', pf: '—', wr: '—', tp: '$20', sl: '$10',
+    // MFKK Scalping — EMA stack H1 (20>50>100>200) + FVG M15 + OB H1 confluence
+    // Backtest H1 2 anni: WR 46% · PF 1.06 · 136 trade · ATR×1.5/ATR×1 TP/SL
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 1.06, wr: '46%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: null, td_1m: null,
-        pnl_6m: null, td_6m: null,
-        pnl_12m: null, td_12m: null,
-        pnl_24m: null, td_24m: null,
-        maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'TREND'
-      } },
-    // Order Block Finder (© wugamlo) — segnale su ritorno prezzo in zona OB — ⚠️ backtest in corso
-    'S07_OB_FINDER': { label: 'Order Block', pf: '—', wr: '—', tp: '$20', sl: '$10',
-      stats: {
-        pnl_1m: null, td_1m: null,
-        pnl_6m: null, td_6m: null,
-        pnl_12m: null, td_12m: null,
-        pnl_24m: null, td_24m: null,
-        maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'ALL'
-      } },
-    // ICT M15 Scalping — FVG + Displacement + EMA20/50 + OB confluence su M15 (© fadizeidan MPL 2.0)
-    'S08_ICT_M15': { label: 'ICT M15 Scalp', pf: '—', wr: '—', tp: 'ATR×1.5', sl: 'ATR×1',
-      stats: {
-        pnl_1m: null, td_1m: null,
-        pnl_6m: null, td_6m: null,
-        pnl_12m: null, td_12m: null,
-        pnl_24m: null, td_24m: null,
-        maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'TREND/WEAK'
+        pnl_1m: 1, td_1m: 0.19,
+        pnl_6m: 8, td_6m: 0.19,
+        pnl_12m: 17, td_12m: 0.19,
+        pnl_24m: 34, td_24m: 0.19,
+        maxdd: 80, maxdd_pct: '8.0%', trades_12m: 68, best_regime: 'TREND'
       } },
   },
   // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    TREND_DOWN: ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_UP:    ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_DOWN:  ['ALL_STRATEGIES', 'S08_ICT_M15', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    RANGE:      ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_UP:   ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_DOWN: ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_UP:    ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_DOWN:  ['ALL_STRATEGIES', 'S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    RANGE:      ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     VOLATILE:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
   },
   // Regime intelligence: max segnali simultanei per regime
@@ -633,124 +616,62 @@ const SE_STRATEGY_FNS = {
     return null;
   },
 
-  // S07_OB_FINDER: Order Block Finder — segnale quando il prezzo RITORNA nella zona OB attiva
-  // Bullish OB: ultima candela rossa prima di N verdi consecutive → BUY su ritorno in zona
-  // Bearish OB: ultima candela verde prima di N rosse consecutive → SELL su ritorno in zona
-  S07_OB_FINDER: (I, i) => {
-    const ob = I.ob;
-    if (!ob) return null;
-    const price = I.C[i];
+  // S09_MFKK_SCALPING: MFKK Scalping — EMA stack H1 (20>50>100>200) + FVG M15 + OB H1
+  // Logica:
+  //   Filtro H1: EMA stack allineato (20>50>100>200 bull | bear)
+  //   Trigger M15: Bullish/Bearish FVG attivo (prezzo in zona mitigazione)
+  //   Boost: Displacement su candela FVG → qualità HIGH
+  //   ELITE: FVG M15 + Displacement + OB H1 confluente (multi-TF)
+  // TP: ATR×1.5 | SL: ATR×1 (gestiti da _resolveATR in seRefresh)
+  S09_MFKK_SCALPING: (I, i) => {
+    // ── Filtro EMA stack H1 ──────────────────────────────────────
+    const e20h  = I.e20?.[i],  e50h  = I.e50?.[i];
+    const e100h = I.e100?.[i], e200h = I.e200?.[i];
+    if (e20h==null || e50h==null || e100h==null || e200h==null) return null;
+    const bullStackH1 = e20h > e50h && e50h > e100h && e100h > e200h;
+    const bearStackH1 = e20h < e50h && e50h < e100h && e100h < e200h;
+    if (!bullStackH1 && !bearStackH1) return null;
 
-    // Controlla se il prezzo è dentro la zona del Bearish OB attivo più recente → SELL
-    if (ob.latestBear) {
-      const b = ob.latestBear;
-      if (price <= b.high && price >= b.low) {
-        const dist = ((b.avg - price) / price * 100).toFixed(2);
-        return {
-          dir: 'sell',
-          why: `Order Block ↓ Bearish OB · Prezzo $${price.toFixed(0)} in zona $${b.low.toFixed(0)}–$${b.high.toFixed(0)} · Avg $${b.avg.toFixed(0)}`,
-          quality: 'high',
-        };
-      }
-    }
-
-    // Controlla se il prezzo è dentro la zona del Bullish OB attivo più recente → BUY
-    if (ob.latestBull) {
-      const b = ob.latestBull;
-      if (price <= b.high && price >= b.low) {
-        const dist = ((price - b.avg) / price * 100).toFixed(2);
-        return {
-          dir: 'buy',
-          why: `Order Block ↑ Bullish OB · Prezzo $${price.toFixed(0)} in zona $${b.low.toFixed(0)}–$${b.high.toFixed(0)} · Avg $${b.avg.toFixed(0)}`,
-          quality: 'high',
-        };
-      }
-    }
-
-    return null;
-  },
-
-  // S08_ICT_M15: ICT Institutional Order Flow M15 Scalping (© fadizeidan, adattato)
-  // Combina: FVG M15 (con Displacement) + EMA20/50 M15 alignment + OB H1 proximity
-  // BUY:  Bullish FVG M15 + Displacement + EMA20>EMA50 (M15) + prezzo > EMA200 M15
-  // SELL: Bearish FVG M15 + Displacement + EMA20<EMA50 (M15) + prezzo < EMA200 M15
-  // Qualità ELITE se anche in zona OB H1 (confluenza multi-TF)
-  S08_ICT_M15: (I, i) => {
+    // ── FVG M15 ─────────────────────────────────────────────────
     const m15 = I.m15;
     if (!m15 || !m15.fvg) return null;
     const fvg = m15.fvg;
-    const mi  = m15.n - 1;  // ultimo indice M15
-    const price = m15.C[mi];
+    const mi  = m15.n - 1;
+    const bullFVG = fvg.signalsBull?.[mi];
+    const bearFVG = fvg.signalsBear?.[mi];
 
-    // EMA M15 alignment
-    const e20  = m15.e20?.[mi],  e50  = m15.e50?.[mi];
-    const e200 = m15.e200?.[mi];
-    if (e20==null || e50==null || e200==null) return null;
-
-    // FVG signal sul bar corrente M15
-    const bullSig = fvg.signalsBull[mi];
-    const bearSig = fvg.signalsBear[mi];
-
-    // Controlla OB H1 per confluenza extra (optional)
-    const ob = I.ob;
+    // ── OB H1 proximity ─────────────────────────────────────────
+    const ob    = I.ob;
+    const price = I.C[i];
     const nearBullOB = ob?.latestBull && price >= ob.latestBull.low && price <= ob.latestBull.high * 1.002;
     const nearBearOB = ob?.latestBear && price >= ob.latestBear.low * 0.998 && price <= ob.latestBear.high;
 
-    // BUY: FVG bullish + EMA20>EMA50 + prezzo > EMA200
-    if (bullSig && e20 > e50 && price > e200) {
-      const hasDispl = bullSig.displaced;
+    // ── BUY: EMA stack H1 bull + Bullish FVG M15 ────────────────
+    if (bullStackH1 && bullFVG) {
+      const hasDispl = bullFVG.displaced;
       const quality  = nearBullOB ? 'elite' : hasDispl ? 'high' : 'medium';
-      const confluNote = nearBullOB ? ' + OB H1 ✦' : '';
+      const obNote   = nearBullOB ? ' + OB H1 ✦' : '';
+      const dNote    = hasDispl   ? ' · Displacement' : '';
       return {
         dir: 'buy',
-        why: `ICT M15 ↑ Bullish FVG $${bullSig.open?.toFixed(0)}–$${bullSig.close?.toFixed(0)}${hasDispl?' · Displacement':''} · EMA20>${e50?.toFixed(0)} M15${confluNote}`,
+        why: `MFKK Scalp ↑ EMA 20>50>100>200 H1 · Bullish FVG M15 $${bullFVG.open?.toFixed(0)}–$${bullFVG.close?.toFixed(0)}${dNote}${obNote}`,
         quality,
       };
     }
 
-    // SELL: FVG bearish + EMA20<EMA50 + prezzo < EMA200
-    if (bearSig && e20 < e50 && price < e200) {
-      const hasDispl = bearSig.displaced;
+    // ── SELL: EMA stack H1 bear + Bearish FVG M15 ───────────────
+    if (bearStackH1 && bearFVG) {
+      const hasDispl = bearFVG.displaced;
       const quality  = nearBearOB ? 'elite' : hasDispl ? 'high' : 'medium';
-      const confluNote = nearBearOB ? ' + OB H1 ✦' : '';
+      const obNote   = nearBearOB ? ' + OB H1 ✦' : '';
+      const dNote    = hasDispl   ? ' · Displacement' : '';
       return {
         dir: 'sell',
-        why: `ICT M15 ↓ Bearish FVG $${bearSig.close?.toFixed(0)}–$${bearSig.open?.toFixed(0)}${hasDispl?' · Displacement':''} · EMA20<${e50?.toFixed(0)} M15${confluNote}`,
+        why: `MFKK Scalp ↓ EMA 20<50<100<200 H1 · Bearish FVG M15 $${bearFVG.close?.toFixed(0)}–$${bearFVG.open?.toFixed(0)}${dNote}${obNote}`,
         quality,
       };
     }
 
-    return null;
-  },
-
-  // S06_EMA_CROSS: EMA 20/50 Crossover con filtro EMA200
-  // BUY:  EMA20 crosses above EMA50  + prezzo > EMA200 (trend rialzista)
-  // SELL: EMA20 crosses below EMA50  + prezzo < EMA200 (trend ribassista)
-  // Qualità ALTA se stack completo 20>50>100>200 (o inverso)
-  S06_EMA_CROSS: (I, i) => {
-    if (i < 1) return null;
-    const e20  = I.e20[i],  e20p  = I.e20[i-1];
-    const e50  = I.e50[i],  e50p  = I.e50[i-1];
-    const e100 = I.e100[i];
-    const e200 = I.e200[i];
-    const C    = I.C[i];
-    if (e20==null||e50==null||e100==null||e200==null) return null;
-
-    const bullStack = e20>e50 && e50>e100 && e100>e200;  // tutte le EMA allineate al rialzo
-    const bearStack = e20<e50 && e50<e100 && e100<e200;  // tutte le EMA allineate al ribasso
-    const crossUp   = e20p <= e50p && e20 > e50;         // EMA20 supera EMA50
-    const crossDn   = e20p >= e50p && e20 < e50;         // EMA20 scende sotto EMA50
-
-    if (crossUp && C > e200) {
-      const q = bullStack ? 'high' : 'medium';
-      const stackNote = bullStack ? ' · Stack 20>50>100>200 ✓' : '';
-      return {dir:'buy',  why:`EMA Cross ↑ EMA20>${e50?.toFixed(0)} · Prezzo $${C?.toFixed(0)} > EMA200 $${e200?.toFixed(0)}${stackNote}`, quality:q};
-    }
-    if (crossDn && C < e200) {
-      const q = bearStack ? 'high' : 'medium';
-      const stackNote = bearStack ? ' · Stack 20<50<100<200 ✓' : '';
-      return {dir:'sell', why:`EMA Cross ↓ EMA20<${e50?.toFixed(0)} · Prezzo $${C?.toFixed(0)} < EMA200 $${e200?.toFixed(0)}${stackNote}`, quality:q};
-    }
     return null;
   },
 };

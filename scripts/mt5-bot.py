@@ -49,13 +49,14 @@ LOG_FILE     = "mt5-bot.log"
 STRATEGY_PARAMS = {
     'S00_MFKK':          {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK Score'},
     'S05_MFKK_INTRADAY': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday'},
+    'S09_MFKK_SCALPING': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping'},
 }
-# Allineato con strategy.js regimePriority (aggiornato 2026-04-14)
+# Allineato con strategy.js regimePriority (aggiornato 2026-04-15)
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'TREND_DOWN': ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'WEAK_UP':    ['S00_MFKK', 'S05_MFKK_INTRADAY'],
-    'WEAK_DOWN':  ['S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'TREND_UP':   ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'TREND_DOWN': ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'WEAK_UP':    ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
+    'WEAK_DOWN':  ['S09_MFKK_SCALPING', 'S00_MFKK', 'S05_MFKK_INTRADAY'],
     'RANGE':      ['S05_MFKK_INTRADAY', 'S00_MFKK'],
     'VOLATILE':   ['S05_MFKK_INTRADAY', 'S00_MFKK'],
     'UNKNOWN':    ['S00_MFKK'],

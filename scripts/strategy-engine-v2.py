@@ -306,6 +306,53 @@ def order_blocks(h,l,c,lookback=5,threshold=0.5):
             obs.append({'type':'bear_ob','hi':h[i],'lo':l[i],'idx':i})
     return obs
 
+def calc_fvg(o,h,l,c,std_len=100,displ_factor=2):
+    """
+    Fair Value Gap (ICT) — H1 approximation per backtester.
+    Bullish FVG: L[i] > H[i-2]  (prezzo lascia un gap rialzista)
+    Bearish FVG: H[i] < L[i-2]  (prezzo lascia un gap ribassista)
+    Displacement: corpo candela intermedia > stdev(corpi, std_len) * displ_factor
+    Ritorna:
+      fvg_bull[i] = True se la barra i si trova in mitigazione di un Bullish FVG attivo
+      fvg_bear[i] = True se la barra i si trova in mitigazione di un Bearish FVG attivo
+    """
+    n=len(c)
+    body=[abs(o[i]-c[i]) for i in range(n)]
+    body_std=stdev_arr(body, std_len)
+    fvg_bull=[False]*n
+    fvg_bear=[False]*n
+    active_bull=[]  # list of {'lo': H[i-2], 'hi': L[i], 'bar': i, 'displaced': bool}
+    active_bear=[]  # list of {'lo': H[i], 'hi': L[i-2], 'bar': i, 'displaced': bool}
+
+    for i in range(2,n):
+        displaced=(body_std[i-1] is not None and body_std[i-1]>0 and
+                   body[i-1] > body_std[i-1]*displ_factor)
+        # Create new FVGs
+        if l[i] > h[i-2]:
+            active_bull.append({'lo':h[i-2],'hi':l[i],'bar':i,'displaced':displaced})
+        if h[i] < l[i-2]:
+            active_bear.append({'lo':h[i],'hi':l[i-2],'bar':i,'displaced':displaced})
+        # Check mitigations and invalidations for bull FVGs
+        still_bull=[]
+        for fvg in active_bull:
+            if fvg['bar']==i: still_bull.append(fvg); continue
+            if l[i] < fvg['lo']: continue  # invalidato (prezzo sceso sotto il gap)
+            if c[i] <= fvg['hi'] and c[i] >= fvg['lo']:
+                fvg_bull[i]=True  # mitigazione in corso
+            still_bull.append(fvg)
+        active_bull=still_bull[-20:]  # mantieni max 20 FVG attivi
+        # Check mitigations and invalidations for bear FVGs
+        still_bear=[]
+        for fvg in active_bear:
+            if fvg['bar']==i: still_bear.append(fvg); continue
+            if h[i] > fvg['hi']: continue  # invalidato (prezzo salito sopra il gap)
+            if c[i] >= fvg['lo'] and c[i] <= fvg['hi']:
+                fvg_bear[i]=True  # mitigazione in corso
+            still_bear.append(fvg)
+        active_bear=still_bear[-20:]
+
+    return fvg_bull, fvg_bear
+
 # ── COMPUTE ALL ───────────────────────────────────────────────────────────────
 def compute_all(candles):
     n=len(candles)
@@ -376,6 +423,9 @@ def compute_all(candles):
                 if C[j]>=ob['lo'] and C[j]<=ob['hi']: ob_bear[j]=True
                 if C[j]>ob['hi']: break
 
+    # FVG (Fair Value Gap) — per S09_MFKK_SCALPING
+    fvg_bull, fvg_bear = calc_fvg(O,H,L,C)
+
     return {
         'n':n,'H':H,'L':L,'C':C,'V':V,'O':O,
         'e20':e20,'e50':e50,'e100':e100,'e200':e200,
@@ -391,6 +441,7 @@ def compute_all(candles):
         'obv_macd_ml':obvm_ml,'obv_macd_b5':obvm_b5,'obv_macd_oc':obvm_oc,
         'mom':mom,'wpr':wpr,'vwap':vwap,
         'ob_bull':ob_bull,'ob_bear':ob_bear,
+        'fvg_bull':fvg_bull,'fvg_bear':fvg_bear,
     }
 
 # ── REGIME DETECTION ─────────────────────────────────────────────────────────
@@ -676,6 +727,28 @@ def s15_obv_macd(ind,i,hour=None):
     if oc[i]==-1 and oc[i-1]!=-1: return 'sell'
     return None
 
+def s_mfkk_scalping(ind,i,hour=None):
+    """
+    S09_MFKK_SCALPING — EMA stack H1 + FVG (H1 approx) + OB confluence
+    Filtro:   EMA20>50>100>200 (bull) | EMA20<50<100<200 (bear) — trend confermato
+    Trigger:  FVG attivo nella direzione del trend (mitigazione ICT)
+    Boost:    OB H1 confluente → qualità ELITE; FVG solo → HIGH
+    TP: 1.5×ATR | SL: 1×ATR (gestiti dal runner)
+    """
+    e20=ind['e20'][i]; e50=ind['e50'][i]
+    e100=ind['e100'][i]; e200=ind['e200'][i]
+    fvg_b=ind.get('fvg_bull'); fvg_s=ind.get('fvg_bear')
+    ob_b=ind['ob_bull'][i]; ob_s=ind['ob_bear'][i]
+    if None in (e20,e50,e100,e200): return None
+    if fvg_b is None or fvg_s is None: return None
+    bull_stack = e20>e50 and e50>e100 and e100>e200
+    bear_stack = e20<e50 and e50<e100 and e100<e200
+    if bull_stack and fvg_b[i]:
+        return 'buy'
+    if bear_stack and fvg_s[i]:
+        return 'sell'
+    return None
+
 # ── STRATEGY MAP ──────────────────────────────────────────────────────────────
 STRATS = {
     'S01_EXHAUSTION':       (s1_exhaustion,        ['TREND_UP','TREND_DOWN']),
@@ -694,13 +767,15 @@ STRATS = {
     'S14_KEY_LEVELS':       (s14_key_levels,       ['RANGE','WEAK_UP','WEAK_DOWN']),
     # ── Nuovi indicatori TV ──
     'S15_OBV_MACD':         (s15_obv_macd,         ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','RANGE','VOLATILE']),
+    # ── MFKK Composite ──
+    'S09_MFKK_SCALPING':    (s_mfkk_scalping,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
 }
 
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
-    'TREND_DOWN': ['S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
-    'WEAK_UP':    ['S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'WEAK_DOWN':  ['S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
+    'TREND_UP':   ['S09_MFKK_SCALPING','S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
+    'TREND_DOWN': ['S09_MFKK_SCALPING','S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
+    'WEAK_UP':    ['S09_MFKK_SCALPING','S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
+    'WEAK_DOWN':  ['S09_MFKK_SCALPING','S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
     'RANGE':      ['S15_OBV_MACD','S12_WPR_RSI_KELT','S07_STOCHRSI_BB','S09_VWAP_WPER','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
     'VOLATILE':   ['S15_OBV_MACD','S07_STOCHRSI_BB','S12_WPR_RSI_KELT','S09_VWAP_WPER'],
     'UNKNOWN':    ['S15_OBV_MACD','S10_ST_MACD_SESSION','S07_STOCHRSI_BB'],
@@ -725,6 +800,9 @@ def run_one(candles, ind, name, fn, tp=TP_USD, sl=SL_USD):
         curr_sl = sl
         if name in ('S13_STRUC_BREAK','S14_KEY_LEVELS'):
             curr_tp = round(av * 2.0, 2)
+            curr_sl = round(av * 1.0, 2)
+        elif name == 'S09_MFKK_SCALPING':
+            curr_tp = round(av * 1.5, 2)
             curr_sl = round(av * 1.0, 2)
 
         sig=fn(ind,i,hour)
@@ -811,8 +889,13 @@ def run_adaptive(candles, ind):
             if s: sig=s; used=name; break
         if not sig: continue
         entry=c['c']
-        tp_p=entry+TP_USD if sig=='buy' else entry-TP_USD
-        sl_p=entry-SL_USD if sig=='buy' else entry+SL_USD
+        # Strategia con ATR-based TP/SL
+        if used=='S09_MFKK_SCALPING' and av:
+            tp_d=round(av*1.5,2); sl_d=round(av*1.0,2)
+        else:
+            tp_d=TP_USD; sl_d=SL_USD
+        tp_p=entry+tp_d if sig=='buy' else entry-tp_d
+        sl_p=entry-sl_d if sig=='buy' else entry+sl_d
         outcome='open'; win=False
         for j in range(i+1,min(i+25,n)):
             jh=candles[j]['h']; jl=candles[j]['l']
@@ -823,7 +906,7 @@ def run_adaptive(candles, ind):
                 if jl<=tp_p: win=True; outcome='win'; break
                 if jh>=sl_p: outcome='loss'; break
         if outcome=='open': continue
-        pnl=TP_USD if win else -SL_USD
+        pnl=tp_d if win else -sl_d
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
                         'outcome':outcome,'pnl':pnl,'strategy':used,'regime':r})
         day_n[day]+=1; day_h[day]=hour

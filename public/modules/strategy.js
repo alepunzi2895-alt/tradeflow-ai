@@ -1262,7 +1262,9 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
-      const isActive = activeList.includes(id);
+      const isPrimary   = activeList[0] === id;
+      const isSecondary = !isPrimary && activeList.includes(id);
+      const isActive    = isPrimary || isSecondary;
       const st = s.stats || {};
       const pnl1col   = (st.pnl_1m||0)>0  ?'var(--green)':'var(--red)';
       const pnl6col   = (st.pnl_6m||0)>0  ?'var(--green)':'var(--red)';
@@ -1284,10 +1286,11 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       return `
-      <div style="background:var(--bg2); border:1px solid ${isActive?rm.col+'50':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
-        ${isActive?`<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>`:''}
+      <div style="background:var(--bg2); border:1px solid ${isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
+        ${isPrimary  ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
+        ${isSecondary? `<div style="position:absolute;top:0;right:0;background:${rm.col}30;border:1px solid ${rm.col}50;color:${rm.col};font-size:7px;font-weight:700;padding:2px 6px;border-bottom-left-radius:6px">▸ BACKUP</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:${isActive?rm.col:'var(--fg)'}">${s.label}</span>
+          <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:7px;font-size:10px">
             <span style="color:var(--green)">PF <b>${s.pf}</b></span>
             <span style="color:var(--blue)">WR <b>${s.wr}</b></span>

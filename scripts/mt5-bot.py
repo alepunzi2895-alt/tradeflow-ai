@@ -601,6 +601,30 @@ def sync_to_vercel(acc, positions, trades, bot_status):
     except Exception as e:
         log.debug(f"Sync Vercel fallito (non critico): {e}")
 
+def fetch_pending_command():
+    """Controlla se la UI ha inviato un comando manuale da eseguire su MT5"""
+    if not SYNC_ENABLED or not VERCEL_URL: return None
+    try:
+        payload = json.dumps({
+            'action': 'mt5_command_get',
+            'secret': MT5_SECRET,
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            f"{VERCEL_URL}/api/db",
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            if r.status == 200:
+                data = json.loads(r.read().decode('utf-8'))
+                if data.get('ok') and data.get('command'):
+                    return data['command']
+    except Exception as e:
+        log.debug(f"fetch_pending_command fallito: {e}")
+    return None
+
+
 # ── LOOP PRINCIPALE ───────────────────────────────────────────────────────────
 def run():
     log.info("="*60)
@@ -622,6 +646,7 @@ def run():
     last_sync_time = -999  # forza sync immediato al primo ciclo
     last_ai_score  = 50.0  # default neutro
     last_score_ts  = 0     # timestamp ultimo fetch score
+    last_cmd_ts    = 0     # timestamp ultimo check comandi manuali
 
     # Inizializza RiskManager
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
@@ -640,6 +665,38 @@ def run():
                 log.warning("Candele non disponibili, riprovo...")
                 time.sleep(30)
                 continue
+
+            # ── Controlla comandi manuali dalla UI (ogni 5s) ──────────────────
+            now_ts = time.time()
+            if now_ts - last_cmd_ts >= 5:
+                last_cmd_ts = now_ts
+                manual_cmd = fetch_pending_command()
+                if manual_cmd:
+                    direction = manual_cmd.get('direction')
+                    strategy  = manual_cmd.get('strategy', 'S00_MFKK')
+                    age_s = (datetime.datetime.now(datetime.timezone.utc) - 
+                             datetime.datetime.fromisoformat(manual_cmd.get('created_at', '2000-01-01T00:00:00')
+                             .replace('Z', '+00:00'))).total_seconds()
+                    if age_s > 60:
+                        log.warning(f"⚠ Comando manuale scaduto ({age_s:.0f}s fa) — ignorato")
+                    elif direction not in ('buy', 'sell'):
+                        log.warning(f"⚠ Comando manuale con direzione invalida: {direction} — ignorato")
+                    else:
+                        params = STRATEGY_PARAMS.get(strategy, STRATEGY_PARAMS['S00_MFKK'])
+                        tp_use = params['tp_usd'] if isinstance(params['tp_usd'], (int, float)) else 20.0
+                        sl_use = params['sl_usd'] if isinstance(params['sl_usd'], (int, float)) else 12.0
+                        log.info(f"🎯 COMANDO MANUALE UI: {direction.upper()} | {strategy} | TP=${tp_use} SL=${sl_use}")
+                        result = place_order(direction, tp_use, sl_use, strategy, lot_size=LOT_SIZE)
+                        if result:
+                            state.record_trade(0, now_utc)
+                            acc_data = get_account_info()
+                            sync_to_vercel(
+                                acc_data, get_open_positions_data(), get_recent_trades_data(20),
+                                {'running': True, 'dry_run': DRY_RUN, 'symbol': SYMBOL,
+                                 'lot': LOT_SIZE, 'trades_today': state.trades_today,
+                                 'pnl_today': state.pnl_today, 'last_signal': f'MANUAL_{strategy}'}
+                            )
+                            last_sync_time = now_ts
 
             # ── Sync periodico a Vercel (ogni 20s) + fetch AI score ────────
             now_ts = time.time()

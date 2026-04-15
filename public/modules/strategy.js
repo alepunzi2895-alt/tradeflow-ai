@@ -39,18 +39,27 @@ const SE = {
         pnl_24m: 4, td_24m: 0.11,
         maxdd: 0, maxdd_pct: '0.1%', trades_12m: 40, best_regime: 'TUTTI'
       } },
+    // EMA Cross 20/50 con filtro EMA200 — ⚠️ backtest in corso
+    'S06_EMA_CROSS': { label: 'EMA Cross 20/50', pf: '—', wr: '—', tp: '$20', sl: '$10',
+      stats: {
+        pnl_1m: null, td_1m: null,
+        pnl_6m: null, td_6m: null,
+        pnl_12m: null, td_12m: null,
+        pnl_24m: null, td_24m: null,
+        maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'TREND'
+      } },
   },
-  // ── REGIME PRIORITY — 2 strategie ufficiali post-backtest MT5 ──
+  // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    TREND_DOWN: ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_UP:   ['ALL_STRATEGIES', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_DOWN: ['ALL_STRATEGIES', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     WEAK_UP:    ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     WEAK_DOWN:  ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     RANGE:      ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     VOLATILE:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
   },
   // Regime intelligence: max segnali simultanei per regime
-  maxSignals: { TREND_UP: 2, TREND_DOWN: 2, WEAK_UP: 2, WEAK_DOWN: 2, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
+  maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 2, WEAK_DOWN: 2, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
 };
 
 let seTimer = null;
@@ -488,6 +497,37 @@ const SE_STRATEGY_FNS = {
     }
     return null;
   },
+
+  // S06_EMA_CROSS: EMA 20/50 Crossover con filtro EMA200
+  // BUY:  EMA20 crosses above EMA50  + prezzo > EMA200 (trend rialzista)
+  // SELL: EMA20 crosses below EMA50  + prezzo < EMA200 (trend ribassista)
+  // Qualità ALTA se stack completo 20>50>100>200 (o inverso)
+  S06_EMA_CROSS: (I, i) => {
+    if (i < 1) return null;
+    const e20  = I.e20[i],  e20p  = I.e20[i-1];
+    const e50  = I.e50[i],  e50p  = I.e50[i-1];
+    const e100 = I.e100[i];
+    const e200 = I.e200[i];
+    const C    = I.C[i];
+    if (e20==null||e50==null||e100==null||e200==null) return null;
+
+    const bullStack = e20>e50 && e50>e100 && e100>e200;  // tutte le EMA allineate al rialzo
+    const bearStack = e20<e50 && e50<e100 && e100<e200;  // tutte le EMA allineate al ribasso
+    const crossUp   = e20p <= e50p && e20 > e50;         // EMA20 supera EMA50
+    const crossDn   = e20p >= e50p && e20 < e50;         // EMA20 scende sotto EMA50
+
+    if (crossUp && C > e200) {
+      const q = bullStack ? 'high' : 'medium';
+      const stackNote = bullStack ? ' · Stack 20>50>100>200 ✓' : '';
+      return {dir:'buy',  why:`EMA Cross ↑ EMA20>${e50?.toFixed(0)} · Prezzo $${C?.toFixed(0)} > EMA200 $${e200?.toFixed(0)}${stackNote}`, quality:q};
+    }
+    if (crossDn && C < e200) {
+      const q = bearStack ? 'high' : 'medium';
+      const stackNote = bearStack ? ' · Stack 20<50<100<200 ✓' : '';
+      return {dir:'sell', why:`EMA Cross ↓ EMA20<${e50?.toFixed(0)} · Prezzo $${C?.toFixed(0)} < EMA200 $${e200?.toFixed(0)}${stackNote}`, quality:q};
+    }
+    return null;
+  },
 };
 
 
@@ -697,6 +737,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
+  // ── EMA ALIGNMENT (per S06_EMA_CROSS)
+  const _e20=I.e20[i], _e50=I.e50[i], _e100=I.e100[i], _e200=I.e200[i], _pr=I.C[i];
+  const emaBullStack = _e20>_e50 && _e50>_e100 && _e100>_e200;
+  const emaBearStack = _e20<_e50 && _e50<_e100 && _e100<_e200;
+  const emaAlignCol  = emaBullStack?'var(--green)':emaBearStack?'var(--red)':'var(--dim)';
+  // Prezzo vs ogni EMA
+  const prVs = (e) => _pr>e?'▲':'▼';
+
   // ── INDICATORI SNAPSHOT
   const indSnap=`
 <div style="margin-bottom:8px">
@@ -708,12 +756,26 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
     </div>`).join('')}
   </div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:3px">
     ${[['MACD',snap.macd],['EMA50',snap.e50],['EMA200',snap.e200],['VWAP',snap.vwap]].map(([k,v])=>`
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:4px 2px;text-align:center">
       <div style="font-size:7px;color:var(--dim)">${k}</div>
       <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
     </div>`).join('')}
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:8px;color:var(--dim);letter-spacing:.05em">EMA STACK 20/50/100/200</span>
+      <span style="font-size:9px;font-weight:800;color:${emaAlignCol}">${emaBullStack?'▲ RIALZISTA':emaBearStack?'▼ RIBASSISTA':'↔ MISTO'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px">
+      ${[['EMA 20','#ff4757',snap.e20,_e20],['EMA 50','#ff7f50',snap.e50,_e50],['EMA 100','#00bcd4',snap.e100,_e100],['EMA 200','#2196f3',snap.e200,_e200]].map(([k,col,v,raw])=>`
+      <div style="border-radius:4px;padding:4px 2px;text-align:center;border:1px solid ${col}40;background:${col}08">
+        <div style="font-size:7px;color:${col};font-weight:700">${k}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--fg)">${v??'—'}</div>
+        <div style="font-size:8px;color:${_pr>raw?'var(--green)':'var(--red)'}">${raw?prVs(raw):''}</div>
+      </div>`).join('')}
+    </div>
   </div>
 </div>`;
 

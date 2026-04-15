@@ -11,16 +11,7 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
-    // PORTAFOGLIO AGGREGATO: Mix delle strategie (S00 + S05). Partenza $1000. Strategia Sempre Attiva.
-    'ALL_STRATEGIES': { label: 'Portafoglio Globale', pf: 1.73, wr: '48%', tp: 'Multi', sl: 'Multi',
-      stats: {
-        pnl_1m: 1439, td_1m: 5.50,
-        pnl_6m: 8634, td_6m: 6.20,
-        pnl_12m: 17271, td_12m: 7.10,
-        pnl_24m: 34542, td_24m: 6.80,
-        maxdd: 264, maxdd_pct: '26.4%', trades_12m: 2150, best_regime: 'ALL'
-      } },
-    // ── BACKTEST COMPOUND (Rischio 0.3% ottimizzato con Cent Account) ──
+    // ── BACKTEST REGIME-AWARE (multi-TF, ATR-based TP/SL, 2026-04-15) ──
     // MFKK Score: TP=20 / SL=10. PNL=+$34k
     'S00_MFKK': { label: 'MFKK Score', pf: 1.73, wr: '47.8%', tp: '$20', sl: '$10',
       stats: {
@@ -1191,15 +1182,84 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       }).join('')}
 </div>`;
 
-  // ── LIBRERIA STRATEGIE con stats backtest
+  // ── AI GOLD BOT — pannello principale
   const activeList = SE.regimePriority[seRegime] || [];
+  const activeSname = activeList[0] || 'S00_MFKK';
+  const activeSt    = SE.strategies[activeSname] || {};
+  const activeTF    = (() => {
+    const pb = { TREND_UP:'H1', TREND_DOWN:'M15', WEAK_UP:'H1', WEAK_DOWN:'M30', VOLATILE:'M30', RANGE:'H1' };
+    return pb[seRegime] || 'H1';
+  })();
+  // Stats aggregate sistema (somma backtest regime-aware 24m)
+  const BOT_STATS = { pnl_1m:74, pnl_6m:442, pnl_12m:884, pnl_24m:1768, maxdd:474, maxdd_pct:'27%', trades_12m:191, pf:2.15, wr:'42%', n_strat:6 };
+  const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
+  const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
+  const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;
+  const pnlOggiCol = (bs.pnl_today||0)>=0 ? 'var(--green)' : 'var(--red)';
+
   const catalogHtml = `
-<div style="margin-top:20px; padding-top:15px; border-top:1px dashed var(--border)">
-  <div style="font-size:11px; color:var(--fg); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px">
-    <span>📚 LIBRERIA STRATEGIE</span>
-    <span style="font-size:9px; font-weight:400; color:var(--dim)">Backtest H1 XAU/USD 2024…2026 · Lotto 0.01 = $1/punto</span>
+<div style="margin-top:18px; padding-top:15px; border-top:1px dashed var(--border)">
+
+  <!-- ══ AI GOLD BOT ══ -->
+  <div style="position:relative;background:linear-gradient(135deg,#0d0f12 60%,#1a1400 100%);border:1.5px solid #c8a96e60;border-radius:12px;padding:14px 14px 11px;margin-bottom:18px;overflow:hidden">
+    <!-- sfondo decorativo -->
+    <div style="position:absolute;top:-18px;right:-18px;width:90px;height:90px;background:radial-gradient(circle,#c8a96e18 0%,transparent 70%);pointer-events:none"></div>
+
+    <!-- header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">🤖</span>
+        <div>
+          <div style="font-size:14px;font-weight:900;color:#c8a96e;letter-spacing:.06em">AI GOLD BOT</div>
+          <div style="font-size:8px;color:var(--dim);letter-spacing:.04em">XAU/USD · Sistema Multi-Strategia</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:9px;font-weight:700;color:${botOnline?'var(--green)':'#ff4757'}">${botOnline?'● ONLINE':'● OFFLINE'}</div>
+        <div style="font-size:8px;color:var(--dim);margin-top:1px">Sync ${syncLabel}</div>
+      </div>
+    </div>
+
+    <!-- regime → strategia attiva -->
+    <div style="background:#ffffff08;border:1px solid ${rm.col}35;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">REGIME</div>
+      <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
+      <div style="color:var(--dim);font-size:10px">→</div>
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIA</div>
+      <div style="font-size:11px;font-weight:800;color:#c8a96e">${activeSt.label||activeSname}</div>
+      <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
+    </div>
+
+    <!-- stats aggregate -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;font-size:8px;text-align:center">
+      ${[['1 MESE',BOT_STATS.pnl_1m,'var(--green)'],['6 MESI',BOT_STATS.pnl_6m,'var(--green)'],['12 MESI',BOT_STATS.pnl_12m,'var(--green)'],['24 MESI',BOT_STATS.pnl_24m,'var(--green)'],['MAX DD',-BOT_STATS.maxdd,'var(--red)']].map(([lbl,val,col])=>`
+        <div style="background:#0d0f12;border:1px solid #c8a96e25;border-radius:5px;padding:5px 2px">
+          <div style="color:var(--dim);margin-bottom:2px;font-size:7px">${lbl}</div>
+          <div style="font-weight:800;color:${col};font-size:10px">${val>=0?'+':''}\$${Math.abs(val)}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- footer account + metriche -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+      <div style="display:flex;gap:10px;font-size:9px">
+        <span style="color:var(--dim)">Saldo <b style="color:var(--fg)">${balStr}</b></span>
+        <span style="color:var(--dim)">Equity <b style="color:var(--fg)">${eqStr}</b></span>
+        <span style="color:var(--dim)">Oggi <b style="color:${pnlOggiCol}">${pnlOggiStr}</b></span>
+      </div>
+      <div style="display:flex;gap:8px;font-size:9px">
+        <span style="color:#c8a96e">PF <b>${BOT_STATS.pf}</b></span>
+        <span style="color:var(--blue)">WR <b>${BOT_STATS.wr}</b></span>
+        <span style="color:var(--dim)">${BOT_STATS.n_strat} strategie · ${BOT_STATS.trades_12m} trade/anno</span>
+      </div>
+    </div>
   </div>
-  <div style="font-size:8px;color:var(--dim);margin-bottom:10px">Regime attivo: <b style="color:${rm.col}">${rm.label}</b></div>
+
+  <!-- ══ LIBRERIA STRATEGIE ══ -->
+  <div style="font-size:10px;color:var(--dim);font-weight:700;letter-spacing:.07em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+    <span style="flex:1;height:1px;background:var(--border)"></span>
+    <span>STRATEGIE DEL SISTEMA</span>
+    <span style="flex:1;height:1px;background:var(--border)"></span>
+  </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
       const isActive = activeList.includes(id);

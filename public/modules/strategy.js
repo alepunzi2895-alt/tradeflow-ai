@@ -1363,18 +1363,29 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:7px;font-size:10px">
-            <span style="color:var(--green)">PF <b>${s.pf}</b></span>
-            <span style="color:var(--blue)">WR <b>${s.wr}</b></span>
+            ${s.pf!=null ? `<span style="color:var(--green)">PF <b>${s.pf}</b></span>` : ''}
+            ${s.wr!=='N/A' ? `<span style="color:var(--blue)">WR <b>${s.wr}</b></span>` : ''}
           </div>
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
+        ${st.pnl_24m==null ? `
+        <div style="background:#1a1600;border:1px solid #c8a96e40;border-radius:5px;padding:6px 8px;margin-bottom:4px">
+          <div style="font-size:8px;color:#c8a96e;font-weight:700;margin-bottom:2px">⏳ BACKTEST PENDENTE</div>
+          <div style="font-size:7px;color:var(--dim);line-height:1.5">
+            Esegui per ottenere statistiche reali:<br>
+            <code style="color:#c8a96e;background:#0d0f12;padding:1px 4px;border-radius:3px">python scripts/backtest_ob_fvg_scalp.py --mt5</code><br>
+            Poi ottimizza parametri:<br>
+            <code style="color:#c8a96e;background:#0d0f12;padding:1px 4px;border-radius:3px">python scripts/param_optimizer.py --mt5</code>
+          </div>
+        </div>
+        ` : `
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:8px;text-align:center;margin-bottom:3px">
           ${[['1 MESE','pnl_1m','td_1m',pnl1col],['6 MESI','pnl_6m','td_6m',pnl6col],['12 MESI','pnl_12m','td_12m',pnl12col],['24 MESI','pnl_24m','td_24m',pnl24col],['MAX DD','maxdd','maxdd_pct','var(--red)']].map(([label,pkey,tdkey,col])=>{
             const v = st[pkey];
             const displayV = pkey==='maxdd'
               ? (v!=null ? '-$'+v : '-$—')
               : (v!=null ? (v>=0?'+':'')+`$${v}` : '+$—');
-            const tdVal = tdkey && st[tdkey]!=null 
+            const tdVal = tdkey && st[tdkey]!=null
               ? (tdkey==='maxdd_pct' ? `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} Max DD</div>` : `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} td/gg</div>`)
               : '';
             return `<div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
@@ -1384,6 +1395,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
             </div>`;
           }).join('')}
         </div>
+        `}
         <div style="margin-top:4px;font-size:8px;color:var(--dim);display:flex;gap:8px">
           <span>~${st.trades_12m||'?'} trade/anno</span>
           <span>Target: TP ${s.tp} · SL ${s.sl}</span>

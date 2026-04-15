@@ -48,18 +48,27 @@ const SE = {
         pnl_24m: null, td_24m: null,
         maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'TREND'
       } },
+    // Order Block Finder (© wugamlo) — segnale su ritorno prezzo in zona OB — ⚠️ backtest in corso
+    'S07_OB_FINDER': { label: 'Order Block', pf: '—', wr: '—', tp: '$20', sl: '$10',
+      stats: {
+        pnl_1m: null, td_1m: null,
+        pnl_6m: null, td_6m: null,
+        pnl_12m: null, td_12m: null,
+        pnl_24m: null, td_24m: null,
+        maxdd: null, maxdd_pct: '—', trades_12m: null, best_regime: 'ALL'
+      } },
   },
   // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['ALL_STRATEGIES', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    TREND_DOWN: ['ALL_STRATEGIES', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_UP:    ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    WEAK_DOWN:  ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    RANGE:      ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_UP:   ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    TREND_DOWN: ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S06_EMA_CROSS', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_UP:    ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    WEAK_DOWN:  ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    RANGE:      ['ALL_STRATEGIES', 'S07_OB_FINDER', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
     VOLATILE:   ['ALL_STRATEGIES', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
   },
   // Regime intelligence: max segnali simultanei per regime
-  maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 2, WEAK_DOWN: 2, RANGE: 2, VOLATILE: 1, UNKNOWN: 1 },
+  maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },
 };
 
 let seTimer = null;
@@ -346,6 +355,64 @@ function _calcICTOrderFlow(O, H, L, C) {
   return { signals, activeFvgs };
 }
 
+/**
+ * Order Block Finder — traduzione Pine Script (© wugamlo, MPL 2.0)
+ * Bullish OB: ultima candela ROSSA prima di `periods` candele verdi consecutive + move% >= threshold
+ *   → zona: Open[OB] (high) … Low[OB] (low)
+ * Bearish OB: ultima candela VERDE prima di `periods` candele rosse consecutive + move% >= threshold
+ *   → zona: High[OB] (high) … Open[OB] (low)
+ *
+ * Il segnale di TRADING si attiva quando il PREZZO CORRENTE RITORNA nella zona OB attiva.
+ * Gli OB già "mitigati" (prezzo passato oltre il limite estremo) vengono scartati.
+ */
+function _calcOrderBlocks(O, H, L, C, periods=5, threshold=0.0) {
+  const n = C.length;
+  const ob_period = periods + 1; // offset OB candle rispetto all'ultimo candle del run
+  const bullOBs = [], bearOBs = [];
+
+  // Scansione: per ogni posizione i, il potenziale OB è a obIdx = i - ob_period
+  // Le candele "consecutive" sono da i-periods a i-1
+  for (let i = ob_period; i < n; i++) {
+    const obIdx  = i - ob_period;
+    const prevIdx = i - 1;
+    if (obIdx < 0) continue;
+
+    // % move dal close dell'OB al close della candela più recente del run (= close[1] in Pine)
+    const absmove = C[obIdx] !== 0 ? Math.abs((C[obIdx] - C[prevIdx]) / C[obIdx]) * 100 : 0;
+    if (absmove < threshold) continue;
+
+    // Conta candele consecutive dopo l'OB
+    let upCnt = 0, dnCnt = 0;
+    for (let j = i - periods; j <= prevIdx; j++) {
+      if (C[j] > O[j]) upCnt++;
+      if (C[j] < O[j]) dnCnt++;
+    }
+
+    // Bullish OB: candela rossa + tutte le successive verdi
+    if (C[obIdx] < O[obIdx] && upCnt === periods) {
+      bullOBs.push({ bar: obIdx, high: O[obIdx], low: L[obIdx], avg: (O[obIdx]+L[obIdx])/2 });
+    }
+    // Bearish OB: candela verde + tutte le successive rosse
+    if (C[obIdx] > O[obIdx] && dnCnt === periods) {
+      bearOBs.push({ bar: obIdx, high: H[obIdx], low: O[obIdx], avg: (H[obIdx]+O[obIdx])/2 });
+    }
+  }
+
+  // Filtra OB già "mitigati" — il prezzo ha già violato il limite estremo
+  const activeBull = bullOBs.filter(ob => {
+    for (let j = ob.bar + 1; j < n; j++) if (L[j] < ob.low) return false;
+    return true;
+  });
+  const activeBear = bearOBs.filter(ob => {
+    for (let j = ob.bar + 1; j < n; j++) if (H[j] > ob.high) return false;
+    return true;
+  });
+
+  const latestBull = activeBull.length ? activeBull[activeBull.length-1] : null;
+  const latestBear = activeBear.length ? activeBear[activeBear.length-1] : null;
+  return { bullOBs: activeBull, bearOBs: activeBear, latestBull, latestBear };
+}
+
 // ── STRATEGY LOGIC ───────────────────────────────────────────────────────────
 // Solo MFKK Score e MFKK HighWR attive.
 // Nuove strategie da indicatori TradingView verranno aggiunte qui come S01_*, S02_*, ecc.
@@ -498,6 +565,43 @@ const SE_STRATEGY_FNS = {
     return null;
   },
 
+  // S07_OB_FINDER: Order Block Finder — segnale quando il prezzo RITORNA nella zona OB attiva
+  // Bullish OB: ultima candela rossa prima di N verdi consecutive → BUY su ritorno in zona
+  // Bearish OB: ultima candela verde prima di N rosse consecutive → SELL su ritorno in zona
+  S07_OB_FINDER: (I, i) => {
+    const ob = I.ob;
+    if (!ob) return null;
+    const price = I.C[i];
+
+    // Controlla se il prezzo è dentro la zona del Bearish OB attivo più recente → SELL
+    if (ob.latestBear) {
+      const b = ob.latestBear;
+      if (price <= b.high && price >= b.low) {
+        const dist = ((b.avg - price) / price * 100).toFixed(2);
+        return {
+          dir: 'sell',
+          why: `Order Block ↓ Bearish OB · Prezzo $${price.toFixed(0)} in zona $${b.low.toFixed(0)}–$${b.high.toFixed(0)} · Avg $${b.avg.toFixed(0)}`,
+          quality: 'high',
+        };
+      }
+    }
+
+    // Controlla se il prezzo è dentro la zona del Bullish OB attivo più recente → BUY
+    if (ob.latestBull) {
+      const b = ob.latestBull;
+      if (price <= b.high && price >= b.low) {
+        const dist = ((price - b.avg) / price * 100).toFixed(2);
+        return {
+          dir: 'buy',
+          why: `Order Block ↑ Bullish OB · Prezzo $${price.toFixed(0)} in zona $${b.low.toFixed(0)}–$${b.high.toFixed(0)} · Avg $${b.avg.toFixed(0)}`,
+          quality: 'high',
+        };
+      }
+    }
+
+    return null;
+  },
+
   // S06_EMA_CROSS: EMA 20/50 Crossover con filtro EMA200
   // BUY:  EMA20 crosses above EMA50  + prezzo > EMA200 (trend rialzista)
   // SELL: EMA20 crosses below EMA50  + prezzo < EMA200 (trend ribassista)
@@ -582,8 +686,9 @@ async function seRefresh() {
   // OBV MACD T-Channel
   const _obvm = _calcOBVMACD(C, H, L, V);
   const _ursi = _calcUltimateRSI(C, 14, 14);
-  const _ict = _calcICTOrderFlow(O, H, L, C);
+  const _ict  = _calcICTOrderFlow(O, H, L, C);
   const _adxd = _adxSma(H, L, C, 14);
+  const _ob   = _calcOrderBlocks(O, H, L, C, 5, 0.0);
 
   seInds = {
     n, C, H, L, V,
@@ -615,6 +720,7 @@ async function seRefresh() {
     adx: _adxd.adx,
     dip: _adxd.dip,
     dim: _adxd.dim,
+    ob:  _ob,
   };
 
   const I=seInds, i=I.n-1;
@@ -779,6 +885,37 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
+  // ── ORDER BLOCKS PANEL
+  const _ob = seInds?.ob || null;
+  const _price = parseFloat(snap.price);
+  let obPanelHtml = '';
+  if (_ob && (_ob.latestBull || _ob.latestBear)) {
+    const bull = _ob.latestBull;
+    const bear = _ob.latestBear;
+    const inBull = bull && _price >= bull.low && _price <= bull.high;
+    const inBear = bear && _price >= bear.low && _price <= bear.high;
+    obPanelHtml = `
+<div style="margin-bottom:8px">
+  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:4px">ORDER BLOCKS ATTIVI</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+    ${bull ? `<div style="background:${inBull?'#00e67618':'#00e67608'};border:1px solid ${inBull?'#00e676':'#00e67630'};border-radius:6px;padding:6px 8px">
+      <div style="font-size:8px;color:var(--green);font-weight:700;margin-bottom:3px">▲ BULLISH OB${inBull?' 🎯 IN ZONA':''}</div>
+      <div style="font-size:9px;color:var(--fg)">H: <b>$${bull.high.toFixed(1)}</b></div>
+      <div style="font-size:9px;color:var(--dim)">Avg: $${bull.avg.toFixed(1)}</div>
+      <div style="font-size:9px;color:var(--fg)">L: <b>$${bull.low.toFixed(1)}</b></div>
+      <div style="font-size:8px;color:var(--dim);margin-top:2px">Dist: ${bull.low > _price ? '+' : ''}${((_price - bull.avg)/_price*100).toFixed(2)}%</div>
+    </div>` : `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:8px;color:var(--dim);text-align:center">Nessun Bull OB attivo</div>`}
+    ${bear ? `<div style="background:${inBear?'#ff475718':'#ff475708'};border:1px solid ${inBear?'#ff4757':'#ff475730'};border-radius:6px;padding:6px 8px">
+      <div style="font-size:8px;color:var(--red);font-weight:700;margin-bottom:3px">▼ BEARISH OB${inBear?' 🎯 IN ZONA':''}</div>
+      <div style="font-size:9px;color:var(--fg)">H: <b>$${bear.high.toFixed(1)}</b></div>
+      <div style="font-size:9px;color:var(--dim)">Avg: $${bear.avg.toFixed(1)}</div>
+      <div style="font-size:9px;color:var(--fg)">L: <b>$${bear.low.toFixed(1)}</b></div>
+      <div style="font-size:8px;color:var(--dim);margin-top:2px">Dist: ${bear.high < _price ? '-' : ''}${((_price - bear.avg)/_price*100).toFixed(2)}%</div>
+    </div>` : `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:8px;color:var(--dim);text-align:center">Nessun Bear OB attivo</div>`}
+  </div>
+</div>`;
+  }
+
   // ── SEGNALI ATTIVI
   let pendingHtml='';
   if(pending.length>0&&!isExtreme){
@@ -930,7 +1067,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
-  el.innerHTML=statusHtml+regimeHtml+indSnap+pendingHtml+posHtml+histHtml+catalogHtml;
+  el.innerHTML=statusHtml+regimeHtml+indSnap+obPanelHtml+pendingHtml+posHtml+histHtml+catalogHtml;
 }
 
 async function seSendTradeToMt5(s) {

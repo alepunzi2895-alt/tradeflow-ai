@@ -196,7 +196,27 @@ async function mt5Get(db) {
   const result = await db.execute({ sql: "SELECT payload, updated_at FROM user_data WHERE user_id='mt5-bot' AND doc_type='mt5_live'", args: [] });
   if (!result.rows.length) return { ok: true, data: null };
   const row = result.rows[0];
-  return { ok: true, data: JSON.parse(row.payload), updated_at: row.updated_at };
+  const data = JSON.parse(row.payload);
+  // Leggi AI score salvato dal browser
+  const scoreRow = await db.execute({ sql: "SELECT payload FROM user_data WHERE user_id='browser' AND doc_type='ai_score'", args: [] });
+  if (scoreRow.rows.length) {
+    const s = JSON.parse(scoreRow.rows[0].payload);
+    data.ai_score = s.score;
+  }
+  return { ok: true, data, updated_at: row.updated_at };
+}
+
+async function scorePush(db, body) {
+  const { score } = body;
+  if (typeof score !== 'number') throw new Error("score must be a number");
+  const payload = JSON.stringify({ score, updated_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('ai-score', 'browser', 'ai_score', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true };
 }
 
 async function mt5CommandPush(db, body) {
@@ -249,8 +269,9 @@ async function adminReset(db, body) {
 
 const ACTIONS = {
   upsert_user: upsertUser, save_trade: saveTrade, get_trades: getTrades, register, login, save_user_data: saveUserData, get_user_data: getUserData, kb_load: kbLoad, kb_save: kbSave, mfx_proxy: mfxProxy, patch_db: patchDb, admin_reset: adminReset,
-  mt5_push: (db, body) => mt5Push(db, body),
-  mt5_get:  (db)      => mt5Get(db),
+  mt5_push:   (db, body) => mt5Push(db, body),
+  mt5_get:    (db)      => mt5Get(db),
+  score_push: (db, body) => scorePush(db, body),
   mt5_command_push: (db, body) => mt5CommandPush(db, body),
   mt5_command_get:  (db, body) => mt5CommandGet(db, body),
 };

@@ -88,6 +88,7 @@ const SE = {
 let seTimer = null;
 let seInds = null;
 let seRegime = 'UNKNOWN';
+let _lastScorePush = 0;
 
 // ── INDICATOR HELPERS ─────────────────────────────────────────────────────────
 function _ema(src, p) {
@@ -913,6 +914,17 @@ async function seRefresh() {
   const mt5Data = await seFetchMt5Data();
   window._seLastMt5Data = mt5Data; // cache per seSendTradeToMt5
   seRender(mt5Data, pending, snap, isExtreme, inSession, hour);
+
+  // Push AI score al DB ogni 60s così il bot Python può leggerlo
+  const nowTs = Date.now();
+  if (nowTs - _lastScorePush > 60000) {
+    const score = dashContext?.confidence?.score;
+    if (typeof score === 'number') {
+      _lastScorePush = nowTs;
+      fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'score_push', score }) }).catch(()=>{});
+    }
+  }
 }
 
 async function seFetchMt5Data() {

@@ -30,7 +30,7 @@ MT5_SERVER   = "XMGlobal-MT5 6"
 SYMBOL       = "GOLD"
 LOT_SIZE     = 0.02          # lot size iniziale (0.02 = sicuro su €1000)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
-MAX_TRADES   = 3             # max operazioni per giorno
+MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 1             # ore di cooldown tra trade
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
@@ -455,7 +455,7 @@ class DailyState:
 
     def can_trade(self, now_utc):
         self.reset_if_new_day()
-        if self.trades_today >= MAX_TRADES:
+        if MAX_TRADES > 0 and self.trades_today >= MAX_TRADES:
             return False, f"Raggiunto max trade/giorno ({MAX_TRADES})"
         hour_utc = now_utc.hour
         if hour_utc < SESSION_UTC[0] or hour_utc >= SESSION_UTC[1]:
@@ -760,7 +760,7 @@ def fetch_pending_command():
 def run():
     log.info("="*60)
     log.info("TradeFlow AI — MT5 Bot avviato")
-    log.info(f"Symbol: {SYMBOL} | Lot: {LOT_SIZE} | Max trade/gg: {MAX_TRADES}")
+    log.info(f"Symbol: {SYMBOL} | Lot: {LOT_SIZE} | Max trade/gg: {'illimitato' if MAX_TRADES==0 else MAX_TRADES}")
     log.info(f"Dry-run: {DRY_RUN}")
     log.info("="*60)
 

@@ -737,8 +737,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
-  // ── EMA ALIGNMENT (per S06_EMA_CROSS)
-  const _e20=I.e20[i], _e50=I.e50[i], _e100=I.e100[i], _e200=I.e200[i], _pr=I.C[i];
+  // ── EMA ALIGNMENT (per S06_EMA_CROSS) — usa snap (già passato a seRender)
+  const _e20=parseFloat(snap.e20), _e50=parseFloat(snap.e50), _e100=parseFloat(snap.e100), _e200=parseFloat(snap.e200), _pr=parseFloat(snap.price);
   const emaBullStack = _e20>_e50 && _e50>_e100 && _e100>_e200;
   const emaBearStack = _e20<_e50 && _e50<_e100 && _e100<_e200;
   const emaAlignCol  = emaBullStack?'var(--green)':emaBearStack?'var(--red)':'var(--dim)';

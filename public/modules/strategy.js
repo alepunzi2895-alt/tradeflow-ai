@@ -608,9 +608,16 @@ async function seRefresh() {
       if(sig){
         const cfg=SE.strategies[name];
         const atr_val = I.atr[i] || 10;
-        const tp = cfg.tp === 'ATR' ? Math.round(atr_val * 2.0) : cfg.tp;
-        const sl = cfg.sl === 'ATR' ? Math.round(atr_val * 1.0) : cfg.sl;
-        pending.push({name, label:cfg.label, dir:sig.dir, why:sig.why, tp, sl, pf:cfg.pf, wr:cfg.wr, quality:sig.quality||'medium', score:sig.score||null});
+        // Risolvi ATR variants e strip simboli ($) → numero sempre numerico
+        const _resolveATR = (v) =>
+          v==='ATR×1.5' ? Math.round(atr_val*1.5) :
+          v==='ATR×1'   ? Math.round(atr_val*1.0) :
+          v==='ATR'     ? Math.round(atr_val*2.0) :
+          typeof v==='string' ? (parseFloat(v.replace(/[^0-9.]/g,''))||20) : v;
+        const tp = _resolveATR(cfg.tp);
+        const sl = _resolveATR(cfg.sl);
+        const isCounterTrend=(seRegime==='TREND_UP'&&sig.dir==='sell')||(seRegime==='TREND_DOWN'&&sig.dir==='buy');
+        pending.push({name, label:cfg.label, dir:sig.dir, why:sig.why, tp, sl, pf:cfg.pf, wr:cfg.wr, quality:sig.quality||'medium', score:sig.score||null, counterTrend:isCounterTrend});
       }
     }
   }
@@ -729,7 +736,10 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         const btnDisabled=botOnline?'':'disabled';
         return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:8px;padding:9px 11px;margin-bottom:6px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <span style="color:${dc};font-weight:800;font-size:13px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="color:${dc};font-weight:800;font-size:13px">${s.dir==='buy'?'▲ BUY':'▼ SELL'}</span>
+              ${s.counterTrend?`<span style="font-size:8px;background:#b36cff18;border:1px solid #b36cff50;border-radius:3px;padding:1px 5px;color:#b36cff">⚡ CONTRO-TREND</span>`:''}
+            </div>
             <div style="display:flex;gap:5px;align-items:center">
               <span style="font-size:9px;background:${qc}18;border:1px solid ${qc}40;border-radius:3px;padding:1px 5px;color:${qc}">${ql}</span>
               <span style="color:var(--dim);font-size:9px">${s.label} · WR ${s.wr}</span>
@@ -893,8 +903,8 @@ async function seSendTradeToMt5(s) {
         command: {
           direction: s.dir,
           strategy: s.name,
-          tp: parseFloat(s.tp),
-          sl: parseFloat(s.sl),
+          tp: typeof s.tp === 'number' ? s.tp : parseFloat(String(s.tp).replace(/[^0-9.]/g,'')),
+          sl: typeof s.sl === 'number' ? s.sl : parseFloat(String(s.sl).replace(/[^0-9.]/g,'')),
           symbol: mt5Live?.bot_status?.symbol || 'GOLD'
         }
       })

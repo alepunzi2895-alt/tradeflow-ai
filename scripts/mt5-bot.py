@@ -553,6 +553,11 @@ def get_recent_trades_data(n=30):
         if deals is not None and len(deals) > 0:
             result = []
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
+                # Escludi tutto ciò che non è un trade reale BUY/SELL:
+                # type 0=BUY, 1=SELL, 2=BALANCE (deposito/prelievo), 3=CREDIT, 4=CHARGE, 5=CORRECTION, ecc.
+                if d.type not in (0, 1):
+                    log.debug(f"  Skip deal type={d.type} (non trade: deposito/prelievo/credito)")
+                    continue
                 if d.entry != 1: continue   # solo deal di chiusura (exit)
                 result.append({
                     'ticket':    d.ticket,

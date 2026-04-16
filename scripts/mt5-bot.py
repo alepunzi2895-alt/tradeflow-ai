@@ -54,15 +54,8 @@ LOG_FILE     = "mt5-bot.log"
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
 STRATEGY_PARAMS = {
-    'S10_OB_FVG_SCALP':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp', 'tp_mult': 1.0, 'sl_mult': 0.6},
-    'S15_OBV_MACD':       {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OBV Momentum', 'tp_mult': 1.5, 'sl_mult': 1.0},
-    'S16_GOLDEN_SQUEEZE': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Elite Golden Squeeze', 'tp_mult': 2.0, 'sl_mult': 1.5},
-    'S05_MFKK_INTRADAY':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.0, 'sl_mult': 1.0},
-    'S04_BB_SQUEEZE':     {'tp_usd': 15.0,  'sl_usd': 10.0,  'label': 'BB Squeeze'},
-    'S07_STOCHRSI_BB':    {'tp_usd': 12.0,  'sl_usd': 15.0,  'label': 'Mean Reversion'},
-    'S11_ALLIGATOR_AWAKEN': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Alligator Awaken'},
-    'S10_ST_MACD_SESSION': {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'Session Momentum'},
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
+    'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -477,20 +470,20 @@ def signal_mfkk_intraday(I, i):
     if is_sell: return 'sell'
     return None
 
-def signal_golden_squeeze(I_m15, idx_m15, h1_trend=0):
+def signal_golden_squeeze(I, i, h1_trend=0):
     """
     S16: ELITE CONFLUENCE
     Requires H1 Supertrend (h1_trend) and M15 OBV Momentum.
     """
     if h1_trend == 0: return None
     
-    obv_val = I_m15.get('obv', [0]*len(I_m15['C']))[idx_m15]
+    obv_val = I.get('obv', [0]*len(I['C']))[i]
     # We use OBV cross EMA 20 as trigger
-    if 'obv_ema' not in I_m15: return None
-    obv_ema = I_m15['obv_ema'][idx_m15]
+    if 'obv_ema' not in I: return None
+    obv_ema = I['obv_ema'][i]
     
-    curr_c = I_m15['C'][idx_m15]
-    prev_c = I_m15['C'][idx_m15-1]
+    curr_c = I['C'][i]
+    prev_c = I['C'][i-1]
     
     # Logic: H1 Trend Alignment + M15 Momentum + Price Action Trigger
     if h1_trend == -1: # BULLISH H1
@@ -499,26 +492,6 @@ def signal_golden_squeeze(I_m15, idx_m15, h1_trend=0):
     elif h1_trend == 1: # BEARISH H1
         if obv_val < obv_ema and curr_c < prev_c:
             return 'sell'
-    return None
-
-def signal_sell_exhaust(I, i):
-    """S05_V3_Sell_Exhaust — OBV T-Channel bear + RSI > 60 + ADX >= 25 + MOM < 0 (TREND_UP)"""
-    if i < 1: return None
-    oc = I.get('obv_oc', [])
-    if not oc or i >= len(oc): return None
-    r = I['rsi'][i]; a = I['adx'][i]; m = I['mom'][i]
-    if None in (r, a, m): return None
-    if oc[i] == -1 and r > 60 and a >= 25 and m < 0: return 'sell'
-    return None
-
-def signal_exhaustion(I, i):
-    """S01_EXHAUSTION — ADX/DI divergenza + MACD vs signal (TREND_DOWN)"""
-    a = I['adx'][i]; dp = I['dip'][i]; dm = I['dim'][i]
-    ml = I['ml'][i]; ms = I['ms'][i]
-    if None in (a, dp, dm, ml, ms): return None
-    diff = ml - ms; spread = abs(dp - dm)
-    if a >= 25 and dm > dp and spread >= 15 and diff >= 0.7: return 'sell'
-    if a >= 25 and dp > dm and spread >= 15 and diff <= -0.7: return 'buy'
     return None
 
 def signal_mfkk_scalping(I, i):
@@ -540,105 +513,46 @@ def signal_mfkk_scalping(I, i):
         
     return None
 
-def signal_struc_break(I, i):
-    """S13_STRUC_BREAK — break e retest del massimo/minimo delle ultime 30 barre (RANGE)"""
-    if i < 60: return None
-    H = I['H']; L = I['L']; C = I['C']
-    hh = max(H[i-30:i]); ll = min(L[i-30:i]); c = C[i]
-    if c > hh and L[i] <= hh*1.002 and L[i] >= hh*0.998: return 'buy'
-    if c < ll and H[i] >= ll*0.998 and H[i] <= ll*1.002: return 'sell'
-    return None
-
 def signal_ob_fvg_scalp(I, i):
     """
-    S10_OB_FVG_SCALP — ICT Order Block + FVG Confluence Scalping (M15/M30)
-    Relaxed: Removed EMA filter for RANGE regime trades.
+    S10_OB_FVG_SCALP V2 — ICT Order Block + FVG + Trend Filter EMA 233
+    Timeframe ideale: M30
     """
+    if i < 233: return None
     ob_b = I.get('ob_bull'); ob_s = I.get('ob_bear')
-    fvg_b = I.get('fvg_bull'); fvg_s = I.get('fvg_bear')
-    if ob_b is None or fvg_b is None: return None
-    C = I['C']; O = I['O']
-    bull_c = C[i] > O[i]
-    bear_c = C[i] < O[i]
-    if ob_b[i] and fvg_b[i] and bull_c: return 'buy'
-    if ob_s[i] and fvg_s[i] and bear_c: return 'sell'
-    return None
-
-    if spread_p < 0.2 and spread > spread_p and a > 20: 
-        if l[i] > t[i] > j[i]: return 'buy'
-        if l[i] < t[i] < j[i]: return 'sell'
-    return None
-
-def signal_st_macd_session(I, i, hour):
-    """S10_ST_MACD_SESSION — Supertrend + MACD confirm in sessione attiva"""
-    if hour is None or not (7 <= hour <= 14): return None
-    st = I['st'][i]; mh = I['mh'][i]
-    c = I['C'][i]; e50 = I['e50'][i]
-    if None in (st, mh, e50): return None
-    # BUY: ST bullish + MACD hist pos + sopra EMA50
-    if st == -1 and mh > 0 and c > e50: return 'buy'
-    # SELL: ST bearish + MACD hist neg + sotto EMA50
-    if st == 1 and mh < 0 and c < e50: return 'sell'
-    return None
-
-def signal_obv_macd(I, i):
-    """S15_OBV_MACD — OBV T-Channel crossover (Momentum Volumi)"""
-    if i < 1: return None
-    oc = I.get('obv_oc', [])
-    if not oc: return None
-    if oc[i] == 1  and oc[i-1] != 1:  return 'buy'
-    if oc[i] == -1 and oc[i-1] != -1: return 'sell'
-    return None
-
-def signal_bb_squeeze(I, i):
-    """S04_BB_SQUEEZE — Breakout da compressione volatilità"""
-    if i < 1: return None
-    bu, bm, bd = I['bb_up'], I['bb_mid'], I['bb_dn']
-    ku, kl = I['ku'], I['kl']
-    c = I['C'][i]; c_prev = I['C'][i-1]
-    if None in (bu[i], bm[i], bd[i], ku[i], kl[i]): return None
-    # Squeeze: BB dentro Keltner
-    is_squeeze = (bu[i] < ku[i] and bd[i] > kl[i])
-    # Se usciamo dallo squeeze o il prezzo rompe con forza
-    if c > bu[i] and c_prev <= bu[i-1]: return 'buy'
-    if c < bd[i] and c_prev >= bd[i-1]: return 'sell'
-    return None
-
-def signal_stochrsi_bb(I, i):
-    """S07_STOCHRSI_BB — Mean reversion su bande estremer"""
-    sk, sd = I.get('srsi_k'), I.get('srsi_d')
-    bd, bu = I['bb_dn'], I['bb_up']
+    fb = I.get('fvg_bull'); fs = I.get('fvg_bear')
+    e233 = I['e233'][i]
     c = I['C'][i]
-    if sk is None or bd[i] is None: return None
-    if sk[i] < 20 and sd[i] < 20 and c <= bd[i] * 1.002: return 'buy'
-    if sk[i] > 80 and sd[i] > 80 and c >= bu[i] * 0.998: return 'sell'
+    
+    if ob_b is None or fb is None or e233 is None: return None
+
+    # Bullish: Prezzo in OB + FVG attivo + Sopra Trend istituzionale
+    if ob_b[i] and fb[i] and c > e233:
+        return 'buy'
+    
+    # Bearish: Prezzo in OB + FVG attivo + Sotto Trend istituzionale
+    if ob_s[i] and fs[i] and c < e233:
+        return 'sell'
+        
     return None
 
 SIGNAL_FNS = {
     'S00_MFKK':            signal_mfkk_score,
     'S05_MFKK_INTRADAY':   signal_mfkk_intraday,
-    'S05_V3_Sell_Exhaust': signal_sell_exhaust,
-    'S01_EXHAUSTION':      signal_exhaustion,
     'S09_MFKK_SCALPING':   signal_mfkk_scalping,
-    'S13_STRUC_BREAK':     signal_struc_break,
     'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
-    'S15_OBV_MACD':         signal_obv_macd,
     'S16_GOLDEN_SQUEEZE':   signal_golden_squeeze,
-    'S04_BB_SQUEEZE':       signal_bb_squeeze,
-    'S07_STOCHRSI_BB':      signal_stochrsi_bb,
-    'S11_ALLIGATOR_AWAKEN': signal_alligator_awakening,
-    'S10_ST_MACD_SESSION':  signal_st_macd_session,
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
 # Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M15',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S08_OBV_EMA_MOM','M15',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M15',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S01_EXHAUSTION','M15',None)],
-    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M5',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M5',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'VOLATILE':   [('S06_ORDERBLOCK','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S07_STOCHRSI_BB','M15',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S07_STOCHRSI_BB','M15',None), ('S04_BB_SQUEEZE','H1',None), ('S11_ALLIGATOR_AWAKEN','M15',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M15',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
+    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M15',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
     'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M15',None)],
 }
 

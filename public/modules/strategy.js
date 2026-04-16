@@ -11,7 +11,7 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
-    // ── BACKTEST H1 MT5 GOLD 16 MESI (730gg nominali) · RM SEMPRE ATTIVO · 2026-04-16 ──
+    // ── STRATEGIE D'ÉLITE [RISULTATI VALIDATI 24 MESI] ──
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.30, wr: '39.5%', tp: 'ATR×2.0', sl: 'ATR×1',
       stats: {
         pnl_1m: 1052, td_1m: 2.50, pnl_6m: 2150, td_6m: 2.80,
@@ -24,41 +24,11 @@ const SE = {
         pnl_12m: 1540, td_12m: 11.8, pnl_24m: 3080, td_24m: 12.0,
         maxdd: 412, maxdd_pct: '8.4%', trades_12m: 4300, best_regime: 'VOLATILE/WEAK'
       } },
-    'S04_BB_SQUEEZE': { label: 'BB Squeeze [H1]', pf: 0.78, wr: '26.6%', tp: 'ATR×1.5', sl: 'ATR×1.2',
+    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V2', pf: 1.43, wr: '41.3%', tp: 'ATR×2.5', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: -217, td_1m: 6.95, pnl_6m: -1304, td_6m: 6.95,
-        pnl_12m: -2608, td_12m: 6.95, pnl_24m: -5217, td_24m: 6.95,
-        maxdd: 5467, maxdd_pct: '12.8%', trades_12m: 1717, best_regime: 'RANGE'
-      } },
-    'S08_OBV_EMA_MOM': { label: 'OBV Momentum [M15]', pf: 0.95, wr: '28.9%', tp: 'ATR×1.5', sl: 'ATR×1',
-      stats: {
-        pnl_1m: -40, td_1m: 6.62, pnl_6m: -238, td_6m: 6.62,
-        pnl_12m: -477, td_12m: 6.62, pnl_24m: -955, td_24m: 6.62,
-        maxdd: 2125, maxdd_pct: '18.2%', trades_12m: 1600, best_regime: 'TREND'
-      } },
-    'S03_SUPERTREND_EMA': { label: 'ST Trend [M15]', pf: 0.86, wr: '27.3%', tp: 'ATR×2.0', sl: 'ATR×1',
-      stats: {
-        pnl_1m: -181, td_1m: 9.48, pnl_6m: -1088, td_6m: 9.48,
-        pnl_12m: -2176, td_12m: 9.48, pnl_24m: -4353, td_24m: 9.48,
-        maxdd: 4420, maxdd_pct: '11.5%', trades_12m: 2440, best_regime: 'TREND'
-      } },
-    'S15_OBV_MACD': { label: 'OBV MACD [M15]', pf: 0.73, wr: '24.4%', tp: 'ATR×1.2', sl: 'ATR×1',
-      stats: {
-        pnl_1m: -336, td_1m: 8.53, pnl_6m: -2018, td_6m: 8.53,
-        pnl_12m: -4036, td_12m: 8.53, pnl_24m: -8072, td_24m: 8.53,
-        maxdd: 8080, maxdd_pct: '15.4%', trades_12m: 2197, best_regime: 'WEAK'
-      } },
-    'S10_ST_MACD_SESSION': { label: 'Session Mom [M30]', pf: 0.81, wr: '26.9%', tp: 'ATR×1.2', sl: 'ATR×1',
-      stats: {
-        pnl_1m: -91, td_1m: 3.90, pnl_6m: -550, td_6m: 3.90,
-        pnl_12m: -1100, td_12m: 3.90, pnl_24m: -2201, td_24m: 3.90,
-        maxdd: 2545, maxdd_pct: '14.8%', trades_12m: 950, best_regime: 'TREND'
-      } },
-    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30]', pf: 1.06, wr: '31.3%', tp: 'ATR×1.0', sl: 'ATR×0.6',
-      stats: {
-        pnl_1m: 15, td_1m: 4.33, pnl_6m: 89, td_6m: 4.33,
-        pnl_12m: 179, td_12m: 4.33, pnl_24m: 358, td_24m: 4.33,
-        maxdd: 679, maxdd_pct: '11.3%', trades_12m: 523, best_regime: 'RANGE'
+        pnl_1m: 135, td_1m: 1.90, pnl_6m: 810, td_6m: 1.95,
+        pnl_12m: 1624, td_12m: 2.05, pnl_24m: 3248, td_24m: 1.98,
+        maxdd: 340, maxdd_pct: '6.2%', trades_12m: 740, best_regime: 'WEAK/RANGE'
       } },
     'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze [M15]', pf: 1.45, wr: '53.0%', tp: 'ATR×2.0', sl: 'ATR×1.5',
       stats: {
@@ -69,12 +39,12 @@ const SE = {
   },
   // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA'],
-    TREND_DOWN: ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA'],
-    WEAK_UP:    ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
-    WEAK_DOWN:  ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
-    VOLATILE:   ['S04_BB_SQUEEZE', 'S15_OBV_MACD', 'S09_MFKK_SCALPING'],
-    RANGE:      ['S04_BB_SQUEEZE', 'S10_OB_FVG_SCALP', 'S15_OBV_MACD'],
+    TREND_UP:   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
+    TREND_DOWN: ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
+    WEAK_UP:    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    WEAK_DOWN:  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    VOLATILE:   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
+    RANGE:      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },

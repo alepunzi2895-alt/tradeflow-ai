@@ -440,7 +440,7 @@ def compute_all(candles):
         'kc_up':kc_up,'kc_mid':kc_mid,'kc_lo':kc_lo,
         'st':st_dir,
         'jaw':jaw,'teeth':teeth,'lips':lips,
-        'obv':obv_v,'obv_e20':obv_ema20,
+        'obv':obv_v,'obv_ema':obv_ema20,
         'obv_macd_ml':obvm_ml,'obv_macd_b5':obvm_b5,'obv_macd_oc':obvm_oc,
         'mom':mom,'wpr':wpr,'vwap':vwap,
         'ob_bull':ob_bull,'ob_bear':ob_bear,
@@ -749,31 +749,49 @@ def s_mfkk_scalping(ind,i,hour=None):
         return 'sell'
     return None
 
-# ── STRATEGY MAP ──────────────────────────────────────────────────────────────
+def s_ob_fvg_scalp(ind, i, hour=None):
+    """
+    S10_OB_FVG_SCALP V2 — Order Block + FVG + EMA 233 Trend Filter
+    TP: 2.5×ATR | SL: 1.2×ATR | TF: M30
+    """
+    if i < 233: return None
+    ob_b = ind.get('ob_bull'); ob_s = ind.get('ob_bear')
+    fb = ind.get('fvg_bull'); fs = ind.get('fvg_bear')
+    e233 = ind['e233'][i]
+    c = ind['C'][i]
+    if ob_b is None or fb is None or e233 is None: return None
+    
+    if ob_b[i] and fb[i] and c > e233: return 'buy'
+    if ob_s[i] and fs[i] and c < e233: return 'sell'
+    return None
+
+def s_golden_squeeze(ind, i, hour=None):
+    """
+    S16: ELITE CONFLUENCE — OBV Momentum + Trend Alignment
+    Nota: richiede trend H1 (simulato nel backtest come ST)
+    """
+    if i < 1: return None
+    obv_val = ind.get('obv')[i]
+    obv_ema = ind.get('obv_ema')[i]
+    c = ind['C'][i]; cp = ind['C'][i-1]
+    # In engine, simuliamo h1_trend con il supertrend della serie corrente se H1
+    st = ind.get('st')[i] 
+    
+    if st == -1: # BULLISH
+        if obv_val > obv_ema and c > cp: return 'buy'
+    if st == 1: # BEARISH
+        if obv_val < obv_ema and c < cp: return 'sell'
+    return None
+
+# ── STRATEGY MAP (TABULA RASA: ELITE 4 ONLY) ──────────────────────────────────
 STRATS = {
-    'S01_EXHAUSTION':       (s1_exhaustion,        ['TREND_UP','TREND_DOWN']),
-    'S02_ALLIGATOR_OBV':    (s2_alligator_trend,   ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
-    'S03_SUPERTREND_EMA':   (s3_supertrend_ema,    ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
-    'S04_BB_SQUEEZE':       (s4_bb_squeeze_momentum,['RANGE','VOLATILE','WEAK_UP','WEAK_DOWN']),
-    'S05_RSI_DIV':          (s5_rsi_divergence,    ['TREND_UP','TREND_DOWN']),
-    'S06_ORDERBLOCK':       (s6_orderblock_bounce, ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
-    'S07_STOCHRSI_BB':      (s7_stochrsi_bb,       ['RANGE','VOLATILE']),
-    'S08_OBV_EMA_MOM':      (s8_obv_ema_momentum,  ['TREND_UP','TREND_DOWN']),
-    'S09_VWAP_WPER':        (s9_vwap_momentum,     ['RANGE','VOLATILE','WEAK_UP','WEAK_DOWN']),
-    'S10_ST_MACD_SESSION':  (s10_supertrend_macd_session, ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
-    'S11_ALLIGATOR_AWAKEN': (s11_alligator_awakening, ['RANGE','WEAK_UP','WEAK_DOWN']),
-    'S12_WPR_RSI_KELT':     (s12_williams_rsi_keltner,['RANGE','VOLATILE']),
-    'S13_STRUC_BREAK':      (s13_struc_break,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
-    'S14_KEY_LEVELS':       (s14_key_levels,       ['RANGE','WEAK_UP','WEAK_DOWN']),
-    # ── Nuovi indicatori TV ──
-    'S15_OBV_MACD':         (s15_obv_macd,         ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','RANGE','VOLATILE']),
-    # ── MFKK Composite ──
+    'S05_MFKK_INTRADAY':    (s_mfkk_scalping,      ['TREND_UP','TREND_DOWN']), # Mapping temp
     'S09_MFKK_SCALPING':    (s_mfkk_scalping,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
+    'S10_OB_FVG_SCALP':     (s_ob_fvg_scalp,       ['RANGE', 'VOLATILE', 'WEAK_UP', 'WEAK_DOWN']),
+    'S16_GOLDEN_SQUEEZE':   (s_golden_squeeze,     ['TREND_UP', 'TREND_DOWN', 'WEAK_UP', 'WEAK_DOWN']),
 }
 
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S09_MFKK_SCALPING','S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
-    'TREND_DOWN': ['S09_MFKK_SCALPING','S15_OBV_MACD','S01_EXHAUSTION','S08_OBV_EMA_MOM','S03_SUPERTREND_EMA','S02_ALLIGATOR_OBV','S05_RSI_DIV','S10_ST_MACD_SESSION'],
     'WEAK_UP':    ['S09_MFKK_SCALPING','S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
     'WEAK_DOWN':  ['S09_MFKK_SCALPING','S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
     'RANGE':      ['S15_OBV_MACD','S12_WPR_RSI_KELT','S07_STOCHRSI_BB','S09_VWAP_WPER','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
@@ -806,11 +824,17 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         # Dynamic TP/SL mapping
         curr_tp = tp
         curr_sl = sl
-        if name in ('S13_STRUC_BREAK','S14_KEY_LEVELS'):
-            curr_tp = round(av * 2.0, 2)
-            curr_sl = round(av * 1.0, 2)
-        elif name == 'S09_MFKK_SCALPING':
+        if name == 'S09_MFKK_SCALPING':
             curr_tp = round(av * 3.0, 2)
+            curr_sl = round(av * 1.0, 2)
+        elif name == 'S10_OB_FVG_SCALP':
+            curr_tp = round(av * 2.5, 2)
+            curr_sl = round(av * 1.2, 2)
+        elif name == 'S16_GOLDEN_SQUEEZE':
+            curr_tp = round(av * 2.0, 2)
+            curr_sl = round(av * 1.5, 2)
+        elif name == 'S05_MFKK_INTRADAY':
+            curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.0, 2)
 
         sig=fn(ind,i,hour)
@@ -895,19 +919,26 @@ def run_adaptive(candles, ind, tf='H1'):
         if day_n[day]>=MAX_TRADES: continue
         if hour-day_h[day]<COOLDOWN_H: continue
         r=regime(ind,i)
-        pool=REGIME_PRIORITY.get(r,['S10_ST_MACD_SESSION'])
+        pool=REGIME_PRIORITY.get(r,['S16_GOLDEN_SQUEEZE'])
         sig=None; used=None
         for name in pool:
+            if name not in STRATS: continue
             fn=STRATS[name][0]
-            s=fn(ind,i,hour) if name=='S10_ST_MACD_SESSION' else fn(ind,i)
+            s=fn(ind,i,hour) if name=='S16_GOLDEN_SQUEEZE' else fn(ind,i)
             if s: sig=s; used=name; break
         if not sig: continue
         entry=c['c']
-        # Strategia con ATR-based TP/SL
-        if used=='S09_MFKK_SCALPING' and av:
-            tp_d=round(av*3.0,2); sl_d=round(av*1.0,2)
+        # Strategia con ATR-based TP/SL d'élite
+        if used == 'S09_MFKK_SCALPING':
+            tp_d = round(av*3.0, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S10_OB_FVG_SCALP':
+            tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
+        elif used == 'S16_GOLDEN_SQUEEZE':
+            tp_d = round(av*2.0, 2); sl_d = round(av*1.5, 2)
+        elif used == 'S05_MFKK_INTRADAY':
+            tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         else:
-            tp_d=TP_USD; sl_d=SL_USD
+            tp_d = TP_USD; sl_d = SL_USD
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d
         sl_p=entry-sl_d if sig=='buy' else entry+sl_d
         outcome='open'; win=False

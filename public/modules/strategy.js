@@ -781,6 +781,8 @@ function seDetectRegime(I, i) {
 
 // ── MAIN LOOP ────────────────────────────────────────────────────────────────
 async function seRefresh() {
+  // Non eseguire se il tab Strategy non è attivo — evita API calls e DOM churn inutili
+  if(!document.getElementById('tp-strategy')?.classList.contains('on')) return;
   const el = document.getElementById('se-content');
   if(!el) return;
 
@@ -1485,9 +1487,11 @@ function seRenderNoData(){
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function initStrategyEngine(){
-  if(seTimer)clearInterval(seTimer);
-  await seRefresh();
-  seTimer=setInterval(seRefresh, 1000); // Polling 1s ultra-veloce
+  if(seTimer) clearInterval(seTimer);
+  // Assegna seTimer subito (sincrono) per evitare race condition se l'utente
+  // cambia tab rapidamente mentre seRefresh è in attesa della risposta API
+  seTimer = setInterval(seRefresh, 1000);
+  seRefresh(); // prima chiamata immediata, senza await
 }
 window.initStrategyEngine=initStrategyEngine;
 window.seRefresh=seRefresh;

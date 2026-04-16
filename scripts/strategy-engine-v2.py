@@ -29,6 +29,8 @@ _parser.add_argument('--file', type=str, default=None,
          'Se omesso usa yfinance GC=F.')
 _parser.add_argument('--out',  type=str, default='strategy_engine_v2.json',
     help='File output risultati (default: strategy_engine_v2.json)')
+_parser.add_argument('--rm',   action='store_true',
+    help='Simula Risk Manager adattivo (AI Score da indicatori → lot/BE/TS)')
 _args, _ = _parser.parse_known_args()
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -848,8 +850,8 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             curr_tp = round(av * 2.5, 2)
             curr_sl = round(av * 1.2, 2)
         elif name == 'S16_GOLDEN_SQUEEZE':
-            curr_tp = round(av * 2.0, 2)
-            curr_sl = round(av * 1.5, 2)
+            curr_tp = round(av * 3.0, 2)
+            curr_sl = round(av * 1.2, 2)
         elif name == 'S05_MFKK_INTRADAY':
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.0, 2)
@@ -974,6 +976,114 @@ def run_adaptive(candles, ind, tf='H1'):
         day_n[day]+=1; day_h[day]=hour
     return trades
 
+# ── AI SCORE SIMULATION (per backtest RM) ─────────────────────────────────────
+def estimate_ai_score(ind, i):
+    """Stima AI Confidence Score da indicatori — proxy per backtest Risk Manager."""
+    adx = ind['adx'][i]; dip = ind['dip'][i]; dim = ind['dim'][i]
+    mc  = ind['macd'][i]; sg  = ind['macd_sig'][i]; r = ind['rsi'][i]
+    if None in (adx, dip, dim, mc, sg, r): return 50.0
+    score = 50.0
+    if adx >= 30:   score += 22
+    elif adx >= 22: score += 10
+    elif adx < 15:  score -= 15
+    hist = mc - sg
+    if abs(hist) > 1.0: score += 10
+    elif abs(hist) > 0.4: score += 5
+    if 45 <= r <= 65: score += 5
+    elif r > 75 or r < 25: score -= 10
+    di_spread = abs(dip - dim)
+    if di_spread >= 15: score += 10
+    elif di_spread >= 8: score += 5
+    return max(0.0, min(100.0, score))
+
+# AI Score tiers (mirrors risk_manager.py)
+RM_TIERS = [
+    {'score_max': 40,  'lot': 0.5, 'tp': 1.0, 'sl': 0.8, 'be_pct': 0.80, 'ts_pct': 0.50, 'label': 'CONSERVATIVE'},
+    {'score_max': 60,  'lot': 0.8, 'tp': 1.0, 'sl': 1.0, 'be_pct': 0.70, 'ts_pct': 0.50, 'label': 'NORMAL'},
+    {'score_max': 75,  'lot': 1.0, 'tp': 1.5, 'sl': 1.0, 'be_pct': 0.60, 'ts_pct': 0.40, 'label': 'AGGRESSIVE'},
+    {'score_max': 85,  'lot': 1.2, 'tp': 1.8, 'sl': 1.2, 'be_pct': 0.50, 'ts_pct': 0.35, 'label': 'STRONG'},
+    {'score_max': 100, 'lot': 1.5, 'tp': 2.0, 'sl': 1.5, 'be_pct': 0.50, 'ts_pct': 0.30, 'label': 'MAX'},
+]
+
+def get_rm_tier(score):
+    for t in RM_TIERS:
+        if score <= t['score_max']: return t
+    return RM_TIERS[-1]
+
+def run_adaptive_rm(candles, ind, tf='H1'):
+    """
+    Sistema adattivo con Risk Manager:
+    AI Score → lot_mult applicato al P&L (stessa logica TP/SL della FASE 3).
+    Misura l'impatto del position sizing adattivo senza distorcere le statistiche con BE/TS.
+    """
+    trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
+    n=len(candles)
+    tf_mult = 1
+    if tf == 'M30': tf_mult = 2
+    elif tf == 'M15': tf_mult = 4
+    lookahead = 25 * tf_mult
+
+    for i in range(220, n):
+        c=candles[i]; ts=c['t']
+        dt=datetime.datetime.utcfromtimestamp(ts)
+        hour=dt.hour; day=dt.strftime('%Y-%m-%d')
+        if not (SESSION_S<=hour<SESSION_E): continue
+        av=ind['atr'][i]; aa=ind['atr30'][i]
+        if av and aa and av>EXTREME_K*aa: continue
+        if day_n[day]>=MAX_TRADES: continue
+        if hour-day_h[day]<COOLDOWN_H: continue
+        r=regime(ind,i)
+        pool=REGIME_PRIORITY.get(r,['S16_GOLDEN_SQUEEZE'])
+        sig=None; used=None
+        for name in pool:
+            if name not in STRATS: continue
+            fn=STRATS[name][0]
+            s=fn(ind,i,hour) if name=='S16_GOLDEN_SQUEEZE' else fn(ind,i)
+            if s: sig=s; used=name; break
+        if not sig: continue
+
+        # ATR-based TP/SL identici a run_adaptive (coerenza confronto)
+        if used == 'S09_MFKK_SCALPING':
+            tp_d = round(av*3.0, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S10_OB_FVG_SCALP':
+            tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
+        elif used == 'S16_GOLDEN_SQUEEZE':
+            tp_d = round(av*3.0, 2); sl_d = round(av*1.2, 2)
+        elif used == 'S05_MFKK_INTRADAY':
+            tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
+        else:
+            tp_d = TP_USD; sl_d = SL_USD
+
+        # AI Score → lot multiplier
+        ai_score = estimate_ai_score(ind, i)
+        tier = get_rm_tier(ai_score)
+        lot_mult = tier['lot']
+
+        entry = c['c']
+        tp_p  = entry + tp_d if sig=='buy' else entry - tp_d
+        sl_p  = entry - sl_d if sig=='buy' else entry + sl_d
+        outcome='open'; win=False
+
+        for j in range(i+1, min(i+lookahead, n)):
+            jh=candles[j]['h']; jl=candles[j]['l']
+            if sig=='buy':
+                if jh >= tp_p: win=True; outcome='win'; break
+                if jl <= sl_p: outcome='loss'; break
+            else:
+                if jl <= tp_p: win=True; outcome='win'; break
+                if jh >= sl_p: outcome='loss'; break
+
+        if outcome=='open': continue
+        # P&L scalato per lot_mult — misura impatto position sizing
+        base_pnl = tp_d if win else -sl_d
+        pnl_scaled = round(base_pnl * lot_mult, 2)
+        trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
+                       'outcome':outcome,'pnl':pnl_scaled,'strategy':used,
+                       'regime':r,'ai_score':round(ai_score,1),'tier':tier['label'],
+                       'lot_mult':lot_mult,'base_pnl':round(base_pnl,2)})
+        day_n[day]+=1; day_h[day]=hour
+    return trades
+
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 def main():
     print("TradeFlow AI — Strategy Engine v2")
@@ -1062,6 +1172,41 @@ def main():
             rr=tp/sl
             print(f"  ${tp:>4} ${sl:>4} {rr:>5.2f} | {s2['n']:>5} {s2['wr']:>6.1f}% {s2['pnl']:>8.1f} {s2['pf']:>6.3f}")
 
+    # ── FASE 5: Sistema adattivo + Risk Manager (--rm) ───────────────────────
+    rm_trades = []; srm = {}
+    if _args.rm:
+        print("\n" + "="*72)
+        print(f"FASE 5: Sistema ADATTIVO + RISK MANAGER (AI Score simulato · {tf})")
+        print("="*72)
+        rm_trades = run_adaptive_rm(candles, ind, tf=tf)
+        srm = stats(rm_trades)
+        print(f"\n  Trade totali:    {srm['n']}")
+        print(f"  Win Rate:        {srm['wr']}%")
+        print(f"  P&L totale:      ${srm['pnl']}")
+        print(f"  Profit Factor:   {srm['pf']}")
+        print(f"  Media $/giorno:  ${srm['avg_day']}")
+        print(f"  Trade/giorno:    {srm['tr_day']}")
+        print(f"  Mesi positivi:   {srm['months']}")
+        print(f"  Max Drawdown:    ${srm['dd']}")
+
+        by_rm = defaultdict(list)
+        for t in rm_trades: by_rm[t['strategy']].append(t)
+        print(f"\n  {'Strategia':<22} {'N':>5} {'WR%':>6} {'P&L':>8}")
+        for name, tl in sorted(by_rm.items(), key=lambda x: -len(x[1])):
+            s2 = stats(tl)
+            print(f"  {name:<22} {s2['n']:>5} {s2['wr']:>6.1f}% {s2['pnl']:>8.1f}")
+
+        # Distribuzione AI Score tier
+        tier_dist = defaultdict(int)
+        for t in rm_trades: tier_dist[t['tier']] += 1
+        print(f"\n  Distribuzione tier:")
+        for tier_name, cnt in sorted(tier_dist.items(), key=lambda x: -x[1]):
+            print(f"    {tier_name:<14}: {cnt} trade ({cnt/srm['n']*100:.1f}%)")
+
+        print(f"\n  Confronto Base vs RM:")
+        print(f"    Base:   P&L ${sa['pnl']} | PF {sa['pf']} | WR {sa['wr']}%")
+        print(f"    Con RM: P&L ${srm['pnl']} | PF {srm['pf']} | WR {srm['wr']}%")
+
     # ── OUTPUT JSON ───────────────────────────────────────────────────────────
     output={
         'generated_at':datetime.datetime.utcnow().isoformat(),
@@ -1076,6 +1221,8 @@ def main():
                    for i,(n,r) in enumerate(ranked)],
         'regime_priority':REGIME_PRIORITY,
         'adaptive':{'stats':sa,'by_strategy':{n:stats(tl) for n,tl in by_s.items()}},
+        'adaptive_rm':{'stats':srm,'by_strategy':{n:stats(tl) for n,tl in defaultdict(list,
+            {t['strategy']:[t] for t in rm_trades}).items()}} if rm_trades else {},
         'last_signals':adap[-50:],
         'config':{'tp':TP_USD,'sl':SL_USD,'max_trades':MAX_TRADES,'cooldown_h':COOLDOWN_H,
                   'session_utc':[SESSION_S,SESSION_E],'extreme_mult':EXTREME_K}
@@ -1086,6 +1233,8 @@ def main():
     print("\n" + "="*72)
     print(f"SALVATO: {OUT_FILE}")
     print(f"SISTEMA ADATTIVO: {sa['wr']}% WR · ${sa['avg_day']}/gg · {sa['tr_day']:.1f} trade/gg")
+    if _args.rm:
+        print(f"ADATTIVO + RM:    {srm['wr']}% WR · ${srm['avg_day']}/gg · {srm['tr_day']:.1f} trade/gg")
     print("="*72)
 
 if __name__=='__main__':

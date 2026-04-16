@@ -59,8 +59,10 @@ async function saveToGitHub(data, sha) {
   return r.ok;
 }
 
-// Simple in-memory cache (survives within same Vercel instance)
+// In-memory cache with 5-minute TTL
 let memCache = null;
+let memCacheTs = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
 
   // GET — return latest cached indicator values
   if (req.method === "GET") {
-    if (memCache) {
+    if (memCache && (Date.now() - memCacheTs) < CACHE_TTL_MS) {
       return res.status(200).json({ ok: true, source: "cache", ...memCache });
     }
     // Try GitHub
@@ -91,6 +93,15 @@ export default async function handler(req, res) {
   // POST — receive webhook from TradingView
   if (req.method === "POST") {
     try {
+      // Optional signature verification — set TV_WEBHOOK_SECRET in Vercel env
+      const TV_SECRET = process.env.TV_WEBHOOK_SECRET;
+      if (TV_SECRET) {
+        const incoming = req.headers['x-tv-secret'] || req.body?.secret;
+        if (incoming !== TV_SECRET) {
+          return res.status(401).json({ ok: false, error: "Unauthorized" });
+        }
+      }
+
       let body = req.body;
       // TradingView sends plain text sometimes
       if (typeof body === "string") {
@@ -117,8 +128,9 @@ export default async function handler(req, res) {
         source:   "tradingview_webhook"
       };
 
-      // Save to memory cache immediately
+      // Save to memory cache with timestamp
       memCache = data;
+      memCacheTs = Date.now();
 
       // Save to GitHub async (don't wait)
       if (TOKEN) {

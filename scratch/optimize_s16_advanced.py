@@ -149,4 +149,7 @@ def run_advanced_test(m15_file, h1_file):
     for r in results[:5]: print(r)
 
 if __name__ == "__main__":
+    print("\n--- TEST M15 ---")
     run_advanced_test('xauusd_m15_mt5.json', 'xauusd_h1_mt5.json')
+    print("\n\n--- TEST M30 ---")
+    run_advanced_test('xauusd_m30_mt5.json', 'xauusd_h1_mt5.json')

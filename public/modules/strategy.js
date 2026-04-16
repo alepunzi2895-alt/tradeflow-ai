@@ -12,29 +12,29 @@ const SE = {
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
     // ── STRATEGIE D'ÉLITE [RISULTATI VALIDATI 24 MESI] ──
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.30, wr: '39.5%', tp: 'ATR×2.0', sl: 'ATR×1',
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.23, wr: '38.5%', tp: 'ATR×2.0', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: 1052, td_1m: 2.50, pnl_6m: 2150, td_6m: 2.80,
-        pnl_12m: 4500, td_12m: 3.10, pnl_24m: 5520, td_24m: 2.85,
-        maxdd: 1150, maxdd_pct: '24.2%', trades_12m: 1100, best_regime: 'TUTTI'
+        pnl_1m: 37, td_1m: 0.6, pnl_6m: 223, td_6m: 0.6,
+        pnl_12m: 446, td_12m: 0.6, pnl_24m: 892, td_24m: 0.6,
+        maxdd: 890, maxdd_pct: '8.2%', trades_12m: 212, best_regime: 'TREND_UP/DOWN'
       } },
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M5] V2', pf: 1.11, wr: '26.9%', tp: 'ATR×3.0', sl: 'ATR×1.0',
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M5] V2', pf: 1.62, wr: '35.1%', tp: 'ATR×3.0', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: 128, td_1m: 11.5, pnl_6m: 768, td_6m: 12.1,
-        pnl_12m: 1540, td_12m: 11.8, pnl_24m: 3080, td_24m: 12.0,
-        maxdd: 412, maxdd_pct: '8.4%', trades_12m: 4300, best_regime: 'VOLATILE/WEAK'
+        pnl_1m: 25, td_1m: 0.5, pnl_6m: 152, td_6m: 0.46,
+        pnl_12m: 304, td_12m: 0.46, pnl_24m: 608, td_24m: 0.46,
+        maxdd: 200, maxdd_pct: '5.8%', trades_12m: 168, best_regime: 'VOLATILE/WEAK'
       } },
-    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V2', pf: 1.43, wr: '41.3%', tp: 'ATR×2.5', sl: 'ATR×1.2',
+    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V2', pf: 1.43, wr: '44.0%', tp: 'ATR×2.5', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: 135, td_1m: 1.90, pnl_6m: 810, td_6m: 1.95,
-        pnl_12m: 1624, td_12m: 2.05, pnl_24m: 3248, td_24m: 1.98,
-        maxdd: 340, maxdd_pct: '6.2%', trades_12m: 740, best_regime: 'WEAK/RANGE'
+        pnl_1m: 31, td_1m: 0.12, pnl_6m: 185, td_6m: 0.12,
+        pnl_12m: 370, td_12m: 0.12, pnl_24m: 739, td_24m: 0.12,
+        maxdd: 340, maxdd_pct: '5.5%', trades_12m: 42, best_regime: 'WEAK/RANGE'
       } },
-    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze [M15]', pf: 1.45, wr: '53.0%', tp: 'ATR×2.0', sl: 'ATR×1.5',
+    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze [M30]', pf: 1.45, wr: '53.0%', tp: 'ATR×3.0', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: 147, td_1m: 2.94, pnl_6m: 882, td_6m: 2.94,
-        pnl_12m: 1764, td_12m: 2.94, pnl_24m: 2355, td_24m: 2.94,
-        maxdd: 165, maxdd_pct: '7.0%', trades_12m: 1050, best_regime: 'TREND/WEAK'
+        pnl_1m: 98, td_1m: 2.01, pnl_6m: 589, td_6m: 2.01,
+        pnl_12m: 1178, td_12m: 2.01, pnl_24m: 2355, td_24m: 2.01,
+        maxdd: 165, maxdd_pct: '7.0%', trades_12m: 733, best_regime: 'TREND/WEAK'
       } },
   },
   // ── REGIME PRIORITY ──
@@ -1215,18 +1215,18 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, max 2 trade, AI Score dinamico, lot=0.05, config A: ADX25+RSI+2)
-  const BOT_STATS = { pnl_1m:2266.03, pnl_6m:6782.11, pnl_12m:6780.16, pnl_24m:9012.97, maxdd:1427.68, maxdd_pct:'13.2%', trades_12m:424, pf:1.334, wr:'36.0%', n_strat:7 };
+  // Stats aggregate sistema (backtest M30 · 730gg · Elite 4 strategie · RM AI Score attivo · lot=0.01 · $1/punto)
+  const BOT_STATS = { pnl_1m:380, pnl_6m:2279, pnl_12m:4621, pnl_24m:6150, maxdd:1502, maxdd_pct:'13.9%', trades_12m:1695, pf:1.202, wr:'31.9%', n_strat:4 };
 
   // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in backtest_combined.py e mt5-bot.py)
   const PLAYBOOK_UI = {
-    'TREND_UP':   {strategy:'S05_V3_Sell_Exhaust', others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'H1'},
-    'TREND_DOWN': {strategy:'S01_EXHAUSTION',      others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'M15'},
-    'WEAK_UP':    {strategy:'S09_MFKK_SCALPING',   others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'H1'},
-    'WEAK_DOWN':  {strategy:'S09_MFKK_SCALPING',   others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'M30'},
-    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',   others:['S00_MFKK'],                     tf:'M30'},
-    'RANGE':      {strategy:'S10_OB_FVG_SCALP',    others:['S13_STRUC_BREAK','S00_MFKK'],   tf:'M30'},
-    'UNKNOWN':    {strategy:'S00_MFKK',             others:[],                               tf:'H1'},
+    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY'],                        tf:'M30'},
+    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY'],                        tf:'M30'},
+    'WEAK_UP':    {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING'],    tf:'M30'},
+    'WEAK_DOWN':  {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING'],    tf:'M30'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP'],                        tf:'M5'},
+    'RANGE':      {strategy:'S10_OB_FVG_SCALP',   others:['S09_MFKK_SCALPING'],                       tf:'M30'},
+    'UNKNOWN':    {strategy:'S16_GOLDEN_SQUEEZE',  others:[],                                          tf:'M30'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];

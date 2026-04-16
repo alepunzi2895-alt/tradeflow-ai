@@ -120,18 +120,31 @@ directives/
 
 Backtest 2026-04-16 · MT5 GOLD H1 730gg · RM sempre attivo
 
+### Bot MT5 (STRATEGY_PARAMS in mt5-bot.py)
+
+| ID | Label | TF | TP mult | SL mult | Regime |
+|---|---|---|---|---|---|
+| `S05_MFKK_INTRADAY` | MFKK Intraday V3 | H1 | ATR×2.0 | ATR×1.0 | TREND_UP, TREND_DOWN |
+| `S09_MFKK_SCALPING` | MFKK Scalping V2 | M5 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | M15/M30 | ATR×2.5 | ATR×1.2 | Tutti i regimi (fallback) |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V2 | M30 | ATR×3.0 | ATR×1.2 | TREND_UP, TREND_DOWN, WEAK |
+
+BE trigger per S16: +ATR×1.1 dal prezzo entry.
+
+### Frontend UI (strategy.js — backtest stats storici)
+
 | ID | Label | WR | PF | Trade/gg | TP / SL | P&L 24m |
 |---|---|---|---|---|---|---|
 | `S00_MFKK` | MFKK Score | 41% | 1.16 | 3.7 | $20 / $12 | +$3052 |
 | `S05_MFKK_INTRADAY` | MFKK Intraday V2 | 36.9% | 1.23 | 3.3 | ATR×1.5 / ATR×1 | +$4776 |
-| `S05_V3_Sell_Exhaust` | Sell Exhaust | 36.8% | 1.96 | 0.16 | ATR×1.5 / ATR×1 | +$702 |
 | `S09_MFKK_SCALPING` | MFKK Scalping | 40.7% | 1.62 | 0.11 | ATR×1.5 / ATR×1 | +$2954 |
-| `S01_EXHAUSTION` | Exhaustion | 44.4% | 2.43 | 0.03 | ATR×1.5 / ATR×1 | +$3011 |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp | 41.3% | 1.43 | ~0.5 | ATR×2.5 / ATR×1.2 | — |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze | 53.0% | 1.45 | ~0.3 | ATR×3.0 / ATR×1.2 | — |
 
 Soglie MFKK Score: `BUY≥85` / `SELL≥70` (era 90/75).
 S05_MFKK_INTRADAY usa V2 Triple MACD (OBV T-Channel + RSI50 + MACD + Momentum, ADX≥20, buy+sell).
 
-Archived strategies (logic kept in code, hidden from UI): S00_MFKK_HWR, S01_OBV_MACD, S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW, S04_BB_SQUEEZE, S06_ORDERBLOCK, S12_WPR_KELTNER, S13_STRUC_BREAK, S14_KEY_LEVELS.
+Archived strategies (logic kept in code, hidden from UI): S00_MFKK_HWR, S01_OBV_MACD, S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW, S04_BB_SQUEEZE, S05_V3_Sell_Exhaust, S01_EXHAUSTION, S06_ORDERBLOCK, S12_WPR_KELTNER, S13_STRUC_BREAK, S14_KEY_LEVELS.
 
 ## Critical Rules
 
@@ -183,3 +196,67 @@ async function fetchT(url, opts={}, ms=8000) {
 
 ### Backtest source of truth
 Results from `backtest_mfkk_intraday.py --mt5` (real broker GOLD data) are canonical. Stats in `SE.strategies` must reflect the latest MT5 run.
+
+## Backtest Results — MFKK AI Gold Bot (2026-04-16)
+
+Dati: MT5 reale GOLD · 730gg (2024-04-15 → 2026-04-16) · lotto 0.01 · $1/punto
+
+### Sistema Adattivo (Regime-based, senza RM)
+
+| TF | Trade | WR% | P&L | PF | DD | Mesi+ |
+|---|---|---|---|---|---|---|
+| **H1** | 2505 | 31.3% | +$2,241 | 1.084 | $2,529 | 13/25 |
+| **M30** | 3390 | 31.9% | +$4,915 | **1.203** | **$960** | 14/25 |
+
+### Sistema Adattivo + Risk Manager (lot scaling da AI Score)
+
+| TF | Trade | WR% | P&L | PF | DD | $/gg |
+|---|---|---|---|---|---|---|
+| **H1** | 2505 | 31.3% | +$3,072 | 1.089 | $3,622 | +$7.70 |
+| **M30** | 3390 | 31.9% | +$6,150 | 1.202 | $1,502 | **+$12.66** |
+
+### Breakdown M30 per strategia (con RM)
+
+| Strategia | Trade | WR% | P&L |
+|---|---|---|---|
+| S16_GOLDEN_SQUEEZE | 2547 | 30.0% | +$3,910 |
+| S05_MFKK_INTRADAY | 423 | 38.5% | +$892 |
+| S09_MFKK_SCALPING | 336 | 35.1% | +$608 |
+| S10_OB_FVG_SCALP | 84 | 44.0% | +$739 |
+
+### Raccomandazioni dal backtest
+
+- **M30 è nettamente superiore a H1** (P&L 2.2×, DD 2.6× minore, tutte le strategie positive)
+- **RM lot scaling aggiunge +25% P&L** su M30 senza degradare WR o PF
+- Il bot dovrebbe usare M30 come timeframe primario (aggiornare FALLBACK_PLAYBOOK in mt5-bot.py)
+- S16 è il driver principale (75% dei trade): le altre strategie sono complementari e positive
+- Trade frequency su M30: 7/gg — accettabile con regime filter attivo
+- Tier distribution su M30 più equilibrata (MAX 35% vs H1 42%) — AI Score ben calibrato
+
+## Known Issues & Architectural Notes
+
+### Confirmed bugs (as of 2026-04-16)
+
+| Severity | File | Issue | Status |
+|---|---|---|---|
+| ✅ Fixed | `api/report.js` | Anthropic fetch had no timeout → Vercel hang | Fixed: added `fetchT` 9s timeout |
+| ✅ Fixed | `api/price.js` | `GC=F` in candles fallback violated spec | Fixed: removed, only `XAUUSD=X` |
+| ✅ Fixed | `scripts/mt5-bot.py` | Flat 30s reconnect wait, no backoff | Fixed: exponential backoff 5→10→20…→300s |
+| ⚠ Open | `api/webhook.js` | `memCache` has no TTL — stale indicators served forever | Add 5-min expiry |
+| ⚠ Open | `api/webhook.js` | No HMAC signature check on TradingView POST | Add `X-TV-Secret` header verification |
+| ⚠ Open | `public/app.js` | `onclick` button bindings (lines 160-172) fail silently if element missing | Use `wire()` for all bindings |
+| ⚠ Open | `api/db.js` | Turso `createClient()` has no explicit timeout — relies on Vercel 10s kill | Low risk, monitor |
+
+### Bot performance bottlenecks
+
+1. **`get_candles(300)` called every loop tick (every ~10s)** — fetches 300 bars even when no new H1 bar has opened. Fix: cache last bar timestamp, skip fetch if no new bar expected.
+2. **`compute_indicators()` runs every 10s** — all indicators recomputed on same data. Fix: only recompute on new H1 candle close (once per hour for H1 strategies).
+3. **`_pos_state` dict in RiskManager never cleaned up** — grows unbounded if bot runs for months. Fix: prune closed tickets periodically.
+4. **Signal functions duplicated** between `mt5-bot.py` and `strategy-engine-v2.py` — diverge silently when one is updated. Fix: extract to `scripts/signals.py`.
+
+### Strategy/timeframe consistency
+
+- Frontend `strategy.js` detects regime and shows signals without timeframe context
+- Bot applies strategies on different TFs (M5 for S09, M30 for S16, H1 for S05)
+- This is expected — frontend is for human guidance, bot uses its own regime+TF logic
+- **Do not add timeframe filtering to the frontend signal engine** unless explicitly requested

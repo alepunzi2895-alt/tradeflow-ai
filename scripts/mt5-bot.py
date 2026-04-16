@@ -63,13 +63,13 @@ STRATEGY_PARAMS = {
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
 PLAYBOOK_FILE = "regime_playbook.json"
 FALLBACK_PLAYBOOK = {
-    'TREND_UP':   {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
-    'TREND_DOWN': {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
-    'WEAK_UP':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
-    'WEAK_DOWN':  {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
+    'TREND_UP':   {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
+    'TREND_DOWN': {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
+    'WEAK_UP':    {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
+    'WEAK_DOWN':  {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
     'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M5'},
-    'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
-    'UNKNOWN':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
+    'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
+    'UNKNOWN':    {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
 }
 PLAYBOOK = FALLBACK_PLAYBOOK  # verrà sovrascritta da load_playbook()
 
@@ -546,13 +546,13 @@ SIGNAL_FNS = {
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
 # Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M15',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
-    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M15',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
+    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
     'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None)],
     'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
-    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M15',None)],
+    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M30',None)],
 }
 
 def get_signal(I, i, hour, regime):
@@ -921,10 +921,14 @@ def run():
     last_bar_time_m30  = None   # per rilevare nuova candela M30
     current_regime     = 'UNKNOWN'
     current_is_extreme = False
-    last_sync_time = -999  # forza sync immediato al primo ciclo
-    last_ai_score  = 50.0  # default neutro
-    last_score_ts  = 0     # timestamp ultimo fetch score
-    last_cmd_ts    = 0     # timestamp ultimo check comandi manuali
+    last_sync_time       = -999  # forza sync immediato al primo ciclo
+    last_ai_score        = 50.0  # default neutro
+    last_score_ts        = 0     # timestamp ultimo fetch score
+    last_cmd_ts          = 0     # timestamp ultimo check comandi manuali
+    reconnect_attempts   = 0     # contatore per exponential backoff MT5
+    last_candle_fetch_ts = 0     # timestamp ultimo fetch candele H1
+    cached_candles       = None  # cache candele (aggiornata ogni 60s)
+    cached_I_h1          = None  # cache indicatori (ricalcolati solo su nuova barra)
 
     # Inizializza RiskManager
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
@@ -936,16 +940,21 @@ def run():
     while True:
         try:
             now_utc = datetime.datetime.now(datetime.timezone.utc)
+            now_ts  = time.time()
 
-            # ── Recupera candele ──────────────────────────────────────────────
-            candles = get_candles(300)
-            if candles is None or len(candles) < 100:
-                log.warning("Candele non disponibili, riprovo...")
+            # ── Recupera candele H1 (cache 60s — evita fetch MT5 ad ogni tick) ─
+            if now_ts - last_candle_fetch_ts >= 60:
+                new_c = get_candles(300)
+                if new_c and len(new_c) >= 100:
+                    cached_candles = new_c
+                    last_candle_fetch_ts = now_ts
+            if cached_candles is None or len(cached_candles) < 100:
+                log.warning("Candele H1 non disponibili, riprovo...")
                 time.sleep(30)
                 continue
+            candles = cached_candles
 
             # ── Controlla comandi manuali dalla UI (ogni 5s) ──────────────────
-            now_ts = time.time()
             if now_ts - last_cmd_ts >= 5:
                 last_cmd_ts = now_ts
                 manual_cmd = fetch_pending_command()
@@ -979,16 +988,23 @@ def run():
             # ── Sync periodico a Vercel (ogni 20s) + fetch AI score ────────
             now_ts = time.time()
             if now_ts - last_sync_time >= 20:
-                # Verifica connessione MT5 — riconnetti se persa
+                # Verifica connessione MT5 — riconnetti con exponential backoff
                 if mt5.account_info() is None:
-                    log.warning("MT5 connessione persa — tentativo riconnessione...")
-                    mt5.shutdown()
-                    time.sleep(5)
+                    reconnect_attempts += 1
+                    wait_s = min(5 * (2 ** (reconnect_attempts - 1)), 300)
+                    log.warning(f"MT5 connessione persa — tentativo {reconnect_attempts}, attesa {wait_s}s...")
+                    try:
+                        mt5.shutdown()
+                    except Exception:
+                        pass
+                    time.sleep(wait_s)
                     if not mt5_connect():
-                        log.error("Riconnessione MT5 fallita, riprovo in 30s")
-                        time.sleep(30)
+                        log.error(f"Riconnessione MT5 fallita (tentativo {reconnect_attempts})")
                         continue
-                    log.info("MT5 riconnesso correttamente.")
+                    log.info(f"MT5 riconnesso correttamente dopo {reconnect_attempts} tentativi.")
+                    reconnect_attempts = 0
+                else:
+                    reconnect_attempts = 0
 
             # ── Fetch AI Score ogni 60s ────────────────────────────────────
             if rm and (now_ts - last_score_ts) >= 60:
@@ -1014,17 +1030,19 @@ def run():
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
 
-            # ── Calcola indicatori + Gestione Posizioni (Real-time) ──
-            I_h1 = compute_indicators(candles)
+            # ── Controlla nuova candela H1 ────────────────────────────────────
+            latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
+            new_h1_bar = (latest_bar_time != last_bar_time)
+
+            # Ricalcola indicatori solo su nuova barra H1 (1×/ora, non ogni 10s)
+            if cached_I_h1 is None or new_h1_bar:
+                cached_I_h1 = compute_indicators(candles)
+            I_h1 = cached_I_h1
             i_h1 = len(candles) - 2
 
             if rm:
                 atr_now = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else 10.0
                 rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
-
-            # ── Controlla nuova candela H1 ────────────────────────────────────
-            latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
-            new_h1_bar = (latest_bar_time != last_bar_time)
 
             if new_h1_bar:
                 last_bar_time = latest_bar_time

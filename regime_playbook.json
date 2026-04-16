@@ -5,7 +5,7 @@
   "playbook": {
     "TREND_UP": {
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "tf": "M15",
+      "tf": "M30",
       "n": 1467,
       "wr": 53.0,
       "pnl": 2355.2,

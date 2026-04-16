@@ -1,6 +1,19 @@
 // Generate trading reports: daily, weekly, monthly
 // Also stores/retrieves trade coaching memory
 
+async function fetchT(url, opts = {}, ms = 8000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(tid);
+    return r;
+  } catch (e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -116,7 +129,7 @@ Genera:
 Sii specifico, usa i dati. Tono da coach, non da critico.`;
     }
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetchT("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -129,7 +142,7 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
         system: "Sei TradeFlow AI, coach di trading professionale. Rispondi sempre in italiano. Usa linguaggio costruttivo, orientato alla crescita. Mai 'errori' — usa 'opportunità di miglioramento', 'da ottimizzare', 'area di sviluppo'.",
         messages: [{ role: "user", content: prompt }]
       })
-    });
+    }, 9000);
 
     const d = await r.json();
     if (d.error) throw new Error(d.error.message);

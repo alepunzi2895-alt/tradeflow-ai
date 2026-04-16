@@ -341,6 +341,7 @@ python scripts/backtest_mfkk_intraday.py --h1-file xauusd_h1_730d.json
 | 2026-04-14 | Magic Combo 0.3% & Elite S05 | Trovata combinazione ottimale per massimizzare P&L mantenendo DD < 44% come richiesto | Impostato rischio a 0.3% (Cent Account) con TP=20, SL=10 su S00. S05 reso ultra-selettivo (RSI>65, ADX>=30) con WR 91% e DD quasi nullo. PNL proiettato raddoppiato a +$34k/24m con DD ridotto al 26%. |
 | 2026-04-15 | Backtest aggiornato su dati MT5 reali (~6m) | `xauusd_h1_mt5.json` copre solo ~6 mesi di candele H1 reali (non 730gg). S00_MFKK: 223 trade, WR 43.5%, PF 1.283, P&L +$428, MaxDD $136. S05 best = V2_Triple_MACD su H4: 82 trade, WR 42.7%, PF 1.365, P&L +$1.102, MaxDD $781. S00_MFKK_HWR: 0 trade (condizioni troppo stringenti nel dataset corrente). | Aggiornato §5.2. Per 730gg usare `--mt5` con MT5 aperto. |
 | 2026-04-16 | Latency in Risk Manager e stats mancanti | `rm.manage_positions` e indicatori aggiornati solo ogni 1 ora (barra H1); S10 stats erano null. | Spostata logica nel loop principale (10s) per risposta real-time; popolato `strategy.js` con stats S10 reali. |
+| 2026-04-16 | Bassa frequenza trade strategie AI | Filtri troppo conservativi su S05, S01, S13, S10 limitavano i trade. | Rilassati parametri RSI/ADX/MACD e tolleranze retest/mitigazione; rimosso filtro EMA da S10; rinominato label BACKUP in SECONDARY. |
 
 ---
 

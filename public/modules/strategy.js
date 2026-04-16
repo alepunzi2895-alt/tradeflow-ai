@@ -708,7 +708,7 @@ const SE_STRATEGY_FNS = {
     return null;
   },
 
-  // S05_V3_Sell_Exhaust — OBV T-Channel bear + RSI>65 + ADX≥30 + MOM< (TREND_UP exhaustion)
+  // S05_V3_Sell_Exhaust — OBV T-Channel bear + RSI>60 + ADX≥25 + MOM< (TREND_UP exhaustion)
   S05_V3_Sell_Exhaust: (I, i) => {
     if (!I.obv_oc || i < 1) return null;
     const oc  = I.obv_oc[i];
@@ -716,8 +716,8 @@ const SE_STRATEGY_FNS = {
     const adx = I.adx?.[i];
     const mom = I.mom?.[i];
     if (rsi == null || adx == null || mom == null) return null;
-    if (oc === -1 && rsi > 65 && adx >= 30 && mom < 0) {
-      return { dir: 'sell', why: `Sell Exhaust ↓ OBV Bear · RSI ${rsi.toFixed(0)}>65 · ADX ${adx.toFixed(0)}≥30 · Mom<0`, quality: 'high' };
+    if (oc === -1 && rsi > 60 && adx >= 25 && mom < 0) {
+      return { dir: 'sell', why: `Sell Exhaust ↓ OBV Bear · RSI ${rsi.toFixed(0)}>60 · ADX ${adx.toFixed(0)}≥25 · Mom<0`, quality: 'high' };
     }
     return null;
   },
@@ -728,64 +728,65 @@ const SE_STRATEGY_FNS = {
     const ml  = I.macd?.[i], ms = I.macd_sig?.[i] ?? I.macd_signal?.[i];
     if (adx == null || dp == null || dm == null || ml == null || ms == null) return null;
     const diff = ml - ms; const spread = Math.abs(dp - dm);
-    if (adx >= 30 && dm > dp && spread >= 15 && diff >= 1.0) {
-      return { dir: 'sell', why: `Exhaustion ↓ ADX ${adx.toFixed(0)}≥30 · DM>DP spread ${spread.toFixed(0)} · MACD diff +${diff.toFixed(1)}`, quality: 'medium' };
+    if (adx >= 25 && dm > dp && spread >= 15 && diff >= 0.7) {
+      return { dir: 'sell', why: `Exhaustion ↓ ADX ${adx.toFixed(0)}≥25 · DM>DP spread ${spread.toFixed(0)} · MACD diff +${diff.toFixed(1)}`, quality: 'medium' };
     }
-    if (adx >= 28 && dp > dm && spread >= 15 && diff <= -1.0) {
-      return { dir: 'buy', why: `Exhaustion ↑ ADX ${adx.toFixed(0)}≥28 · DP>DM spread ${spread.toFixed(0)} · MACD diff ${diff.toFixed(1)}`, quality: 'medium' };
+    if (adx >= 25 && dp > dm && spread >= 15 && diff <= -0.7) {
+      return { dir: 'buy', why: `Exhaustion ↑ ADX ${adx.toFixed(0)}≥25 · DP>DM spread ${spread.toFixed(0)} · MACD diff ${diff.toFixed(1)}`, quality: 'medium' };
     }
     return null;
   },
 
-  // S13_STRUC_BREAK — breakout 40-bar high/low con retest immediato (RANGE)
+  // S13_STRUC_BREAK — breakout 30-bar high/low con retest (RANGE)
   S13_STRUC_BREAK: (I, i) => {
     if (i < 60) return null;
     const H = I.H, L = I.L, C = I.C;
     if (!H || !L || !C) return null;
-    const hh = Math.max(...H.slice(i-40, i));
-    const ll  = Math.min(...L.slice(i-40, i));
+    const hh = Math.max(...H.slice(i-30, i));
+    const ll  = Math.min(...L.slice(i-30, i));
     const c   = C[i], lo = L[i], hi = H[i];
-    if (c > hh && lo <= hh * 1.001 && lo >= hh * 0.999) {
-      return { dir: 'buy', why: `Struc Break ↑ Breakout + retest max 40 barre $${hh.toFixed(2)}`, quality: 'high' };
+    if (c > hh && lo <= hh * 1.002 && lo >= hh * 0.998) {
+      return { dir: 'buy', why: `Struc Break ↑ Breakout + retest 30 barre $${hh.toFixed(2)}`, quality: 'high' };
     }
-    if (c < ll && hi >= ll * 0.999 && hi <= ll * 1.001) {
-      return { dir: 'sell', why: `Struc Break ↓ Breakout + retest min 40 barre $${ll.toFixed(2)}`, quality: 'high' };
+    if (c < ll && hi >= ll * 0.998 && hi <= ll * 1.002) {
+      return { dir: 'sell', why: `Struc Break ↓ Breakout + retest 30 barre $${ll.toFixed(2)}`, quality: 'high' };
     }
     return null;
   },
 
   // S10_OB_FVG_SCALP — ICT Order Block + FVG Confluence Scalping · M15 always-on
-  // LONG : EMA20>EMA50 + price in Bullish OB body + Bull FVG attivo + candela bullish
-  // SHORT: EMA20<EMA50 + price in Bearish OB body + Bear FVG attivo + candela bearish
+  // LONG : Bullish OB body + Bull FVG attivo + candela bullish
+  // SHORT: Bearish OB body + Bear FVG attivo + candela bearish
+  // NOTA: Filtro EMA20/50 rilassato (facoltativo) per massimizzare frequenza
   S10_OB_FVG_SCALP: (I, i) => {
     const {O, H, L, C, e20, e50, fvg_bull, fvg_bear} = I;
-    if (!e20?.[i] || !e50?.[i] || !C || !O) return null;
+    if (!C || !O) return null;
 
-    const LB = 20;
+    const LB = 30; // Aumentato lookback OB a 30
     let ob_b = false, ob_s = false;
 
     // ── Bullish OB detection ────────────────────────────────────────────────
-    for (let j = i - 3; j >= Math.max(i - LB - 1, 2); j--) {
-      if (C[j] >= O[j]) continue;                       // deve essere bearish
+    for (let j = i - 2; j >= Math.max(i - LB - 1, 2); j--) {
+      if (C[j] >= O[j]) continue;
       const ob_lo = Math.min(O[j], C[j]);
       const ob_hi = Math.max(O[j], C[j]);
-      if (!(C[j+1] > O[j+1] && j+2 <= i && C[j+2] > O[j+2])) continue; // impulso bullish
+      if (!(C[j+1] > O[j+1])) continue; // almeno una candela impulsiva
       let mitig = false;
-      for (let k = j+1; k < i; k++) { if (L[k] < ob_lo * 0.999) { mitig = true; break; } }
+      for (let k = j+1; k < i; k++) { if (L[k] < ob_lo * 0.998) { mitig = true; break; } }
       if (mitig) continue;
-      if (C[i] >= ob_lo * 0.999 && C[i] <= ob_hi * 1.002) { ob_b = true; break; }
+      if (C[i] >= ob_lo * 0.998 && C[i] <= ob_hi * 1.003) { ob_b = true; break; }
     }
 
     // ── Bearish OB detection ────────────────────────────────────────────────
-    for (let j = i - 3; j >= Math.max(i - LB - 1, 2); j--) {
-      if (C[j] <= O[j]) continue;                       // deve essere bullish
+    for (let j = i - 2; j >= Math.max(i - LB - 1, 2); j--) {
+      if (C[j] <= O[j]) continue;
       const ob_lo = Math.min(O[j], C[j]);
       const ob_hi = Math.max(O[j], C[j]);
-      if (!(C[j+1] < O[j+1] && j+2 <= i && C[j+2] < O[j+2])) continue; // impulso bearish
+      if (!(C[j+1] < O[j+1])) continue;
       let mitig = false;
-      for (let k = j+1; k < i; k++) { if (H[k] > ob_hi * 1.001) { mitig = true; break; } }
+      for (let k = j+1; k < i; k++) { if (H[k] > ob_hi * 1.002) { mitig = true; break; } }
       if (mitig) continue;
-      if (C[i] >= ob_lo * 0.998 && C[i] <= ob_hi * 1.001) { ob_s = true; break; }
+      if (C[i] >= ob_lo * 0.997 && C[i] <= ob_hi * 1.002) { ob_s = true; break; }
     }
 
     const fvg_b = fvg_bull?.[i];
@@ -793,11 +794,11 @@ const SE_STRATEGY_FNS = {
     const bull_c = C[i] > O[i];
     const bear_c = C[i] < O[i];
 
-    if (e20[i] > e50[i] && ob_b && fvg_b && bull_c) {
-      return { dir: 'buy', why: `OB+FVG Bull ▲ EMA20>${e20[i].toFixed(0)} prezzo in Bullish OB + Bull FVG`, quality: 'high', score: 88 };
+    if (ob_b && fvg_b && bull_c) {
+      return { dir: 'buy', why: `OB+FVG Bull ▲ Prezzo in Bullish OB + Bull FVG M15`, quality: 'high', score: 88 };
     }
-    if (e20[i] < e50[i] && ob_s && fvg_s && bear_c) {
-      return { dir: 'sell', why: `OB+FVG Bear ▼ EMA20<${e20[i].toFixed(0)} prezzo in Bearish OB + Bear FVG`, quality: 'high', score: 88 };
+    if (ob_s && fvg_s && bear_c) {
+      return { dir: 'sell', why: `OB+FVG Bear ▼ Prezzo in Bearish OB + Bear FVG M15`, quality: 'high', score: 88 };
     }
     return null;
   },
@@ -1359,7 +1360,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       return `
       <div style="background:var(--bg2); border:1px solid ${isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isPrimary  ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
-        ${isSecondary? `<div style="position:absolute;top:0;right:0;background:${rm.col}30;border:1px solid ${rm.col}50;color:${rm.col};font-size:7px;font-weight:700;padding:2px 6px;border-bottom-left-radius:6px">▸ BACKUP</div>` : ''}
+        ${isSecondary? `<div style="position:absolute;top:0;right:0;background:${rm.col}30;border:1px solid ${rm.col}50;color:${rm.col};font-size:7px;font-weight:700;padding:2px 6px;border-bottom-left-radius:6px">▸ SECONDARY</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:7px;font-size:10px">

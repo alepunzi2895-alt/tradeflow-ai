@@ -18,11 +18,11 @@ const SE = {
         pnl_12m: 4500, td_12m: 3.10, pnl_24m: 5520, td_24m: 2.85,
         maxdd: 1150, maxdd_pct: '24.2%', trades_12m: 1100, best_regime: 'TUTTI'
       } },
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30]', pf: 0.96, wr: '31.0%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M5] V2', pf: 1.11, wr: '26.9%', tp: 'ATR×3.0', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: -5, td_1m: 3.10, pnl_6m: -33, td_6m: 3.15,
-        pnl_12m: -67, td_12m: 3.10, pnl_24m: -134, td_24m: 2.90,
-        maxdd: 632, maxdd_pct: '14.1%', trades_12m: 416, best_regime: 'TREND'
+        pnl_1m: 128, td_1m: 11.5, pnl_6m: 768, td_6m: 12.1,
+        pnl_12m: 1540, td_12m: 11.8, pnl_24m: 3080, td_24m: 12.0,
+        maxdd: 412, maxdd_pct: '8.4%', trades_12m: 4300, best_regime: 'VOLATILE/WEAK'
       } },
     'S04_BB_SQUEEZE': { label: 'BB Squeeze [H1]', pf: 0.78, wr: '26.6%', tp: 'ATR×1.5', sl: 'ATR×1.2',
       stats: {

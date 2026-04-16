@@ -362,7 +362,8 @@ def compute_all(candles):
     O=[c['o'] for c in candles]
 
     # EMAs
-    e20=ema(C,20); e50=ema(C,50); e100=ema(C,100); e200=ema(C,200)
+    e13=ema(C,13); e34=ema(C,34); e89=ema(C,89); e233=ema(C,233)
+    e20=ema(C,20); e50=ema(C,50); e100=ema(C,100); e200=e233 # Alias
 
     # MACD
     ml,sg,hist_m=macd_full(C)
@@ -429,6 +430,7 @@ def compute_all(candles):
 
     return {
         'n':n,'H':H,'L':L,'C':C,'V':V,'O':O,
+        'e13':e13,'e34':e34,'e89':e89,'e233':e233,
         'e20':e20,'e50':e50,'e100':e100,'e200':e200,
         'macd':ml,'macd_sig':sg,'macd_hist':hist_m,
         'adx':adx_v,'dip':dip,'dim':dim,
@@ -730,23 +732,20 @@ def s15_obv_macd(ind,i,hour=None):
 
 def s_mfkk_scalping(ind,i,hour=None):
     """
-    S09_MFKK_SCALPING — EMA stack H1 + FVG (H1 approx) + OB confluence
-    Filtro:   EMA20>50>100>200 (bull) | EMA20<50<100<200 (bear) — trend confermato
-    Trigger:  FVG attivo nella direzione del trend (mitigazione ICT)
-    Boost:    OB H1 confluente → qualità ELITE; FVG solo → HIGH
-    TP: 1.5×ATR | SL: 1×ATR (gestiti dal runner)
+    S09_MFKK_SCALPING V2 — EMA Fibonacci Stack (13,34,89,233) + FVG retest + Trend Bias
+    TP: 3.0×ATR | SL: 1.0×ATR
     """
-    e20=ind['e20'][i]; e50=ind['e50'][i]
-    e100=ind['e100'][i]; e200=ind['e200'][i]
+    if i < 233: return None
+    e13=ind['e13'][i]; e34=ind['e34'][i]; e89=ind['e89'][i]; e233=ind['e233'][i]
     fvg_b=ind.get('fvg_bull'); fvg_s=ind.get('fvg_bear')
-    ob_b=ind['ob_bull'][i]; ob_s=ind['ob_bear'][i]
-    if None in (e20,e50,e100,e200): return None
-    if fvg_b is None or fvg_s is None: return None
-    bull_stack = e20>e50 and e50>e100 and e100>e200
-    bear_stack = e20<e50 and e50<e100 and e100<e200
-    if bull_stack and fvg_b[i]:
+    c=ind['C'][i]
+    if None in (e13, e34, e89, e233) or fvg_b is None: return None
+    
+    # Bullish Stack + Price > EMA 233 + FVG
+    if e13 > e34 > e89 > e233 and c > e233 and fvg_b[i]:
         return 'buy'
-    if bear_stack and fvg_s[i]:
+    # Bearish Stack + Price < EMA 233 + FVG
+    if e13 < e34 < e89 < e233 and c < e233 and fvg_s[i]:
         return 'sell'
     return None
 
@@ -811,7 +810,7 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.0, 2)
         elif name == 'S09_MFKK_SCALPING':
-            curr_tp = round(av * 1.5, 2)
+            curr_tp = round(av * 3.0, 2)
             curr_sl = round(av * 1.0, 2)
 
         sig=fn(ind,i,hour)
@@ -906,7 +905,7 @@ def run_adaptive(candles, ind, tf='H1'):
         entry=c['c']
         # Strategia con ATR-based TP/SL
         if used=='S09_MFKK_SCALPING' and av:
-            tp_d=round(av*1.5,2); sl_d=round(av*1.0,2)
+            tp_d=round(av*3.0,2); sl_d=round(av*1.0,2)
         else:
             tp_d=TP_USD; sl_d=SL_USD
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d

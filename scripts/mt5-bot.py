@@ -62,6 +62,7 @@ STRATEGY_PARAMS = {
     'S07_STOCHRSI_BB':    {'tp_usd': 12.0,  'sl_usd': 15.0,  'label': 'Mean Reversion'},
     'S11_ALLIGATOR_AWAKEN': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Alligator Awaken'},
     'S10_ST_MACD_SESSION': {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'Session Momentum'},
+    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -71,7 +72,7 @@ FALLBACK_PLAYBOOK = {
     'TREND_DOWN': {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
     'WEAK_UP':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
     'WEAK_DOWN':  {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
-    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
+    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M5'},
     'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
     'UNKNOWN':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M15'},
 }
@@ -362,8 +363,10 @@ def compute_indicators(candles):
     n=len(C)
     I={}
     I['O']=O; I['C']=C; I['H']=H; I['L']=L; I['V']=V
+    I['e13']=ema(C,13); I['e34']=ema(C,34)
+    I['e89']=ema(C,89); I['e233']=ema(C,233)
     I['e20']=ema(C,20); I['e50']=ema(C,50)
-    I['e100']=ema(C,100); I['e200']=ema(C,200)
+    I['e100']=ema(C,100); I['e200']=I['e233'] # Alias per compatibilità
     I['rsi']=rsi(C,14)
     I['atr']=atr(H,L,C,14)
     I['adx'],I['dip'],I['dim']=adx_calc(H,L,C,14)
@@ -519,12 +522,22 @@ def signal_exhaustion(I, i):
     return None
 
 def signal_mfkk_scalping(I, i):
-    """S09_MFKK_SCALPING — EMA stack bullish/bearish + FVG retest"""
-    e20 = I['e20'][i]; e50 = I['e50'][i]; e100 = I['e100'][i]; e200 = I['e200'][i]
+    """S09_MFKK_SCALPING V2 — EMA Fibonacci Stack (13,34,89,233) + FVG retest + Trend Bias (M5)"""
+    if i < 233: return None
+    e13 = I['e13'][i]; e34 = I['e34'][i]; e89 = I['e89'][i]; e233 = I['e233'][i]
     fb = I.get('fvg_bull'); fs = I.get('fvg_bear')
-    if None in (e20, e50, e100, e200) or fb is None: return None
-    if e20 > e50 > e100 > e200 and fb[i]: return 'buy'
-    if e20 < e50 < e100 < e200 and fs[i]: return 'sell'
+    c = I['C'][i]
+    
+    if None in (e13, e34, e89, e233) or fb is None: return None
+    
+    # Bullish Stack + Trend Bias (Price > EMA 233) + FVG
+    if e13 > e34 > e89 > e233 and c > e233 and fb[i]:
+        return 'buy'
+    
+    # Bearish Stack + Trend Bias (Price < EMA 233) + FVG
+    if e13 < e34 < e89 < e233 and c < e233 and fs[i]:
+        return 'sell'
+        
     return None
 
 def signal_struc_break(I, i):
@@ -622,9 +635,9 @@ SIGNAL_FNS = {
 REGIME_MULTI_STRATEGIES = {
     'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M15',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S08_OBV_EMA_MOM','M15',None)],
     'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M15',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S01_EXHAUSTION','M15',None)],
-    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M30',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M30',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'VOLATILE':   [('S06_ORDERBLOCK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S07_STOCHRSI_BB','M15',None)],
+    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M5',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M5',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'VOLATILE':   [('S06_ORDERBLOCK','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S07_STOCHRSI_BB','M15',None)],
     'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S07_STOCHRSI_BB','M15',None), ('S04_BB_SQUEEZE','H1',None), ('S11_ALLIGATOR_AWAKEN','M15',None)],
     'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M15',None)],
 }

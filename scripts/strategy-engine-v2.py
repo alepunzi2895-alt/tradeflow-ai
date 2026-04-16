@@ -1017,11 +1017,11 @@ def main():
         'config':{'tp':TP_USD,'sl':SL_USD,'max_trades':MAX_TRADES,'cooldown_h':COOLDOWN_H,
                   'session_utc':[SESSION_S,SESSION_E],'extreme_mult':EXTREME_K}
     }
-    with open('strategy_engine_v2.json','w') as f:
+    with open(OUT_FILE,'w') as f:
         json.dump(output,f,indent=2,default=str)
 
     print("\n" + "="*72)
-    print("SALVATO: strategy_engine_v2.json")
+    print(f"SALVATO: {OUT_FILE}")
     print(f"SISTEMA ADATTIVO: {sa['wr']}% WR · ${sa['avg_day']}/gg · {sa['tr_day']:.1f} trade/gg")
     print("="*72)
 

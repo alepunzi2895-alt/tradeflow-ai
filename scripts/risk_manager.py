@@ -50,6 +50,10 @@ STRATEGY_BASE = {
     'S05_V3_Sell_Exhaust': {'base_tp': None, 'base_sl': None,  'use_atr': True},
     'S01_EXHAUSTION':      {'base_tp': None, 'base_sl': None,  'use_atr': True},
     'S13_STRUC_BREAK':     {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S15_OBV_MACD':       {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S04_BB_SQUEEZE':     {'base_tp': 15.0, 'base_sl': 10.0,  'use_atr': False},
+    'S07_STOCHRSI_BB':    {'base_tp': 12.0, 'base_sl': 15.0,  'use_atr': False},
+    'S11_ALLIGATOR_AWAKEN': {'base_tp': None, 'base_sl': None, 'use_atr': True},
 }
 ATR_TP_MULT_BASE = 1.5   # moltiplicatore ATR per TP base (ottimizzato su H1)
 ATR_SL_MULT_BASE = 1.0   # moltiplicatore ATR per SL base (ottimizzato su H1)

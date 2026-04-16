@@ -12,6 +12,9 @@ USO:
   python scripts/mt5-bot.py --dry-run   (simula senza inviare ordini)
 """
 import sys, io, time, json, math, datetime, argparse, os, logging, urllib.request, urllib.error
+from dotenv import load_dotenv
+load_dotenv() # Carica .env dal root se presente
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # ── RISK MANAGER ─────────────────────────────────────────────────────────────
@@ -22,12 +25,13 @@ except ImportError:
     log_placeholder = logging.getLogger('tf-bot')
     log_placeholder.warning("risk_manager.py non trovato — uso lot size fisso")
 
-# ── CONFIGURAZIONE ────────────────────────────────────────────────────────────
-MT5_LOGIN    = 1301224666
-MT5_PASSWORD = "Alessandro95!"
-MT5_SERVER   = "XMGlobal-MT5 6"
+# ── CONFIGURAZIONE (Legacy fallback, ora legge da .env) ───────────────
+MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
+MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
+MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 
-SYMBOL       = "GOLD"
+SYMBOL       = os.getenv("SYMBOL", "GOLD")
+
 LOT_SIZE     = 0.05          # lot size base (0.05 = config A ottimizzata, ~€1000+ capital)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
@@ -36,9 +40,13 @@ EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 10            # polling ogni 10 secondi
 
-VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"  # NO slash finale
-MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
+# Se sei su VPS Standalone, usa http://localhost:3000
+VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
+MT5_SECRET   = os.getenv("MT5_BOT_SECRET", "tradeflow-mt5-secret") 
+
 SYNC_ENABLED = True          # False per disabilitare il sync cloud
+
+current_ai_score = 50.0      # Global per rilassamento filtri
 
 
 LOG_FILE     = "mt5-bot.log"
@@ -46,14 +54,12 @@ LOG_FILE     = "mt5-bot.log"
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
 # Strategie attive da regime_playbook.json (backtest multi-TF 2026-04-15)
-STRATEGY_PARAMS = {
-    'S00_MFKK':            {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'MFKK Score'},
-    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday'},
-    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping'},
-    'S05_V3_Sell_Exhaust': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Sell Exhaust'},
-    'S01_EXHAUSTION':      {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Exhaustion'},
-    'S13_STRUC_BREAK':     {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Struc Break'},
     'S10_OB_FVG_SCALP':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp', 'tp_mult': 1.0, 'sl_mult': 0.6},
+    'S15_OBV_MACD':       {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OBV Momentum', 'tp_mult': 1.5, 'sl_mult': 1.0},
+    'S04_BB_SQUEEZE':     {'tp_usd': 15.0,  'sl_usd': 10.0,  'label': 'BB Squeeze'},
+    'S07_STOCHRSI_BB':    {'tp_usd': 12.0,  'sl_usd': 15.0,  'label': 'Mean Reversion'},
+    'S11_ALLIGATOR_AWAKEN': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Alligator Awaken'},
+    'S10_ST_MACD_SESSION': {'tp_usd': 20.0,  'sl_usd': 12.0,  'label': 'Session Momentum'},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -300,6 +306,50 @@ def obv_macd_tchannel(H, L, C, V, wl=28, vl=14, ml=9, sl=26):
         else: oc.append(oc[-1])
     return ml_, b5, oc
 
+def supertrend(H, L, C, p=10, m=3.0):
+    atr_v = atr(H, L, C, p)
+    n = len(C); dir_ = [1]*n; st = [0.0]*n
+    ub = [(H[i]+L[i])/2+m*(atr_v[i] or 0) for i in range(n)]
+    lb = [(H[i]+L[i])/2-m*(atr_v[i] or 0) for i in range(n)]
+    f_ub = [0.0]*n; f_lb = [0.0]*n
+    for i in range(1, n):
+        f_ub[i] = ub[i] if ub[i]<f_ub[i-1] or C[i-1]>f_ub[i-1] else f_ub[i-1]
+        f_lb[i] = lb[i] if lb[i]>f_lb[i-1] or C[i-1]<f_lb[i-1] else f_lb[i-1]
+        if st[i-1]==f_ub[i-1] and C[i]<=f_ub[i]: st[i]=f_ub[i]; dir_[i]=1
+        elif st[i-1]==f_ub[i-1] and C[i]>f_ub[i]: st[i]=f_lb[i]; dir_[i]=-1
+        elif st[i-1]==f_lb[i-1] and C[i]>=f_lb[i]: st[i]=f_lb[i]; dir_[i]=-1
+        elif st[i-1]==f_lb[i-1] and C[i]<f_lb[i]: st[i]=f_ub[i]; dir_[i]=1
+        else: st[i]=f_ub[i]; dir_[i]=1
+    return dir_  # 1=bearish, -1=bullish
+
+def alligator(H, L, p1=13, p2=8, p3=5):
+    med = [(H[i]+L[i])/2 for i in range(len(H))]
+    jaw = ema(med, p1)
+    teeth = ema(med, p2)
+    lips = ema(med, p3)
+    return jaw, teeth, lips
+
+def stoch_rsi(src, rsi_p=14, stoch_p=14, k_p=3, d_p=3):
+    r=rsi(src,rsi_p)
+    n=len(r); raw=[None]*n
+    for i in range(stoch_p-1,n):
+        sl=[x for x in r[i-stoch_p+1:i+1] if x is not None]
+        if len(sl)<stoch_p or r[i] is None: continue
+        hi=max(sl); lo=min(sl)
+        raw[i]=(r[i]-lo)/(hi-lo)*100 if hi>lo else 50
+    sk=sma([x if x else 50 for x in raw],k_p)
+    sd=sma([x if x else 50 for x in sk],d_p)
+    return sk,sd
+
+def bb(src, p=20, m=2.0):
+    mid=sma(src,p); up=[]; dn=[]
+    for i,v in enumerate(mid):
+        if v is None: up.append(None);dn.append(None);continue
+        sl=src[i-p+1:i+1]
+        mn=sum(sl)/p; std=math.sqrt(sum((x-mn)**2 for x in sl)/p)
+        up.append(v+m*std); dn.append(v-m*std)
+    return mid, up, dn
+
 # ── COMPUTE INDICATORS ────────────────────────────────────────────────────────
 def compute_indicators(candles):
     O=[c['o'] for c in candles]
@@ -325,6 +375,9 @@ def compute_indicators(candles):
     I['vwap']=vwap_intraday(candles)
     I['obv']=obv(C,V)
     I['obv_ema']=ema(I['obv'],20)
+    I['srsi_k'],I['srsi_d']=stoch_rsi(C,14,14,3,3)
+    I['jaw'], I['teeth'], I['lips'] = alligator(H, L)
+    I['st'] = supertrend(H, L, C, 10, 3.0)
     # OBV MACD T-Channel per S05_MFKK_INTRADAY / S05_V3_Sell_Exhaust
     try:
         _, _, I['obv_oc'] = obv_macd_tchannel(H,L,C,V)
@@ -401,7 +454,9 @@ def signal_mfkk_intraday(I, i):
     a   = I['adx'][i]
     mc  = I['ml'][i]   # MACD line
     if None in (r, mo, a, mc): return None
-    if a < 25: return None           # ADX25 — richiede trend più definito (era 20)
+    if a < 25: 
+        # Rilassamento se AI Score è alto
+        if current_ai_score < 75 or a < 20: return None
     if oc[i] == 1  and r > 52 and mo > 0 and mc > 0: return 'buy'   # RSI bias +2
     if oc[i] == -1 and r < 48 and mo < 0 and mc < 0: return 'sell'  # RSI bias +2
     return None
@@ -459,6 +514,56 @@ def signal_ob_fvg_scalp(I, i):
     if ob_s[i] and fvg_s[i] and bear_c: return 'sell'
     return None
 
+    if spread_p < 0.2 and spread > spread_p and a > 20: 
+        if l[i] > t[i] > j[i]: return 'buy'
+        if l[i] < t[i] < j[i]: return 'sell'
+    return None
+
+def signal_st_macd_session(I, i, hour):
+    """S10_ST_MACD_SESSION — Supertrend + MACD confirm in sessione attiva"""
+    if hour is None or not (7 <= hour <= 14): return None
+    st = I['st'][i]; mh = I['mh'][i]
+    c = I['C'][i]; e50 = I['e50'][i]
+    if None in (st, mh, e50): return None
+    # BUY: ST bullish + MACD hist pos + sopra EMA50
+    if st == -1 and mh > 0 and c > e50: return 'buy'
+    # SELL: ST bearish + MACD hist neg + sotto EMA50
+    if st == 1 and mh < 0 and c < e50: return 'sell'
+    return None
+
+def signal_obv_macd(I, i):
+    """S15_OBV_MACD — OBV T-Channel crossover (Momentum Volumi)"""
+    if i < 1: return None
+    oc = I.get('obv_oc', [])
+    if not oc: return None
+    if oc[i] == 1  and oc[i-1] != 1:  return 'buy'
+    if oc[i] == -1 and oc[i-1] != -1: return 'sell'
+    return None
+
+def signal_bb_squeeze(I, i):
+    """S04_BB_SQUEEZE — Breakout da compressione volatilità"""
+    if i < 1: return None
+    bu, bm, bd = I['bb_up'], I['bb_mid'], I['bb_dn']
+    ku, kl = I['ku'], I['kl']
+    c = I['C'][i]; c_prev = I['C'][i-1]
+    if None in (bu[i], bm[i], bd[i], ku[i], kl[i]): return None
+    # Squeeze: BB dentro Keltner
+    is_squeeze = (bu[i] < ku[i] and bd[i] > kl[i])
+    # Se usciamo dallo squeeze o il prezzo rompe con forza
+    if c > bu[i] and c_prev <= bu[i-1]: return 'buy'
+    if c < bd[i] and c_prev >= bd[i-1]: return 'sell'
+    return None
+
+def signal_stochrsi_bb(I, i):
+    """S07_STOCHRSI_BB — Mean reversion su bande estremer"""
+    sk, sd = I.get('srsi_k'), I.get('srsi_d')
+    bd, bu = I['bb_dn'], I['bb_up']
+    c = I['C'][i]
+    if sk is None or bd[i] is None: return None
+    if sk[i] < 20 and sd[i] < 20 and c <= bd[i] * 1.002: return 'buy'
+    if sk[i] > 80 and sd[i] > 80 and c >= bu[i] * 0.998: return 'sell'
+    return None
+
 SIGNAL_FNS = {
     'S00_MFKK':            signal_mfkk_score,
     'S05_MFKK_INTRADAY':   signal_mfkk_intraday,
@@ -467,17 +572,22 @@ SIGNAL_FNS = {
     'S09_MFKK_SCALPING':   signal_mfkk_scalping,
     'S13_STRUC_BREAK':     signal_struc_break,
     'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
+    'S15_OBV_MACD':         signal_obv_macd,
+    'S04_BB_SQUEEZE':       signal_bb_squeeze,
+    'S07_STOCHRSI_BB':      signal_stochrsi_bb,
+    'S11_ALLIGATOR_AWAKEN': signal_alligator_awakening,
+    'S10_ST_MACD_SESSION':  signal_st_macd_session,
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
 # Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
-    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
-    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
-    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None),  ('S00_MFKK','H1',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None),   ('S00_MFKK','H1',None)],
+    'TREND_UP':   [('S15_OBV_MACD','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None), ('S04_BB_SQUEEZE','M30',None)],
+    'TREND_DOWN': [('S15_OBV_MACD','H1',None), ('S01_EXHAUSTION','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None), ('S15_OBV_MACD','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S04_BB_SQUEEZE','M15',None)],
+    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None), ('S15_OBV_MACD','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S04_BB_SQUEEZE','M15',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S07_STOCHRSI_BB','M15',None), ('S00_MFKK','H1',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S07_STOCHRSI_BB','M30',None), ('S13_STRUC_BREAK','H1',None), ('S11_ALLIGATOR_AWAKEN','M15',None)],
     'UNKNOWN':    [('S00_MFKK','H1',None)],
 }
 
@@ -918,7 +1028,9 @@ def run():
 
             # ── Fetch AI Score ogni 60s ────────────────────────────────────
             if rm and (now_ts - last_score_ts) >= 60:
-                last_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                global current_ai_score
+                current_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                last_ai_score = current_ai_score
                 last_score_ts = now_ts
                 log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f} — tier: {rm.get_tier(last_ai_score)['label']}")
 
@@ -1032,7 +1144,12 @@ def run():
                             if state.trades_today >= MAX_TRADES: break
                             fn2 = SIGNAL_FNS.get(sec_id)
                             if not fn2: continue
-                            sec_dir = fn2(I_h1, i_h1)
+                            
+                            # Supporto per session hour se richiesto
+                            if sec_id == 'S10_ST_MACD_SESSION':
+                                sec_dir = fn2(I_h1, i_h1, hour)
+                            else:
+                                sec_dir = fn2(I_h1, i_h1)
                             if not sec_dir: continue
                             if sec_dir_filter and sec_dir != sec_dir_filter: continue
                             if has_position_in_direction(sec_dir): continue

@@ -28,7 +28,7 @@ MT5_PASSWORD = "Alessandro95!"
 MT5_SERVER   = "XMGlobal-MT5 6"
 
 SYMBOL       = "GOLD"
-LOT_SIZE     = 0.02          # lot size iniziale (0.02 = sicuro su €1000)
+LOT_SIZE     = 0.05          # lot size base (0.05 = config A ottimizzata, ~€1000+ capital)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 1             # ore di cooldown tra trade
@@ -394,7 +394,8 @@ def signal_mfkk_score(I, i):
 def signal_mfkk_intraday(I, i):
     """
     S05_MFKK_INTRADAY — V2 Triple MACD (identico a strategy.js)
-    OBV T-Channel direzione + RSI + MACD line + Momentum + ADX >= 20
+    OBV T-Channel direzione + RSI + MACD line + Momentum + ADX >= 25 (config A ottimizzata)
+    RSI bias +2: buy RSI>52, sell RSI<48 — filtro qualità segnale
     """
     if i < 2: return None
     oc  = I.get('obv_oc', [])
@@ -404,9 +405,9 @@ def signal_mfkk_intraday(I, i):
     a   = I['adx'][i]
     mc  = I['ml'][i]   # MACD line
     if None in (r, mo, a, mc): return None
-    if a < 20: return None
-    if oc[i] == 1  and r > 50 and mo > 0 and mc > 0: return 'buy'
-    if oc[i] == -1 and r < 50 and mo < 0 and mc < 0: return 'sell'
+    if a < 25: return None           # ADX25 — richiede trend più definito (era 20)
+    if oc[i] == 1  and r > 52 and mo > 0 and mc > 0: return 'buy'   # RSI bias +2
+    if oc[i] == -1 and r < 48 and mo < 0 and mc < 0: return 'sell'  # RSI bias +2
     return None
 
 def signal_sell_exhaust(I, i):

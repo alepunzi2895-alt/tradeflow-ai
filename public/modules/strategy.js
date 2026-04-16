@@ -1262,8 +1262,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, max 2 trade, AI Score dinamico, lot=0.02)
-  const BOT_STATS = { pnl_1m:1090.71, pnl_6m:2757.84, pnl_12m:3096.97, pnl_24m:3685.31, maxdd:407.36, maxdd_pct:'8.6%', trades_12m:286, pf:1.487, wr:'40.6%', n_strat:7 };
+  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, max 2 trade, AI Score dinamico, lot=0.05, config A: ADX25+RSI+2)
+  const BOT_STATS = { pnl_1m:2884.89, pnl_6m:6871.28, pnl_12m:7924.43, pnl_24m:9533.37, maxdd:1290.61, maxdd_pct:'11.9%', trades_12m:252, pf:1.494, wr:'40.6%', n_strat:7 };
 
   // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in backtest_combined.py e mt5-bot.py)
   const PLAYBOOK_UI = {
@@ -1277,7 +1277,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
   const activeList = [playbookEntry.strategy, ...(playbookEntry.secondary ? [playbookEntry.secondary] : [])];
-  const DD_BUDGET = 25.0;   // soglia DD sistema — solo per gauge visuale
+  const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
   const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#ffd700' : '#ff4757';
   const activeSname = playbookEntry.strategy;
@@ -1381,7 +1381,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         : id==='S00_MFKK_HWR'
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'
-        ? 'V2 Triple MACD H1 · OBV T-Channel + RSI 50 + MACD + Momentum · ADX≥20 · 3.3 trade/gg · WR 37% · PF 1.23'
+        ? 'V2 Triple MACD H1 · OBV T-Channel + RSI>52/<48 + MACD + Momentum · ADX≥25 · config A ottimizzata · WR 39% · PF 1.34'
         : id==='S09_MFKK_SCALPING'
         ? 'EMA stack (20>50>100>200) + FVG retest · H1 su WEAK_UP · M30 su WEAK_DOWN/VOLATILE'
         : id==='S05_V3_Sell_Exhaust'

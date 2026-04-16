@@ -278,9 +278,9 @@ def s_mfkk_intraday(I, i):
     if not oc or i>=len(oc): return None
     r=I['rsi'][i]; mo=I['mom'][i]; a=I['adx'][i]; mc=I['macd'][i]
     if None in (r, mo, a, mc): return None
-    if a < 20: return None
-    if oc[i] == 1  and r > 50 and mo > 0 and mc > 0: return 'buy'
-    if oc[i] == -1 and r < 50 and mo < 0 and mc < 0: return 'sell'
+    if a < 25: return None           # ADX25 — richiede trend più definito (era 20)
+    if oc[i] == 1  and r > 52 and mo > 0 and mc > 0: return 'buy'   # RSI bias +2
+    if oc[i] == -1 and r < 48 and mo < 0 and mc < 0: return 'sell'  # RSI bias +2
     return None
 
 def s_ob_fvg_scalp(I, i):
@@ -432,8 +432,8 @@ def simulate(h1, m15, m30):
     equity = INITIAL_BALANCE
 
     # Inizializza RiskManager con stessi parametri del bot reale (mt5-bot.py)
-    # base_lot=0.02 = LOT_SIZE del bot, max_lot=0.10 = LOT_SIZE*5
-    rm = get_risk_manager(base_lot=0.02, max_lot=0.10) if get_risk_manager else None
+    # base_lot=0.05 = LOT_SIZE del bot, max_lot=0.25 = LOT_SIZE*5
+    rm = get_risk_manager(base_lot=0.05, max_lot=0.25) if get_risk_manager else None
 
     # Stato simulazione — max 2 trade simultanei, 1 per direzione
     open_trades    = []
@@ -704,7 +704,7 @@ print(f"  Win Rate      : {s['wr']}%")
 print(f"  Profit Factor : {s['pf']}")
 print(f"  P&L totale    : ${s['total_pnl']:.2f}")
 print(f"  Max Drawdown  : ${s['max_dd']:.2f}")
-print(f"\nPer periodo (RiskManager base_lot=0.02 — identico al bot reale):")
+print(f"\nPer periodo (RiskManager base_lot=0.05 — config A ottimizzata, ADX25+RSI+2):")
 print(f"  1 mese   : ${s['pnl_1m']:.2f}   ({s['trades_1m']} trade)")
 print(f"  6 mesi   : ${s['pnl_6m']:.2f}   ({s['trades_6m']} trade)")
 print(f"  12 mesi  : ${s['pnl_12m']:.2f}  ({s['trades_12m']} trade)")

@@ -60,13 +60,19 @@ const SE = {
         pnl_12m: 4956, td_12m: 0.18, pnl_24m: 9912, td_24m: 0.18,
         maxdd: 1120, maxdd_pct: '11.3%', trades_12m: 48, best_regime: 'RANGE'
       } },
+    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze', pf: 1.45, wr: '52.9%', tp: 'ATR×2.0', sl: 'ATR×1.5',
+      stats: {
+        pnl_1m: 146, td_1m: 2.94, pnl_6m: 876, td_6m: 2.94,
+        pnl_12m: 1752, td_12m: 2.94, pnl_24m: 2340, td_24m: 2.94,
+        maxdd: 180, maxdd_pct: '8.5%', trades_12m: 1050, best_regime: 'TREND/WEAK'
+      } },
   },
   // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA', 'S05_MFKK_INTRADAY', 'S10_ST_MACD_SESSION'],
-    TREND_DOWN: ['S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA', 'S05_MFKK_INTRADAY', 'S10_ST_MACD_SESSION'],
-    WEAK_UP:    ['S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
-    WEAK_DOWN:  ['S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
+    TREND_UP:   ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA'],
+    TREND_DOWN: ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA'],
+    WEAK_UP:    ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
+    WEAK_DOWN:  ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
     VOLATILE:   ['S04_BB_SQUEEZE', 'S15_OBV_MACD', 'S09_MFKK_SCALPING'],
     RANGE:      ['S04_BB_SQUEEZE', 'S10_OB_FVG_SCALP', 'S15_OBV_MACD'],
   },

@@ -26,7 +26,9 @@
       "Bash(python:*)",
       "Bash(del xauusd_h1_730d.json)",
       "Bash(ping github.com -n 2)",
-      "Bash(curl -s --max-time 5 https://github.com)"
+      "Bash(curl -s --max-time 5 https://github.com)",
+      "Bash(ls C:/Users/f45038c/Downloads/tradeflow-ai/tradeflow-ai/*.json)",
+      "Bash(ls C:/Users/f45038c/Downloads/tradeflow-ai/tradeflow-ai/scripts/*.json)"
     ]
   }
 }

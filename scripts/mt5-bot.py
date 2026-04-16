@@ -56,6 +56,7 @@ LOG_FILE     = "mt5-bot.log"
 # Strategie attive da regime_playbook.json (backtest multi-TF 2026-04-15)
     'S10_OB_FVG_SCALP':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp', 'tp_mult': 1.0, 'sl_mult': 0.6},
     'S15_OBV_MACD':       {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OBV Momentum', 'tp_mult': 1.5, 'sl_mult': 1.0},
+    'S16_GOLDEN_SQUEEZE': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Elite Golden Squeeze', 'tp_mult': 2.0, 'sl_mult': 1.5},
     'S04_BB_SQUEEZE':     {'tp_usd': 15.0,  'sl_usd': 10.0,  'label': 'BB Squeeze'},
     'S07_STOCHRSI_BB':    {'tp_usd': 12.0,  'sl_usd': 15.0,  'label': 'Mean Reversion'},
     'S11_ALLIGATOR_AWAKEN': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Alligator Awaken'},
@@ -461,6 +462,30 @@ def signal_mfkk_intraday(I, i):
     if oc[i] == -1 and r < 48 and mo < 0 and mc < 0: return 'sell'  # RSI bias +2
     return None
 
+def signal_golden_squeeze(I_m15, idx_m15, h1_trend=0):
+    """
+    S16: ELITE CONFLUENCE
+    Requires H1 Supertrend (h1_trend) and M15 OBV Momentum.
+    """
+    if h1_trend == 0: return None
+    
+    obv_val = I_m15.get('obv', [0]*len(I_m15['C']))[idx_m15]
+    # We use OBV cross EMA 20 as trigger
+    if 'obv_ema' not in I_m15: return None
+    obv_ema = I_m15['obv_ema'][idx_m15]
+    
+    curr_c = I_m15['C'][idx_m15]
+    prev_c = I_m15['C'][idx_m15-1]
+    
+    # Logic: H1 Trend Alignment + M15 Momentum + Price Action Trigger
+    if h1_trend == -1: # BULLISH H1
+        if obv_val > obv_ema and curr_c > prev_c:
+            return 'buy'
+    elif h1_trend == 1: # BEARISH H1
+        if obv_val < obv_ema and curr_c < prev_c:
+            return 'sell'
+    return None
+
 def signal_sell_exhaust(I, i):
     """S05_V3_Sell_Exhaust — OBV T-Channel bear + RSI > 60 + ADX >= 25 + MOM < 0 (TREND_UP)"""
     if i < 1: return None
@@ -573,6 +598,7 @@ SIGNAL_FNS = {
     'S13_STRUC_BREAK':     signal_struc_break,
     'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
     'S15_OBV_MACD':         signal_obv_macd,
+    'S16_GOLDEN_SQUEEZE':   signal_golden_squeeze,
     'S04_BB_SQUEEZE':       signal_bb_squeeze,
     'S07_STOCHRSI_BB':      signal_stochrsi_bb,
     'S11_ALLIGATOR_AWAKEN': signal_alligator_awakening,
@@ -1191,7 +1217,15 @@ def run():
                             idx = len(candles_m15) - 2
                             sname = pb_entry['strategy']
                             fn    = SIGNAL_FNS.get(sname)
-                            direction = fn(I_m15, idx) if fn else None
+                            
+                            # Calcolo trend H1 corrente per confluenza
+                            curr_h1_trend = I_h1['st'][i_h1] if 'st' in I_h1 else 0
+                            
+                            if sname == 'S16_GOLDEN_SQUEEZE':
+                                direction = fn(I_m15, idx, curr_h1_trend)
+                            else:
+                                direction = fn(I_m15, idx) if fn else None
+                                
                             if direction and has_position_in_direction(direction):
                                 log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
                             elif direction:

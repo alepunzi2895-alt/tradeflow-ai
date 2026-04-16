@@ -784,17 +784,18 @@ def s_mfkk_intraday(ind, i, hour=None):
 
 def s_golden_squeeze(ind, i, hour=None):
     """
-    S16: ELITE CONFLUENCE — OBV Momentum + Trend Alignment (ST Proxy)
+    S16: ELITE CONFLUENCE V2 — OBV Momentum + Trend Alignment (ST Proxy) + EMA 233
     """
-    if i < 20: return None
+    if i < 233: return None
     obv_val = ind.get('obv')[i]; obv_ema = ind.get('obv_ema')[i]
     c = ind['C'][i]; cp = ind['C'][i-1]; st = ind.get('st')[i]
-    if None in (obv_val, obv_ema, st): return None
+    e233 = ind['e233'][i]
+    if None in (obv_val, obv_ema, st, e233): return None
     
     if st == -1: # BULLISH Proxy
-        if obv_val > obv_ema and c > cp: return 'buy'
+        if c > e233 and obv_val > obv_ema and c > cp: return 'buy'
     if st == 1: # BEARISH Proxy
-        if obv_val < obv_ema and c < cp: return 'sell'
+        if c < e233 and obv_val < obv_ema and c < cp: return 'sell'
     return None
 
 # ── STRATEGY MAP (TABULA RASA: ELITE 4 ONLY) ──────────────────────────────────
@@ -950,7 +951,7 @@ def run_adaptive(candles, ind, tf='H1'):
         elif used == 'S10_OB_FVG_SCALP':
             tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
-            tp_d = round(av*2.0, 2); sl_d = round(av*1.5, 2)
+            tp_d = round(av*3.0, 2); sl_d = round(av*1.2, 2)
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         else:

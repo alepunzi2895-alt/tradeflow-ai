@@ -140,6 +140,7 @@ class RiskManager:
             'tier':        tier['label'],
             'tier_label':  tier['label'],
             'ai_score':    round(ai_score, 1),
+            'be_mult':     sb.get('be_mult'), # Passa il moltiplicatore BE
         }
 
         log.info(
@@ -206,8 +207,10 @@ class RiskManager:
 
             # ── 2. BREAK EVEN ─────────────────────────────────────────────
             if not ps['be_done'] and tp:
-                tp_dist   = abs(tp - entry)
-                be_trigger = tp_dist * 0.40  # BE al 40% del TP
+                # Se abbiamo un be_trigger specifico salvato o dedotto
+                tp_dist = abs(tp - entry)
+                be_trigger = ps.get('be_trigger') or (tp_dist * 0.40)
+                
                 if dist >= be_trigger:
                     be_sl = round(entry + 0.02, 2) if is_buy else round(entry - 0.02, 2)
                     if (is_buy and sl < be_sl) or (not is_buy and (sl == 0 or sl > be_sl)):

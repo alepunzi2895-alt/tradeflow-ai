@@ -54,8 +54,10 @@ LOG_FILE     = "mt5-bot.log"
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
 STRATEGY_PARAMS = {
+    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.0, 'sl_mult': 1.0},
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
     'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
+    'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V2', 'tp_mult': 3.0, 'sl_mult': 1.2, 'be_mult': 1.1},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -359,7 +361,7 @@ def compute_indicators(candles):
     I['e13']=ema(C,13); I['e34']=ema(C,34)
     I['e89']=ema(C,89); I['e233']=ema(C,233)
     I['e20']=ema(C,20); I['e50']=ema(C,50)
-    I['e100']=ema(C,100); I['e200']=I['e233'] # Alias per compatibilità
+    I['e100']=ema(C,100); I['e200']=ema(C,200)
     I['rsi']=rsi(C,14)
     I['atr']=atr(H,L,C,14)
     I['adx'],I['dip'],I['dim']=adx_calc(H,L,C,14)
@@ -396,9 +398,6 @@ def compute_indicators(candles):
     for i in range(30,n):
         vals=[I['atr'][j] for j in range(i-30,i) if I['atr'][j] is not None]
         I['atr_avg'][i]=sum(vals)/len(vals) if vals else None
-
-    # EMA 200 per S05 V3 Trend Filter
-    I['e200'] = _ema(C, 200)
 
     return I
 
@@ -472,25 +471,25 @@ def signal_mfkk_intraday(I, i):
 
 def signal_golden_squeeze(I, i, h1_trend=0):
     """
-    S16: ELITE CONFLUENCE
-    Requires H1 Supertrend (h1_trend) and M15 OBV Momentum.
+    S16: ELITE CONFLUENCE V2 (Institutional Squeeze)
+    Requires H1 Supertrend (h1_trend), M15 OBV Momentum, and EMA 233 Filter.
     """
-    if h1_trend == 0: return None
+    if h1_trend == 0 or i < 233: return None
     
     obv_val = I.get('obv', [0]*len(I['C']))[i]
-    # We use OBV cross EMA 20 as trigger
     if 'obv_ema' not in I: return None
     obv_ema = I['obv_ema'][i]
     
     curr_c = I['C'][i]
     prev_c = I['C'][i-1]
+    e233 = I['e233'][i]
     
-    # Logic: H1 Trend Alignment + M15 Momentum + Price Action Trigger
+    # Logic: H1 Trend Alignment + Institutional Bias (EMA 233) + OBV Momentum
     if h1_trend == -1: # BULLISH H1
-        if obv_val > obv_ema and curr_c > prev_c:
+        if curr_c > e233 and obv_val > obv_ema and curr_c > prev_c:
             return 'buy'
     elif h1_trend == 1: # BEARISH H1
-        if obv_val < obv_ema and curr_c < prev_c:
+        if curr_c < e233 and obv_val < obv_ema and curr_c < prev_c:
             return 'sell'
     return None
 
@@ -1084,6 +1083,16 @@ def run():
                                 )
                             result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
                             if result:
+                                # Registra BE trigger nel RiskManager per questo ticket
+                                if rm and 'be_trigger' in rp:
+                                    rm._pos_state[result.order] = {
+                                        'be_done': False,
+                                        'partial_done': False,
+                                        'ts_price': None,
+                                        'ts_step': rp.get('ts_step', 5.0),
+                                        'be_trigger': rp['be_trigger']
+                                    }
+                                
                                 tick = mt5.symbol_info_tick(SYMBOL)
                                 price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                 log_trade_to_json(direction, strategy_name, price,

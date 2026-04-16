@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-16T19:13:19.086814",
-  "n_candles": 23615,
+  "generated_at": "2026-04-16T19:24:59.967245",
+  "n_candles": 47226,
   "indicators": [
     "EMA20",
     "EMA50",
@@ -24,13 +24,13 @@
   "strategies": {
     "S05_MFKK_INTRADAY": {
       "stats": {
-        "n": 3980,
-        "wr": 14.2,
-        "pnl": -13103.5,
-        "pf": 0.423,
-        "dd": 13153.5,
-        "avg_day": -25.95,
-        "tr_day": 7.88,
+        "n": 4655,
+        "wr": 13.9,
+        "pnl": -9657.9,
+        "pf": 0.466,
+        "dd": 9660.6,
+        "avg_day": -18.75,
+        "tr_day": 9.04,
         "months": "0/25"
       },
       "regime_fit": [
@@ -42,13 +42,13 @@
     },
     "S09_MFKK_SCALPING": {
       "stats": {
-        "n": 704,
-        "wr": 3.0,
-        "pnl": -4190.0,
-        "pf": 0.136,
-        "dd": 4190.0,
-        "avg_day": -15.81,
-        "tr_day": 2.66,
+        "n": 1234,
+        "wr": 3.9,
+        "pnl": -5431.3,
+        "pf": 0.153,
+        "dd": 5449.2,
+        "avg_day": -12.9,
+        "tr_day": 2.93,
         "months": "0/25"
       },
       "regime_fit": [
@@ -60,14 +60,14 @@
     },
     "S10_OB_FVG_SCALP": {
       "stats": {
-        "n": 142,
-        "wr": 16.2,
-        "pnl": -669.4,
-        "pf": 0.589,
-        "dd": 778.7,
-        "avg_day": -11.95,
-        "tr_day": 2.54,
-        "months": "6/20"
+        "n": 93,
+        "wr": 21.5,
+        "pnl": 178.2,
+        "pf": 1.209,
+        "dd": 267.3,
+        "avg_day": 4.14,
+        "tr_day": 2.16,
+        "months": "7/17"
       },
       "regime_fit": [
         "RANGE",
@@ -78,13 +78,13 @@
     },
     "S16_GOLDEN_SQUEEZE": {
       "stats": {
-        "n": 5063,
-        "wr": 35.2,
-        "pnl": -1659.3,
-        "pf": 0.95,
-        "dd": 2852.5,
-        "avg_day": -3.23,
-        "tr_day": 9.87,
+        "n": 4908,
+        "wr": 35.8,
+        "pnl": -1633.6,
+        "pf": 0.927,
+        "dd": 1913.8,
+        "avg_day": -3.17,
+        "tr_day": 9.53,
         "months": "11/25"
       },
       "regime_fit": [
@@ -98,34 +98,34 @@
   "ranking": [
     {
       "rank": 1,
-      "name": "S16_GOLDEN_SQUEEZE",
-      "pf": 0.95,
-      "wr": 35.2,
-      "n": 5063,
-      "use": false
+      "name": "S10_OB_FVG_SCALP",
+      "pf": 1.209,
+      "wr": 21.5,
+      "n": 93,
+      "use": true
     },
     {
       "rank": 2,
-      "name": "S10_OB_FVG_SCALP",
-      "pf": 0.589,
-      "wr": 16.2,
-      "n": 142,
+      "name": "S16_GOLDEN_SQUEEZE",
+      "pf": 0.927,
+      "wr": 35.8,
+      "n": 4908,
       "use": false
     },
     {
       "rank": 3,
       "name": "S05_MFKK_INTRADAY",
-      "pf": 0.423,
-      "wr": 14.2,
-      "n": 3980,
+      "pf": 0.466,
+      "wr": 13.9,
+      "n": 4655,
       "use": false
     },
     {
       "rank": 4,
       "name": "S09_MFKK_SCALPING",
-      "pf": 0.136,
-      "wr": 3.0,
-      "n": 704,
+      "pf": 0.153,
+      "wr": 3.9,
+      "n": 1234,
       "use": false
     }
   ],
@@ -162,106 +162,96 @@
   },
   "adaptive": {
     "stats": {
-      "n": 3909,
-      "wr": 42.8,
-      "pnl": 3800.1,
-      "pf": 1.133,
-      "dd": 1042.4,
-      "avg_day": 7.6,
-      "tr_day": 7.82,
-      "months": "15/25"
+      "n": 4239,
+      "wr": 30.7,
+      "pnl": 4005.8,
+      "pf": 1.187,
+      "dd": 646.5,
+      "avg_day": 7.78,
+      "tr_day": 8.23,
+      "months": "13/25"
     },
     "by_strategy": {
       "S16_GOLDEN_SQUEEZE": {
-        "n": 3120,
-        "wr": 44.0,
-        "pnl": 1702.0,
-        "pf": 1.071,
-        "dd": 1117.9,
-        "avg_day": 3.55,
-        "tr_day": 6.51,
-        "months": "15/25"
-      },
-      "S05_MFKK_INTRADAY": {
-        "n": 395,
-        "wr": 38.7,
-        "pnl": 642.0,
-        "pf": 1.281,
-        "dd": 215.7,
-        "avg_day": 2.72,
-        "tr_day": 1.67,
-        "months": "15/25"
-      },
-      "S09_MFKK_SCALPING": {
-        "n": 320,
-        "wr": 35.3,
-        "pnl": 742.5,
-        "pf": 1.51,
-        "dd": 129.0,
-        "avg_day": 4.98,
-        "tr_day": 2.15,
+        "n": 3246,
+        "wr": 31.1,
+        "pnl": 3211.8,
+        "pf": 1.187,
+        "dd": 601.3,
+        "avg_day": 6.33,
+        "tr_day": 6.4,
         "months": "16/25"
       },
+      "S09_MFKK_SCALPING": {
+        "n": 552,
+        "wr": 24.6,
+        "pnl": 198.1,
+        "pf": 1.1,
+        "dd": 246.8,
+        "avg_day": 0.73,
+        "tr_day": 2.03,
+        "months": "12/25"
+      },
+      "S05_MFKK_INTRADAY": {
+        "n": 398,
+        "wr": 34.2,
+        "pnl": 186.5,
+        "pf": 1.104,
+        "dd": 312.5,
+        "avg_day": 0.69,
+        "tr_day": 1.47,
+        "months": "13/25"
+      },
       "S10_OB_FVG_SCALP": {
-        "n": 74,
-        "wr": 45.9,
-        "pnl": 713.5,
-        "pf": 2.087,
-        "dd": 177.1,
-        "avg_day": 20.39,
-        "tr_day": 2.11,
-        "months": "8/16"
+        "n": 43,
+        "wr": 48.8,
+        "pnl": 409.4,
+        "pf": 2.029,
+        "dd": 94.8,
+        "avg_day": 15.75,
+        "tr_day": 1.65,
+        "months": "8/12"
       }
     }
   },
   "last_signals": [
     {
-      "date": "2026-04-06",
-      "hour": 14,
+      "date": "2026-04-08",
+      "hour": 1,
       "dir": "buy",
-      "entry": 4677.7,
-      "outcome": "loss",
-      "pnl": -16.56,
-      "strategy": "S09_MFKK_SCALPING",
-      "regime": "RANGE"
-    },
-    {
-      "date": "2026-04-07",
-      "hour": 11,
-      "dir": "buy",
-      "entry": 4678.4,
-      "outcome": "loss",
-      "pnl": -30.24,
+      "entry": 4731.87,
+      "outcome": "win",
+      "pnl": 50.57,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_UP"
-    },
-    {
-      "date": "2026-04-07",
-      "hour": 13,
-      "dir": "buy",
-      "entry": 4651.92,
-      "outcome": "loss",
-      "pnl": -23.55,
-      "strategy": "S10_OB_FVG_SCALP",
-      "regime": "RANGE"
+      "regime": "TREND_UP"
     },
     {
       "date": "2026-04-08",
       "hour": 2,
       "dir": "buy",
-      "entry": 4833.29,
+      "entry": 4818.24,
       "outcome": "loss",
-      "pnl": -46.07,
+      "pnl": -30.74,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_UP"
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-08",
+      "hour": 3,
+      "dir": "buy",
+      "entry": 4834.89,
+      "outcome": "loss",
+      "pnl": -31.76,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
     },
     {
       "date": "2026-04-08",
       "hour": 4,
       "dir": "buy",
-      "entry": 4810.14,
+      "entry": 4819.86,
       "outcome": "loss",
-      "pnl": -51.0,
+      "pnl": -31.77,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -269,9 +259,19 @@
       "date": "2026-04-08",
       "hour": 5,
       "dir": "buy",
-      "entry": 4811.57,
+      "entry": 4813.9,
       "outcome": "loss",
-      "pnl": -51.75,
+      "pnl": -27.06,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-08",
+      "hour": 6,
+      "dir": "buy",
+      "entry": 4802.83,
+      "outcome": "loss",
+      "pnl": -19.07,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -279,9 +279,9 @@
       "date": "2026-04-08",
       "hour": 7,
       "dir": "buy",
-      "entry": 4803.42,
-      "outcome": "loss",
-      "pnl": -43.93,
+      "entry": 4802.57,
+      "outcome": "win",
+      "pnl": 36.69,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -289,9 +289,9 @@
       "date": "2026-04-08",
       "hour": 8,
       "dir": "buy",
-      "entry": 4815.62,
-      "outcome": "loss",
-      "pnl": -40.68,
+      "entry": 4809.19,
+      "outcome": "win",
+      "pnl": 30.3,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -299,59 +299,29 @@
       "date": "2026-04-08",
       "hour": 9,
       "dir": "buy",
-      "entry": 4836.19,
+      "entry": 4826.15,
       "outcome": "loss",
-      "pnl": -31.18,
-      "strategy": "S16_GOLDEN_SQUEEZE",
+      "pnl": -10.51,
+      "strategy": "S05_MFKK_INTRADAY",
       "regime": "TREND_UP"
     },
     {
       "date": "2026-04-08",
-      "hour": 13,
+      "hour": 10,
       "dir": "buy",
-      "entry": 4782.53,
+      "entry": 4818.18,
       "outcome": "loss",
-      "pnl": -17.2,
-      "strategy": "S09_MFKK_SCALPING",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-08",
-      "hour": 14,
-      "dir": "buy",
-      "entry": 4789.64,
-      "outcome": "loss",
-      "pnl": -17.86,
-      "strategy": "S09_MFKK_SCALPING",
-      "regime": "WEAK_UP"
-    },
-    {
-      "date": "2026-04-08",
-      "hour": 15,
-      "dir": "buy",
-      "entry": 4783.94,
-      "outcome": "loss",
-      "pnl": -20.56,
-      "strategy": "S09_MFKK_SCALPING",
-      "regime": "RANGE"
-    },
-    {
-      "date": "2026-04-08",
-      "hour": 16,
-      "dir": "buy",
-      "entry": 4790.3,
-      "outcome": "loss",
-      "pnl": -19.93,
-      "strategy": "S09_MFKK_SCALPING",
-      "regime": "RANGE"
+      "pnl": -14.34,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
     },
     {
       "date": "2026-04-09",
       "hour": 1,
       "dir": "sell",
-      "entry": 4713.68,
+      "entry": 4712.36,
       "outcome": "loss",
-      "pnl": -30.93,
+      "pnl": -16.16,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_DOWN"
     },
@@ -359,9 +329,9 @@
       "date": "2026-04-09",
       "hour": 2,
       "dir": "sell",
-      "entry": 4709.75,
+      "entry": 4708.42,
       "outcome": "loss",
-      "pnl": -27.19,
+      "pnl": -14.06,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_DOWN"
     },
@@ -369,29 +339,9 @@
       "date": "2026-04-09",
       "hour": 3,
       "dir": "sell",
-      "entry": 4706.3,
+      "entry": 4702.33,
       "outcome": "loss",
-      "pnl": -27.18,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 4,
-      "dir": "sell",
-      "entry": 4704.79,
-      "outcome": "loss",
-      "pnl": -27.28,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 5,
-      "dir": "sell",
-      "entry": 4725.22,
-      "outcome": "loss",
-      "pnl": -25.34,
+      "pnl": -12.82,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_DOWN"
     },
@@ -401,9 +351,9 @@
       "dir": "sell",
       "entry": 4712.38,
       "outcome": "loss",
-      "pnl": -24.3,
+      "pnl": -15.22,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
+      "regime": "WEAK_DOWN"
     },
     {
       "date": "2026-04-09",
@@ -411,19 +361,19 @@
       "dir": "sell",
       "entry": 4713.04,
       "outcome": "loss",
-      "pnl": -22.63,
+      "pnl": -11.94,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
+      "regime": "WEAK_DOWN"
     },
     {
       "date": "2026-04-09",
       "hour": 9,
       "dir": "sell",
-      "entry": 4712.49,
+      "entry": 4718.19,
       "outcome": "loss",
-      "pnl": -23.52,
+      "pnl": -11.98,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
+      "regime": "WEAK_DOWN"
     },
     {
       "date": "2026-04-09",
@@ -431,69 +381,159 @@
       "dir": "sell",
       "entry": 4708.36,
       "outcome": "loss",
-      "pnl": -24.36,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 11,
-      "dir": "sell",
-      "entry": 4721.23,
-      "outcome": "loss",
-      "pnl": -23.65,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-13",
-      "hour": 2,
-      "dir": "sell",
-      "entry": 4653.21,
-      "outcome": "loss",
-      "pnl": -29.44,
+      "pnl": -15.05,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "WEAK_DOWN"
     },
     {
-      "date": "2026-04-13",
-      "hour": 4,
+      "date": "2026-04-09",
+      "hour": 16,
       "dir": "buy",
-      "entry": 4717.26,
-      "outcome": "win",
-      "pnl": 43.14,
+      "entry": 4775.62,
+      "outcome": "loss",
+      "pnl": -13.65,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
+      "regime": "WEAK_UP"
+    },
+    {
+      "date": "2026-04-09",
+      "hour": 17,
+      "dir": "buy",
+      "entry": 4770.74,
+      "outcome": "loss",
+      "pnl": -14.55,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_UP"
+    },
+    {
+      "date": "2026-04-09",
+      "hour": 18,
+      "dir": "buy",
+      "entry": 4769.0,
+      "outcome": "loss",
+      "pnl": -16.79,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_UP"
+    },
+    {
+      "date": "2026-04-10",
+      "hour": 17,
+      "dir": "buy",
+      "entry": 4779.9,
+      "outcome": "loss",
+      "pnl": -12.45,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_UP"
+    },
+    {
+      "date": "2026-04-10",
+      "hour": 18,
+      "dir": "buy",
+      "entry": 4781.63,
+      "outcome": "loss",
+      "pnl": -15.27,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 1,
+      "dir": "sell",
+      "entry": 4675.56,
+      "outcome": "loss",
+      "pnl": -17.03,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_DOWN"
     },
     {
       "date": "2026-04-13",
       "hour": 5,
-      "dir": "buy",
+      "dir": "sell",
       "entry": 4720.35,
-      "outcome": "win",
-      "pnl": 43.95,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
+      "outcome": "loss",
+      "pnl": -12.47,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "WEAK_DOWN"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 6,
+      "dir": "sell",
+      "entry": 4713.68,
+      "outcome": "loss",
+      "pnl": -12.41,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
     },
     {
       "date": "2026-04-13",
       "hour": 7,
-      "dir": "buy",
-      "entry": 4722.98,
-      "outcome": "win",
-      "pnl": 44.11,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_DOWN"
+      "dir": "sell",
+      "entry": 4714.48,
+      "outcome": "loss",
+      "pnl": -11.4,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
     },
     {
       "date": "2026-04-13",
       "hour": 8,
-      "dir": "buy",
-      "entry": 4729.26,
+      "dir": "sell",
+      "entry": 4719.16,
       "outcome": "loss",
-      "pnl": -22.56,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_DOWN"
+      "pnl": -8.98,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 12,
+      "dir": "sell",
+      "entry": 4714.42,
+      "outcome": "loss",
+      "pnl": -8.68,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 13,
+      "dir": "sell",
+      "entry": 4717.68,
+      "outcome": "loss",
+      "pnl": -8.53,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 14,
+      "dir": "sell",
+      "entry": 4721.44,
+      "outcome": "loss",
+      "pnl": -8.51,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 15,
+      "dir": "sell",
+      "entry": 4717.12,
+      "outcome": "loss",
+      "pnl": -9.25,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-13",
+      "hour": 16,
+      "dir": "sell",
+      "entry": 4734.18,
+      "outcome": "loss",
+      "pnl": -9.69,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
     },
     {
       "date": "2026-04-14",
@@ -501,7 +541,7 @@
       "dir": "buy",
       "entry": 4757.87,
       "outcome": "win",
-      "pnl": 29.48,
+      "pnl": 21.01,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "WEAK_UP"
     },
@@ -509,9 +549,9 @@
       "date": "2026-04-14",
       "hour": 2,
       "dir": "buy",
-      "entry": 4757.41,
-      "outcome": "win",
-      "pnl": 27.03,
+      "entry": 4762.83,
+      "outcome": "loss",
+      "pnl": -8.36,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "WEAK_UP"
     },
@@ -519,9 +559,9 @@
       "date": "2026-04-14",
       "hour": 3,
       "dir": "buy",
-      "entry": 4762.27,
+      "entry": 4759.5,
       "outcome": "win",
-      "pnl": 25.77,
+      "pnl": 19.99,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -529,9 +569,9 @@
       "date": "2026-04-14",
       "hour": 4,
       "dir": "buy",
-      "entry": 4770.23,
-      "outcome": "win",
-      "pnl": 23.86,
+      "entry": 4775.99,
+      "outcome": "loss",
+      "pnl": -9.9,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -539,59 +579,69 @@
       "date": "2026-04-14",
       "hour": 5,
       "dir": "buy",
-      "entry": 4768.71,
+      "entry": 4767.97,
       "outcome": "win",
-      "pnl": 22.67,
+      "pnl": 26.6,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
     {
       "date": "2026-04-14",
-      "hour": 6,
+      "hour": 18,
       "dir": "buy",
-      "entry": 4768.21,
+      "entry": 4802.28,
       "outcome": "win",
-      "pnl": 22.3,
-      "strategy": "S05_MFKK_INTRADAY",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-14",
-      "hour": 7,
-      "dir": "buy",
-      "entry": 4775.9,
-      "outcome": "loss",
-      "pnl": -16.95,
+      "pnl": 37.38,
       "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_UP"
+      "regime": "WEAK_UP"
     },
     {
       "date": "2026-04-14",
-      "hour": 9,
+      "hour": 19,
       "dir": "buy",
-      "entry": 4767.6,
+      "entry": 4809.29,
       "outcome": "win",
-      "pnl": 21.59,
+      "pnl": 37.9,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_UP"
+    },
+    {
+      "date": "2026-04-14",
+      "hour": 20,
+      "dir": "buy",
+      "entry": 4826.99,
+      "outcome": "win",
+      "pnl": 36.89,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
     {
       "date": "2026-04-14",
-      "hour": 10,
+      "hour": 21,
       "dir": "buy",
-      "entry": 4777.03,
+      "entry": 4838.64,
       "outcome": "loss",
-      "pnl": -18.17,
+      "pnl": -13.42,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
     {
       "date": "2026-04-14",
-      "hour": 11,
+      "hour": 22,
       "dir": "buy",
-      "entry": 4785.85,
+      "entry": 4840.86,
       "outcome": "loss",
-      "pnl": -17.93,
+      "pnl": -11.38,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-15",
+      "hour": 1,
+      "dir": "buy",
+      "entry": 4844.76,
+      "outcome": "loss",
+      "pnl": -6.91,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -599,19 +649,9 @@
       "date": "2026-04-15",
       "hour": 2,
       "dir": "buy",
-      "entry": 4835.85,
-      "outcome": "win",
-      "pnl": 22.41,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-15",
-      "hour": 3,
-      "dir": "buy",
-      "entry": 4835.28,
-      "outcome": "win",
-      "pnl": 21.1,
+      "entry": 4837.11,
+      "outcome": "loss",
+      "pnl": -7.5,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
@@ -619,101 +659,61 @@
       "date": "2026-04-15",
       "hour": 4,
       "dir": "buy",
-      "entry": 4850.64,
+      "entry": 4850.15,
       "outcome": "loss",
-      "pnl": -17.85,
+      "pnl": -10.58,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     },
     {
       "date": "2026-04-15",
-      "hour": 6,
+      "hour": 5,
       "dir": "buy",
-      "entry": 4826.34,
+      "entry": 4845.13,
       "outcome": "loss",
-      "pnl": -19.67,
-      "strategy": "S16_GOLDEN_SQUEEZE",
+      "pnl": -10.52,
+      "strategy": "S05_MFKK_INTRADAY",
       "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-15",
-      "hour": 7,
-      "dir": "buy",
-      "entry": 4824.48,
-      "outcome": "loss",
-      "pnl": -19.42,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-15",
-      "hour": 8,
-      "dir": "buy",
-      "entry": 4826.07,
-      "outcome": "loss",
-      "pnl": -19.0,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-15",
-      "hour": 9,
-      "dir": "sell",
-      "entry": 4811.55,
-      "outcome": "loss",
-      "pnl": -19.97,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_UP"
-    },
-    {
-      "date": "2026-04-15",
-      "hour": 10,
-      "dir": "sell",
-      "entry": 4811.09,
-      "outcome": "loss",
-      "pnl": -20.13,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-15",
-      "hour": 23,
-      "dir": "sell",
-      "entry": 4793.73,
-      "outcome": "loss",
-      "pnl": -16.99,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-16",
-      "hour": 2,
-      "dir": "buy",
-      "entry": 4823.29,
-      "outcome": "loss",
-      "pnl": -14.29,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "WEAK_UP"
     },
     {
       "date": "2026-04-16",
       "hour": 3,
       "dir": "buy",
-      "entry": 4824.6,
+      "entry": 4829.65,
       "outcome": "loss",
-      "pnl": -13.91,
+      "pnl": -7.51,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "WEAK_UP"
     },
     {
       "date": "2026-04-16",
-      "hour": 13,
+      "hour": 4,
       "dir": "buy",
-      "entry": 4806.93,
+      "entry": 4829.71,
       "outcome": "loss",
-      "pnl": -10.27,
-      "strategy": "S09_MFKK_SCALPING",
-      "regime": "RANGE"
+      "pnl": -7.86,
+      "strategy": "S05_MFKK_INTRADAY",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-16",
+      "hour": 5,
+      "dir": "buy",
+      "entry": 4821.23,
+      "outcome": "loss",
+      "pnl": -10.12,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-16",
+      "hour": 6,
+      "dir": "buy",
+      "entry": 4826.41,
+      "outcome": "loss",
+      "pnl": -9.9,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_UP"
     }
   ],
   "config": {

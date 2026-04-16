@@ -53,10 +53,11 @@ LOG_FILE     = "mt5-bot.log"
 
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
-# Strategie attive da regime_playbook.json (backtest multi-TF 2026-04-15)
+STRATEGY_PARAMS = {
     'S10_OB_FVG_SCALP':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp', 'tp_mult': 1.0, 'sl_mult': 0.6},
     'S15_OBV_MACD':       {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OBV Momentum', 'tp_mult': 1.5, 'sl_mult': 1.0},
     'S16_GOLDEN_SQUEEZE': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Elite Golden Squeeze', 'tp_mult': 2.0, 'sl_mult': 1.5},
+    'S05_MFKK_INTRADAY':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.0, 'sl_mult': 1.0},
     'S04_BB_SQUEEZE':     {'tp_usd': 15.0,  'sl_usd': 10.0,  'label': 'BB Squeeze'},
     'S07_STOCHRSI_BB':    {'tp_usd': 12.0,  'sl_usd': 15.0,  'label': 'Mean Reversion'},
     'S11_ALLIGATOR_AWAKEN': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Alligator Awaken'},
@@ -399,6 +400,10 @@ def compute_indicators(candles):
     for i in range(30,n):
         vals=[I['atr'][j] for j in range(i-30,i) if I['atr'][j] is not None]
         I['atr_avg'][i]=sum(vals)/len(vals) if vals else None
+
+    # EMA 200 per S05 V3 Trend Filter
+    I['e200'] = _ema(C, 200)
+
     return I
 
 # ── REGIME DETECTION ─────────────────────────────────────────────────────────
@@ -443,9 +448,8 @@ def signal_mfkk_score(I, i):
 
 def signal_mfkk_intraday(I, i):
     """
-    S05_MFKK_INTRADAY — V2 Triple MACD (identico a strategy.js)
-    OBV T-Channel direzione + RSI + MACD line + Momentum + ADX >= 25 (config A ottimizzata)
-    RSI bias +2: buy RSI>52, sell RSI<48 — filtro qualità segnale
+    S05_MFKK_INTRADAY V3 — V2 Triple MACD + EMA 200 Trend Filter
+    OBV T-Channel + RSI + MACD + Mom + ADX + EMA 200 Bias
     """
     if i < 2: return None
     oc  = I.get('obv_oc', [])
@@ -454,12 +458,20 @@ def signal_mfkk_intraday(I, i):
     mo  = I['mom'][i]
     a   = I['adx'][i]
     mc  = I['ml'][i]   # MACD line
-    if None in (r, mo, a, mc): return None
+    e200 = I['e200'][i]
+    close = I['C'][i]
+    
+    if None in (r, mo, a, mc, e200): return None
     if a < 25: 
         # Rilassamento se AI Score è alto
         if current_ai_score < 75 or a < 20: return None
-    if oc[i] == 1  and r > 52 and mo > 0 and mc > 0: return 'buy'   # RSI bias +2
-    if oc[i] == -1 and r < 48 and mo < 0 and mc < 0: return 'sell'  # RSI bias +2
+        
+    # V3: Solo segnali a favore dell'EMA 200
+    is_buy = oc[i] == 1  and r > 52 and mo > 0 and mc > 0 and close > e200
+    is_sell = oc[i] == -1 and r < 48 and mo < 0 and mc < 0 and close < e200
+    
+    if is_buy: return 'buy'
+    if is_sell: return 'sell'
     return None
 
 def signal_golden_squeeze(I_m15, idx_m15, h1_trend=0):

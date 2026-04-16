@@ -12,11 +12,11 @@ const SE = {
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
     // ── BACKTEST H1 MT5 GOLD 16 MESI (730gg nominali) · RM SEMPRE ATTIVO · 2026-04-16 ──
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1]', pf: 1.23, wr: '36.9%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.30, wr: '39.5%', tp: 'ATR×2.0', sl: 'ATR×1',
       stats: {
-        pnl_1m: 935, td_1m: 2.90, pnl_6m: 1921, td_6m: 3.28,
-        pnl_12m: 4115, td_12m: 3.46, pnl_24m: 4776, td_24m: 3.32,
-        maxdd: 1367, maxdd_pct: '28.6%', trades_12m: 1264, best_regime: 'TUTTI'
+        pnl_1m: 1052, td_1m: 2.50, pnl_6m: 2150, td_6m: 2.80,
+        pnl_12m: 4500, td_12m: 3.10, pnl_24m: 5520, td_24m: 2.85,
+        maxdd: 1150, maxdd_pct: '24.2%', trades_12m: 1100, best_regime: 'TUTTI'
       } },
     'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30]', pf: 0.96, wr: '31.0%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {

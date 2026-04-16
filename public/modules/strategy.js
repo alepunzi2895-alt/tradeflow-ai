@@ -1261,33 +1261,25 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // DD-gated multi-strategy activation: aggiunge strategie finché DD portfolio < budget
-  const DD_BUDGET = 30.0;      // max portfolio DD% tollerata
-  const DIV_FACTOR = 0.80;     // 20% diversification discount per strategia aggiuntiva
+  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo)
+  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'11.9%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:7 };
+
+  // Multi-strategy activation: tutte le strategie del regime sono attive.
+  // Il DD individuale (es. 44% per MFKK Score) è calcolato sul singolo backtest a lot fisso,
+  // NON rappresenta il rischio del sistema combinato. Il DD reale del sistema è quello del
+  // combined backtest (BOT_STATS.maxdd_pct = 11.9%) che usa regime-gating + RiskManager.
+  const DD_BUDGET = 25.0;   // soglia DD sistema — solo per gauge visuale
   const regimeAll = SE.regimePriority[seRegime] || ['S00_MFKK'];
-  const activeList = [];
-  let portfolioDdPct = 0;
-  for (let _k = 0; _k < regimeAll.length; _k++) {
-    const _sid = regimeAll[_k];
-    const _st = SE.strategies[_sid]?.stats || {};
-    const _dd = parseFloat(String(_st.maxdd_pct || '0').replace('%','')) || 0;
-    const _marginal = _k === 0 ? _dd : _dd * DIV_FACTOR;
-    if (portfolioDdPct + _marginal <= DD_BUDGET) {
-      portfolioDdPct += _marginal;
-      activeList.push(_sid);
-    }
-  }
-  portfolioDdPct = Math.round(portfolioDdPct * 10) / 10;
-  const ddColor = portfolioDdPct < 20 ? 'var(--green)' : portfolioDdPct < 25 ? '#ffd700' : '#ff4757';
+  const activeList = [...regimeAll];  // tutte le strategie del regime sono attive
+  // DD di portafoglio = DD reale del sistema combinato (backtest validato)
+  const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
+  const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#ffd700' : '#ff4757';
   const activeSname = activeList[0] || 'S00_MFKK';
   const activeSt    = SE.strategies[activeSname] || {};
   const activeTF    = (() => {
     const pb = { TREND_UP:'M30', TREND_DOWN:'M15', WEAK_UP:'M15', WEAK_DOWN:'M15', VOLATILE:'M15', RANGE:'M30' };
     return pb[seRegime] || 'H1';
   })();
-  // Stats aggregate sistema (somma backtest regime-aware 24m)
-  // Aggiornato da backtest_combined.py — simulazione PARALLELA con RiskManager compounding
-  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'11.9%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:7 };
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;

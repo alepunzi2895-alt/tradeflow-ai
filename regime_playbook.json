@@ -6,42 +6,42 @@
     "TREND_UP": {
       "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "M15",
-      "n": 1466,
-      "wr": 52.9,
-      "pnl": 2340.4,
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
       "pf": 1.45,
-      "dd": 180.0,
-      "score": 310.0
+      "dd": 165.0,
+      "score": 320.0
     },
     "TREND_DOWN": {
       "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "M15",
-      "n": 1466,
-      "wr": 52.9,
-      "pnl": 2340.4,
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
       "pf": 1.45,
-      "dd": 180.0,
-      "score": 310.0
+      "dd": 165.0,
+      "score": 320.0
     },
     "WEAK_UP": {
       "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "M15",
-      "n": 1466,
-      "wr": 52.9,
-      "pnl": 2340.4,
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
       "pf": 1.45,
-      "dd": 180.0,
-      "score": 280.0
+      "dd": 165.0,
+      "score": 290.0
     },
     "WEAK_DOWN": {
       "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "M15",
-      "n": 1466,
-      "wr": 52.9,
-      "pnl": 2340.4,
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
       "pf": 1.45,
-      "dd": 180.0,
-      "score": 280.0
+      "dd": 165.0,
+      "score": 290.0
     },
     "RANGE": {
       "strategy": "S09_MFKK_SCALPING",

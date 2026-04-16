@@ -60,11 +60,11 @@ const SE = {
         pnl_12m: 4956, td_12m: 0.18, pnl_24m: 9912, td_24m: 0.18,
         maxdd: 1120, maxdd_pct: '11.3%', trades_12m: 48, best_regime: 'RANGE'
       } },
-    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze', pf: 1.45, wr: '52.9%', tp: 'ATR×2.0', sl: 'ATR×1.5',
+    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze', pf: 1.45, wr: '53.0%', tp: 'ATR×2.0', sl: 'ATR×1.5',
       stats: {
-        pnl_1m: 146, td_1m: 2.94, pnl_6m: 876, td_6m: 2.94,
-        pnl_12m: 1752, td_12m: 2.94, pnl_24m: 2340, td_24m: 2.94,
-        maxdd: 180, maxdd_pct: '8.5%', trades_12m: 1050, best_regime: 'TREND/WEAK'
+        pnl_1m: 147, td_1m: 2.94, pnl_6m: 882, td_6m: 2.94,
+        pnl_12m: 1764, td_12m: 2.94, pnl_24m: 2355, td_24m: 2.94,
+        maxdd: 165, maxdd_pct: '7.0%', trades_12m: 1050, best_regime: 'TREND/WEAK'
       } },
   },
   // ── REGIME PRIORITY ──

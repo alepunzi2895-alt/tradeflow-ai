@@ -13,13 +13,15 @@ PREREQUISITI:
   MT5 deve essere aperto con l'account configurato sotto.
 """
 
-import sys, io, argparse, json, math, datetime
+import sys, io, argparse, json, math, datetime, os
+from dotenv import load_dotenv
+load_dotenv()
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-# ── CONFIG (stessi valori di mt5-bot.py) ─────────────────────────────────────
-MT5_LOGIN    = 1301224666
-MT5_PASSWORD = "Alessandro95!"
-MT5_SERVER   = "XMGlobal-MT5 6"
+# ── CONFIG (legge da .env, fallback su hardcoded) ───────────────────────────
+MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
+MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
+MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 
 SYMBOL_CANDIDATES = ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"]
 

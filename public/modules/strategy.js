@@ -1406,7 +1406,11 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
+  // Preserva scroll position del container .mfp per evitare flickering ogni 1s
+  const _mfp = document.querySelector('#tp-strategy .mfp');
+  const _scrollTop = _mfp ? _mfp.scrollTop : 0;
   el.innerHTML=statusHtml+regimeHtml+botPanelHtml+pendingHtml+posHtml+histHtml+stratCardsHtml+indSnap+obPanelHtml+m15PanelHtml;
+  if(_mfp) _mfp.scrollTop = _scrollTop;
 }
 
 async function seSendTradeToMt5(s) {

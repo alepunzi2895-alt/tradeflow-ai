@@ -37,7 +37,9 @@ export default async function handler(req, res) {
   if (type === 'candles') {
     const range = req.query.range || '60d';
     const interval = req.query.interval || '1h';
-    const symbols = asset === 'XAG' ? ['XAGUSD=X'] : ['XAUUSD=X'];
+    // GC=F (futures) accettato come fallback SOLO per candles/indicatori tecnici
+    // (non per prezzi live — differenza spot/futures irrilevante per ADX/RSI/MACD)
+    const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F'] : ['XAUUSD=X', 'GC=F'];
     for (const sym of symbols) {
       try {
         const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;

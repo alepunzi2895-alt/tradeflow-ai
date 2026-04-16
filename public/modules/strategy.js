@@ -1262,21 +1262,21 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, 1 trade alla volta, lot=0.02)
-  const BOT_STATS = { pnl_1m:-15.0, pnl_6m:1169.78, pnl_12m:1257.58, pnl_24m:1570.64, maxdd:285.18, maxdd_pct:'10.7%', trades_12m:84, pf:1.775, wr:'39.9%', n_strat:7 };
+  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, max 2 trade, AI Score dinamico, lot=0.02)
+  const BOT_STATS = { pnl_1m:1090.71, pnl_6m:2757.84, pnl_12m:3096.97, pnl_24m:3685.31, maxdd:407.36, maxdd_pct:'8.6%', trades_12m:286, pf:1.487, wr:'40.6%', n_strat:7 };
 
-  // Playbook regime→strategia (identico a regime_playbook.json e mt5-bot.py — 1 strategia per regime)
+  // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in backtest_combined.py e mt5-bot.py)
   const PLAYBOOK_UI = {
-    'TREND_UP':   {strategy:'S05_V3_Sell_Exhaust', tf:'H1'},
-    'TREND_DOWN': {strategy:'S01_EXHAUSTION',      tf:'M15'},
-    'WEAK_UP':    {strategy:'S09_MFKK_SCALPING',   tf:'H1'},
-    'WEAK_DOWN':  {strategy:'S09_MFKK_SCALPING',   tf:'M30'},
-    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',   tf:'M30'},
-    'RANGE':      {strategy:'S10_OB_FVG_SCALP',    tf:'M30'},
-    'UNKNOWN':    {strategy:'S00_MFKK',             tf:'H1'},
+    'TREND_UP':   {strategy:'S05_V3_Sell_Exhaust', secondary:'S05_MFKK_INTRADAY', tf:'H1'},
+    'TREND_DOWN': {strategy:'S01_EXHAUSTION',      secondary:'S05_MFKK_INTRADAY', tf:'M15'},
+    'WEAK_UP':    {strategy:'S09_MFKK_SCALPING',   secondary:'S05_MFKK_INTRADAY', tf:'H1'},
+    'WEAK_DOWN':  {strategy:'S09_MFKK_SCALPING',   secondary:'S05_MFKK_INTRADAY', tf:'M30'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',   secondary:null,                tf:'M30'},
+    'RANGE':      {strategy:'S10_OB_FVG_SCALP',    secondary:'S13_STRUC_BREAK',   tf:'M30'},
+    'UNKNOWN':    {strategy:'S00_MFKK',             secondary:null,                tf:'H1'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
-  const activeList = [playbookEntry.strategy];  // 1 strategia attiva per regime
+  const activeList = [playbookEntry.strategy, ...(playbookEntry.secondary ? [playbookEntry.secondary] : [])];
   const DD_BUDGET = 25.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
   const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#ffd700' : '#ff4757';
@@ -1317,8 +1317,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">REGIME</div>
         <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
         <div style="color:var(--dim);font-size:10px">→</div>
-        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIA ATTIVA</div>
-        <div style="font-size:10px;font-weight:800;color:#c8a96e">${SE.strategies[activeSname]?.label||activeSname}</div>
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIE ATTIVE</div>
+        <div style="font-size:10px;font-weight:800;color:#c8a96e">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
         <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;font-size:8px">

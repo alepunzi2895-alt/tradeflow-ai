@@ -472,6 +472,18 @@ SIGNAL_FNS = {
     'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
 }
 
+# Multi-strategy map: (strategy_id, tf, direction_filter) per regime
+# Identico a backtest_combined.py — S00_MFKK solo TREND_UP(sell) e TREND_DOWN(buy)
+REGIME_MULTI_STRATEGIES = {
+    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','sell')],
+    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','buy')],
+    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None)],
+    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None)],
+    'UNKNOWN':    [('S00_MFKK','H1',None)],
+}
+
 def get_signal(I, i, hour, regime):
     """Restituisce (strategia, direzione) per strategie H1.
     Le strategie M15/M30 sono gestite direttamente nel loop principale.
@@ -614,6 +626,14 @@ def count_open_positions():
     pos = mt5.positions_get(symbol=SYMBOL)
     if pos is None: return 0
     return len([p for p in pos if p.magic == MAGIC])
+
+def has_position_in_direction(direction):
+    """True se esiste già una posizione aperta nella direzione specificata."""
+    for p in mt5.positions_get(symbol=SYMBOL) or []:
+        if p.magic != MAGIC: continue
+        if direction == 'buy'  and p.type == mt5.ORDER_TYPE_BUY:  return True
+        if direction == 'sell' and p.type == mt5.ORDER_TYPE_SELL: return True
+    return False
 
 def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None):
     """Invia un ordine market su MT5 con lot size adattivo da RiskManager"""
@@ -952,15 +972,17 @@ def run():
                     can, reason = state.can_trade(now_utc)
                     if not can:
                         log.debug(f"Trade non permesso: {reason}")
-                    elif count_open_positions() > 0:
-                        log.debug(f"Posizione già aperta, attendo chiusura")
+                    elif count_open_positions() >= 2:
+                        log.debug(f"Max posizioni aperte (2)")
                     else:
-                        # ── Segnale strategia H1 ──────────────────────────────
+                        # ── Segnale primario H1 ───────────────────────────────
                         hour = bar_dt.hour
                         strategy_name, direction = get_signal(I_h1, i_h1, hour, current_regime)
 
                         if strategy_name is None:
-                            log.info(f"Regime: {current_regime} | Nessun segnale H1 su {bar_dt.strftime('%H:%M')}")
+                            log.info(f"Regime: {current_regime} | Nessun segnale primario H1 su {bar_dt.strftime('%H:%M')}")
+                        elif has_position_in_direction(direction):
+                            log.debug(f"[H1] Direzione {direction} già occupata, skip {strategy_name}")
                         else:
                             params = STRATEGY_PARAMS[strategy_name]
                             atr_i = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else None
@@ -1005,6 +1027,36 @@ def run():
                                 )
                                 last_sync_time = time.time()
 
+                        # ── Secondary H1 strategies ───────────────────────────
+                        for (sec_id, sec_tf, sec_dir_filter) in REGIME_MULTI_STRATEGIES.get(current_regime, []):
+                            if sec_tf != 'H1': continue
+                            if sec_id == strategy_name: continue   # già provata come primaria
+                            if count_open_positions() >= 2: break
+                            if state.trades_today >= MAX_TRADES: break
+                            fn2 = SIGNAL_FNS.get(sec_id)
+                            if not fn2: continue
+                            sec_dir = fn2(I_h1, i_h1)
+                            if not sec_dir: continue
+                            if sec_dir_filter and sec_dir != sec_dir_filter: continue
+                            if has_position_in_direction(sec_dir): continue
+                            sec_params = STRATEGY_PARAMS.get(sec_id, {})
+                            atr_i2 = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else None
+                            if rm:
+                                rp2 = rm.get_order_params(ai_score=last_ai_score, atr=atr_i2, strategy=sec_id, direction=sec_dir)
+                                lot2, tp2, sl2 = rp2['lot'], rp2['tp_usd'], rp2['sl_usd']
+                                log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)} | {rp2['tier_label']} | lot={lot2} | TP=${tp2} | SL=${sl2}")
+                            else:
+                                lot2, tp2, sl2 = LOT_SIZE, 20.0, 12.0
+                                log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)}")
+                            result2 = place_order(sec_dir, tp2, sl2, sec_id, lot_size=lot2)
+                            if result2:
+                                tick2 = mt5.symbol_info_tick(SYMBOL)
+                                price2 = tick2.ask if sec_dir=='buy' else tick2.bid if tick2 else 0
+                                log_trade_to_json(sec_dir, sec_id, price2,
+                                                  round(price2+(tp2 if sec_dir=='buy' else -tp2),2),
+                                                  round(price2-(sl2 if sec_dir=='buy' else -sl2),2), result2)
+                                state.record_trade(0, now_utc)
+
             # ── Controlla nuova candela M15 (es. S01_EXHAUSTION in TREND_DOWN) ─
             pb_entry = PLAYBOOK.get(current_regime, {})
             if pb_entry.get('tf') == 'M15' and not current_is_extreme:
@@ -1018,15 +1070,17 @@ def run():
                         can, reason = state.can_trade(now_utc)
                         if not can:
                             log.debug(f"[M15] Trade non permesso: {reason}")
-                        elif count_open_positions() > 0:
-                            log.debug(f"[M15] Posizione già aperta, attendo chiusura")
+                        elif count_open_positions() >= 2:
+                            log.debug(f"[M15] Max posizioni aperte (2)")
                         else:
                             I_m15 = compute_indicators(candles_m15)
                             idx = len(candles_m15) - 2
                             sname = pb_entry['strategy']
                             fn    = SIGNAL_FNS.get(sname)
                             direction = fn(I_m15, idx) if fn else None
-                            if direction:
+                            if direction and has_position_in_direction(direction):
+                                log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
+                            elif direction:
                                 params = STRATEGY_PARAMS[sname]
                                 atr_i = I_m15['atr'][idx] if I_m15['atr'][idx] else None
                                 if rm:
@@ -1066,15 +1120,17 @@ def run():
                         can, reason = state.can_trade(now_utc)
                         if not can:
                             log.debug(f"[M30] Trade non permesso: {reason}")
-                        elif count_open_positions() > 0:
-                            log.debug(f"[M30] Posizione già aperta, attendo chiusura")
+                        elif count_open_positions() >= 2:
+                            log.debug(f"[M30] Max posizioni aperte (2)")
                         else:
                             I_m30 = compute_indicators(candles_m30)
                             idx = len(candles_m30) - 2
                             sname = pb_entry['strategy']
                             fn    = SIGNAL_FNS.get(sname)
                             direction = fn(I_m30, idx) if fn else None
-                            if direction:
+                            if direction and has_position_in_direction(direction):
+                                log.debug(f"[M30] Direzione {direction} già occupata, skip {sname}")
+                            elif direction:
                                 params = STRATEGY_PARAMS[sname]
                                 atr_i = I_m30['atr'][idx] if I_m30['atr'][idx] else None
                                 if rm:

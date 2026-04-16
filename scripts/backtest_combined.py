@@ -37,15 +37,29 @@ MAX_LOOK   = 60    # max barre per risolvere TP/SL (H1 equiv)
 SESSION    = (7, 17)  # ore UTC
 MAX_TRADES_DAY = 3
 
-# ── PLAYBOOK ──────────────────────────────────────────────────────────────────
+# ── MULTI-STRATEGY MAP ────────────────────────────────────────────────────────
+# Tupla: (strategy_id, timeframe, direction_filter)
+# direction_filter: None=entrambe, 'buy'/'sell'=solo quella direzione
+# S00_MFKK usata solo in TREND_UP(sell) e TREND_DOWN(buy) → DD da 44% → ~15%
+REGIME_MULTI_STRATEGIES = {
+    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','sell')],
+    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','buy')],
+    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None)],
+    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None)],
+    'UNKNOWN':    [('S00_MFKK','H1',None)],
+}
+
+# Mantieni FALLBACK_PLAYBOOK solo per display/compatibilità
 FALLBACK_PLAYBOOK = {
-    'TREND_UP':   {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
-    'TREND_DOWN': {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
-    'WEAK_UP':    {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
-    'WEAK_DOWN':  {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
-    'VOLATILE':   {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
-    'RANGE':      {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
-    'UNKNOWN':    {'strategy': 'S00_MFKK',           'tf': 'H1'},
+    'TREND_UP':   {'strategy': 'S05_V3_Sell_Exhaust', 'tf': 'H1'},
+    'TREND_DOWN': {'strategy': 'S01_EXHAUSTION',      'tf': 'M15'},
+    'WEAK_UP':    {'strategy': 'S09_MFKK_SCALPING',   'tf': 'H1'},
+    'WEAK_DOWN':  {'strategy': 'S09_MFKK_SCALPING',   'tf': 'M30'},
+    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',   'tf': 'M30'},
+    'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',    'tf': 'M30'},
+    'UNKNOWN':    {'strategy': 'S00_MFKK',             'tf': 'H1'},
 }
 
 def load_playbook(path):
@@ -324,6 +338,24 @@ def s_mfkk_score(I, i):
     if bear>=70: return 'sell'
     return None
 
+# ── AI SCORE SIMULATOR ───────────────────────────────────────────────────────
+def simulate_ai_score(ind, i):
+    """Replica logica AI Confidence Score del dashboard (0-100)."""
+    a=ind['adx'][i]; r=ind['rsi'][i]; m=ind['macd'][i]
+    atr=ind['atr'][i]; atr30=ind['atr30'][i]
+    if None in (a, r, m): return 50.0
+    score = 0.0
+    score += min(max((a-20)/20,0),1.0)*30
+    score += min(abs(r-50)/15,1.0)*20
+    score += min(abs(m)/2.0,1.0)*20
+    if atr and atr30:
+        if a>=35:            score += 30
+        elif a>=25:          score += 15
+        elif atr>1.2*atr30:  score += 5
+        else:                score += 10
+    else: score += 10
+    return round(min(max(score,0),100),1)
+
 SIGNAL_FNS = {
     'S05_V3_Sell_Exhaust': s_sell_exhaust,
     'S05_MFKK_INTRADAY':   s_mfkk_intraday,
@@ -380,7 +412,7 @@ def resolve(candles, open_idx, direction, tp_price, sl_price, max_bars):
     return 'timeout', j, candles[j]['c']
 
 # ── SIMULAZIONE COMBINATA ─────────────────────────────────────────────────────
-def simulate(h1, m15, m30, playbook):
+def simulate(h1, m15, m30):
     print(f"\nH1: {len(h1)} barre | M15: {len(m15)} barre | M30: {len(m30)} barre")
 
     # Precomputa indicatori per ogni TF
@@ -403,9 +435,9 @@ def simulate(h1, m15, m30, playbook):
     # base_lot=0.02 = LOT_SIZE del bot, max_lot=0.10 = LOT_SIZE*5
     rm = get_risk_manager(base_lot=0.02, max_lot=0.10) if get_risk_manager else None
 
-    # Stato simulazione — 1 trade alla volta (identico al bot: count_open_positions()>0 blocca)
+    # Stato simulazione — max 2 trade simultanei, 1 per direzione
     open_trades    = []
-    MAX_OPEN_TRADES= 1
+    MAX_OPEN_TRADES= 2
     cooldown_bars  = 0   # barre H1 di cooldown
     trades_today   = 0
     current_day    = None
@@ -491,75 +523,57 @@ def simulate(h1, m15, m30, playbook):
         reg = regime(ind_h1, i)
         if reg == 'EXTREME': continue
 
-        entry = playbook.get(reg)
-        if not entry: continue
-        sname = entry['strategy']
-        tf    = entry['tf']
+        strategies_for_regime = REGIME_MULTI_STRATEGIES.get(reg, [('S00_MFKK','H1',None)])
+        open_dirs = {t['dir'] for t in open_trades}   # direzioni già occupate
 
-        # ── Indicatori del TF corretto ────────────────────────────────────
-        if tf == 'H1':
-            use_ind = ind_h1
-            use_idx = i
-            use_atr = ind_h1['atr'][i] or 10.0
-        elif tf == 'M15' and ind_m15:
-            j = last_closed_idx(times_m15, h1_close_ts)
-            if j < 300: continue   # warmup insufficiente
-            # Usa indicatori precomputati su tutto M15, accede all'indice j
-            use_ind = ind_m15
-            use_idx = j
-            use_atr = ind_m15['atr'][j] or 10.0
-        elif tf == 'M30' and ind_m30:
-            j = last_closed_idx(times_m30, h1_close_ts)
-            if j < 250: continue
-            use_ind = ind_m30
-            use_idx = j
-            use_atr = ind_m30['atr'][j] or 10.0
-        else:
-            use_ind = ind_h1; use_idx = i
-            use_atr = ind_h1['atr'][i] or 10.0
+        for (sname, tf, dir_filter) in strategies_for_regime:
+            if len(open_trades) >= MAX_OPEN_TRADES: break
+            if trades_today >= MAX_TRADES_DAY: break
 
-        # ── Segnale ───────────────────────────────────────────────────────
-        fn = SIGNAL_FNS.get(sname)
-        if not fn: continue
-        direction = fn(use_ind, use_idx)
-        if not direction: continue
+            # ── Indicatori del TF corretto ────────────────────────────
+            if tf == 'H1':
+                use_ind=ind_h1; use_idx=i; use_atr=ind_h1['atr'][i] or 10.0
+            elif tf == 'M15' and ind_m15:
+                j=last_closed_idx(times_m15, h1_close_ts)
+                if j<300: continue
+                use_ind=ind_m15; use_idx=j; use_atr=ind_m15['atr'][j] or 10.0
+            elif tf == 'M30' and ind_m30:
+                j=last_closed_idx(times_m30, h1_close_ts)
+                if j<250: continue
+                use_ind=ind_m30; use_idx=j; use_atr=ind_m30['atr'][j] or 10.0
+            else:
+                use_ind=ind_h1; use_idx=i; use_atr=ind_h1['atr'][i] or 10.0
 
-        # ── Apri trade ────────────────────────────────────────────────────
-        entry_price = h1[i+1]['o']   # open della prossima H1 barra = esecuzione market
-        
-        # Risk Manager sizing se disponibile, altrimenti fallback statico a 0.02
-        trade_lot = 0.02
-        if rm:
-            # Simula score dinamico 70-85 (il bot filtra i migliori regimi empirici)
-            ai_score = 75.0 
-            params = rm.get_order_params(ai_score, use_atr, sname, direction)
-            trade_lot = params['lot']
-            tp_pts = params['tp_usd']
-            sl_pts = params['sl_usd']
-        else:
-            tp_pts = round(use_atr * TP_MULT, 2)
-            sl_pts = round(use_atr * SL_MULT, 2)
-            
-        tp_p   = entry_price + tp_pts if direction=='buy' else entry_price - tp_pts
-        sl_p   = entry_price - sl_pts if direction=='buy' else entry_price + sl_pts
+            # ── Segnale ───────────────────────────────────────────────
+            fn = SIGNAL_FNS.get(sname)
+            if not fn: continue
+            direction = fn(use_ind, use_idx)
+            if not direction: continue
+            if dir_filter and direction != dir_filter: continue   # filtro S00_MFKK
+            if direction in open_dirs: continue                    # deduplica direzioni
 
-        trade_open = {
-            'strategy':  sname,
-            'regime':    reg,
-            'tf':        tf,
-            'dir':       direction,
-            'entry':     entry_price,
-            'tp':        tp_p,
-            'sl':        sl_p,
-            'tp_pts':    tp_pts,
-            'sl_pts':    sl_pts,
-            'lot':       trade_lot,
-            'open_t':    h1_open_ts,
-            'open_bar_j': use_idx if tf!='H1' else i,
-            'last_checked_j': use_idx if tf!='H1' else i,
-        }
-        open_trades.append(trade_open)
-        trades_today += 1
+            # ── AI Score dinamico → RM sizing ─────────────────────────
+            ai_score = simulate_ai_score(use_ind, use_idx) if rm else 75.0
+            if rm:
+                params = rm.get_order_params(ai_score, use_atr, sname, direction)
+                trade_lot=params['lot']; tp_pts=params['tp_usd']; sl_pts=params['sl_usd']
+            else:
+                trade_lot=0.02; tp_pts=round(use_atr*TP_MULT,2); sl_pts=round(use_atr*SL_MULT,2)
+
+            entry_price = h1[i+1]['o']
+            tp_p = entry_price+tp_pts if direction=='buy' else entry_price-tp_pts
+            sl_p = entry_price-sl_pts if direction=='buy' else entry_price+sl_pts
+
+            open_trades.append({
+                'strategy':sname,'regime':reg,'tf':tf,'dir':direction,
+                'entry':entry_price,'tp':tp_p,'sl':sl_p,
+                'tp_pts':tp_pts,'sl_pts':sl_pts,'lot':trade_lot,
+                'open_t':h1_open_ts,
+                'open_bar_j':use_idx if tf!='H1' else i,
+                'last_checked_j':use_idx if tf!='H1' else i,
+            })
+            open_dirs.add(direction)
+            trades_today += 1
 
     # Trade ancora aperto a fine serie
     for trade_open in open_trades:
@@ -673,7 +687,7 @@ if m30:
     print(f"Periodo M30: {datetime.datetime.utcfromtimestamp(m30[0]['t']).strftime('%Y-%m-%d')} "
           f"→ {datetime.datetime.utcfromtimestamp(m30[-1]['t']).strftime('%Y-%m-%d')}")
 
-trades, equity_curve = simulate(h1, m15, m30, playbook)
+trades, equity_curve = simulate(h1, m15, m30)
 s = stats(trades, equity_curve)
 
 if not s:
@@ -722,7 +736,7 @@ output = {
     'generated_at': datetime.datetime.utcnow().isoformat(),
     'stats': s,
     'trades': trades,
-    'playbook': playbook,
+    'regime_multi_strategies': {k: [list(t) for t in v] for k, v in REGIME_MULTI_STRATEGIES.items()},
 }
 with open(args.out, 'w', encoding='utf-8') as f:
     json.dump(output, f, indent=2)

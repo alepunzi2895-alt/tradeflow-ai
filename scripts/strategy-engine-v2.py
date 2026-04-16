@@ -765,38 +765,54 @@ def s_ob_fvg_scalp(ind, i, hour=None):
     if ob_s[i] and fs[i] and c < e233: return 'sell'
     return None
 
+def s_mfkk_intraday(ind, i, hour=None):
+    """
+    S05_MFKK_INTRADAY V3 — V2 Triple MACD + EMA 200 Trend Filter
+    OBV T-Channel + RSI + MACD + Mom + ADX + EMA 200 Bias
+    """
+    if i < 200: return None
+    oc = ind.get('obv_macd_oc')
+    r = ind['rsi'][i]; mo = ind['mom'][i]; a = ind['adx'][i]
+    mc = ind['macd'][i]; e200 = ind['e200'][i]; close = ind['C'][i]
+    if None in (r, mo, a, mc, e200) or oc is None: return None
+    
+    is_buy = oc[i] == 1 and r > 52 and mo > 0 and mc > 0 and close > e200
+    is_sell = oc[i] == -1 and r < 48 and mo < 0 and mc < 0 and close < e200
+    if is_buy: return 'buy'
+    if is_sell: return 'sell'
+    return None
+
 def s_golden_squeeze(ind, i, hour=None):
     """
-    S16: ELITE CONFLUENCE — OBV Momentum + Trend Alignment
-    Nota: richiede trend H1 (simulato nel backtest come ST)
+    S16: ELITE CONFLUENCE — OBV Momentum + Trend Alignment (ST Proxy)
     """
-    if i < 1: return None
-    obv_val = ind.get('obv')[i]
-    obv_ema = ind.get('obv_ema')[i]
-    c = ind['C'][i]; cp = ind['C'][i-1]
-    # In engine, simuliamo h1_trend con il supertrend della serie corrente se H1
-    st = ind.get('st')[i] 
+    if i < 20: return None
+    obv_val = ind.get('obv')[i]; obv_ema = ind.get('obv_ema')[i]
+    c = ind['C'][i]; cp = ind['C'][i-1]; st = ind.get('st')[i]
+    if None in (obv_val, obv_ema, st): return None
     
-    if st == -1: # BULLISH
+    if st == -1: # BULLISH Proxy
         if obv_val > obv_ema and c > cp: return 'buy'
-    if st == 1: # BEARISH
+    if st == 1: # BEARISH Proxy
         if obv_val < obv_ema and c < cp: return 'sell'
     return None
 
 # ── STRATEGY MAP (TABULA RASA: ELITE 4 ONLY) ──────────────────────────────────
 STRATS = {
-    'S05_MFKK_INTRADAY':    (s_mfkk_scalping,      ['TREND_UP','TREND_DOWN']), # Mapping temp
-    'S09_MFKK_SCALPING':    (s_mfkk_scalping,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
+    'S05_MFKK_INTRADAY':    (s_mfkk_intraday,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
+    'S09_MFKK_SCALPING':    (s_mfkk_scalping,      ['VOLATILE','WEAK_UP','WEAK_DOWN','RANGE']),
     'S10_OB_FVG_SCALP':     (s_ob_fvg_scalp,       ['RANGE', 'VOLATILE', 'WEAK_UP', 'WEAK_DOWN']),
     'S16_GOLDEN_SQUEEZE':   (s_golden_squeeze,     ['TREND_UP', 'TREND_DOWN', 'WEAK_UP', 'WEAK_DOWN']),
 }
 
 REGIME_PRIORITY = {
-    'WEAK_UP':    ['S09_MFKK_SCALPING','S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'WEAK_DOWN':  ['S09_MFKK_SCALPING','S15_OBV_MACD','S10_ST_MACD_SESSION','S02_ALLIGATOR_OBV','S06_ORDERBLOCK','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'RANGE':      ['S15_OBV_MACD','S12_WPR_RSI_KELT','S07_STOCHRSI_BB','S09_VWAP_WPER','S04_BB_SQUEEZE','S11_ALLIGATOR_AWAKEN'],
-    'VOLATILE':   ['S15_OBV_MACD','S07_STOCHRSI_BB','S12_WPR_RSI_KELT','S09_VWAP_WPER'],
-    'UNKNOWN':    ['S15_OBV_MACD','S10_ST_MACD_SESSION','S07_STOCHRSI_BB'],
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
+    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
+    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE'],
 }
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────

@@ -1287,7 +1287,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   })();
   // Stats aggregate sistema (somma backtest regime-aware 24m)
   // Aggiornato da backtest_combined.py — simulazione PARALLELA con RiskManager compounding
-  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'11.9%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:6 };
+  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'11.9%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:7 };
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;
@@ -1339,11 +1339,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
     <!-- stats aggregate -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;font-size:8px;text-align:center">
-      ${[['1 MESE',BOT_STATS.pnl_1m,'var(--green)'],['6 MESI',BOT_STATS.pnl_6m,'var(--green)'],['12 MESI',BOT_STATS.pnl_12m,'var(--green)'],['24 MESI',BOT_STATS.pnl_24m,'var(--green)'],['MAX DD',-BOT_STATS.maxdd,'var(--red)']].map(([lbl,val,col])=>`
-        <div style="background:#0d0f12;border:1px solid #c8a96e25;border-radius:5px;padding:5px 2px">
+      ${[['1 MESE',BOT_STATS.pnl_1m,'var(--green)',null],['6 MESI',BOT_STATS.pnl_6m,'var(--green)',null],['12 MESI',BOT_STATS.pnl_12m,'var(--green)',null],['24 MESI',BOT_STATS.pnl_24m,'var(--green)',null],['MAX DD',-BOT_STATS.maxdd,'var(--red)',BOT_STATS.maxdd_pct]].map(([lbl,val,col,ddPct])=>{
+        const pctStr = ddPct ? ddPct : `${(Math.abs(val)/1000*100).toFixed(0)}%`;
+        return `<div style="background:#0d0f12;border:1px solid #c8a96e25;border-radius:5px;padding:5px 2px">
           <div style="color:var(--dim);margin-bottom:2px;font-size:7px">${lbl}</div>
-          <div style="font-weight:800;color:${col};font-size:10px">${val>=0?'+':''}\$${Math.abs(val)}</div>
-        </div>`).join('')}
+          <div style="font-weight:800;color:${col};font-size:10px">${val>=0?'+':''}\$${Math.abs(val).toFixed(0)}</div>
+          <div style="font-size:7px;color:${col};opacity:0.75;margin-top:1px">${val>=0&&!ddPct?'+':''}${pctStr}</div>
+        </div>`;
+      }).join('')}
     </div>
 
     <!-- footer account + metriche -->
@@ -1417,15 +1420,21 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:8px;text-align:center;margin-bottom:3px">
           ${[['1 MESE','pnl_1m','td_1m',pnl1col],['6 MESI','pnl_6m','td_6m',pnl6col],['12 MESI','pnl_12m','td_12m',pnl12col],['24 MESI','pnl_24m','td_24m',pnl24col],['MAX DD','maxdd','maxdd_pct','var(--red)']].map(([label,pkey,tdkey,col])=>{
             const v = st[pkey];
-            const displayV = pkey==='maxdd'
+            const isDD = pkey==='maxdd';
+            const displayV = isDD
               ? (v!=null ? '-$'+v : '-$—')
               : (v!=null ? (v>=0?'+':'')+`$${v}` : '+$—');
-            const tdVal = tdkey && st[tdkey]!=null
-              ? (tdkey==='maxdd_pct' ? `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} Max DD</div>` : `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} td/gg</div>`)
+            // Riga % : P&L su capitale $1000 / DD su peak equity (maxdd_pct già calcolato)
+            const pctVal = isDD
+              ? (st.maxdd_pct || '—')
+              : (v!=null ? `${v>=0?'+':''}${(v/1000*100).toFixed(0)}%` : '—');
+            const tdVal = (!isDD && tdkey && st[tdkey]!=null)
+              ? `<div style="font-size:7px;color:var(--dim);margin-top:1px">${st[tdkey]} td/gg</div>`
               : '';
             return `<div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:3px 2px">
               <div style="color:var(--dim);margin-bottom:1px">${label}</div>
               <div style="font-weight:700;color:${col}">${displayV}</div>
+              <div style="font-size:7px;color:${col};opacity:0.75;margin-top:1px">${isDD?pctVal:(v!=null?pctVal:'')}</div>
               ${tdVal}
             </div>`;
           }).join('')}

@@ -51,10 +51,11 @@ def load_from_file(path):
     with open(path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     candles = data['candles'] if isinstance(data, dict) and 'candles' in data else data
+    tf = data.get('timeframe', 'H1') if isinstance(data, dict) else 'H1'
     src = data.get('source', 'file') if isinstance(data, dict) else 'file'
     sym = data.get('symbol', path) if isinstance(data, dict) else path
-    print(f"Caricato {len(candles)} candele da {path} (source={src}, symbol={sym})")
-    return candles
+    print(f"Caricato {len(candles)} candele da {path} (source={src}, TF={tf}, symbol={sym})")
+    return candles, tf
 
 def download():
     if not HAS_YF: raise RuntimeError("pip install yfinance")
@@ -782,9 +783,17 @@ REGIME_PRIORITY = {
 }
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
-def run_one(candles, ind, name, fn, tp=TP_USD, sl=SL_USD):
+def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
+    
+    # Scala lookahead bars in base al TF (base 30 bar su H1)
+    tf_mult = 1
+    if tf == 'M30': tf_mult = 2
+    elif tf == 'M15': tf_mult = 4
+    elif tf == 'M5': tf_mult = 12
+    lookahead = 30 * tf_mult
+    
     for i in range(220,n):
         c=candles[i]; ts=c['t']
         dt=datetime.datetime.utcfromtimestamp(ts)
@@ -815,7 +824,7 @@ def run_one(candles, ind, name, fn, tp=TP_USD, sl=SL_USD):
         outcome='open'; win=False; close_price=entry
         curr_sl_dyn = sl_p
         
-        for j in range(i+1,min(i+30,n)): # max 30 bars (H1)
+        for j in range(i+1,min(i+lookahead,n)): # Scaled lookahead (base 30 H1)
             jc=candles[j]['c']; jh=candles[j]['h']; jl=candles[j]['l']
             
             # --- SIMULA BE & TRAILING (nuovo richiesto) ---
@@ -868,9 +877,15 @@ def stats(trades, tp=TP_USD, sl=SL_USD):
             'months':f"{pos}/{len(mo)}"}
 
 # ── ADAPTIVE BACKTEST ─────────────────────────────────────────────────────────
-def run_adaptive(candles, ind):
+def run_adaptive(candles, ind, tf='H1'):
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
+    
+    tf_mult = 1
+    if tf == 'M30': tf_mult = 2
+    elif tf == 'M15': tf_mult = 4
+    lookahead = 25 * tf_mult # adaptive uses slightly shorter exit
+    
     for i in range(220,n):
         c=candles[i]; ts=c['t']
         dt=datetime.datetime.utcfromtimestamp(ts)
@@ -897,7 +912,7 @@ def run_adaptive(candles, ind):
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d
         sl_p=entry-sl_d if sig=='buy' else entry+sl_d
         outcome='open'; win=False
-        for j in range(i+1,min(i+25,n)):
+        for j in range(i+1,min(i+lookahead,n)):
             jh=candles[j]['h']; jl=candles[j]['l']
             if sig=='buy':
                 if jh>=tp_p: win=True; outcome='win'; break
@@ -921,11 +936,12 @@ def main():
 
     print("Caricamento dati...")
     if _args.file:
-        candles = load_from_file(_args.file)
+        candles, tf = load_from_file(_args.file)
     else:
         print("  (nessun --file specificato, uso yfinance GC=F)")
         candles = download()
-    print(f"  {len(candles)} candele H1 | prima: {datetime.datetime.fromtimestamp(candles[0]['t']).strftime('%Y-%m-%d')} | ultima: {datetime.datetime.fromtimestamp(candles[-1]['t']).strftime('%Y-%m-%d')}")
+        tf = 'H1'
+    print(f"  {len(candles)} candele {tf} | prima: {datetime.datetime.fromtimestamp(candles[0]['t']).strftime('%Y-%m-%d')} | ultima: {datetime.datetime.fromtimestamp(candles[-1]['t']).strftime('%Y-%m-%d')}")
 
     print("Calcolo 15 indicatori...")
     ind=compute_all(candles)
@@ -933,16 +949,16 @@ def main():
 
     # ── FASE 1: Backtest individuale ─────────────────────────────────────────
     print("\n" + "="*72)
-    print("FASE 1: Backtest individuale 12 strategie")
+    print(f"FASE 1: Backtest individuale 12 strategie su {tf}")
     print("="*72)
     hdr=f"{'Strategia':<22} {'N':>5} {'WR%':>6} {'P&L':>8} {'PF':>6} {'$/gg':>7} {'tr/gg':>5} {'Mesi+':>7} {'DD':>7}"
     print(hdr); print("-"*72)
     all_results={}
     for name,(fn,_) in STRATS.items():
         if name=='S10_ST_MACD_SESSION':
-            trades=run_one(candles,ind,name,s10_supertrend_macd_session)
+            trades=run_one(candles,ind,name,s10_supertrend_macd_session,tf=tf)
         else:
-            trades=run_one(candles,ind,name,fn)
+            trades=run_one(candles,ind,name,fn,tf=tf)
         s=stats(trades)
         all_results[name]={'stats':s,'trades':trades}
         print(f"{name:<22} {s['n']:>5} {s['wr']:>6.1f}% {s['pnl']:>8.1f} {s['pf']:>6.3f} {s['avg_day']:>7.2f} {s['tr_day']:>5.2f} {s['months']:>7} {s['dd']:>7.1f}")
@@ -950,7 +966,7 @@ def main():
     # ── FASE 2: Ranking per PF ────────────────────────────────────────────────
     ranked=sorted(all_results.items(), key=lambda x:-x[1]['stats']['pf'])
     print("\n" + "="*72)
-    print("RANKING STRATEGIE (per Profit Factor)")
+    print(f"RANKING STRATEGIE (per Profit Factor su {tf})")
     print("="*72)
     for i,(name,res) in enumerate(ranked):
         s=res['stats']
@@ -959,9 +975,9 @@ def main():
 
     # ── FASE 3: Sistema adattivo ──────────────────────────────────────────────
     print("\n" + "="*72)
-    print("FASE 3: Sistema ADATTIVO (regime + strategia ottimale)")
+    print(f"FASE 3: Sistema ADATTIVO (regime + strategia ottimale su {tf})")
     print("="*72)
-    adap=run_adaptive(candles,ind)
+    adap=run_adaptive(candles,ind,tf=tf)
     sa=stats(adap)
     print(f"\n  Trade totali:    {sa['n']}")
     print(f"  Win Rate:        {sa['wr']}%")
@@ -994,7 +1010,7 @@ def main():
         print(f"  {'TP':>5} {'SL':>5} {'R:R':>5} | {'N':>5} {'WR%':>6} {'P&L':>8} {'PF':>6}")
         for tp,sl in tp_sl_configs:
             if name=='S10_ST_MACD_SESSION': continue
-            t2=run_one(candles,ind,name,fn,tp=tp,sl=sl)
+            t2=run_one(candles,ind,name,fn,tf=tf,tp=tp,sl=sl)
             s2=stats(t2,tp,sl)
             rr=tp/sl
             print(f"  ${tp:>4} ${sl:>4} {rr:>5.2f} | {s2['n']:>5} {s2['wr']:>6.1f}% {s2['pnl']:>8.1f} {s2['pf']:>6.3f}")

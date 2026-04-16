@@ -44,34 +44,34 @@
       "score": 290.0
     },
     "RANGE": {
-      "strategy": "S09_MFKK_SCALPING",
-      "tf": "M15",
-      "n": 363,
-      "wr": 49.0,
-      "pnl": 442.4,
-      "pf": 1.435,
-      "dd": 131.9,
-      "score": 250.31
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M30",
+      "n": 523,
+      "wr": 31.3,
+      "pnl": 358.7,
+      "pf": 1.06,
+      "dd": 679.8,
+      "score": 180.0
     },
     "VOLATILE": {
-      "strategy": "S09_MFKK_SCALPING",
-      "tf": "M15",
-      "n": 363,
-      "wr": 49.0,
-      "pnl": 442.4,
-      "pf": 1.435,
-      "dd": 131.9,
-      "score": 250.31
+      "strategy": "S06_ORDERBLOCK",
+      "tf": "M30",
+      "n": 1047,
+      "wr": 31.3,
+      "pnl": 358.7,
+      "pf": 1.06,
+      "dd": 679.8,
+      "score": 160.0
     },
     "UNKNOWN": {
-      "strategy": "S09_MFKK_SCALPING",
+      "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "M15",
-      "n": 363,
-      "wr": 49.0,
-      "pnl": 442.4,
-      "pf": 1.435,
-      "dd": 131.9,
-      "score": 250.31
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
+      "pf": 1.45,
+      "dd": 165.0,
+      "score": 100.0
     }
   },
   "regime_matrix": {

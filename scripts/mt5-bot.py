@@ -608,13 +608,13 @@ SIGNAL_FNS = {
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
 # Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S15_OBV_MACD','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None), ('S04_BB_SQUEEZE','M30',None)],
-    'TREND_DOWN': [('S15_OBV_MACD','H1',None), ('S01_EXHAUSTION','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
-    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None), ('S15_OBV_MACD','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S04_BB_SQUEEZE','M15',None)],
-    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None), ('S15_OBV_MACD','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S04_BB_SQUEEZE','M15',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S07_STOCHRSI_BB','M15',None), ('S00_MFKK','H1',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S07_STOCHRSI_BB','M30',None), ('S13_STRUC_BREAK','H1',None), ('S11_ALLIGATOR_AWAKEN','M15',None)],
-    'UNKNOWN':    [('S00_MFKK','H1',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M15',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S08_OBV_EMA_MOM','M15',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M15',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None), ('S01_EXHAUSTION','M15',None)],
+    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M30',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M15',None), ('S09_MFKK_SCALPING','M30',None), ('S15_OBV_MACD','M15',None), ('S05_MFKK_INTRADAY','H1',None)],
+    'VOLATILE':   [('S06_ORDERBLOCK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S07_STOCHRSI_BB','M15',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S07_STOCHRSI_BB','M15',None), ('S04_BB_SQUEEZE','H1',None), ('S11_ALLIGATOR_AWAKEN','M15',None)],
+    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M15',None)],
 }
 
 def get_signal(I, i, hour, regime):

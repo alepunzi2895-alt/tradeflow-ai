@@ -1263,20 +1263,20 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
   // ── MFKK AI GOLD BOT — pannello principale
   // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, max 2 trade, AI Score dinamico, lot=0.05, config A: ADX25+RSI+2)
-  const BOT_STATS = { pnl_1m:2884.89, pnl_6m:6871.28, pnl_12m:7924.43, pnl_24m:9533.37, maxdd:1290.61, maxdd_pct:'11.9%', trades_12m:252, pf:1.494, wr:'40.6%', n_strat:7 };
+  const BOT_STATS = { pnl_1m:2639.47, pnl_6m:7786.13, pnl_12m:7589.96, pnl_24m:9794.58, maxdd:1324.83, maxdd_pct:'11.8%', trades_12m:386, pf:1.376, wr:'36.4%', n_strat:7 };
 
   // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in backtest_combined.py e mt5-bot.py)
   const PLAYBOOK_UI = {
-    'TREND_UP':   {strategy:'S05_V3_Sell_Exhaust', secondary:'S05_MFKK_INTRADAY', tf:'H1'},
-    'TREND_DOWN': {strategy:'S01_EXHAUSTION',      secondary:'S05_MFKK_INTRADAY', tf:'M15'},
-    'WEAK_UP':    {strategy:'S09_MFKK_SCALPING',   secondary:'S05_MFKK_INTRADAY', tf:'H1'},
-    'WEAK_DOWN':  {strategy:'S09_MFKK_SCALPING',   secondary:'S05_MFKK_INTRADAY', tf:'M30'},
-    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',   secondary:null,                tf:'M30'},
-    'RANGE':      {strategy:'S10_OB_FVG_SCALP',    secondary:'S13_STRUC_BREAK',   tf:'M30'},
-    'UNKNOWN':    {strategy:'S00_MFKK',             secondary:null,                tf:'H1'},
+    'TREND_UP':   {strategy:'S05_V3_Sell_Exhaust', others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'H1'},
+    'TREND_DOWN': {strategy:'S01_EXHAUSTION',      others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'M15'},
+    'WEAK_UP':    {strategy:'S09_MFKK_SCALPING',   others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'H1'},
+    'WEAK_DOWN':  {strategy:'S09_MFKK_SCALPING',   others:['S05_MFKK_INTRADAY','S00_MFKK'], tf:'M30'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',   others:['S00_MFKK'],                     tf:'M30'},
+    'RANGE':      {strategy:'S10_OB_FVG_SCALP',    others:['S13_STRUC_BREAK','S00_MFKK'],   tf:'M30'},
+    'UNKNOWN':    {strategy:'S00_MFKK',             others:[],                               tf:'H1'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
-  const activeList = [playbookEntry.strategy, ...(playbookEntry.secondary ? [playbookEntry.secondary] : [])];
+  const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];
   const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
   const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#ffd700' : '#ff4757';
@@ -1382,7 +1382,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const pnl12col  = (st.pnl_12m||0)>0 ?'var(--green)':'var(--red)';
       const pnl24col  = (st.pnl_24m||0)>0 ?'var(--green)':'var(--red)';
       const inds = id==='S00_MFKK'
-        ? 'ADX 80% + MACD 10% + CCI(50) 10% · BUY≥85 · SELL≥70 · WR 41% · 3.7 trade/gg · P&L +$3052/24m · +RM WR 52.7%'
+        ? 'ADX 80% + MACD 10% + CCI(50) 10% · BUY≥80 · SELL≥65 · WR 30% · 12.5 trade/mese · P&L +$885/24m · attiva tutti i regimi'
         : id==='S00_MFKK_HWR'
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'

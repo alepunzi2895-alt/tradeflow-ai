@@ -40,14 +40,14 @@ MAX_TRADES_DAY = 3
 # ── MULTI-STRATEGY MAP ────────────────────────────────────────────────────────
 # Tupla: (strategy_id, timeframe, direction_filter)
 # direction_filter: None=entrambe, 'buy'/'sell'=solo quella direzione
-# S00_MFKK usata solo in TREND_UP(sell) e TREND_DOWN(buy) → DD da 44% → ~15%
+# S00_MFKK su tutti i regimi come 3a opzione (BUY>=80/SELL>=65) — ~10 trade/mese effettivi
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','sell')],
-    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','buy')],
-    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None)],
-    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None)],
+    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None),  ('S00_MFKK','H1',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None),   ('S00_MFKK','H1',None)],
     'UNKNOWN':    [('S00_MFKK','H1',None)],
 }
 
@@ -334,8 +334,8 @@ def s_mfkk_score(I, i):
     cs=min(abs(c or 0)/100*100,100)
     if (c or 0)>=0: bull+=cs*0.10
     else:           bear+=cs*0.10
-    if bull>=85: return 'buy'
-    if bear>=70: return 'sell'
+    if bull>=80: return 'buy'
+    if bear>=65: return 'sell'
     return None
 
 # ── AI SCORE SIMULATOR ───────────────────────────────────────────────────────

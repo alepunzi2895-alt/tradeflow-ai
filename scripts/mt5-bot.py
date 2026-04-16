@@ -387,8 +387,8 @@ def signal_mfkk_score(I, i):
     if c >= 0: bull += cs*0.10
     else:      bear += cs*0.10
 
-    if bull >= 85: return 'buy'   # era 90
-    if bear >= 70: return 'sell'  # era 75
+    if bull >= 80: return 'buy'
+    if bear >= 65: return 'sell'
     return None
 
 def signal_mfkk_intraday(I, i):
@@ -474,14 +474,14 @@ SIGNAL_FNS = {
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
-# Identico a backtest_combined.py — S00_MFKK solo TREND_UP(sell) e TREND_DOWN(buy)
+# Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','sell')],
-    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1','buy')],
-    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None)],
-    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None)],
+    'TREND_UP':   [('S05_V3_Sell_Exhaust','H1',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'TREND_DOWN': [('S01_EXHAUSTION','M15',None),     ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'WEAK_UP':    [('S09_MFKK_SCALPING','H1',None),   ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'WEAK_DOWN':  [('S09_MFKK_SCALPING','M30',None),  ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','H1',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None),  ('S00_MFKK','H1',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None),   ('S13_STRUC_BREAK','H1',None),   ('S00_MFKK','H1',None)],
     'UNKNOWN':    [('S00_MFKK','H1',None)],
 }
 

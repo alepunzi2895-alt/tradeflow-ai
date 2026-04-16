@@ -11,27 +11,28 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
-    // ── BACKTEST REGIME-AWARE (multi-TF, ATR-based TP/SL, 2026-04-15) ──
-    // MFKK Score: TP=20 / SL=10. PNL=+$34k
-    'S00_MFKK': { label: 'MFKK Score', pf: 1.73, wr: '47.8%', tp: '$20', sl: '$10',
+    // ── BACKTEST H1 MT5 GOLD 730gg · RM SEMPRE ATTIVO · 2026-04-16 ──
+    // MFKK Score: soglie rilassate BUY≥85/SELL≥70 · TP=$20/SL=$12 · +RM WR 52.7%
+    'S00_MFKK': { label: 'MFKK Score', pf: 1.16, wr: '41.0%', tp: '$20', sl: '$12',
       stats: {
-        pnl_1m: 1433, td_1m: 5.42,
-        pnl_6m: 8600, td_6m: 5.92,
-        pnl_12m: 17200, td_12m: 6.82,
-        pnl_24m: 34404, td_24m: 6.54,
-        maxdd: 264, maxdd_pct: '26.4%', trades_12m: 2110, best_regime: 'TREND'
+        pnl_1m: 136, td_1m: 3.27,
+        pnl_6m: 1844, td_6m: 3.52,
+        pnl_12m: 2292, td_12m: 3.95,
+        pnl_24m: 3052, td_24m: 3.69,
+        maxdd: 1344, maxdd_pct: '44.1%', trades_12m: 1441, best_regime: 'TREND'
       } },
-    // MFKK Intraday: V3 Sell Exhaustion ultra-chirurgico. DD=0%
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 16.5, wr: '91.7%', tp: 'ATR×1.5', sl: 'ATR×1',
+    // MFKK Intraday: V2 Triple MACD H1 · OBV+RSI+MACD+MOM · 3.3 trade/gg · PF 1.23
+    // Backtest H1 MT5 730gg: 2426 trade/24m · WR 36.9% · P&L +$4776 · MaxDD $1367
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.23, wr: '36.9%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 1, td_1m: 0.08,
-        pnl_6m: 2, td_6m: 0.12,
-        pnl_12m: 4, td_12m: 0.16,
-        pnl_24m: 4, td_24m: 0.11,
-        maxdd: 0, maxdd_pct: '0.1%', trades_12m: 40, best_regime: 'TUTTI'
+        pnl_1m: 935, td_1m: 2.90,
+        pnl_6m: 1921, td_6m: 3.28,
+        pnl_12m: 4115, td_12m: 3.46,
+        pnl_24m: 4776, td_24m: 3.32,
+        maxdd: 1367, maxdd_pct: '28.6%', trades_12m: 1264, best_regime: 'TUTTI'
       } },
     // MFKK Scalping — EMA stack + FVG retest · regime-ottimale: WEAK_UP H1 + WEAK_DOWN/VOLATILE M30
-    // Backtest multi-TF 2026-04-15: 163 trade/24m · WR 40% · PF 2.44 · ATR×1.5/ATR×1 TP/SL
+    // Backtest regime-filtered 2026-04-15: 163 trade/24m · WR 40% · PF 1.62 · ATR×1.5/ATR×1 TP/SL
     'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 1.62, wr: '40.7%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
         pnl_1m: 123, td_1m: 0.11,
@@ -40,15 +41,15 @@ const SE = {
         pnl_24m: 2954, td_24m: 0.11,
         maxdd: 612, maxdd_pct: '20.7%', trades_12m: 30, best_regime: 'WEAK'
       } },
-    // Sell Exhaust — OBV bear + RSI>65 + ADX≥30 + MOM< · regime: TREND_UP H1
-    // Backtest TREND_UP H1: WR 60.9% · PF 3.11 · 23 trade/24m · ATR×1.5/×1
-    'S05_V3_Sell_Exhaust': { label: 'Sell Exhaust', pf: 2.18, wr: '35.4%', tp: 'ATR×1.5', sl: 'ATR×1',
+    // Sell Exhaust — OBV bear + RSI>60 + ADX≥25 + MOM< · regime: TREND_UP H1
+    // Backtest H1 MT5 730gg: WR 36.8% · PF 1.96 · 61 trade/12m · MaxDD $278
+    'S05_V3_Sell_Exhaust': { label: 'Sell Exhaust', pf: 1.96, wr: '36.8%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 257, td_1m: 0.09,
-        pnl_6m: 1541, td_6m: 0.09,
-        pnl_12m: 3082, td_12m: 0.09,
-        pnl_24m: 6164, td_24m: 0.09,
-        maxdd: 1245, maxdd_pct: '20.2%', trades_12m: 24, best_regime: 'TREND_UP'
+        pnl_1m: 328, td_1m: 0.17,
+        pnl_6m: 829, td_6m: 0.16,
+        pnl_12m: 625, td_12m: 0.17,
+        pnl_24m: 702, td_24m: 0.16,
+        maxdd: 278, maxdd_pct: '9.3%', trades_12m: 61, best_regime: 'TREND_UP'
       } },
     // Exhaustion — ADX/DI spread + MACD crossover · regime: TREND_DOWN (M15 sul bot)
     // Backtest TREND_DOWN M15: WR 42% · PF 1.76 · 143 trade/24m · ATR×1.5/×1
@@ -83,13 +84,14 @@ const SE = {
   },
   // ── REGIME PRIORITY ──
   // Allineato con regime_playbook.json (backtest multi-TF 2026-04-15)
+  // Aggiornato 2026-04-16: S05_MFKK_INTRADAY (V2 Triple MACD) ora presente in tutti i regimi
   regimePriority: {
-    TREND_UP:   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S05_V3_Sell_Exhaust'],
-    TREND_DOWN: ['S01_EXHAUSTION',    'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    WEAK_UP:    ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
-    WEAK_DOWN:  ['S09_MFKK_SCALPING', 'S05_MFKK_INTRADAY', 'S10_OB_FVG_SCALP'],
+    TREND_UP:   ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S05_V3_Sell_Exhaust'],
+    TREND_DOWN: ['S05_MFKK_INTRADAY', 'S01_EXHAUSTION',    'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    WEAK_UP:    ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
+    WEAK_DOWN:  ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
     VOLATILE:   ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
-    RANGE:      ['S10_OB_FVG_SCALP',  'S13_STRUC_BREAK'],
+    RANGE:      ['S05_MFKK_INTRADAY', 'S10_OB_FVG_SCALP',  'S13_STRUC_BREAK'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },
@@ -632,19 +634,24 @@ const SE_STRATEGY_FNS = {
     return null;
   },
 
-  // S05_MFKK_INTRADAY: V3 Sell Exhaustion — migliore variante da backtest MT5 GOLD H1 730gg
-  // Condizioni: OBV bear + RSI>55 + ADX≥20 + Momentum negativo
+  // S05_MFKK_INTRADAY: V2 Triple MACD H1 — 3.3 trade/gg · WR 36.9% · PF 1.23 · P&L $4776/24m
+  // OBV T-Channel direzione + RSI sopra/sotto 50 + MACD line + Momentum + ADX≥20
+  // Identico a signal_mfkk_intraday() in mt5-bot.py
   S05_MFKK_INTRADAY: (I, i) => {
-    if (!I.obv_oc || i < 1) return null;
+    if (!I.obv_oc || i < 2) return null;
     const oc  = I.obv_oc[i];
     const rsi = I.rsi?.[i];
-    const a   = I.adx?.[i];
-    const m   = I.mom?.[i];
-    if (rsi == null || a == null || m == null) return null;
+    const adx = I.adx?.[i];
+    const mom = I.mom?.[i];
+    const mc  = I.macd?.[i];
+    if (rsi == null || adx == null || mom == null || mc == null) return null;
+    if (adx < 20) return null;
 
-    // V3 Sell Exhaustion
-    if (oc === -1 && rsi > 55 && a >= 20 && m < 0) {
-      return {dir:'sell', why:`MFKK Intraday ↓ Sell Exhaustion · OBV Bear · RSI ${rsi.toFixed(0)}>55 · ADX ${a.toFixed(0)}≥20 · Mom ROC negativo`, quality:'high'};
+    if (oc === 1 && rsi > 50 && mom > 0 && mc > 0) {
+      return {dir:'buy',  why:`MFKK Intraday ↑ V2 · OBV Bull · RSI ${rsi.toFixed(0)}>50 · MACD+ · Mom+`, quality:'high'};
+    }
+    if (oc === -1 && rsi < 50 && mom < 0 && mc < 0) {
+      return {dir:'sell', why:`MFKK Intraday ↓ V2 · OBV Bear · RSI ${rsi.toFixed(0)}<50 · MACD- · Mom-`, quality:'high'};
     }
     return null;
   },
@@ -1343,15 +1350,15 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const pnl12col  = (st.pnl_12m||0)>0 ?'var(--green)':'var(--red)';
       const pnl24col  = (st.pnl_24m||0)>0 ?'var(--green)':'var(--red)';
       const inds = id==='S00_MFKK'
-        ? 'ADX 80% + MACD 10% + CCI(50) 10% · SELL≥75 · BUY≥90 · SELL 3.6x più redditizio · zona 80-89 WR 58.8%'
+        ? 'ADX 80% + MACD 10% + CCI(50) 10% · BUY≥85 · SELL≥70 · WR 41% · 3.7 trade/gg · P&L +$3052/24m · +RM WR 52.7%'
         : id==='S00_MFKK_HWR'
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'
-        ? 'OBV MACD T-Channel + RSI>65 + Momentum + ADX≥30 · Setup chirurgico estremo WR 75%'
+        ? 'V2 Triple MACD H1 · OBV T-Channel + RSI 50 + MACD + Momentum · ADX≥20 · 3.3 trade/gg · WR 37% · PF 1.23'
         : id==='S09_MFKK_SCALPING'
         ? 'EMA stack (20>50>100>200) + FVG retest · H1 su WEAK_UP · M30 su WEAK_DOWN/VOLATILE'
         : id==='S05_V3_Sell_Exhaust'
-        ? 'OBV T-Channel bear + RSI>65 + ADX≥30 + MOM<0 · Sell exhaustion su TREND_UP H1'
+        ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion su TREND_UP H1 · WR 37% · PF 1.96 · MaxDD $278'
         : id==='S01_EXHAUSTION'
         ? 'ADX/DI spread≥15 + MACD vs signal crossover · TREND_DOWN M15 (bot) / H1 (UI)'
         : id==='S13_STRUC_BREAK'

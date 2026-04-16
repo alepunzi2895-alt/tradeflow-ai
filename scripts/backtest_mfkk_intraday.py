@@ -212,8 +212,8 @@ def mfkk_score(ind, i):
     else:        score_bear += cci_score * 0.10
 
     score = max(score_bull, score_bear)
-    if score_bull >= 90 and score_bull > score_bear: return 'buy'
-    if score_bear >= 75 and score_bear > score_bull: return 'sell'
+    if score_bull >= 85 and score_bull > score_bear: return 'buy'  # era 90
+    if score_bear >= 70 and score_bear > score_bull: return 'sell'  # era 75
     return None
 
 # ── STRATEGIA 2: MFKK HIGH WIN RATE ──────────────────────────────────────────
@@ -240,8 +240,8 @@ def mfkk_intraday_v1(ind, i):
     if i<1: return None
     oc=ind['obv_oc']; r=ind['rsi'][i]; m=ind['mom'][i]; a=ind['adx'][i]
     if None in (r,m,a): return None
-    if oc[i]==1  and oc[i-1]!=1  and r<62 and m>0 and a>=18: return 'buy'
-    if oc[i]==-1 and oc[i-1]!=-1 and r>38 and m<0 and a>=18: return 'sell'
+    if oc[i]==1  and oc[i-1]!=1  and r<65 and m>0 and a>=15: return 'buy'   # era r<62, a>=18
+    if oc[i]==-1 and oc[i-1]!=-1 and r>35 and m<0 and a>=15: return 'sell'  # era r>38, a>=18
     return None
 
 def mfkk_intraday_v2(ind, i):
@@ -267,7 +267,7 @@ def mfkk_intraday_v3(ind, i):
     if i<1: return None
     oc=ind['obv_oc']; r=ind['rsi'][i]; a=ind['adx'][i]; m=ind['mom'][i]
     if None in (r,a,m): return None
-    if oc[i]==-1 and r>65 and a>=30 and m<0: return 'sell'
+    if oc[i]==-1 and r>60 and a>=25 and m<0: return 'sell'   # era r>65, a>=30
     return None
 
 def mfkk_intraday_v4(ind, i):
@@ -282,8 +282,8 @@ def mfkk_intraday_v4(ind, i):
     if None in (r,a,mc[i],mc[i-1],m,e50): return None
     macd_up = mc[i]>0 and mc[i-1]<=0
     macd_dn = mc[i]<0 and mc[i-1]>=0
-    if oc[i]==1  and oc[i-1]!=1  and r<58 and a>=25 and (macd_up or mc[i]>0) and m>0 and c>e50: return 'buy'
-    if oc[i]==-1 and oc[i-1]!=-1 and r>42 and a>=25 and (macd_dn or mc[i]<0) and m<0 and c<e50: return 'sell'
+    if oc[i]==1  and oc[i-1]!=1  and r<62 and a>=20 and (macd_up or mc[i]>0) and m>0 and c>e50: return 'buy'   # era r<58, a>=25
+    if oc[i]==-1 and oc[i-1]!=-1 and r>38 and a>=20 and (macd_dn or mc[i]<0) and m<0 and c<e50: return 'sell'  # era r>42, a>=25
     return None
 
 INTRADAY_VARIANTS = {
@@ -1144,11 +1144,12 @@ def simulate_portfolio(trades_list, initial_balance=1000.0, risk_pct=0.02, contr
 
 def main():
     args = ap.parse_args()
+    # RM sempre attivo (override flag — richiesto dall'utente)
+    args.rm = True
     print("="*72)
-    print("TradeFlow AI — MFKK Suite Backtest")
+    print("TradeFlow AI — MFKK Suite Backtest  [RM SEMPRE ATTIVO]")
     print("Strategie: MFKK Score · MFKK HighWR · MFKK Intraday Combo")
-    if args.rm:
-        print("🧠 Risk Manager mode ATTIVO (AI Score simulato + TS/BE/Parziali)")
+    print("🧠 Risk Manager: AI Score simulato + TS/BE/Parziali (default ON)")
     print("="*72)
 
     # ── CARICAMENTO DATI
@@ -1200,7 +1201,9 @@ def main():
 
     results = {}
 
-    # STRATEGIA 1: MFKK SCORE (Sweep Multi-TF)
+    # ════════════════════════════════════════════════════════════════════
+    # STRATEGIA 1: MFKK SCORE (Sweep Multi-TF) + Risk Manager
+    # ════════════════════════════════════════════════════════════════════
     print(f"\n{'='*72}")
     print("MFKK SCORE — Multi-TF sweep (TP $20 / SL $12)")
     print('='*72)
@@ -1209,7 +1212,7 @@ def main():
     best_score_tf = 'H1'
     best_score_data = None
     trades_mfkk = []
-    
+
     print(f"\n{'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'BuyWR':>7} {'SellWR':>8}")
     print('-'*70)
 
@@ -1227,13 +1230,34 @@ def main():
                 best_score_data = {'stats': s_tf, 'periods': periods_tf, 'trades': trades_tf}
 
     if best_score_data:
-        print(f"\n🏆 BEST MFKK SCORE: {best_score_tf}")
+        print(f"\n🏆 BEST MFKK SCORE BASELINE: {best_score_tf}")
         s = best_score_data['stats']
         print(f"  Trade: {s['n']} | WR: {s['wr']}% | PF: {s['pf']} | P&L: ${s['pnl']} | MaxDD: ${s['dd']}")
-        results['S00_MFKK_SCORE'] = {'strategy':'MFKK Score', 'best_tf':best_score_tf, 'tp':TP_H1, 'sl':SL_H1, 'stats':s, 'periods':best_score_data['periods']}
+        results['S00_MFKK_SCORE'] = {'strategy':'MFKK Score', 'best_tf':best_score_tf, 'tp':TP_H1, 'sl':SL_H1,
+                                      'stats':s, 'periods':best_score_data['periods']}
         trades_mfkk = best_score_data['trades']
 
-    # STRATEGIA 2: HIGHWR (Sweep Multi-TF SELL ONLY)
+        # ── Risk Manager run sul best TF
+        bc, bi, bsess, bcool = tf_configs[best_score_tf]
+        print(f"\n  🧠 MFKK Score {best_score_tf} + Risk Manager:")
+        trades_score_rm = run_backtest_rm(bc, bi, mfkk_score, base_tp=TP_H1, base_sl=SL_H1,
+                                          session=bsess, cooldown_bars=bcool)
+        s_rm = calc_stats(trades_score_rm)
+        p_rm = stats_by_period(trades_score_rm, bc)
+        if s_rm:
+            print(f"  Trade: {s_rm['n']} | WR: {s_rm['wr']}% | PF: {s_rm['pf']} | P&L: ${s_rm['pnl']} | MaxDD: ${s_rm['dd']}")
+        print("\n  Confronto BASELINE vs RiskManager:")
+        _print_comparison('BASELINE', s, best_score_data['periods'], 'RiskMgr', s_rm, p_rm)
+        if trades_score_rm:
+            sc_list = [t['ai_score'] for t in trades_score_rm]
+            tiers = defaultdict(int)
+            for t in trades_score_rm: tiers[t['tier']] += 1
+            print(f"  AI Score medio: {sum(sc_list)/len(sc_list):.1f} | Tier: {dict(sorted(tiers.items()))}")
+        results['S00_MFKK_SCORE_RM'] = {'strategy':'MFKK Score + RM', 'stats':s_rm, 'periods':p_rm}
+
+    # ════════════════════════════════════════════════════════════════════
+    # STRATEGIA 2: MFKK HIGH WIN RATE (Sweep Multi-TF SELL ONLY) + RM
+    # ════════════════════════════════════════════════════════════════════
     print(f"\n{'='*72}")
     print("MFKK HIGH WIN RATE — Multi-TF sweep (SELL ONLY) (TP $20 / SL $12)")
     print('='*72)
@@ -1241,7 +1265,7 @@ def main():
     best_hwr_val = -1
     best_hwr_tf = 'H1'
     best_hwr_data = None
-    
+
     print(f"\n{'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'SellWR':>8}")
     print('-'*70)
 
@@ -1262,27 +1286,108 @@ def main():
         print(f"\n🏆 BEST MFKK HIGH WR: {best_hwr_tf}")
         s = best_hwr_data['stats']
         print(f"  Trade: {s['n']} | WR: {s['wr']}% | PF: {s['pf']} | P&L: ${s['pnl']} | MaxDD: ${s['dd']}")
-        results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'best_tf':best_hwr_tf, 'tp':TP_HWR, 'sl':SL_HWR, 'stats':s, 'periods':best_hwr_data['periods']}
+        results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'best_tf':best_hwr_tf, 'tp':TP_HWR, 'sl':SL_HWR,
+                                    'stats':s, 'periods':best_hwr_data['periods']}
+        # RM run
+        bc2, bi2, bsess2, bcool2 = tf_configs[best_hwr_tf]
+        trades_hwr_rm = run_backtest_rm(bc2, bi2, mfkk_hwr, base_tp=TP_HWR, base_sl=SL_HWR,
+                                         session=bsess2, cooldown_bars=bcool2)
+        s_hwr_rm = calc_stats(trades_hwr_rm)
+        p_hwr_rm = stats_by_period(trades_hwr_rm, bc2)
+        if s_hwr_rm:
+            print(f"\n  🧠 HWR {best_hwr_tf} + RM: Trade={s_hwr_rm['n']} | WR={s_hwr_rm['wr']}% | P&L=${s_hwr_rm['pnl']}")
+        results['S00_MFKK_HWR_RM'] = {'strategy':'MFKK HighWR + RM', 'stats':s_hwr_rm, 'periods':p_hwr_rm}
     else:
         results['S00_MFKK_HWR'] = {'strategy':'MFKK HighWR', 'stats':None, 'periods':{}}
 
-    # STRATEGIA 3: INTRADAY
+    # ════════════════════════════════════════════════════════════════════
+    # STRATEGIA 3: MFKK INTRADAY COMBO — Multi-TF sweep + RM
+    # ════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*72}")
+    print("MFKK INTRADAY COMBO — OBV MACD + RSI + MOMENTUM")
+    print("Multi-TF sweep (M5/M15/M30/H1/H4) + Risk Manager")
+    print('='*72)
 
     best_overall = None; best_overall_score = -1; intraday_results = {}
+
+    print(f"\n{'Variante':<22} {'TF':<5} {'N':>5} {'WR':>6} {'PF':>6} {'P&L':>9} {'DD':>8} {'BuyWR':>7} {'SellWR':>8}")
+    print('-'*75)
+
     for vname, vfn in INTRADAY_VARIANTS.items():
         intraday_results[vname] = {}
         for tf_label, (candles, ind, session, cooldown) in tf_configs.items():
             trades = run_backtest(candles, ind, vfn, use_atr=True, session=session, cooldown_bars=cooldown, label=tf_label)
             s = calc_stats(trades); periods = stats_by_period(trades, candles)
-            intraday_results[vname][tf_label] = {'stats':s, 'periods':periods, 'trades_count':len(trades)}
-            if s and s['n']>=20:
-                sc = s['pf'] * s['wr']
-                if sc > best_overall_score: best_overall_score = sc; best_overall = {'variant':vname, 'tf':tf_label, 'stats':s, 'periods':periods, 'trades':trades}
-    
-    results['S05_MFKK_INTRADAY'] = {'strategy':'MFKK Intraday', 'best':best_overall, 'all_variants':intraday_results}
+            intraday_results[vname][tf_label] = {'stats':s, 'periods':periods, 'trades_count':len(trades) if trades else 0}
+            if s and s['n'] >= 15:
+                status = '✅' if s['pf'] >= 1.5 else ('⚠️' if s['pf'] >= 1.1 else '❌')
+                print(f"{status} {vname:<20} {tf_label:<5} {s['n']:>5} {s['wr']:>5.1f}% {s['pf']:>6.3f} {s['pnl']:>9.1f} {s['dd']:>8.1f} {s['buy_wr']:>6.1f}% {s['sell_wr']:>7.1f}%")
+                rr = (s['pnl'] / s['dd']) if s['dd'] > 0 else s['pnl']
+                sc = s['pf'] * (s['wr'] / 100) * math.log(s['n'] + 1) * min(rr / 3, 1.5)
+                if sc > best_overall_score:
+                    best_overall_score = sc
+                    best_overall = {'variant': vname, 'tf': tf_label, 'stats': s,
+                                    'periods': periods, 'trades': trades, 'score': round(sc, 3)}
+            else:
+                n_ = s['n'] if s else 0
+                print(f"── {vname:<20} {tf_label:<5} {n_:>5}  (N<15, skip)")
 
     if best_overall:
-        print(f"\n🏆 BEST MFKK INTRADAY: {best_overall['variant']} su {best_overall['tf']}")
+        bv = best_overall['variant']; btf = best_overall['tf']
+        bc3, bi3, bsess3, bcool3 = tf_configs[btf]
+        bfn = INTRADAY_VARIANTS[bv]
+        print(f"\n🏆 BEST MFKK INTRADAY: {bv} su {btf} (Score={best_overall['score']:.3f})")
+        s = best_overall['stats']
+        print(f"   WR={s['wr']}% | PF={s['pf']} | P&L=${s['pnl']} | MaxDD=${s['dd']}")
+        print(f"   Breakdown per periodo:")
+        print(f"     {'Per':<5} {'N':>5} {'WR':>6} {'P&L':>9} {'PF':>6} {'Trade/gg':>9}")
+        for p, ps in best_overall['periods'].items():
+            print(f"     {p:<5} {ps['n']:>5} {ps['wr']:>5.1f}% ${ps['pnl']:>8.1f} {ps['pf']:>6.3f} {ps['avg_td']:>9.2f}")
+
+        # RM run sul best combo
+        print(f"\n  🧠 {bv} {btf} + Risk Manager:")
+        trades_intr_rm = run_backtest_rm(bc3, bi3, bfn, use_atr=True, session=bsess3, cooldown_bars=bcool3)
+        s_intr_rm = calc_stats(trades_intr_rm)
+        p_intr_rm = stats_by_period(trades_intr_rm, bc3)
+        if s_intr_rm:
+            print(f"  Trade: {s_intr_rm['n']} | WR: {s_intr_rm['wr']}% | PF: {s_intr_rm['pf']} | P&L: ${s_intr_rm['pnl']}")
+        print("\n  Confronto BASELINE vs RiskManager:")
+        _print_comparison('BASELINE', s, best_overall['periods'], 'RiskMgr', s_intr_rm, p_intr_rm)
+        results['S05_MFKK_INTRADAY_RM'] = {'strategy':'MFKK Intraday + RM', 'stats':s_intr_rm, 'periods':p_intr_rm}
+    else:
+        print("⚠️  Nessuna variante MFKK Intraday con N>=15.")
+        best_overall = {'variant': 'V1_OBV_RSI_MOM', 'tf': 'H1', 'stats': None, 'periods': {}, 'trades': [], 'score': 0}
+
+    results['S05_MFKK_INTRADAY'] = {'strategy': 'MFKK Intraday', 'best': best_overall, 'all_variants': intraday_results}
+
+    # ════════════════════════════════════════════════════════════════════
+    # RIEPILOGO FINALE
+    # ════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*72}")
+    print("RIEPILOGO FINALE — Strategie Ufficiali (BASELINE + Risk Manager)")
+    print('='*72)
+    print(f"{'Strategia':<26} {'TF':<5} {'WR':>6} {'PF':>6} {'24m P&L':>10} {'12m P&L':>10} {'6m P&L':>10} {'1m P&L':>9}")
+    print('-'*84)
+
+    for sid, r in results.items():
+        if sid == 'S05_MFKK_INTRADAY':
+            s  = r['best']['stats'] or {}
+            ps = r['best']['periods']
+            tf = r['best']['tf']
+            nm = r.get('strategy', sid)
+        else:
+            s  = r.get('stats') or {}
+            ps = r.get('periods', {})
+            tf = r.get('best_tf', r.get('tf', 'H1'))
+            nm = r.get('strategy', sid)
+        wr  = s.get('wr', 0)
+        pf  = s.get('pf', 0)
+        p24 = ps.get('24m', {}).get('pnl', 0)
+        p12 = ps.get('12m', {}).get('pnl', 0)
+        p6  = ps.get('6m',  {}).get('pnl', 0)
+        p1  = ps.get('1m',  {}).get('pnl', 0)
+        tag = ' 🧠' if 'RM' in sid else '   '
+        print(f"{nm+tag:<26} {tf:<5} {wr:>5.1f}% {pf:>6.3f} {p24:>10.1f} {p12:>10.1f} {p6:>10.1f} {p1:>9.1f}")
 
     # COMPOUND
     if args.compound:
@@ -1296,8 +1401,8 @@ def main():
             print(f"  Rischio {r_pct*100:.2f}%: Capitale Finale: ${eq:,.2f} | P&L: +${p_tot:,.2f} | MaxDD: {dd_pct:.1f}% | PF: {pf:.2f}")
 
     # SAVE
-    out_data = {'generated': datetime.datetime.utcnow().isoformat(), 'config':{'days':DAYS}, 'strategies': results}
-    with open(args.out,'w',encoding='utf-8') as f:
+    out_data = {'generated': datetime.datetime.utcnow().isoformat(), 'config': {'days': DAYS, 'rm_always_on': True}, 'strategies': results}
+    with open(args.out, 'w', encoding='utf-8') as f:
         json.dump(out_data, f, indent=2, ensure_ascii=False)
     print(f"\nSalvato: {args.out}")
 

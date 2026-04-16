@@ -118,11 +118,18 @@ directives/
 
 ## Active Strategies
 
-| ID | Label | WR | Timeframe | TP / SL |
-|---|---|---|---|---|
-| `S00_MFKK` | MFKK Score | ~42% | H1 | $20 / $12 fixed |
-| `S05_MFKK_INTRADAY` | MFKK Intraday | ~37% | H1 | ATR×1.5 / ATR×1 |
-| `S09_MFKK_SCALPING` | MFKK Scalping (EMA stack + FVG + OB) | ~46% | H1 | ATR×1.5 / ATR×1 |
+Backtest 2026-04-16 · MT5 GOLD H1 730gg · RM sempre attivo
+
+| ID | Label | WR | PF | Trade/gg | TP / SL | P&L 24m |
+|---|---|---|---|---|---|---|
+| `S00_MFKK` | MFKK Score | 41% | 1.16 | 3.7 | $20 / $12 | +$3052 |
+| `S05_MFKK_INTRADAY` | MFKK Intraday V2 | 36.9% | 1.23 | 3.3 | ATR×1.5 / ATR×1 | +$4776 |
+| `S05_V3_Sell_Exhaust` | Sell Exhaust | 36.8% | 1.96 | 0.16 | ATR×1.5 / ATR×1 | +$702 |
+| `S09_MFKK_SCALPING` | MFKK Scalping | 40.7% | 1.62 | 0.11 | ATR×1.5 / ATR×1 | +$2954 |
+| `S01_EXHAUSTION` | Exhaustion | 44.4% | 2.43 | 0.03 | ATR×1.5 / ATR×1 | +$3011 |
+
+Soglie MFKK Score: `BUY≥85` / `SELL≥70` (era 90/75).
+S05_MFKK_INTRADAY usa V2 Triple MACD (OBV T-Channel + RSI50 + MACD + Momentum, ADX≥20, buy+sell).
 
 Archived strategies (logic kept in code, hidden from UI): S00_MFKK_HWR, S01_OBV_MACD, S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW, S04_BB_SQUEEZE, S06_ORDERBLOCK, S12_WPR_KELTNER, S13_STRUC_BREAK, S14_KEY_LEVELS.
 

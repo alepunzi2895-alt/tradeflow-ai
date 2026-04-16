@@ -387,8 +387,8 @@ def signal_mfkk_score(I, i):
     if c >= 0: bull += cs*0.10
     else:      bear += cs*0.10
 
-    if bull >= 90: return 'buy'
-    if bear >= 75: return 'sell'
+    if bull >= 85: return 'buy'   # era 90
+    if bear >= 70: return 'sell'  # era 75
     return None
 
 def signal_mfkk_intraday(I, i):

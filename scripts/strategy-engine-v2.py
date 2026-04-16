@@ -469,8 +469,8 @@ def s1_exhaustion(ind,i,hour=None):
     m=ind['macd'][i]; sg=ind['macd_sig'][i]
     if None in (a,dp,dm,m,sg): return None
     diff=m-sg; spread=abs(dp-dm)
-    if a>=30 and dm>dp and spread>=15 and diff>=1.0: return 'sell'
-    if a>=28 and dp>dm and spread>=15 and diff<=-1.0: return 'buy'
+    if a>=26 and dm>dp and spread>=10 and diff>=0.5: return 'sell'   # era a>=30, spread>=15, diff>=1.0
+    if a>=24 and dp>dm and spread>=10 and diff<=-0.5: return 'buy'   # era a>=28, spread>=15, diff<=-1.0
     return None
 
 def s2_alligator_trend(ind,i,hour=None):

@@ -32,33 +32,33 @@ const SE = {
       } },
     // MFKK Scalping — EMA stack + FVG retest · regime-ottimale: WEAK_UP H1 + WEAK_DOWN/VOLATILE M30
     // Backtest multi-TF 2026-04-15: 163 trade/24m · WR 40% · PF 2.44 · ATR×1.5/ATR×1 TP/SL
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 2.44, wr: '40%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 1.62, wr: '40.7%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 22, td_1m: 0.32,
-        pnl_6m: 133, td_6m: 0.32,
-        pnl_12m: 265, td_12m: 0.32,
-        pnl_24m: 531, td_24m: 0.32,
-        maxdd: 75, maxdd_pct: '14%', trades_12m: 82, best_regime: 'WEAK'
+        pnl_1m: 123, td_1m: 0.11,
+        pnl_6m: 738, td_6m: 0.11,
+        pnl_12m: 1477, td_12m: 0.11,
+        pnl_24m: 2954, td_24m: 0.11,
+        maxdd: 612, maxdd_pct: '20.7%', trades_12m: 30, best_regime: 'WEAK'
       } },
     // Sell Exhaust — OBV bear + RSI>65 + ADX≥30 + MOM< · regime: TREND_UP H1
     // Backtest TREND_UP H1: WR 60.9% · PF 3.11 · 23 trade/24m · ATR×1.5/×1
-    'S05_V3_Sell_Exhaust': { label: 'Sell Exhaust', pf: 3.11, wr: '60.9%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S05_V3_Sell_Exhaust': { label: 'Sell Exhaust', pf: 2.18, wr: '35.4%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 11, td_1m: 0.05,
-        pnl_6m: 68, td_6m: 0.05,
-        pnl_12m: 136, td_12m: 0.05,
-        pnl_24m: 272, td_24m: 0.05,
-        maxdd: 48, maxdd_pct: '5.5%', trades_12m: 12, best_regime: 'TREND_UP'
+        pnl_1m: 257, td_1m: 0.09,
+        pnl_6m: 1541, td_6m: 0.09,
+        pnl_12m: 3082, td_12m: 0.09,
+        pnl_24m: 6164, td_24m: 0.09,
+        maxdd: 1245, maxdd_pct: '20.2%', trades_12m: 24, best_regime: 'TREND_UP'
       } },
     // Exhaustion — ADX/DI spread + MACD crossover · regime: TREND_DOWN (M15 sul bot)
     // Backtest TREND_DOWN M15: WR 42% · PF 1.76 · 143 trade/24m · ATR×1.5/×1
-    'S01_EXHAUSTION': { label: 'Exhaustion', pf: 1.76, wr: '42%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S01_EXHAUSTION': { label: 'Exhaustion', pf: 2.43, wr: '44.4%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 35, td_1m: 0.29,
-        pnl_6m: 211, td_6m: 0.29,
-        pnl_12m: 423, td_12m: 0.29,
-        pnl_24m: 845, td_24m: 0.29,
-        maxdd: 474, maxdd_pct: '56%', trades_12m: 72, best_regime: 'TREND_DOWN'
+        pnl_1m: 125, td_1m: 0.03,
+        pnl_6m: 752, td_6m: 0.03,
+        pnl_12m: 1505, td_12m: 0.03,
+        pnl_24m: 3011, td_24m: 0.03,
+        maxdd: 412, maxdd_pct: '13.7%', trades_12m: 9, best_regime: 'TREND_DOWN'
       } },
     // Struc Break — breakout 40-bar high/low con retest · regime: RANGE H1
     // Backtest RANGE H1: WR 42% · PF 1.87 · 50 trade/24m · ATR×1.5/×1
@@ -72,13 +72,13 @@ const SE = {
       } },
     // OB+FVG Scalp — Order Block + FVG confluence · M15 · sempre attiva
     // Backtest 2026-04-15: WR 80% · PF 34.19 · 14 trade/12m · ATR×1.0/×0.6
-    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp', pf: 34.19, wr: '80%', tp: 'ATR×1.0', sl: 'ATR×0.6',
+    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp', pf: 2.16, wr: '46.3%', tp: 'ATR×1.0', sl: 'ATR×0.6',
       stats: {
-        pnl_1m: 15, td_1m: 0.04,
-        pnl_6m: 90, td_6m: 0.04,
-        pnl_12m: 180, td_12m: 0.04,
-        pnl_24m: 360, td_24m: 0.04,
-        maxdd: 11.6, maxdd_pct: '3.2%', trades_12m: 14, best_regime: 'RANGE'
+        pnl_1m: 413, td_1m: 0.18,
+        pnl_6m: 2478, td_6m: 0.18,
+        pnl_12m: 4956, td_12m: 0.18,
+        pnl_24m: 9912, td_24m: 0.18,
+        maxdd: 1120, maxdd_pct: '11.3%', trades_12m: 48, best_regime: 'RANGE'
       } },
   },
   // ── REGIME PRIORITY ──
@@ -1263,7 +1263,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   })();
   // Stats aggregate sistema (somma backtest regime-aware 24m)
   // Aggiornato da backtest_combined.py — simulazione PARALLELA con RiskManager compounding
-  const BOT_STATS = { pnl_1m:475.58, pnl_6m:10068.94, pnl_12m:10784.06, pnl_24m:12989.34, maxdd:2417.1, maxdd_pct:'18.6%', trades_12m:53, pf:2.721, wr:'47.8%', n_strat:6 };
+  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'12.5%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:6 };
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;

@@ -175,6 +175,28 @@ def calc_fvg(O, H, L, C, std_len=100, df=2):
         as_=sb2[-20:]
     return fb, fs
 
+def calc_order_blocks(O, H, L, C, lookback=30):
+    """Calcolo Order Blocks identico al bot reale MT5."""
+    n = len(C)
+    ob_bull = [False]*n; ob_bear = [False]*n
+    for i in range(lookback + 4, n):
+        c_now = C[i]
+        for j in range(i - 2, max(i - lookback - 1, 2), -1):
+            if C[j] >= O[j]: continue
+            ob_lo = min(O[j], C[j]); ob_hi = max(O[j], C[j])
+            if not (j+1 < n and C[j+1] > O[j+1]): continue
+            if any(L[k] < ob_lo * 0.998 for k in range(j+1, i)): continue
+            if ob_lo * 0.998 <= c_now <= ob_hi * 1.003:
+                ob_bull[i] = True; break
+        for j in range(i - 2, max(i - lookback - 1, 2), -1):
+            if C[j] <= O[j]: continue
+            ob_lo = min(O[j], C[j]); ob_hi = max(O[j], C[j])
+            if not (j+1 < n and C[j+1] < O[j+1]): continue
+            if any(H[k] > ob_hi * 1.002 for k in range(j+1, i)): continue
+            if ob_lo * 0.997 <= c_now <= ob_hi * 1.002:
+                ob_bear[i] = True; break
+    return ob_bull, ob_bear
+
 def cci50(H, L, C):
     n=len(C); out=[None]*49
     for i in range(49,n):
@@ -209,6 +231,10 @@ def compute_ind(candles):
         I['fvg_bull'],I['fvg_bear']=calc_fvg(O,H,L,C)
     except Exception:
         I['fvg_bull']=[False]*n; I['fvg_bear']=[False]*n
+    try:
+        I['ob_bull'],I['ob_bear']=calc_order_blocks(O,H,L,C)
+    except Exception:
+        I['ob_bull']=[False]*n; I['ob_bear']=[False]*n
     return I
 
 # ── REGIME ────────────────────────────────────────────────────────────────────
@@ -229,7 +255,7 @@ def s_sell_exhaust(I, i):
     if i>=len(oc): return None
     r=I['rsi'][i]; a=I['adx'][i]; m=I['mom'][i]
     if None in (r,a,m): return None
-    if oc[i]==-1 and r>65 and a>=30 and m<0: return 'sell'
+    if oc[i]==-1 and r>60 and a>=25 and m<0: return 'sell'
     return None
 
 def s_mfkk_intraday(I, i):
@@ -244,16 +270,14 @@ def s_mfkk_intraday(I, i):
     return None
 
 def s_ob_fvg_scalp(I, i):
-    e20=I['e20'][i]; e50=I['e50'][i]
-    if None in (e20, e50): return None
     ob_b=I.get('ob_bull'); ob_s=I.get('ob_bear')
     fvg_b=I.get('fvg_bull'); fvg_s=I.get('fvg_bear')
     if ob_b is None or fvg_b is None: return None
     C=I['C']; O=I['O']
     bull_c = C[i] > O[i]
     bear_c = C[i] < O[i]
-    if e20 > e50 and ob_b[i] and fvg_b[i] and bull_c: return 'buy'
-    if e20 < e50 and ob_s[i] and fvg_s[i] and bear_c: return 'sell'
+    if ob_b[i] and fvg_b[i] and bull_c: return 'buy'
+    if ob_s[i] and fvg_s[i] and bear_c: return 'sell'
     return None
 
 def s_exhaustion(I, i):
@@ -261,8 +285,8 @@ def s_exhaustion(I, i):
     ml=I['macd'][i]; ms=I['macd_sig'][i]
     if None in (a,dp,dm,ml,ms): return None
     diff=ml-ms; spread=abs(dp-dm)
-    if a>=30 and dm>dp and spread>=15 and diff>=1.0: return 'sell'
-    if a>=28 and dp>dm and spread>=15 and diff<=-1.0: return 'buy'
+    if a>=25 and dm>dp and spread>=15 and diff>=0.7: return 'sell'
+    if a>=25 and dp>dm and spread>=15 and diff<=-0.7: return 'buy'
     return None
 
 def s_mfkk_scalping(I, i):
@@ -276,9 +300,9 @@ def s_mfkk_scalping(I, i):
 def s_struc_break(I, i):
     if i<60: return None
     H=I['H']; L=I['L']; C=I['C']
-    hh=max(H[i-40:i]); ll=min(L[i-40:i]); c=C[i]
-    if c>hh and L[i]<=hh*1.001 and L[i]>=hh*0.999: return 'buy'
-    if c<ll and H[i]>=ll*0.999 and H[i]<=ll*1.001: return 'sell'
+    hh=max(H[i-30:i]); ll=min(L[i-30:i]); c=C[i]
+    if c>hh and L[i]<=hh*1.002 and L[i]>=hh*0.998: return 'buy'
+    if c<ll and H[i]>=ll*0.998 and H[i]<=ll*1.002: return 'sell'
     return None
 
 def s_mfkk_score(I, i):

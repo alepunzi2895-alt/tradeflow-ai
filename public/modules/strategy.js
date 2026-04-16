@@ -762,6 +762,33 @@ const SE_STRATEGY_FNS = {
     }
     return null;
   },
+
+  // S16_GOLDEN_SQUEEZE: versione browser-side — multi-confluenza istituzionale
+  // EMA200 bias + ADX≥20 + DI dominance + MACD histogram + OBV T-Channel
+  // Corrisponde alla logica del bot (signal_golden_squeeze) adattata agli indicatori H1 disponibili
+  S16_GOLDEN_SQUEEZE: (I, i) => {
+    if (i < 2) return null;
+    const adx = I.adx?.[i];
+    const dip = I.dip?.[i];
+    const dim = I.dim?.[i];
+    const mc  = I.macd?.[i];
+    const ms  = I.macd_sig?.[i];
+    const oc  = I.obv_oc?.[i];   // OBV T-Channel: 1=bull, -1=bear
+    const e200= I.e200?.[i];
+    const c   = I.C?.[i];
+    if (adx==null||dip==null||dim==null||mc==null||ms==null||e200==null||c==null) return null;
+    if (adx < 20) return null;
+    const mh = mc - ms;  // MACD histogram
+    const bullTrend = c > e200 && dip > dim;
+    const bearTrend = c < e200 && dim > dip;
+    if (bullTrend && mc > 0 && mh > 0 && oc !== -1) {
+      return { dir:'buy',  why:`Golden Squeeze ↑ · ADX ${adx.toFixed(0)} · DI+${dip.toFixed(0)}>DI-${dim.toFixed(0)} · MACD+ · >EMA200`, quality:'high', score:82 };
+    }
+    if (bearTrend && mc < 0 && mh < 0 && oc !== 1) {
+      return { dir:'sell', why:`Golden Squeeze ↓ · ADX ${adx.toFixed(0)} · DI-${dim.toFixed(0)}>DI+${dip.toFixed(0)} · MACD- · <EMA200`, quality:'high', score:82 };
+    }
+    return null;
+  },
 };
 
 
@@ -919,11 +946,14 @@ async function seRefresh() {
         const cfg=SE.strategies[name];
         const atr_val = I.atr[i] || 10;
         // Risolvi ATR variants e strip simboli ($) → numero sempre numerico
-        const _resolveATR = (v) =>
-          v==='ATR×1.5' ? Math.round(atr_val*1.5) :
-          v==='ATR×1'   ? Math.round(atr_val*1.0) :
-          v==='ATR'     ? Math.round(atr_val*2.0) :
-          typeof v==='string' ? (parseFloat(v.replace(/[^0-9.]/g,''))||20) : v;
+        // Supporta qualsiasi formato ATR×N.N (es. ATR×3.0, ATR×1.2) via regex
+        const _resolveATR = (v) => {
+          if (typeof v !== 'string') return v;
+          const m = v.match(/ATR[×x*](\d+\.?\d*)/i);
+          if (m) return Math.round(atr_val * parseFloat(m[1]));
+          if (v === 'ATR') return Math.round(atr_val * 2.0);
+          return parseFloat(v.replace(/[^0-9.]/g,'')) || 20;
+        };
         const tp = _resolveATR(cfg.tp);
         const sl = _resolveATR(cfg.sl);
         const isCounterTrend=(seRegime==='TREND_UP'&&sig.dir==='sell')||(seRegime==='TREND_DOWN'&&sig.dir==='buy');
@@ -1291,11 +1321,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;font-size:8px;text-align:center">
       ${[['1 MESE',BOT_STATS.pnl_1m,null],['6 MESI',BOT_STATS.pnl_6m,null],['12 MESI',BOT_STATS.pnl_12m,null],['24 MESI',BOT_STATS.pnl_24m,null],['MAX DD',-BOT_STATS.maxdd,BOT_STATS.maxdd_pct]].map(([lbl,val,ddPct])=>{
         const col = ddPct ? 'var(--red)' : (val>=0?'var(--green)':'var(--red)');
-        const pctStr = ddPct ? ddPct : `${(val/1000*100).toFixed(1)}%`;
+        // Backtest a lot=0.01 → bot reale lot=0.05 = ×5
+        const LOT_SCALE = 5;
+        const pctStr = ddPct ? ddPct : `lot0.05: $${Math.abs(val*LOT_SCALE).toFixed(0)}`;
         return `<div style="background:#0d0f12;border:1px solid #c8a96e25;border-radius:5px;padding:5px 2px">
           <div style="color:var(--dim);margin-bottom:2px;font-size:7px">${lbl}</div>
           <div style="font-weight:800;color:${col};font-size:10px">${val>=0&&!ddPct?'+':''}\$${Math.abs(val).toFixed(0)}</div>
-          <div style="font-size:7px;color:${col};opacity:0.75;margin-top:1px">${val>=0&&!ddPct?'+':''}${pctStr}</div>
+          <div style="font-size:7px;color:${col};opacity:0.75;margin-top:1px">${pctStr}</div>
         </div>`;
       }).join('')}
     </div>

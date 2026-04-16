@@ -34,7 +34,7 @@ MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 1             # ore di cooldown tra trade
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
-CHECK_SEC    = 60            # polling ogni 60 secondi
+CHECK_SEC    = 10            # polling ogni 10 secondi
 
 VERCEL_URL   = "https://tradeflow-ai-delta.vercel.app"  # NO slash finale
 MT5_SECRET   = "tradeflow-mt5-secret"              # deve combaciare con MT5_BOT_SECRET su Vercel
@@ -928,6 +928,14 @@ def run():
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
 
+            # ── Calcola indicatori + Gestione Posizioni (Real-time) ──
+            I_h1 = compute_indicators(candles)
+            i_h1 = len(candles) - 2
+
+            if rm:
+                atr_now = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else 10.0
+                rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
+
             # ── Controlla nuova candela H1 ────────────────────────────────────
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
             new_h1_bar = (latest_bar_time != last_bar_time)
@@ -937,22 +945,14 @@ def run():
                 bar_dt = datetime.datetime.fromtimestamp(latest_bar_time, tz=datetime.timezone.utc)
                 log.info(f"─── Nuova barra H1 chiusa: {bar_dt.strftime('%Y-%m-%d %H:%M')} UTC ───")
 
-                # ── Calcola indicatori ────────────────────────────────────────
-                I_h1 = compute_indicators(candles)
-                i_h1 = len(candles) - 2
-
-                # ── Gestione posizioni: BE + Trailing ─────────────────────────
-                if rm:
-                    atr_now = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else 10.0
-                    rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
-
-                # ── Regime ───────────────────────────────────────────────────
+                # ── Aggiorna Regime ───────────────────────────────────────────
                 current_regime = detect_regime(I_h1, i_h1)
 
                 # ── Controllo giorno estremo ──────────────────────────────────
                 atr_v   = I_h1['atr'][i_h1]
                 atr_avg = I_h1['atr_avg'][i_h1]
                 current_is_extreme = bool(atr_v and atr_avg and atr_v > EXTREME_MULT * atr_avg)
+
                 if current_is_extreme:
                     log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip H1")
                 else:

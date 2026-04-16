@@ -1288,7 +1288,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;
   const pnlOggiCol = (bs.pnl_today||0)>=0 ? 'var(--green)' : 'var(--red)';
 
-  const catalogHtml = `
+  const botPanelHtml = `
 <div style="margin-top:18px; padding-top:15px; border-top:1px dashed var(--border)">
 
   <!-- ══ AI GOLD BOT ══ -->
@@ -1359,6 +1359,11 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       </div>
     </div>
   </div>
+
+</div>`;
+
+  const stratCardsHtml = `
+<div style="margin-top:18px; padding-top:15px; border-top:1px dashed var(--border)">
 
   <!-- ══ LIBRERIA STRATEGIE ══ -->
   <div style="font-size:10px;color:var(--dim);font-weight:700;letter-spacing:.07em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
@@ -1446,7 +1451,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
-  el.innerHTML=statusHtml+regimeHtml+indSnap+obPanelHtml+m15PanelHtml+pendingHtml+posHtml+histHtml+catalogHtml;
+  el.innerHTML=statusHtml+regimeHtml+botPanelHtml+pendingHtml+posHtml+histHtml+stratCardsHtml+indSnap+obPanelHtml+m15PanelHtml;
 }
 
 async function seSendTradeToMt5(s) {

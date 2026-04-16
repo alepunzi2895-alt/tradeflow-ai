@@ -303,11 +303,12 @@ class RiskManager:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 import json
                 data = json.loads(r.read().decode())
-                # Il bot_status può contenere ai_score se il browser lo ha pushato
-                score = data.get('bot_status', {}).get('ai_score')
+                # La risposta ha struttura {ok, data: {..., ai_score: ...}}
+                inner = data.get('data') or {}
+                score = inner.get('ai_score')
                 if score is not None:
                     return float(score)
-                # Fallback: cerca nei raw data
+                # Fallback: cerca a livello radice
                 score = data.get('ai_score') or data.get('confidence')
                 if score is not None:
                     return float(score)

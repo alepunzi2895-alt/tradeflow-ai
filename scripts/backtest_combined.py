@@ -31,7 +31,7 @@ args = ap.parse_args()
 
 TP_MULT    = 1.5
 SL_MULT    = 1.0
-EXTREME_K  = 3.5
+EXTREME_K  = 3.0   # identico a EXTREME_MULT nel bot (era 3.5)
 WARMUP_H1  = 250   # barre H1 di warmup prima di iniziare
 MAX_LOOK   = 60    # max barre per risolvere TP/SL (H1 equiv)
 SESSION    = (7, 17)  # ore UTC
@@ -399,13 +399,13 @@ def simulate(h1, m15, m30, playbook):
     INITIAL_BALANCE = 1000.0
     equity = INITIAL_BALANCE
 
-    # Inizializza RiskManager (simula lotto medio proporzionato al conto)
-    # Impostiamo base_lot = 0.18 per colpire target >$500/m con score=75
-    rm = get_risk_manager(base_lot=0.18, max_lot=0.50) if get_risk_manager else None
+    # Inizializza RiskManager con stessi parametri del bot reale (mt5-bot.py)
+    # base_lot=0.02 = LOT_SIZE del bot, max_lot=0.10 = LOT_SIZE*5
+    rm = get_risk_manager(base_lot=0.02, max_lot=0.10) if get_risk_manager else None
 
-    # Stato simulazione
+    # Stato simulazione — 1 trade alla volta (identico al bot: count_open_positions()>0 blocca)
     open_trades    = []
-    MAX_OPEN_TRADES= 3
+    MAX_OPEN_TRADES= 1
     cooldown_bars  = 0   # barre H1 di cooldown
     trades_today   = 0
     current_day    = None
@@ -690,7 +690,7 @@ print(f"  Win Rate      : {s['wr']}%")
 print(f"  Profit Factor : {s['pf']}")
 print(f"  P&L totale    : ${s['total_pnl']:.2f}")
 print(f"  Max Drawdown  : ${s['max_dd']:.2f}")
-print(f"\nPer periodo (scaling dinamico RiskManager base_lot=0.18):")
+print(f"\nPer periodo (RiskManager base_lot=0.02 — identico al bot reale):")
 print(f"  1 mese   : ${s['pnl_1m']:.2f}   ({s['trades_1m']} trade)")
 print(f"  6 mesi   : ${s['pnl_6m']:.2f}   ({s['trades_6m']} trade)")
 print(f"  12 mesi  : ${s['pnl_12m']:.2f}  ({s['trades_12m']} trade)")
@@ -714,7 +714,7 @@ print(f"    pnl_1m:{s['pnl_1m']}, pnl_6m:{s['pnl_6m']},")
 print(f"    pnl_12m:{s['pnl_12m']}, pnl_24m:{s['pnl_24m']},")
 print(f"    maxdd:{s['max_dd']}, maxdd_pct:'{max_dd_pct}%',")
 print(f"    trades_12m:{s['trades_12m']}, pf:{s['pf']},")
-print(f"    wr:'{s['wr']}%', n_strat:6")
+print(f"    wr:'{s['wr']}%', n_strat:7")
 print(f"  }};")
 
 # Salva JSON

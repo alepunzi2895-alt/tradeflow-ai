@@ -819,9 +819,10 @@ function seDetectRegime(I, i) {
   const atr = I.atr[i];
   const a30 = I.atr30[i];
 
-  if(adx >= 28) return (dip > dim) ? 'TREND_UP' : 'TREND_DOWN';
-  if(adx >= 20) return (dip > dim) ? 'WEAK_UP' : 'WEAK_DOWN';
-  if(atr > 1.35 * a30) return 'VOLATILE';
+  // Soglie identiche a mt5-bot.py detect_regime() e backtest_combined.py regime()
+  if(adx >= 30) return (dip > dim) ? 'TREND_UP' : 'TREND_DOWN';
+  if(adx >= 22) return (dip > dim) ? 'WEAK_UP' : 'WEAK_DOWN';
+  if(atr && a30 && atr > 1.4 * a30) return 'VOLATILE';
   return 'RANGE';
 }
 
@@ -1261,25 +1262,27 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo)
-  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'11.9%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:7 };
+  // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, 1 trade alla volta, lot=0.02)
+  const BOT_STATS = { pnl_1m:-15.0, pnl_6m:1169.78, pnl_12m:1257.58, pnl_24m:1570.64, maxdd:285.18, maxdd_pct:'10.7%', trades_12m:84, pf:1.775, wr:'39.9%', n_strat:7 };
 
-  // Multi-strategy activation: tutte le strategie del regime sono attive.
-  // Il DD individuale (es. 44% per MFKK Score) è calcolato sul singolo backtest a lot fisso,
-  // NON rappresenta il rischio del sistema combinato. Il DD reale del sistema è quello del
-  // combined backtest (BOT_STATS.maxdd_pct = 11.9%) che usa regime-gating + RiskManager.
+  // Playbook regime→strategia (identico a regime_playbook.json e mt5-bot.py — 1 strategia per regime)
+  const PLAYBOOK_UI = {
+    'TREND_UP':   {strategy:'S05_V3_Sell_Exhaust', tf:'H1'},
+    'TREND_DOWN': {strategy:'S01_EXHAUSTION',      tf:'M15'},
+    'WEAK_UP':    {strategy:'S09_MFKK_SCALPING',   tf:'H1'},
+    'WEAK_DOWN':  {strategy:'S09_MFKK_SCALPING',   tf:'M30'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',   tf:'M30'},
+    'RANGE':      {strategy:'S10_OB_FVG_SCALP',    tf:'M30'},
+    'UNKNOWN':    {strategy:'S00_MFKK',             tf:'H1'},
+  };
+  const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
+  const activeList = [playbookEntry.strategy];  // 1 strategia attiva per regime
   const DD_BUDGET = 25.0;   // soglia DD sistema — solo per gauge visuale
-  const regimeAll = SE.regimePriority[seRegime] || ['S00_MFKK'];
-  const activeList = [...regimeAll];  // tutte le strategie del regime sono attive
-  // DD di portafoglio = DD reale del sistema combinato (backtest validato)
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
   const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#ffd700' : '#ff4757';
-  const activeSname = activeList[0] || 'S00_MFKK';
+  const activeSname = playbookEntry.strategy;
   const activeSt    = SE.strategies[activeSname] || {};
-  const activeTF    = (() => {
-    const pb = { TREND_UP:'M30', TREND_DOWN:'M15', WEAK_UP:'M15', WEAK_DOWN:'M15', VOLATILE:'M15', RANGE:'M30' };
-    return pb[seRegime] || 'H1';
-  })();
+  const activeTF    = playbookEntry.tf;
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;
@@ -1308,18 +1311,18 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       </div>
     </div>
 
-    <!-- regime → strategie attive (multi-strategy + DD gauge) -->
+    <!-- regime → strategia attiva (playbook) + DD gauge -->
     <div style="background:#ffffff08;border:1px solid ${rm.col}35;border-radius:8px;padding:8px 10px;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">REGIME</div>
         <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
         <div style="color:var(--dim);font-size:10px">→</div>
-        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIE ATTIVE</div>
-        <div style="font-size:10px;font-weight:800;color:#c8a96e">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIA ATTIVA</div>
+        <div style="font-size:10px;font-weight:800;color:#c8a96e">${SE.strategies[activeSname]?.label||activeSname}</div>
         <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;font-size:8px">
-        <span style="color:var(--dim)">Portfolio DD:</span>
+        <span style="color:var(--dim)">Sistema DD:</span>
         <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
           <div style="width:${Math.min(portfolioDdPct/DD_BUDGET*100,100).toFixed(0)}%;height:100%;background:${ddColor};border-radius:2px"></div>
         </div>
@@ -1331,11 +1334,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
     <!-- stats aggregate -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;font-size:8px;text-align:center">
-      ${[['1 MESE',BOT_STATS.pnl_1m,'var(--green)',null],['6 MESI',BOT_STATS.pnl_6m,'var(--green)',null],['12 MESI',BOT_STATS.pnl_12m,'var(--green)',null],['24 MESI',BOT_STATS.pnl_24m,'var(--green)',null],['MAX DD',-BOT_STATS.maxdd,'var(--red)',BOT_STATS.maxdd_pct]].map(([lbl,val,col,ddPct])=>{
-        const pctStr = ddPct ? ddPct : `${(Math.abs(val)/1000*100).toFixed(0)}%`;
+      ${[['1 MESE',BOT_STATS.pnl_1m,null],['6 MESI',BOT_STATS.pnl_6m,null],['12 MESI',BOT_STATS.pnl_12m,null],['24 MESI',BOT_STATS.pnl_24m,null],['MAX DD',-BOT_STATS.maxdd,BOT_STATS.maxdd_pct]].map(([lbl,val,ddPct])=>{
+        const col = ddPct ? 'var(--red)' : (val>=0?'var(--green)':'var(--red)');
+        const pctStr = ddPct ? ddPct : `${(val/1000*100).toFixed(1)}%`;
         return `<div style="background:#0d0f12;border:1px solid #c8a96e25;border-radius:5px;padding:5px 2px">
           <div style="color:var(--dim);margin-bottom:2px;font-size:7px">${lbl}</div>
-          <div style="font-weight:800;color:${col};font-size:10px">${val>=0?'+':''}\$${Math.abs(val).toFixed(0)}</div>
+          <div style="font-weight:800;color:${col};font-size:10px">${val>=0&&!ddPct?'+':''}\$${Math.abs(val).toFixed(0)}</div>
           <div style="font-size:7px;color:${col};opacity:0.75;margin-top:1px">${val>=0&&!ddPct?'+':''}${pctStr}</div>
         </div>`;
       }).join('')}

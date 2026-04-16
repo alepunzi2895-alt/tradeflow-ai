@@ -1,989 +1,2590 @@
 {
-  "generated_at": "2026-04-15T22:16:10.582791",
+  "generated_at": "2026-04-16T18:57:46.476474",
   "tp_mult": 1.5,
   "sl_mult": 1.0,
-  "min_trades_threshold": 15,
   "playbook": {
     "TREND_UP": {
-      "strategy": "S05_V3_Sell_Exhaust",
-      "tf": "H1",
-      "n": 23,
-      "wr": 60.9,
-      "pnl": 272.7,
-      "pf": 3.112,
-      "dd": 47.6,
-      "tpd": 1.44,
-      "score": 193.86
+      "strategy": "S09_MFKK_SCALPING",
+      "tf": "M15",
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
     },
     "TREND_DOWN": {
-      "strategy": "S01_EXHAUSTION",
+      "strategy": "S09_MFKK_SCALPING",
       "tf": "M15",
-      "n": 143,
-      "wr": 42.0,
-      "pnl": 845.9,
-      "pf": 1.759,
-      "dd": 473.8,
-      "tpd": 2.47,
-      "score": 120.54
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
     },
     "WEAK_UP": {
       "strategy": "S09_MFKK_SCALPING",
-      "tf": "H1",
-      "n": 55,
-      "wr": 40.0,
-      "pnl": 222.1,
-      "pf": 3.439,
-      "dd": 37.7,
-      "tpd": 1.57,
-      "score": 203.95
+      "tf": "M15",
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
     },
     "WEAK_DOWN": {
       "strategy": "S09_MFKK_SCALPING",
-      "tf": "M30",
-      "n": 88,
-      "wr": 37.5,
-      "pnl": 229.1,
-      "pf": 1.683,
-      "dd": 75.0,
-      "tpd": 1.87,
-      "score": 115.4
+      "tf": "M15",
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
+    },
+    "RANGE": {
+      "strategy": "S09_MFKK_SCALPING",
+      "tf": "M15",
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
     },
     "VOLATILE": {
       "strategy": "S09_MFKK_SCALPING",
-      "tf": "M30",
-      "n": 20,
-      "wr": 45.0,
-      "pnl": 79.9,
-      "pf": 2.193,
-      "dd": 32.9,
-      "tpd": 1.82,
-      "score": 143.15
+      "tf": "M15",
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
     },
-    "RANGE": {
-      "strategy": "S10_OB_FVG_SCALP",
-      "tf": "M30",
-      "n": 27,
-      "wr": 66.7,
-      "pnl": 360.8,
-      "pf": 13.849,
-      "dd": 11.6,
-      "tpd": 1.5,
-      "score": 732.45
+    "UNKNOWN": {
+      "strategy": "S09_MFKK_SCALPING",
+      "tf": "M15",
+      "n": 363,
+      "wr": 49.0,
+      "pnl": 442.4,
+      "pf": 1.435,
+      "dd": 131.9,
+      "score": 250.31
     }
   },
   "regime_matrix": {
     "TREND_UP": {
-      "M5": {
-        "S00_MFKK": {
-          "n": 1684,
-          "wr": 28.3,
-          "pnl": -877.4,
-          "pf": 0.759,
-          "dd": 887.3,
-          "tpd": 5.54,
-          "score": 46.43
+      "H1": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
         },
-        "S05_MFKK_INTRADAY": {
-          "n": 1044,
-          "wr": 30.6,
-          "pnl": -268.0,
-          "pf": 0.874,
-          "dd": 354.6,
-          "tpd": 3.46,
-          "score": 52.87
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
         },
-        "S05_V3_Sell_Exhaust": {
-          "n": 85,
-          "wr": 25.9,
-          "pnl": -77.2,
-          "pf": 0.642,
-          "dd": 124.2,
-          "tpd": 1.13,
-          "score": 39.86
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
         },
-        "S01_EXHAUSTION": {
-          "n": 57,
-          "wr": 21.1,
-          "pnl": -129.7,
-          "pf": 0.494,
-          "dd": 172.7,
-          "tpd": 1.78,
-          "score": 31.02
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
         },
-        "S13_STRUC_BREAK": {
-          "n": 704,
-          "wr": 29.3,
-          "pnl": -289.2,
-          "pf": 0.782,
-          "dd": 310.6,
-          "tpd": 2.72,
-          "score": 47.88
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 375,
-          "wr": 27.5,
-          "pnl": -116.1,
-          "pf": 0.858,
-          "dd": 160.8,
-          "tpd": 1.96,
-          "score": 51.14
-        }
-      },
-      "M15": {
-        "S00_MFKK": {
-          "n": 1918,
-          "wr": 30.6,
-          "pnl": -271.9,
-          "pf": 0.952,
-          "dd": 546.0,
-          "tpd": 7.35,
-          "score": 56.78
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 1170,
-          "wr": 29.7,
-          "pnl": -385.9,
-          "pf": 0.883,
-          "dd": 484.8,
-          "tpd": 3.9,
-          "score": 53.05
-        },
-        "S05_V3_Sell_Exhaust": {
-          "n": 62,
-          "wr": 24.2,
-          "pnl": -151.4,
-          "pf": 0.49,
-          "dd": 177.7,
-          "tpd": 1.44,
-          "score": 31.76
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
         },
         "S01_EXHAUSTION": {
-          "n": 91,
-          "wr": 44.0,
-          "pnl": 197.3,
-          "pf": 1.521,
-          "dd": 135.4,
-          "tpd": 2.53,
-          "score": 109.24
+          "strategy": "S01_EXHAUSTION",
+          "n": 262,
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
         },
-        "S13_STRUC_BREAK": {
-          "n": 455,
-          "wr": 27.5,
-          "pnl": -166.1,
-          "pf": 0.849,
-          "dd": 233.9,
-          "tpd": 2.24,
-          "score": 50.69
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
         },
         "S09_MFKK_SCALPING": {
-          "n": 276,
-          "wr": 32.6,
-          "pnl": 211.5,
-          "pf": 1.275,
-          "dd": 106.0,
-          "tpd": 1.97,
-          "score": 93.53
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 150,
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
         }
       },
       "M30": {
-        "S00_MFKK": {
-          "n": 1558,
-          "wr": 34.6,
-          "pnl": 177.8,
-          "pf": 1.029,
-          "dd": 551.7,
-          "tpd": 7.83,
-          "score": 81.83
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 945,
-          "wr": 33.8,
-          "pnl": -253.1,
-          "pf": 0.937,
-          "dd": 515.3,
-          "tpd": 4.75,
-          "score": 56.98
-        },
-        "S05_V3_Sell_Exhaust": {
-          "n": 54,
-          "wr": 20.4,
-          "pnl": -162.4,
-          "pf": 0.524,
-          "dd": 173.5,
-          "tpd": 1.74,
-          "score": 32.31
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
         },
         "S01_EXHAUSTION": {
-          "n": 120,
-          "wr": 24.2,
-          "pnl": -379.2,
-          "pf": 0.498,
-          "dd": 483.0,
-          "tpd": 3.53,
-          "score": 32.15
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
         },
-        "S13_STRUC_BREAK": {
-          "n": 224,
-          "wr": 37.5,
-          "pnl": 92.5,
-          "pf": 1.124,
-          "dd": 103.9,
-          "tpd": 2.11,
-          "score": 87.45
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 68,
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
         },
         "S09_MFKK_SCALPING": {
-          "n": 157,
-          "wr": 29.9,
-          "pnl": 114.8,
-          "pf": 1.203,
-          "dd": 200.3,
-          "tpd": 2.15,
-          "score": 89.13
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
         }
       },
-      "H1": {
-        "S00_MFKK": {
-          "n": 1156,
-          "wr": 34.9,
-          "pnl": 469.1,
-          "pf": 1.08,
-          "dd": 1181.2,
-          "tpd": 7.66,
-          "score": 84.46
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
         },
-        "S05_MFKK_INTRADAY": {
-          "n": 750,
-          "wr": 36.7,
-          "pnl": 826.9,
-          "pf": 1.222,
-          "dd": 470.3,
-          "tpd": 5.24,
-          "score": 92.1
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
         },
-        "S05_V3_Sell_Exhaust": {
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
           "n": 23,
-          "wr": 60.9,
-          "pnl": 272.7,
-          "pf": 3.112,
-          "dd": 47.6,
-          "tpd": 1.44,
-          "score": 193.86
-        },
-        "S01_EXHAUSTION": {
-          "n": 89,
-          "wr": 29.2,
-          "pnl": -198.4,
-          "pf": 0.647,
-          "dd": 265.5,
-          "tpd": 2.78,
-          "score": 41.11
-        },
-        "S13_STRUC_BREAK": {
-          "n": 101,
-          "wr": 31.7,
-          "pnl": 75.9,
-          "pf": 1.19,
-          "dd": 74.4,
-          "tpd": 1.49,
-          "score": 89.0
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
         },
         "S09_MFKK_SCALPING": {
-          "n": 72,
-          "wr": 37.5,
-          "pnl": -118.9,
-          "pf": 0.807,
-          "dd": 320.2,
-          "tpd": 1.76,
-          "score": 51.6
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
         }
       }
     },
     "TREND_DOWN": {
-      "M5": {
-        "S00_MFKK": {
-          "n": 2043,
-          "wr": 29.4,
-          "pnl": -1183.2,
-          "pf": 0.818,
-          "dd": 1265.5,
-          "tpd": 6.12,
-          "score": 49.73
+      "H1": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
         },
-        "S05_MFKK_INTRADAY": {
-          "n": 1042,
-          "wr": 30.9,
-          "pnl": -599.4,
-          "pf": 0.821,
-          "dd": 609.2,
-          "tpd": 3.36,
-          "score": 50.32
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
         },
-        "S01_EXHAUSTION": {
-          "n": 88,
-          "wr": 28.4,
-          "pnl": -175.9,
-          "pf": 0.758,
-          "dd": 201.0,
-          "tpd": 1.66,
-          "score": 46.42
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
         },
-        "S13_STRUC_BREAK": {
-          "n": 449,
-          "wr": 30.7,
-          "pnl": -27.9,
-          "pf": 0.97,
-          "dd": 205.6,
-          "tpd": 2.08,
-          "score": 57.72
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
         },
-        "S09_MFKK_SCALPING": {
-          "n": 438,
-          "wr": 29.0,
-          "pnl": -490.1,
-          "pf": 0.729,
-          "dd": 568.2,
-          "tpd": 2.11,
-          "score": 45.15
-        }
-      },
-      "M15": {
-        "S00_MFKK": {
-          "n": 2355,
-          "wr": 30.4,
-          "pnl": -1268.5,
-          "pf": 0.878,
-          "dd": 1529.4,
-          "tpd": 6.91,
-          "score": 53.01
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 1136,
-          "wr": 31.2,
-          "pnl": -926.6,
-          "pf": 0.838,
-          "dd": 1182.1,
-          "tpd": 3.96,
-          "score": 51.27
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
         },
         "S01_EXHAUSTION": {
-          "n": 143,
-          "wr": 42.0,
-          "pnl": 845.9,
-          "pf": 1.759,
-          "dd": 473.8,
-          "tpd": 2.47,
-          "score": 120.54
+          "strategy": "S01_EXHAUSTION",
+          "n": 262,
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
         },
-        "S13_STRUC_BREAK": {
-          "n": 200,
-          "wr": 29.5,
-          "pnl": -66.5,
-          "pf": 0.876,
-          "dd": 180.7,
-          "tpd": 1.85,
-          "score": 52.65
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
         },
         "S09_MFKK_SCALPING": {
-          "n": 289,
-          "wr": 29.4,
-          "pnl": -209.8,
-          "pf": 0.862,
-          "dd": 375.9,
-          "tpd": 2.14,
-          "score": 51.92
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 150,
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
         }
       },
       "M30": {
-        "S00_MFKK": {
-          "n": 1771,
-          "wr": 31.0,
-          "pnl": 286.0,
-          "pf": 1.027,
-          "dd": 1683.2,
-          "tpd": 6.95,
-          "score": 80.65
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 698,
-          "wr": 27.9,
-          "pnl": -673.6,
-          "pf": 0.867,
-          "dd": 1429.3,
-          "tpd": 4.08,
-          "score": 51.73
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
         },
         "S01_EXHAUSTION": {
-          "n": 167,
-          "wr": 36.5,
-          "pnl": 151.4,
-          "pf": 1.102,
-          "dd": 332.6,
-          "tpd": 3.8,
-          "score": 86.06
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
         },
-        "S13_STRUC_BREAK": {
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
           "n": 68,
-          "wr": 33.8,
-          "pnl": 49.4,
-          "pf": 1.195,
-          "dd": 47.6,
-          "tpd": 1.66,
-          "score": 89.9
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
         },
         "S09_MFKK_SCALPING": {
-          "n": 198,
-          "wr": 27.3,
-          "pnl": -534.4,
-          "pf": 0.636,
-          "dd": 631.5,
-          "tpd": 2.87,
-          "score": 39.98
-        },
-        "S10_OB_FVG_SCALP": {
-          "n": 17,
-          "wr": 47.1,
-          "pnl": -174.2,
-          "pf": 0.514,
-          "dd": 281.6,
-          "tpd": 1.13,
-          "score": 39.82
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
         }
       },
-      "H1": {
-        "S00_MFKK": {
-          "n": 1199,
-          "wr": 26.7,
-          "pnl": -1815.5,
-          "pf": 0.846,
-          "dd": 2687.5,
-          "tpd": 6.74,
-          "score": 50.31
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
         },
-        "S05_MFKK_INTRADAY": {
-          "n": 490,
-          "wr": 31.4,
-          "pnl": -230.8,
-          "pf": 0.958,
-          "dd": 1518.8,
-          "tpd": 3.89,
-          "score": 57.33
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
         },
-        "S01_EXHAUSTION": {
-          "n": 89,
-          "wr": 18.0,
-          "pnl": -1117.4,
-          "pf": 0.341,
-          "dd": 1130.3,
-          "tpd": 2.97,
-          "score": 22.44
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
         },
-        "S13_STRUC_BREAK": {
-          "n": 20,
-          "wr": 25.0,
-          "pnl": -14.0,
-          "pf": 0.883,
-          "dd": 82.0,
-          "tpd": 1.33,
-          "score": 51.65
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 23,
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
         },
         "S09_MFKK_SCALPING": {
-          "n": 86,
-          "wr": 32.6,
-          "pnl": 142.7,
-          "pf": 1.207,
-          "dd": 212.3,
-          "tpd": 2.21,
-          "score": 90.12
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
         }
       }
     },
     "WEAK_UP": {
-      "M5": {
-        "S05_MFKK_INTRADAY": {
-          "n": 782,
-          "wr": 27.6,
-          "pnl": -272.4,
-          "pf": 0.827,
-          "dd": 332.0,
-          "tpd": 2.5,
-          "score": 49.64
+      "H1": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
         },
-        "S13_STRUC_BREAK": {
-          "n": 431,
-          "wr": 27.6,
-          "pnl": -207.2,
-          "pf": 0.732,
-          "dd": 208.4,
-          "tpd": 1.74,
-          "score": 44.88
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
         },
-        "S09_MFKK_SCALPING": {
-          "n": 253,
-          "wr": 23.3,
-          "pnl": -244.6,
-          "pf": 0.564,
-          "dd": 301.5,
-          "tpd": 1.45,
-          "score": 35.2
-        }
-      },
-      "M15": {
-        "S05_MFKK_INTRADAY": {
-          "n": 1018,
-          "wr": 27.6,
-          "pnl": -952.1,
-          "pf": 0.687,
-          "dd": 979.8,
-          "tpd": 2.71,
-          "score": 42.63
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
         },
-        "S13_STRUC_BREAK": {
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
           "n": 262,
-          "wr": 30.5,
-          "pnl": -64.9,
-          "pf": 0.899,
-          "dd": 102.1,
-          "tpd": 1.36,
-          "score": 54.11
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
         },
         "S09_MFKK_SCALPING": {
-          "n": 156,
-          "wr": 39.1,
-          "pnl": 236.5,
-          "pf": 1.694,
-          "dd": 72.0,
-          "tpd": 1.47,
-          "score": 116.43
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 150,
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
         }
       },
       "M30": {
-        "S05_MFKK_INTRADAY": {
-          "n": 839,
-          "wr": 32.5,
-          "pnl": -455.0,
-          "pf": 0.871,
-          "dd": 743.7,
-          "tpd": 3.3,
-          "score": 53.31
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
         },
-        "S13_STRUC_BREAK": {
-          "n": 109,
-          "wr": 33.0,
-          "pnl": 128.8,
-          "pf": 1.464,
-          "dd": 67.0,
-          "tpd": 1.43,
-          "score": 103.11
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 68,
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
         },
         "S09_MFKK_SCALPING": {
-          "n": 86,
-          "wr": 24.4,
-          "pnl": -115.9,
-          "pf": 0.688,
-          "dd": 140.4,
-          "tpd": 1.69,
-          "score": 41.73
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
         }
       },
-      "H1": {
-        "S05_MFKK_INTRADAY": {
-          "n": 503,
-          "wr": 33.0,
-          "pnl": -39.1,
-          "pf": 0.986,
-          "dd": 556.6,
-          "tpd": 3.07,
-          "score": 59.2
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
         },
-        "S13_STRUC_BREAK": {
-          "n": 34,
-          "wr": 32.4,
-          "pnl": -4.7,
-          "pf": 0.968,
-          "dd": 59.0,
-          "tpd": 1.17,
-          "score": 58.11
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 23,
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
         },
         "S09_MFKK_SCALPING": {
-          "n": 55,
-          "wr": 40.0,
-          "pnl": 222.1,
-          "pf": 3.439,
-          "dd": 37.7,
-          "tpd": 1.57,
-          "score": 203.95
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
         }
       }
     },
     "WEAK_DOWN": {
-      "M5": {
-        "S00_MFKK": {
-          "n": 733,
-          "wr": 29.1,
-          "pnl": -318.5,
-          "pf": 0.836,
-          "dd": 369.4,
-          "tpd": 2.28,
-          "score": 50.52
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 793,
-          "wr": 30.3,
-          "pnl": -298.8,
-          "pf": 0.853,
-          "dd": 444.2,
-          "tpd": 2.46,
-          "score": 51.73
-        },
-        "S13_STRUC_BREAK": {
-          "n": 267,
-          "wr": 26.2,
-          "pnl": -170.9,
-          "pf": 0.662,
-          "dd": 176.5,
-          "tpd": 1.48,
-          "score": 40.97
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 240,
-          "wr": 29.6,
-          "pnl": 74.7,
-          "pf": 1.166,
-          "dd": 74.8,
-          "tpd": 1.47,
-          "score": 87.17
-        }
-      },
-      "M15": {
-        "S00_MFKK": {
-          "n": 377,
-          "wr": 31.3,
-          "pnl": -224.9,
-          "pf": 0.841,
-          "dd": 326.2,
-          "tpd": 1.55,
-          "score": 51.44
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 904,
-          "wr": 29.1,
-          "pnl": -826.6,
-          "pf": 0.754,
-          "dd": 896.0,
-          "tpd": 2.61,
-          "score": 46.43
-        },
-        "S13_STRUC_BREAK": {
-          "n": 98,
-          "wr": 29.6,
-          "pnl": -43.5,
-          "pf": 0.834,
-          "dd": 89.2,
-          "tpd": 1.15,
-          "score": 50.58
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 159,
-          "wr": 19.5,
-          "pnl": -443.0,
-          "pf": 0.35,
-          "dd": 452.3,
-          "tpd": 1.51,
-          "score": 23.35
-        }
-      },
-      "M30": {
-        "S00_MFKK": {
-          "n": 244,
-          "wr": 29.5,
-          "pnl": -207.3,
-          "pf": 0.823,
-          "dd": 380.9,
-          "tpd": 1.73,
-          "score": 50.0
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 716,
-          "wr": 32.0,
-          "pnl": -109.8,
-          "pf": 0.969,
-          "dd": 530.4,
-          "tpd": 3.11,
-          "score": 58.04
-        },
-        "S13_STRUC_BREAK": {
-          "n": 21,
-          "wr": 28.6,
-          "pnl": -17.5,
-          "pf": 0.749,
-          "dd": 30.4,
-          "tpd": 1.24,
-          "score": 46.02
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 88,
-          "wr": 37.5,
-          "pnl": 229.1,
-          "pf": 1.683,
-          "dd": 75.0,
-          "tpd": 1.87,
-          "score": 115.4
-        }
-      },
       "H1": {
-        "S00_MFKK": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 262,
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
           "n": 150,
-          "wr": 27.3,
-          "pnl": -279.3,
-          "pf": 0.755,
-          "dd": 410.4,
-          "tpd": 1.65,
-          "score": 45.95
-        },
-        "S05_MFKK_INTRADAY": {
-          "n": 451,
-          "wr": 32.8,
-          "pnl": 309.5,
-          "pf": 1.104,
-          "dd": 422.1,
-          "tpd": 3.01,
-          "score": 85.04
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 39,
-          "wr": 38.5,
-          "pnl": -31.1,
-          "pf": 0.895,
-          "dd": 99.1,
-          "tpd": 1.5,
-          "score": 56.29
-        }
-      }
-    },
-    "VOLATILE": {
-      "M5": {
-        "S05_MFKK_INTRADAY": {
-          "n": 160,
-          "wr": 32.5,
-          "pnl": 8.3,
-          "pf": 1.02,
-          "dd": 87.2,
-          "tpd": 1.25,
-          "score": 80.75
-        },
-        "S13_STRUC_BREAK": {
-          "n": 116,
-          "wr": 34.5,
-          "pnl": 20.3,
-          "pf": 1.096,
-          "dd": 37.7,
-          "tpd": 1.2,
-          "score": 85.14
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 41,
-          "wr": 34.1,
-          "pnl": -4.3,
-          "pf": 0.948,
-          "dd": 27.4,
-          "tpd": 1.14,
-          "score": 57.64
-        }
-      },
-      "M15": {
-        "S05_MFKK_INTRADAY": {
-          "n": 116,
-          "wr": 31.9,
-          "pnl": 26.5,
-          "pf": 1.061,
-          "dd": 128.8,
-          "tpd": 1.23,
-          "score": 82.62
-        },
-        "S13_STRUC_BREAK": {
-          "n": 46,
-          "wr": 32.6,
-          "pnl": -30.6,
-          "pf": 0.787,
-          "dd": 63.6,
-          "tpd": 1.1,
-          "score": 49.13
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 31,
-          "wr": 16.1,
-          "pnl": -174.3,
-          "pf": 0.206,
-          "dd": 179.5,
-          "tpd": 1.35,
-          "score": 15.14
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
         }
       },
       "M30": {
-        "S05_MFKK_INTRADAY": {
-          "n": 75,
-          "wr": 24.0,
-          "pnl": -293.5,
-          "pf": 0.39,
-          "dd": 293.5,
-          "tpd": 1.34,
-          "score": 26.7
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
         },
-        "S13_STRUC_BREAK": {
-          "n": 28,
-          "wr": 32.1,
-          "pnl": 42.8,
-          "pf": 1.539,
-          "dd": 44.9,
-          "tpd": 1.12,
-          "score": 106.59
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 68,
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
         },
         "S09_MFKK_SCALPING": {
-          "n": 20,
-          "wr": 45.0,
-          "pnl": 79.9,
-          "pf": 2.193,
-          "dd": 32.9,
-          "tpd": 1.82,
-          "score": 143.15
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
         }
       },
-      "H1": {
-        "S05_MFKK_INTRADAY": {
-          "n": 16,
-          "wr": 50.0,
-          "pnl": 51.9,
-          "pf": 1.415,
-          "dd": 92.7,
-          "tpd": 1.33,
-          "score": 105.75
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 23,
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
         }
       }
     },
     "RANGE": {
-      "M5": {
-        "S05_MFKK_INTRADAY": {
-          "n": 1381,
-          "wr": 26.6,
-          "pnl": -822.6,
-          "pf": 0.711,
-          "dd": 866.2,
-          "tpd": 3.81,
-          "score": 43.52
+      "H1": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
         },
-        "S13_STRUC_BREAK": {
-          "n": 1331,
-          "wr": 30.2,
-          "pnl": -469.5,
-          "pf": 0.795,
-          "dd": 471.6,
-          "tpd": 3.77,
-          "score": 48.81
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 262,
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
         },
         "S09_MFKK_SCALPING": {
-          "n": 1110,
-          "wr": 26.1,
-          "pnl": -432.6,
-          "pf": 0.806,
-          "dd": 435.2,
-          "tpd": 3.24,
-          "score": 48.14
-        }
-      },
-      "M15": {
-        "S05_MFKK_INTRADAY": {
-          "n": 752,
-          "wr": 33.2,
-          "pnl": -98.8,
-          "pf": 0.955,
-          "dd": 220.3,
-          "tpd": 1.83,
-          "score": 57.72
-        },
-        "S13_STRUC_BREAK": {
-          "n": 512,
-          "wr": 30.5,
-          "pnl": -121.8,
-          "pf": 0.883,
-          "dd": 159.2,
-          "tpd": 1.77,
-          "score": 53.29
-        },
-        "S09_MFKK_SCALPING": {
-          "n": 737,
-          "wr": 27.4,
-          "pnl": -313.8,
-          "pf": 0.836,
-          "dd": 324.6,
-          "tpd": 2.52,
-          "score": 50.02
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 150,
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
         }
       },
       "M30": {
-        "S05_MFKK_INTRADAY": {
-          "n": 513,
-          "wr": 32.9,
-          "pnl": -204.2,
-          "pf": 0.905,
-          "dd": 298.2,
-          "tpd": 1.72,
-          "score": 55.13
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
         },
-        "S13_STRUC_BREAK": {
-          "n": 200,
-          "wr": 38.0,
-          "pnl": 100.7,
-          "pf": 1.168,
-          "dd": 115.1,
-          "tpd": 1.56,
-          "score": 89.8
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 68,
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
         },
         "S09_MFKK_SCALPING": {
-          "n": 463,
-          "wr": 40.4,
-          "pnl": 769.8,
-          "pf": 1.545,
-          "dd": 152.3,
-          "tpd": 2.76,
-          "score": 109.37
-        },
-        "S10_OB_FVG_SCALP": {
-          "n": 27,
-          "wr": 66.7,
-          "pnl": 360.8,
-          "pf": 13.849,
-          "dd": 11.6,
-          "tpd": 1.5,
-          "score": 732.45
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
         }
       },
-      "H1": {
-        "S05_MFKK_INTRADAY": {
-          "n": 293,
-          "wr": 30.7,
-          "pnl": -311.2,
-          "pf": 0.847,
-          "dd": 452.7,
-          "tpd": 1.53,
-          "score": 51.57
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
         },
-        "S13_STRUC_BREAK": {
-          "n": 50,
-          "wr": 42.0,
-          "pnl": 120.8,
-          "pf": 1.868,
-          "dd": 36.7,
-          "tpd": 1.19,
-          "score": 126.0
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 23,
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
         },
         "S09_MFKK_SCALPING": {
-          "n": 227,
-          "wr": 22.9,
-          "pnl": -670.8,
-          "pf": 0.496,
-          "dd": 676.9,
-          "tpd": 2.36,
-          "score": 31.67
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
+        }
+      }
+    },
+    "VOLATILE": {
+      "H1": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 262,
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 150,
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
+        }
+      },
+      "M30": {
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 68,
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
+        }
+      },
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 23,
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
+        }
+      }
+    },
+    "UNKNOWN": {
+      "H1": {
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 1061,
+          "wr": 41.3,
+          "pnl": 1284.0,
+          "pf": 1.172,
+          "dd": 552.0,
+          "score": 194.86
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 771,
+          "wr": 37.9,
+          "pnl": 92.0,
+          "pf": 1.016,
+          "dd": 452.0,
+          "score": 149.68
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 309,
+          "wr": 35.9,
+          "pnl": -156.0,
+          "pf": 0.934,
+          "dd": 500.0,
+          "score": 117.02
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 586,
+          "wr": 41.0,
+          "pnl": 648.0,
+          "pf": 1.156,
+          "dd": 520.0,
+          "score": 178.58
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 592,
+          "wr": 41.6,
+          "pnl": 768.0,
+          "pf": 1.185,
+          "dd": 824.0,
+          "score": 185.96
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 262,
+          "wr": 39.7,
+          "pnl": 184.0,
+          "pf": 1.097,
+          "dd": 280.0,
+          "score": 148.87
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 238,
+          "wr": 38.2,
+          "pnl": 56.0,
+          "pf": 1.032,
+          "dd": 412.0,
+          "score": 133.11
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 105,
+          "wr": 36.2,
+          "pnl": -44.0,
+          "pf": 0.945,
+          "dd": 240.0,
+          "score": 103.35
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 151,
+          "wr": 33.1,
+          "pnl": -212.0,
+          "pf": 0.825,
+          "dd": 272.0,
+          "score": 86.81
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 33,
+          "wr": 33.3,
+          "pnl": -44.0,
+          "pf": 0.833,
+          "dd": 116.0,
+          "score": 69.86
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 83,
+          "wr": 28.9,
+          "pnl": -228.0,
+          "pf": 0.678,
+          "dd": 300.0,
+          "score": 57.2
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 444,
+          "wr": 42.1,
+          "pnl": 656.0,
+          "pf": 1.213,
+          "dd": 396.0,
+          "score": 186.26
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 150,
+          "wr": 47.3,
+          "pnl": 384.0,
+          "pf": 1.385,
+          "dd": 223.0,
+          "score": 208.07
+        }
+      },
+      "M30": {
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 318,
+          "wr": 39.3,
+          "pnl": 184.0,
+          "pf": 1.079,
+          "dd": 268.0,
+          "score": 148.52
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 269,
+          "wr": 40.9,
+          "pnl": 292.0,
+          "pf": 1.153,
+          "dd": 364.0,
+          "score": 161.74
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 590,
+          "wr": 40.3,
+          "pnl": 536.0,
+          "pf": 1.127,
+          "dd": 724.0,
+          "score": 171.26
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 48,
+          "wr": 31.2,
+          "pnl": -96.0,
+          "pf": 0.758,
+          "dd": 136.0,
+          "score": 63.41
+        },
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 934,
+          "wr": 34.9,
+          "pnl": -776.0,
+          "pf": 0.894,
+          "dd": 1380.0,
+          "score": 123.88
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 361,
+          "wr": 31.6,
+          "pnl": -684.0,
+          "pf": 0.769,
+          "dd": 1004.0,
+          "score": 86.45
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 653,
+          "wr": 34.6,
+          "pnl": -604.0,
+          "pf": 0.882,
+          "dd": 776.0,
+          "score": 116.42
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 106,
+          "wr": 30.2,
+          "pnl": -248.0,
+          "pf": 0.721,
+          "dd": 412.0,
+          "score": 65.87
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 327,
+          "wr": 34.9,
+          "pnl": -276.0,
+          "pf": 0.892,
+          "dd": 392.0,
+          "score": 109.41
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 68,
+          "wr": 50.0,
+          "pnl": 272.0,
+          "pf": 1.667,
+          "dd": 108.0,
+          "score": 236.09
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 497,
+          "wr": 35.6,
+          "pnl": -300.0,
+          "pf": 0.922,
+          "dd": 1052.0,
+          "score": 121.33
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 316,
+          "wr": 36.4,
+          "pnl": -112.0,
+          "pf": 0.954,
+          "dd": 428.0,
+          "score": 121.53
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 188,
+          "wr": 46.8,
+          "pnl": 383.0,
+          "pf": 1.453,
+          "dd": 145.3,
+          "score": 222.64
+        }
+      },
+      "M15": {
+        "S15_OBV_MACD": {
+          "strategy": "S15_OBV_MACD",
+          "n": 1161,
+          "wr": 25.8,
+          "pnl": -4364.0,
+          "pf": 0.578,
+          "dd": 4412.0,
+          "score": 60.62
+        },
+        "S11_ALLIGATOR_AWAKEN": {
+          "strategy": "S11_ALLIGATOR_AWAKEN",
+          "n": 66,
+          "wr": 37.9,
+          "pnl": 8.0,
+          "pf": 1.016,
+          "dd": 84.0,
+          "score": 108.57
+        },
+        "S02_ALLIGATOR_OBV": {
+          "strategy": "S02_ALLIGATOR_OBV",
+          "n": 487,
+          "wr": 30.0,
+          "pnl": -1172.0,
+          "pf": 0.714,
+          "dd": 1284.0,
+          "score": 78.99
+        },
+        "S09_VWAP_WPER": {
+          "strategy": "S09_VWAP_WPER",
+          "n": 391,
+          "wr": 25.6,
+          "pnl": -1492.0,
+          "pf": 0.573,
+          "dd": 1596.0,
+          "score": 52.69
+        },
+        "S08_OBV_EMA_MOM": {
+          "strategy": "S08_OBV_EMA_MOM",
+          "n": 503,
+          "wr": 34.6,
+          "pnl": -468.0,
+          "pf": 0.881,
+          "dd": 988.0,
+          "score": 112.83
+        },
+        "S10_ST_MACD_SESSION": {
+          "strategy": "S10_ST_MACD_SESSION",
+          "n": 278,
+          "wr": 25.2,
+          "pnl": -1096.0,
+          "pf": 0.561,
+          "dd": 1144.0,
+          "score": 48.69
+        },
+        "S04_BB_SQUEEZE": {
+          "strategy": "S04_BB_SQUEEZE",
+          "n": 292,
+          "wr": 39.4,
+          "pnl": 176.0,
+          "pf": 1.083,
+          "dd": 180.0,
+          "score": 147.87
+        },
+        "S12_WPR_RSI_KELT": {
+          "strategy": "S12_WPR_RSI_KELT",
+          "n": 316,
+          "wr": 29.1,
+          "pnl": -848.0,
+          "pf": 0.685,
+          "dd": 1024.0,
+          "score": 69.76
+        },
+        "S06_ORDERBLOCK": {
+          "strategy": "S06_ORDERBLOCK",
+          "n": 23,
+          "wr": 21.7,
+          "pnl": -116.0,
+          "pf": 0.463,
+          "dd": 120.0,
+          "score": 23.73
+        },
+        "S09_MFKK_SCALPING": {
+          "strategy": "S09_MFKK_SCALPING",
+          "n": 363,
+          "wr": 49.0,
+          "pnl": 442.4,
+          "pf": 1.435,
+          "dd": 131.9,
+          "score": 250.31
+        },
+        "S01_EXHAUSTION": {
+          "strategy": "S01_EXHAUSTION",
+          "n": 143,
+          "wr": 40.6,
+          "pnl": 140.0,
+          "pf": 1.137,
+          "dd": 172.0,
+          "score": 145.66
+        },
+        "S07_STOCHRSI_BB": {
+          "strategy": "S07_STOCHRSI_BB",
+          "n": 104,
+          "wr": 34.6,
+          "pnl": -96.0,
+          "pf": 0.882,
+          "dd": 364.0,
+          "score": 92.07
+        },
+        "S03_SUPERTREND_EMA": {
+          "strategy": "S03_SUPERTREND_EMA",
+          "n": 338,
+          "wr": 30.5,
+          "pnl": -760.0,
+          "pf": 0.73,
+          "dd": 856.0,
+          "score": 78.57
         }
       }
     }

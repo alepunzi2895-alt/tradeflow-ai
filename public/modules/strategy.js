@@ -11,87 +11,64 @@ const SE = {
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
   strategies: {
-    // ── BACKTEST H1 MT5 GOLD 730gg · RM SEMPRE ATTIVO · 2026-04-16 ──
-    // MFKK Score: soglie rilassate BUY≥85/SELL≥70 · TP=$20/SL=$12 · +RM WR 52.7%
-    'S00_MFKK': { label: 'MFKK Score', pf: 1.16, wr: '41.0%', tp: '$20', sl: '$12',
-      stats: {
-        pnl_1m: 136, td_1m: 3.27,
-        pnl_6m: 1844, td_6m: 3.52,
-        pnl_12m: 2292, td_12m: 3.95,
-        pnl_24m: 3052, td_24m: 3.69,
-        maxdd: 1344, maxdd_pct: '44.1%', trades_12m: 1441, best_regime: 'TREND'
-      } },
-    // MFKK Intraday: V2 Triple MACD H1 · OBV+RSI+MACD+MOM · 3.3 trade/gg · PF 1.23
-    // Backtest H1 MT5 730gg: 2426 trade/24m · WR 36.9% · P&L +$4776 · MaxDD $1367
+    // ── BACKTEST H1 MT5 GOLD 16 MESI (730gg nominali) · RM SEMPRE ATTIVO · 2026-04-16 ──
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday', pf: 1.23, wr: '36.9%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 935, td_1m: 2.90,
-        pnl_6m: 1921, td_6m: 3.28,
-        pnl_12m: 4115, td_12m: 3.46,
-        pnl_24m: 4776, td_24m: 3.32,
+        pnl_1m: 935, td_1m: 2.90, pnl_6m: 1921, td_6m: 3.28,
+        pnl_12m: 4115, td_12m: 3.46, pnl_24m: 4776, td_24m: 3.32,
         maxdd: 1367, maxdd_pct: '28.6%', trades_12m: 1264, best_regime: 'TUTTI'
       } },
-    // MFKK Scalping — EMA stack + FVG retest · regime-ottimale: WEAK_UP H1 + WEAK_DOWN/VOLATILE M30
-    // Backtest regime-filtered 2026-04-15: 163 trade/24m · WR 40% · PF 1.62 · ATR×1.5/ATR×1 TP/SL
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 1.62, wr: '40.7%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping', pf: 1.38, wr: '47.3%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 123, td_1m: 0.11,
-        pnl_6m: 738, td_6m: 0.11,
-        pnl_12m: 1477, td_12m: 0.11,
-        pnl_24m: 2954, td_24m: 0.11,
-        maxdd: 612, maxdd_pct: '20.7%', trades_12m: 30, best_regime: 'WEAK'
+        pnl_1m: 154, td_1m: 0.15, pnl_6m: 768, td_6m: 0.15,
+        pnl_12m: 1536, td_12m: 0.15, pnl_24m: 2154, td_24m: 0.15,
+        maxdd: 412, maxdd_pct: '14.1%', trades_12m: 54, best_regime: 'TREND'
       } },
-    // Sell Exhaust — OBV bear + RSI>60 + ADX≥25 + MOM< · regime: TREND_UP H1
-    // Backtest H1 MT5 730gg: WR 36.8% · PF 1.96 · 61 trade/12m · MaxDD $278
-    'S05_V3_Sell_Exhaust': { label: 'Sell Exhaust', pf: 1.96, wr: '36.8%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S04_BB_SQUEEZE': { label: 'BB Squeeze', pf: 1.17, wr: '41.3%', tp: 'ATR×1.5', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: 328, td_1m: 0.17,
-        pnl_6m: 829, td_6m: 0.16,
-        pnl_12m: 625, td_12m: 0.17,
-        pnl_24m: 702, td_24m: 0.16,
-        maxdd: 278, maxdd_pct: '9.3%', trades_12m: 61, best_regime: 'TREND_UP'
+        pnl_1m: 112, td_1m: 0.45, pnl_6m: 432, td_6m: 0.44,
+        pnl_12m: 980, td_12m: 0.45, pnl_24m: 1284, td_24m: 0.44,
+        maxdd: 552, maxdd_pct: '12.8%', trades_12m: 164, best_regime: 'RANGE'
       } },
-    // Exhaustion — ADX/DI spread + MACD crossover · regime: TREND_DOWN (M15 sul bot)
-    // Backtest TREND_DOWN M15: WR 42% · PF 1.76 · 143 trade/24m · ATR×1.5/×1
-    'S01_EXHAUSTION': { label: 'Exhaustion', pf: 2.43, wr: '44.4%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S08_OBV_EMA_MOM': { label: 'OBV Momentum', pf: 1.18, wr: '41.6%', tp: 'ATR×1.5', sl: 'ATR×1',
       stats: {
-        pnl_1m: 125, td_1m: 0.03,
-        pnl_6m: 752, td_6m: 0.03,
-        pnl_12m: 1505, td_12m: 0.03,
-        pnl_24m: 3011, td_24m: 0.03,
-        maxdd: 412, maxdd_pct: '13.7%', trades_12m: 9, best_regime: 'TREND_DOWN'
+        pnl_1m: 85, td_1m: 0.38, pnl_6m: 312, td_6m: 0.37,
+        pnl_12m: 640, td_12m: 0.38, pnl_24m: 768, td_24m: 0.37,
+        maxdd: 824, maxdd_pct: '18.2%', trades_12m: 138, best_regime: 'TREND'
       } },
-    // Struc Break — breakout 40-bar high/low con retest · regime: RANGE H1
-    // Backtest RANGE H1: WR 42% · PF 1.87 · 50 trade/24m · ATR×1.5/×1
-    'S13_STRUC_BREAK': { label: 'Struc Break', pf: 1.87, wr: '42%', tp: 'ATR×1.5', sl: 'ATR×1',
+    'S03_SUPERTREND_EMA': { label: 'ST Trend', pf: 1.21, wr: '42.1%', tp: 'ATR×2.0', sl: 'ATR×1',
       stats: {
-        pnl_1m: 5, td_1m: 0.10,
-        pnl_6m: 30, td_6m: 0.10,
-        pnl_12m: 60, td_12m: 0.10,
-        pnl_24m: 120, td_24m: 0.10,
-        maxdd: 37, maxdd_pct: '3.7%', trades_12m: 25, best_regime: 'RANGE'
+        pnl_1m: 92, td_1m: 0.32, pnl_6m: 284, td_6m: 0.31,
+        pnl_12m: 512, td_12m: 0.32, pnl_24m: 656, td_24m: 0.31,
+        maxdd: 396, maxdd_pct: '11.5%', trades_12m: 115, best_regime: 'TREND'
       } },
-    // OB+FVG Scalp — Order Block + FVG confluence · M15 · sempre attiva
-    // Backtest 2026-04-15: WR 80% · PF 34.19 · 14 trade/12m · ATR×1.0/×0.6
+    'S15_OBV_MACD': { label: 'OBV MACD', pf: 1.01, wr: '37.9%', tp: 'ATR×1.2', sl: 'ATR×1',
+      stats: {
+        pnl_1m: 12, td_1m: 0.25, pnl_6m: 45, td_6m: 0.24,
+        pnl_12m: 82, td_12m: 0.25, pnl_24m: 92, td_24m: 0.24,
+        maxdd: 452, maxdd_pct: '15.4%', trades_12m: 90, best_regime: 'WEAK'
+      } },
+    'S10_ST_MACD_SESSION': { label: 'Session Mom', pf: 1.03, wr: '38.2%', tp: 'ATR×1.2', sl: 'ATR×1',
+      stats: {
+        pnl_1m: 15, td_1m: 0.22, pnl_6m: 38, td_6m: 0.21,
+        pnl_12m: 52, td_12m: 0.22, pnl_24m: 56, td_24m: 0.21,
+        maxdd: 412, maxdd_pct: '14.8%', trades_12m: 80, best_regime: 'TREND'
+      } },
     'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp', pf: 2.16, wr: '46.3%', tp: 'ATR×1.0', sl: 'ATR×0.6',
       stats: {
-        pnl_1m: 413, td_1m: 0.18,
-        pnl_6m: 2478, td_6m: 0.18,
-        pnl_12m: 4956, td_12m: 0.18,
-        pnl_24m: 9912, td_24m: 0.18,
+        pnl_1m: 413, td_1m: 0.18, pnl_6m: 2478, td_6m: 0.18,
+        pnl_12m: 4956, td_12m: 0.18, pnl_24m: 9912, td_24m: 0.18,
         maxdd: 1120, maxdd_pct: '11.3%', trades_12m: 48, best_regime: 'RANGE'
       } },
   },
   // ── REGIME PRIORITY ──
-  // Allineato con regime_playbook.json (backtest multi-TF 2026-04-15)
-  // Aggiornato 2026-04-16: S05_MFKK_INTRADAY (V2 Triple MACD) ora presente in tutti i regimi
   regimePriority: {
-    TREND_UP:   ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S05_V3_Sell_Exhaust'],
-    TREND_DOWN: ['S05_MFKK_INTRADAY', 'S01_EXHAUSTION',    'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    WEAK_UP:    ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
-    WEAK_DOWN:  ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
-    VOLATILE:   ['S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
-    RANGE:      ['S05_MFKK_INTRADAY', 'S10_OB_FVG_SCALP',  'S13_STRUC_BREAK'],
+    TREND_UP:   ['S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA', 'S05_MFKK_INTRADAY', 'S10_ST_MACD_SESSION'],
+    TREND_DOWN: ['S09_MFKK_SCALPING', 'S08_OBV_EMA_MOM', 'S03_SUPERTREND_EMA', 'S05_MFKK_INTRADAY', 'S10_ST_MACD_SESSION'],
+    WEAK_UP:    ['S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
+    WEAK_DOWN:  ['S05_MFKK_INTRADAY', 'S15_OBV_MACD', 'S04_BB_SQUEEZE'],
+    VOLATILE:   ['S04_BB_SQUEEZE', 'S15_OBV_MACD', 'S09_MFKK_SCALPING'],
+    RANGE:      ['S04_BB_SQUEEZE', 'S10_OB_FVG_SCALP', 'S15_OBV_MACD'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },

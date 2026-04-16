@@ -44,19 +44,22 @@ TIERS = [
 
 # TP/SL base in dollari per strategia (fallback se ATR non disponibile)
 STRATEGY_BASE = {
-    'S00_MFKK':            {'base_tp': 15.0, 'base_sl': 8.0,  'use_atr': False},
-    'S05_MFKK_INTRADAY':   {'base_tp': None, 'base_sl': None,  'use_atr': True},
-    'S09_MFKK_SCALPING':   {'base_tp': None, 'base_sl': None,  'use_atr': True},
-    'S05_V3_Sell_Exhaust': {'base_tp': None, 'base_sl': None,  'use_atr': True},
-    'S01_EXHAUSTION':      {'base_tp': None, 'base_sl': None,  'use_atr': True},
-    'S13_STRUC_BREAK':     {'base_tp': None, 'base_sl': None,  'use_atr': True},
-    'S15_OBV_MACD':       {'base_tp': None, 'base_sl': None,  'use_atr': True},
-    'S04_BB_SQUEEZE':     {'base_tp': 15.0, 'base_sl': 10.0,  'use_atr': False},
-    'S07_STOCHRSI_BB':    {'base_tp': 12.0, 'base_sl': 15.0,  'use_atr': False},
-    'S11_ALLIGATOR_AWAKEN': {'base_tp': None, 'base_sl': None, 'use_atr': True},
+    'S00_MFKK':              {'base_tp': 15.0, 'base_sl': 8.0,  'use_atr': False},
+    'S05_MFKK_INTRADAY':     {'base_tp': None, 'base_sl': None,  'use_atr': True, 'atr_tp': 2.0, 'atr_sl': 1.0},
+    'S09_MFKK_SCALPING':     {'base_tp': None, 'base_sl': None,  'use_atr': True, 'atr_tp': 3.0, 'atr_sl': 1.0},
+    'S10_OB_FVG_SCALP':      {'base_tp': None, 'base_sl': None,  'use_atr': True, 'atr_tp': 2.5, 'atr_sl': 1.2},
+    'S16_GOLDEN_SQUEEZE':    {'base_tp': None, 'base_sl': None,  'use_atr': True, 'atr_tp': 3.0, 'atr_sl': 1.2},
+    'S17_CONVERGENCE_SCALP': {'base_tp': None, 'base_sl': None,  'use_atr': True, 'atr_tp': 1.5, 'atr_sl': 0.8},
+    'S05_V3_Sell_Exhaust':   {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S01_EXHAUSTION':        {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S13_STRUC_BREAK':       {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S15_OBV_MACD':          {'base_tp': None, 'base_sl': None,  'use_atr': True},
+    'S04_BB_SQUEEZE':        {'base_tp': 15.0, 'base_sl': 10.0,  'use_atr': False},
+    'S07_STOCHRSI_BB':       {'base_tp': 12.0, 'base_sl': 15.0,  'use_atr': False},
+    'S11_ALLIGATOR_AWAKEN':  {'base_tp': None, 'base_sl': None, 'use_atr': True},
 }
-ATR_TP_MULT_BASE = 1.5   # moltiplicatore ATR per TP base (ottimizzato su H1)
-ATR_SL_MULT_BASE = 1.0   # moltiplicatore ATR per SL base (ottimizzato su H1)
+ATR_TP_MULT_BASE = 1.5   # moltiplicatore ATR per TP base (fallback generico)
+ATR_SL_MULT_BASE = 1.0   # moltiplicatore ATR per SL base (fallback generico)
 
 
 class RiskManager:
@@ -73,6 +76,60 @@ class RiskManager:
         # traccia stato posizioni per BE/TS/partial
         self._pos_state: dict = {}   # {ticket: {'be_done': bool, 'partial_done': bool, 'ts_price': float}}
 
+    # ── MANIPULATION DETECTION ─────────────────────────────────────────────────
+    def get_manipulation_mult(self, atr: float, atr_avg: float,
+                              adx: float = None, dip: float = None,
+                              dim: float = None, hour_utc: int = None) -> float:
+        """
+        Moltiplicatore 0.0–1.5 da applicare al lot size.
+        0.0 = pausa totale (spike estremo / manipolazione evidente)
+        1.0 = condizioni normali
+        >1.0 = contesto favorevole (trend netto + sessione liquida)
+        """
+        mult = 1.0
+
+        # ATR spike vs media
+        if atr and atr_avg and atr_avg > 0:
+            ratio = atr / atr_avg
+            if ratio > 2.5:
+                return 0.0   # spike estremo → nessun trade
+            elif ratio > 1.8:
+                mult *= 0.4
+            elif ratio > 1.4:
+                mult *= 0.65
+            elif ratio > 1.2:
+                mult *= 0.85
+
+        # Sessione UTC
+        if hour_utc is not None:
+            if 0 <= hour_utc < 7:       # Asian (bassa liquidità)
+                mult *= 0.5
+            elif 13 <= hour_utc < 17:   # London/NY overlap (massima liquidità)
+                mult *= 1.2
+            elif 7 <= hour_utc < 13:    # London
+                mult *= 1.05
+            elif 17 <= hour_utc < 21:   # NY
+                mult *= 0.95
+            else:                       # after-hours
+                mult *= 0.8
+
+        # ADX / DI
+        if adx is not None:
+            if adx < 15:
+                mult *= 0.55
+            elif adx >= 30:
+                di_spread = abs(dip - dim) if (dip is not None and dim is not None) else 0
+                mult *= 1.25 if di_spread >= 15 else 1.1
+            elif adx < 22:
+                mult *= 0.8
+
+        # DI convergence + ATR spike → segnale di manipolazione intrabar
+        if dip is not None and dim is not None and atr and atr_avg and atr_avg > 0:
+            if abs(dip - dim) < 4 and (atr / atr_avg) > 1.4:
+                mult *= 0.5
+
+        return round(max(0.0, min(1.5, mult)), 3)
+
     # ── TIER DETECTION ─────────────────────────────────────────────────────────
     def get_tier(self, ai_score: float) -> dict:
         """Restituisce il tier di rischio corrispondente all'AI Score."""
@@ -83,24 +140,30 @@ class RiskManager:
 
     # ── ORDER PARAMS ────────────────────────────────────────────────────────────
     def get_order_params(self, ai_score: float, atr: float, strategy: str,
-                         direction: str = 'buy') -> dict:
+                         direction: str = 'buy',
+                         atr_avg: float = None, adx: float = None,
+                         dip: float = None, dim: float = None,
+                         hour_utc: int = None) -> dict:
         """
         Calcola i parametri completi per un nuovo ordine:
-        - lot_size   : lotto adattivo
+        - lot_size   : lotto adattivo (ridotto da manipulation mult)
         - tp_usd     : take profit in dollari
         - sl_usd     : stop loss in dollari
         - tp2_usd    : secondo TP per parzializzazione (se attiva)
         - be_trigger : prezzo di trigger per Break Even
         - ts_step    : step trailing stop in dollari
         - tier        : tier di rischio usato
+        - manip_mult : moltiplicatore anti-manipolazione (0.0 = trade saltato)
         """
         tier = self.get_tier(ai_score)
         sb   = STRATEGY_BASE.get(strategy, {'base_tp': 20.0, 'base_sl': 12.0, 'use_atr': False})
 
         # ── Calcola TP/SL base ────────────────────────────────────────────
         if sb['use_atr'] and atr:
-            base_tp = atr * ATR_TP_MULT_BASE
-            base_sl = atr * ATR_SL_MULT_BASE
+            atr_tp = sb.get('atr_tp', ATR_TP_MULT_BASE)
+            atr_sl = sb.get('atr_sl', ATR_SL_MULT_BASE)
+            base_tp = atr * atr_tp
+            base_sl = atr * atr_sl
         else:
             base_tp = sb['base_tp'] or (atr * ATR_TP_MULT_BASE if atr else 20.0)
             base_sl = sb['base_sl'] or (atr * ATR_SL_MULT_BASE if atr else 12.0)
@@ -109,9 +172,14 @@ class RiskManager:
         tp_usd = round(base_tp * tier['tp_mult'], 2)
         sl_usd = round(base_sl * tier['sl_mult'], 2)
 
-        # ── Lot size ──────────────────────────────────────────────────────
-        raw_lot = self.base_lot * tier['lot_mult']
-        lot = self._round_lot(raw_lot)
+        # ── Manipulation mult ─────────────────────────────────────────────
+        manip_mult = self.get_manipulation_mult(
+            atr, atr_avg or atr, adx, dip, dim, hour_utc
+        )
+
+        # ── Lot size (tier × manipulation) ───────────────────────────────
+        raw_lot = self.base_lot * tier['lot_mult'] * manip_mult
+        lot = self._round_lot(raw_lot) if manip_mult > 0 else 0.0
 
         # ── Trailing stop step ────────────────────────────────────────────
         ts_step = round(atr * tier['ts_step'], 2) if atr else round(sl_usd * 0.3, 2)
@@ -128,27 +196,33 @@ class RiskManager:
         # ── BE trigger (in dollari dal prezzo di entrata) ─────────────────
         be_trigger = round(tp_usd * tier['be_pct'], 2)
 
+        paused = manip_mult == 0.0
         result = {
             'lot':         lot,
             'tp_usd':      tp_usd,
             'sl_usd':      sl_usd,
             'be_trigger':  be_trigger,
             'ts_step':     ts_step,
-            'partial':     tier.get('partial', False),
+            'partial':     tier.get('partial', False) and not paused,
             'partial_lot': partial_lot,
             'tp2_usd':     tp2_usd,
             'tier':        tier['label'],
             'tier_label':  tier['label'],
             'ai_score':    round(ai_score, 1),
-            'be_mult':     sb.get('be_mult'), # Passa il moltiplicatore BE
+            'be_mult':     sb.get('be_mult'),
+            'manip_mult':  manip_mult,
+            'paused':      paused,
         }
 
-        log.info(
-            f"📊 RiskManager [{tier['label']}] score={ai_score:.0f} | "
-            f"lot={lot} | TP=${tp_usd} | SL=${sl_usd} | "
-            f"BE@+${be_trigger} | TS step=${ts_step}"
-            + (f" | Partial {int(partial_pct*100)}% @TP${tp2_usd}" if tier.get('partial') else "")
-        )
+        if paused:
+            log.warning(f"⛔ RiskManager PAUSED [{strategy}] score={ai_score:.0f} — ATR spike/manipulation detected")
+        else:
+            log.info(
+                f"📊 RiskManager [{tier['label']}] score={ai_score:.0f} manip={manip_mult:.2f} | "
+                f"lot={lot} | TP=${tp_usd} | SL=${sl_usd} | "
+                f"BE@+${be_trigger} | TS step=${ts_step}"
+                + (f" | Partial {int(partial_pct*100)}% @TP${tp2_usd}" if tier.get('partial') else "")
+            )
         return result
 
     # ── MANAGE POSITIONS (chiamato ad ogni tick nel loop del bot) ──────────────

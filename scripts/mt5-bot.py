@@ -1080,29 +1080,39 @@ def run():
                             if rm:
                                 rp = rm.get_order_params(
                                     ai_score=last_ai_score, atr=atr_i,
-                                    strategy=strategy_name, direction=direction
+                                    strategy=strategy_name, direction=direction,
+                                    atr_avg=I_h1['atr_avg'][i_h1],
+                                    adx=I_h1['adx'][i_h1], dip=I_h1['dip'][i_h1],
+                                    dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour
                                 )
+                                if rp.get('paused'):
+                                    log.info(f"⛔ SEGNALE H1 SOSPESO (manipolazione/spike) | manip_mult=0")
+                                    rp = None
+                            if rm and rp:
                                 lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
                                 log.info(
                                     f"★ SEGNALE H1: {direction.upper()} | {params['label']} | Regime: {current_regime} "
                                     f"| ADX={I_h1['adx'][i_h1]:.1f} | RSI={I_h1['rsi'][i_h1]:.1f} "
-                                    f"| score={last_ai_score:.0f} | {rp['tier_label']} "
+                                    f"| score={last_ai_score:.0f} | {rp['tier_label']} manip={rp['manip_mult']:.2f} "
                                     f"| lot={lot_use} | TP=${tp_use} | SL=${sl_use} "
                                     f"| BE@+${rp['be_trigger']} | TS step=${rp['ts_step']}"
                                 )
-                            else:
+                            elif not rm:
                                 lot_use = LOT_SIZE
                                 tp_use  = params['tp_usd'] if isinstance(params['tp_usd'], float) else 20.0
                                 sl_use  = params['sl_usd'] if isinstance(params['sl_usd'], float) else 12.0
+                                rp = None
                                 log.info(
                                     f"★ SEGNALE H1: {direction.upper()} | {params['label']} | Regime: {current_regime} "
                                     f"| ADX={I_h1['adx'][i_h1]:.1f} | RSI={I_h1['rsi'][i_h1]:.1f} "
                                     f"| TP=${tp_use} SL=${sl_use}"
                                 )
+                            else:
+                                continue  # paused — skip order
                             result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
                             if result:
                                 # Registra BE trigger nel RiskManager per questo ticket
-                                if rm and 'be_trigger' in rp:
+                                if rm and rp and 'be_trigger' in rp:
                                     rm._pos_state[result.order] = {
                                         'be_done': False,
                                         'partial_done': False,
@@ -1147,10 +1157,18 @@ def run():
                             if has_position_in_direction(sec_dir): continue
                             sec_params = STRATEGY_PARAMS.get(sec_id, {})
                             atr_i2 = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else None
+                            rp2 = None
                             if rm:
-                                rp2 = rm.get_order_params(ai_score=last_ai_score, atr=atr_i2, strategy=sec_id, direction=sec_dir)
+                                rp2 = rm.get_order_params(
+                                    ai_score=last_ai_score, atr=atr_i2, strategy=sec_id, direction=sec_dir,
+                                    atr_avg=I_h1['atr_avg'][i_h1], adx=I_h1['adx'][i_h1],
+                                    dip=I_h1['dip'][i_h1], dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour
+                                )
+                                if rp2.get('paused'):
+                                    log.info(f"⛔ SEGNALE H1 (sec) SOSPESO (manipolazione) | {sec_id}")
+                                    continue
                                 lot2, tp2, sl2 = rp2['lot'], rp2['tp_usd'], rp2['sl_usd']
-                                log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)} | {rp2['tier_label']} | lot={lot2} | TP=${tp2} | SL=${sl2}")
+                                log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)} | {rp2['tier_label']} manip={rp2['manip_mult']:.2f} | lot={lot2} | TP=${tp2} | SL=${sl2}")
                             else:
                                 lot2, tp2, sl2 = LOT_SIZE, 20.0, 12.0
                                 log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)}")
@@ -1197,13 +1215,25 @@ def run():
                             elif direction:
                                 params = STRATEGY_PARAMS[sname]
                                 atr_i = I_m15['atr'][idx] if I_m15['atr'][idx] else None
+                                rp = None
                                 if rm:
-                                    rp = rm.get_order_params(ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction)
+                                    rp = rm.get_order_params(
+                                        ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction,
+                                        atr_avg=I_m15.get('atr_avg', [None]*len(candles_m15))[idx],
+                                        adx=I_m15['adx'][idx], dip=I_m15['dip'][idx],
+                                        dim=I_m15['dim'][idx], hour_utc=bar_dt_m15.hour
+                                    )
+                                    if rp.get('paused'):
+                                        log.info(f"⛔ SEGNALE M15 SOSPESO (manipolazione) | {sname}")
+                                        rp = None
+                                if rp:
                                     lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
-                                    log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use} | SL=${sl_use}")
-                                else:
+                                    log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} manip={rp['manip_mult']:.2f} | lot={lot_use} | TP=${tp_use} | SL=${sl_use}")
+                                elif not rm:
                                     lot_use, tp_use, sl_use = LOT_SIZE, 15.0, 10.0
                                     log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime}")
+                                else:
+                                    continue  # paused
                                 result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use)
                                 if result:
                                     tick = mt5.symbol_info_tick(SYMBOL)
@@ -1247,13 +1277,25 @@ def run():
                             elif direction:
                                 params = STRATEGY_PARAMS[sname]
                                 atr_i = I_m30['atr'][idx] if I_m30['atr'][idx] else None
+                                rp = None
                                 if rm:
-                                    rp = rm.get_order_params(ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction)
+                                    rp = rm.get_order_params(
+                                        ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction,
+                                        atr_avg=I_m30.get('atr_avg', [None]*len(candles_m30))[idx],
+                                        adx=I_m30['adx'][idx], dip=I_m30['dip'][idx],
+                                        dim=I_m30['dim'][idx], hour_utc=bar_dt_m30.hour
+                                    )
+                                    if rp.get('paused'):
+                                        log.info(f"⛔ SEGNALE M30 SOSPESO (manipolazione) | {sname}")
+                                        rp = None
+                                if rp:
                                     lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
-                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use} | SL=${sl_use}")
-                                else:
+                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} manip={rp['manip_mult']:.2f} | lot={lot_use} | TP=${tp_use} | SL=${sl_use}")
+                                elif not rm:
                                     lot_use, tp_use, sl_use = LOT_SIZE, 15.0, 10.0
                                     log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime}")
+                                else:
+                                    continue  # paused
                                 result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use)
                                 if result:
                                     tick = mt5.symbol_info_tick(SYMBOL)

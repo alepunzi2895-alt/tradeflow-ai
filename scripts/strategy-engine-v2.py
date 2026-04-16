@@ -800,22 +800,56 @@ def s_golden_squeeze(ind, i, hour=None):
         if c < e233 and obv_val < obv_ema and c < cp: return 'sell'
     return None
 
-# ── STRATEGY MAP (TABULA RASA: ELITE 4 ONLY) ──────────────────────────────────
+def s_convergence_scalp(ind, i, hour=None):
+    """
+    S17_CONVERGENCE_SCALP — EMA13/34 crossover + StochRSI alignment + BB %B + EMA50 bias
+    Fires ONLY on transition into aligned state (not every aligned bar → high frequency filter)
+    TP: 1.5×ATR | SL: 0.8×ATR | TF: M5/M15 (backtest on H1 proxy data)
+    """
+    if i < 34: return None
+    e13 = ind['e13'][i]; e34 = ind['e34'][i]
+    sk = ind['srsi_k'][i]; sd = ind['srsi_d'][i]
+    bbu = ind['bb_up'][i]; bbl = ind['bb_lo'][i]
+    c = ind['C'][i]; e50 = ind['e50'][i]
+    atr = ind['atr'][i]; atr30 = ind['atr30'][i]
+    if None in (e13, e34, sk, sd, bbu, bbl, c, e50, atr): return None
+    if atr30 and atr > 2.2 * atr30: return None  # manipolazione/spike estremo
+
+    bb_range = bbu - bbl
+    bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
+
+    e13_p = ind['e13'][i-1]; e34_p = ind['e34'][i-1]
+    sk_p = ind['srsi_k'][i-1]; sd_p = ind['srsi_d'][i-1]
+    if None in (e13_p, e34_p, sk_p, sd_p): return None
+
+    # Segnale solo sulla barra di transizione (crossover)
+    bull_prev = e13_p > e34_p and sk_p > sd_p
+    bear_prev = e13_p < e34_p and sk_p < sd_p
+
+    bull = e13 > e34 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
+    bear = e13 < e34 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
+
+    if bull: return 'buy'
+    if bear: return 'sell'
+    return None
+
+# ── STRATEGY MAP ───────────────────────────────────────────────────────────────
 STRATS = {
-    'S05_MFKK_INTRADAY':    (s_mfkk_intraday,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
-    'S09_MFKK_SCALPING':    (s_mfkk_scalping,      ['VOLATILE','WEAK_UP','WEAK_DOWN','RANGE']),
-    'S10_OB_FVG_SCALP':     (s_ob_fvg_scalp,       ['RANGE', 'VOLATILE', 'WEAK_UP', 'WEAK_DOWN']),
-    'S16_GOLDEN_SQUEEZE':   (s_golden_squeeze,     ['TREND_UP', 'TREND_DOWN', 'WEAK_UP', 'WEAK_DOWN']),
+    'S05_MFKK_INTRADAY':      (s_mfkk_intraday,       ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
+    'S09_MFKK_SCALPING':      (s_mfkk_scalping,       ['VOLATILE','WEAK_UP','WEAK_DOWN','RANGE']),
+    'S10_OB_FVG_SCALP':       (s_ob_fvg_scalp,        ['RANGE', 'VOLATILE', 'WEAK_UP', 'WEAK_DOWN']),
+    'S16_GOLDEN_SQUEEZE':     (s_golden_squeeze,      ['TREND_UP', 'TREND_DOWN', 'WEAK_UP', 'WEAK_DOWN']),
+    'S17_CONVERGENCE_SCALP':  (s_convergence_scalp,   ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
 }
 
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
-    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
-    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
-    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE'],
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S17_CONVERGENCE_SCALP'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S17_CONVERGENCE_SCALP'],
+    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
+    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
@@ -855,6 +889,9 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         elif name == 'S05_MFKK_INTRADAY':
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.0, 2)
+        elif name == 'S17_CONVERGENCE_SCALP':
+            curr_tp = round(av * 1.5, 2)
+            curr_sl = round(av * 0.8, 2)
 
         sig=fn(ind,i,hour)
         if sig is None: continue
@@ -943,7 +980,7 @@ def run_adaptive(candles, ind, tf='H1'):
         for name in pool:
             if name not in STRATS: continue
             fn=STRATS[name][0]
-            s=fn(ind,i,hour) if name=='S16_GOLDEN_SQUEEZE' else fn(ind,i)
+            s=fn(ind,i,hour)
             if s: sig=s; used=name; break
         if not sig: continue
         entry=c['c']
@@ -956,6 +993,8 @@ def run_adaptive(candles, ind, tf='H1'):
             tp_d = round(av*3.0, 2); sl_d = round(av*1.2, 2)
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S17_CONVERGENCE_SCALP':
+            tp_d = round(av*1.5, 2); sl_d = round(av*0.8, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d
@@ -1038,7 +1077,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         for name in pool:
             if name not in STRATS: continue
             fn=STRATS[name][0]
-            s=fn(ind,i,hour) if name=='S16_GOLDEN_SQUEEZE' else fn(ind,i)
+            s=fn(ind,i,hour)
             if s: sig=s; used=name; break
         if not sig: continue
 
@@ -1051,6 +1090,8 @@ def run_adaptive_rm(candles, ind, tf='H1'):
             tp_d = round(av*3.0, 2); sl_d = round(av*1.2, 2)
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S17_CONVERGENCE_SCALP':
+            tp_d = round(av*1.5, 2); sl_d = round(av*0.8, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
 
@@ -1206,6 +1247,31 @@ def main():
         print(f"\n  Confronto Base vs RM:")
         print(f"    Base:   P&L ${sa['pnl']} | PF {sa['pf']} | WR {sa['wr']}%")
         print(f"    Con RM: P&L ${srm['pnl']} | PF {srm['pf']} | WR {srm['wr']}%")
+
+    # ── FASE 6: S17_CONVERGENCE_SCALP ─────────────────────────────────────────
+    print("\n" + "="*72)
+    print("FASE 6: S17_CONVERGENCE_SCALP — EMA13/34 + StochRSI + BB%B + EMA50")
+    print("        (backtest su dati H1 come proxy; su M5/M15 frequenza ×12/×4)")
+    print("="*72)
+    s17_trades = run_one(candles, ind, 'S17_CONVERGENCE_SCALP', s_convergence_scalp, tf=tf)
+    ss17 = stats(s17_trades)
+    print(f"\n  Trade totali:    {ss17['n']}")
+    print(f"  Win Rate:        {ss17['wr']}%")
+    print(f"  P&L totale:      ${ss17['pnl']}")
+    print(f"  Profit Factor:   {ss17['pf']}")
+    print(f"  Trade/giorno:    {ss17['tr_day']}")
+    print(f"  Media $/giorno:  ${ss17['avg_day']}")
+    print(f"  Mesi positivi:   {ss17['months']}")
+    print(f"  Max Drawdown:    ${ss17['dd']}")
+    print(f"\n  TP: ATR×1.5 | SL: ATR×0.8 | RR: 1.875")
+    print(f"  Su M5 frequenza stimata: {ss17['tr_day']*12:.1f} trade/gg")
+    if ss17['pf'] >= 1.10 and ss17['n'] >= 30:
+        print(f"  → ✅ PROMETTENTE: PF {ss17['pf']:.3f} su dati proxy H1")
+        print(f"     Raccomandazione: backtest dedicato su dati M5 prima dell'attivazione")
+    elif ss17['pf'] >= 1.0:
+        print(f"  → ⚠️  BORDELINE: PF {ss17['pf']:.3f} — ottimizzare soglie o cambiare TF")
+    else:
+        print(f"  → ❌ NON PROFICUA su questo dataset: PF {ss17['pf']:.3f}")
 
     # ── OUTPUT JSON ───────────────────────────────────────────────────────────
     output={

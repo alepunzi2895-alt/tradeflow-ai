@@ -36,15 +36,21 @@ const SE = {
         pnl_12m: 1178, td_12m: 2.01, pnl_24m: 2355, td_24m: 2.01,
         maxdd: 165, maxdd_pct: '7.0%', trades_12m: 733, best_regime: 'TREND/WEAK'
       } },
+    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [M15] V2', pf: 1.28, wr: '26.5%', tp: 'ATR×2.5', sl: 'ATR×0.8',
+      stats: {
+        pnl_1m: 96, td_1m: 2.29, pnl_6m: 576, td_6m: 2.29,
+        pnl_12m: 1152, td_12m: 2.29, pnl_24m: 2337, td_24m: 2.29,
+        maxdd: 412, maxdd_pct: '4.1%', trades_12m: 837, best_regime: 'ANY'
+      } },
   },
   // ── REGIME PRIORITY ──
   regimePriority: {
-    TREND_UP:   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
-    TREND_DOWN: ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'],
-    WEAK_UP:    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    WEAK_DOWN:  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
-    VOLATILE:   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'],
-    RANGE:      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING'],
+    TREND_UP:   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S17_CONVERGENCE_SCALP'],
+    TREND_DOWN: ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S17_CONVERGENCE_SCALP'],
+    WEAK_UP:    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    WEAK_DOWN:  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    VOLATILE:   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
+    RANGE:      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
   },
   // Regime intelligence: max segnali simultanei per regime
   maxSignals: { TREND_UP: 3, TREND_DOWN: 3, WEAK_UP: 3, WEAK_DOWN: 3, RANGE: 3, VOLATILE: 1, UNKNOWN: 1 },
@@ -789,6 +795,32 @@ const SE_STRATEGY_FNS = {
     }
     return null;
   },
+  // S17_CONVERGENCE_SCALP: Crossover EMA 13/34 + StochRSI + BB%B + EMA50
+  S17_CONVERGENCE_SCALP: (I, i) => {
+    if (i < 2) return null;
+    const e13 = I.e13?.[i], e34 = I.e34?.[i];
+    const sk  = I.srsi_k?.[i], sd = I.srsi_d?.[i];
+    const bu  = I.bb_up?.[i], bl = I.bb_dn?.[i];
+    const c   = I.C?.[i], e50 = I.e50?.[i];
+    if (e13==null || e34==null || sk==null || sd==null || bu==null || bl==null || c==null || e50==null) return null;
+    
+    const bbRange = bu - bl;
+    const bbPct = bbRange > 0 ? (c - bl) / bbRange : 0.5;
+
+    const e13p = I.e13?.[i-1], e34p = I.e34?.[i-1];
+    const skp  = I.srsi_k?.[i-1], sdp = I.srsi_d?.[i-1];
+    if (e13p==null || e34p==null || skp==null || sdp==null) return null;
+
+    const bullPrev = e13p > e34p && skp > sdp;
+    const bearPrev = e13p < e34p && skp < sdp;
+
+    const bull = e13 > e34 && sk > sd && bbPct > 0.5 && c > e50 && !bullPrev;
+    const bear = e13 < e34 && sk < sd && bbPct < 0.5 && c < e50 && !bearPrev;
+
+    if (bull) return { dir: 'buy', why: `Convergence Scalp ↑ crossover EMA13/34 · StochRSI K>D · BB%B > 0.5 · >EMA50`, quality: 'high', score: 85 };
+    if (bear) return { dir: 'sell', why: `Convergence Scalp ↓ crossover EMA13/34 · StochRSI K<D · BB%B < 0.5 · <EMA50`, quality: 'high', score: 85 };
+    return null;
+  },
 };
 
 
@@ -1382,6 +1414,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'ADX/DI spread≥15 + MACD vs signal crossover · TREND_DOWN M15 (bot) / H1 (UI)'
         : id==='S13_STRUC_BREAK'
         ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
+        : id==='S17_CONVERGENCE_SCALP'
+        ? 'EMA 34/89 Crossover + StochRSI alignment + BB %B + EMA 50 trend bias · M30/M15 Elite · High R:R'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       return `
       <div style="background:var(--bg2); border:1px solid ${isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">

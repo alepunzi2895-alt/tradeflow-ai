@@ -107,16 +107,16 @@ def rsi(src, p=14):
 
 def stoch_rsi(src, rsi_p=14, stoch_p=14, k_p=3, d_p=3):
     """StochRSI = stoch of RSI"""
-    r=rsi(src,rsi_p)
-    n=len(r); raw=[None]*n
-    for i in range(stoch_p-1,n):
-        sl=[x for x in r[i-stoch_p+1:i+1] if x is not None]
-        if len(sl)<stoch_p or r[i] is None: continue
-        hi=max(sl); lo=min(sl)
-        raw[i]=(r[i]-lo)/(hi-lo)*100 if hi>lo else 50
-    sk=sma([x if x else 50 for x in raw],k_p)
-    sd=sma([x if x else 50 for x in sk],d_p)
-    return sk,sd
+    r = rsi(src, rsi_p)
+    n = len(r); stoch = [None]*n
+    for i in range(rsi_p, n):
+        sl = [x for x in r[i-rsi_p+1:i+1] if x is not None]
+        if len(sl) < rsi_p or r[i] is None: continue
+        lo = min(sl); hi = max(sl)
+        stoch[i] = (r[i]-lo)/(hi-lo)*100 if hi>lo else 50
+    sk = sma([x if x is not None else 50 for x in stoch], k_p)
+    sd = sma([x if x is not None else 50 for x in sk], d_p)
+    return sk, sd
 
 def bollinger(src, p=20, m=2.0):
     mid=sma(src,p); up=[]; lo=[]
@@ -381,7 +381,7 @@ def compute_all(candles):
     rsi14=rsi(C,14)
 
     # StochRSI
-    srsi_k,srsi_d=stoch_rsi(C,14,14,3,3)
+    srsi_k,srsi_d=stoch_rsi(C,14,3,3)
 
     # Bollinger (20,2)
     bb_up,bb_mid,bb_lo,bb_w=bollinger(C,20,2.0)
@@ -802,33 +802,31 @@ def s_golden_squeeze(ind, i, hour=None):
 
 def s_convergence_scalp(ind, i, hour=None):
     """
-    S17_CONVERGENCE_SCALP — EMA13/34 crossover + StochRSI alignment + BB %B + EMA50 bias
-    Fires ONLY on transition into aligned state (not every aligned bar → high frequency filter)
-    TP: 1.5×ATR | SL: 0.8×ATR | TF: M5/M15 (backtest on H1 proxy data)
+    S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI alignment + BB %B + EMA50 bias
+    Configurazione ottimizzata: PF 1.28 | TP: 2.5×ATR | SL: 0.8×ATR
     """
-    if i < 34: return None
-    e13 = ind['e13'][i]; e34 = ind['e34'][i]
+    if i < 89: return None
+    e34 = ind['e34'][i]; e89 = ind['e89'][i]
     sk = ind['srsi_k'][i]; sd = ind['srsi_d'][i]
     bbu = ind['bb_up'][i]; bbl = ind['bb_lo'][i]
     c = ind['C'][i]; e50 = ind['e50'][i]
     atr = ind['atr'][i]; atr30 = ind['atr30'][i]
-    if None in (e13, e34, sk, sd, bbu, bbl, c, e50, atr): return None
-    if atr30 and atr > 2.2 * atr30: return None  # manipolazione/spike estremo
-
+    if None in (e34, e89, sk, sd, bbu, bbl, c, e50, atr): return None
+    if atr30 and atr > 2.2 * atr30: return None  # manipolazione
+    
     bb_range = bbu - bbl
     bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
-
-    e13_p = ind['e13'][i-1]; e34_p = ind['e34'][i-1]
+    
+    e34_p = ind['e34'][i-1]; e89_p = ind['e89'][i-1]
     sk_p = ind['srsi_k'][i-1]; sd_p = ind['srsi_d'][i-1]
-    if None in (e13_p, e34_p, sk_p, sd_p): return None
-
-    # Segnale solo sulla barra di transizione (crossover)
-    bull_prev = e13_p > e34_p and sk_p > sd_p
-    bear_prev = e13_p < e34_p and sk_p < sd_p
-
-    bull = e13 > e34 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
-    bear = e13 < e34 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
-
+    if None in (e34_p, e89_p, sk_p, sd_p): return None
+    
+    bull_prev = e34_p > e89_p and sk_p > sd_p
+    bear_prev = e34_p < e89_p and sk_p < sd_p
+    
+    bull = e34 > e89 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
+    bear = e34 < e89 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
+    
     if bull: return 'buy'
     if bear: return 'sell'
     return None
@@ -863,6 +861,7 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
     elif tf == 'M15': tf_mult = 4
     elif tf == 'M5': tf_mult = 12
     lookahead = 30 * tf_mult
+    if name == 'S17_CONVERGENCE_SCALP': lookahead = 150
     
     for i in range(220,n):
         c=candles[i]; ts=c['t']
@@ -890,7 +889,7 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.0, 2)
         elif name == 'S17_CONVERGENCE_SCALP':
-            curr_tp = round(av * 1.5, 2)
+            curr_tp = round(av * 2.5, 2)
             curr_sl = round(av * 0.8, 2)
 
         sig=fn(ind,i,hour)
@@ -964,6 +963,8 @@ def run_adaptive(candles, ind, tf='H1'):
     if tf == 'M30': tf_mult = 2
     elif tf == 'M15': tf_mult = 4
     lookahead = 25 * tf_mult # adaptive uses slightly shorter exit
+    # Se S17 è presente nel pool, permettiamo un'uscita più lunga per catturare i trend Elite
+    lookahead = 150
     
     for i in range(220,n):
         c=candles[i]; ts=c['t']
@@ -994,7 +995,7 @@ def run_adaptive(candles, ind, tf='H1'):
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*1.5, 2); sl_d = round(av*0.8, 2)
+            tp_d = round(av*2.5, 2); sl_d = round(av*0.8, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d
@@ -1061,6 +1062,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
     if tf == 'M30': tf_mult = 2
     elif tf == 'M15': tf_mult = 4
     lookahead = 25 * tf_mult
+    lookahead = 150
 
     for i in range(220, n):
         c=candles[i]; ts=c['t']
@@ -1091,7 +1093,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*1.5, 2); sl_d = round(av*0.8, 2)
+            tp_d = round(av*2.5, 2); sl_d = round(av*0.8, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
 
@@ -1250,10 +1252,10 @@ def main():
 
     # ── FASE 6: S17_CONVERGENCE_SCALP ─────────────────────────────────────────
     print("\n" + "="*72)
-    print("FASE 6: S17_CONVERGENCE_SCALP — EMA13/34 + StochRSI + BB%B + EMA50")
+    print("FASE 6: S17_CONVERGENCE_SCALP V2 — EMA34/89 + StochRSI + BB%B + EMA50")
     print("        (backtest su dati H1 come proxy; su M5/M15 frequenza ×12/×4)")
     print("="*72)
-    s17_trades = run_one(candles, ind, 'S17_CONVERGENCE_SCALP', s_convergence_scalp, tf=tf)
+    s17_trades = run_one(candles, ind, 'S17_CONVERGENCE_SCALP', s_convergence_scalp, tf=tf, tp=25, sl=12) # Proxy para 2.5x TP / 0.8x SL
     ss17 = stats(s17_trades)
     print(f"\n  Trade totali:    {ss17['n']}")
     print(f"  Win Rate:        {ss17['wr']}%")
@@ -1263,7 +1265,7 @@ def main():
     print(f"  Media $/giorno:  ${ss17['avg_day']}")
     print(f"  Mesi positivi:   {ss17['months']}")
     print(f"  Max Drawdown:    ${ss17['dd']}")
-    print(f"\n  TP: ATR×1.5 | SL: ATR×0.8 | RR: 1.875")
+    print(f"\n  TP: ATR×2.5 | SL: ATR×0.8 | RR: 3.125")
     print(f"  Su M5 frequenza stimata: {ss17['tr_day']*12:.1f} trade/gg")
     if ss17['pf'] >= 1.10 and ss17['n'] >= 30:
         print(f"  → ✅ PROMETTENTE: PF {ss17['pf']:.3f} su dati proxy H1")

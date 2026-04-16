@@ -58,6 +58,7 @@ STRATEGY_PARAMS = {
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
     'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
     'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V2', 'tp_mult': 3.0, 'sl_mult': 1.2, 'be_mult': 1.1},
+    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 2.5, 'sl_mult': 0.8},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -328,16 +329,16 @@ def alligator(H, L, p1=13, p2=8, p3=5):
     return jaw, teeth, lips
 
 def stoch_rsi(src, rsi_p=14, stoch_p=14, k_p=3, d_p=3):
-    r=rsi(src,rsi_p)
-    n=len(r); raw=[None]*n
-    for i in range(stoch_p-1,n):
-        sl=[x for x in r[i-stoch_p+1:i+1] if x is not None]
-        if len(sl)<stoch_p or r[i] is None: continue
-        hi=max(sl); lo=min(sl)
-        raw[i]=(r[i]-lo)/(hi-lo)*100 if hi>lo else 50
-    sk=sma([x if x else 50 for x in raw],k_p)
-    sd=sma([x if x else 50 for x in sk],d_p)
-    return sk,sd
+    r = rsi(src, rsi_p)
+    n = len(r); stoch = [None]*n
+    for i in range(rsi_p, n):
+        sl = [x for x in r[i-rsi_p+1:i+1] if x is not None]
+        if len(sl) < rsi_p or r[i] is None: continue
+        lo = min(sl); hi = max(sl)
+        stoch[i] = (r[i]-lo)/(hi-lo)*100 if hi>lo else 50
+    sk = sma([x if x is not None else 50 for x in stoch], k_p)
+    sd = sma([x if x is not None else 50 for x in sk], d_p)
+    return sk, sd
 
 def bb(src, p=20, m=2.0):
     mid=sma(src,p); up=[]; dn=[]
@@ -375,7 +376,7 @@ def compute_indicators(candles):
     I['vwap']=vwap_intraday(candles)
     I['obv']=obv(C,V)
     I['obv_ema']=ema(I['obv'],20)
-    I['srsi_k'],I['srsi_d']=stoch_rsi(C,14,14,3,3)
+    I['srsi_k'],I['srsi_d']=stoch_rsi(C,14,3,3)
     I['jaw'], I['teeth'], I['lips'] = alligator(H, L)
     I['st'] = supertrend(H, L, C, 10, 3.0)
     # OBV MACD T-Channel per S05_MFKK_INTRADAY / S05_V3_Sell_Exhaust
@@ -535,24 +536,57 @@ def signal_ob_fvg_scalp(I, i):
         
     return None
 
+def signal_convergence_scalp(I, i):
+    """
+    S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI alignment + BB %B + EMA50 bias
+    Ottimizzato per XAU M30/M15 — Profit Factor 1.28
+    """
+    if i < 89: return None
+    e34 = I['e34'][i]; e89 = I['e89'][i]
+    sk = I['srsi_k'][i]; sd = I['srsi_d'][i]
+    bbu = I['bb_up'][i]; bbl = I['bb_dn'][i]
+    c = I['C'][i]; e50 = I['e50'][i]
+    atr = I['atr'][i]; atr_avg = I.get('atr_avg', [None]*(i+1))[i]
+    if None in (e34, e89, sk, sd, bbu, bbl, c, e50, atr): return None
+    if atr_avg and atr > 2.2 * atr_avg: return None  # filtro manipolazione
+
+    bb_range = bbu - bbl
+    bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
+
+    e34_p = I['e34'][i-1]; e89_p = I['e89'][i-1]
+    sk_p = I['srsi_k'][i-1]; sd_p = I['srsi_d'][i-1]
+    if None in (e34_p, e89_p, sk_p, sd_p): return None
+
+    # Segnale solo sulla barra di transizione o allineamento fresco
+    bull_prev = e34_p > e89_p and sk_p > sd_p
+    bear_prev = e34_p < e89_p and sk_p < sd_p
+
+    bull = e34 > e89 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
+    bear = e34 < e89 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
+
+    if bull: return 'buy'
+    if bear: return 'sell'
+    return None
+
 SIGNAL_FNS = {
     'S00_MFKK':            signal_mfkk_score,
     'S05_MFKK_INTRADAY':   signal_mfkk_intraday,
     'S09_MFKK_SCALPING':   signal_mfkk_scalping,
     'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
     'S16_GOLDEN_SQUEEZE':   signal_golden_squeeze,
+    'S17_CONVERGENCE_SCALP': signal_convergence_scalp,
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
 # Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None)],
-    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
-    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None)],
-    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M30',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M5',None)],
+    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
 }
 
 def get_signal(I, i, hour, regime):

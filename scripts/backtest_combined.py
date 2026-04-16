@@ -39,13 +39,13 @@ MAX_TRADES_DAY = 3
 
 # ── PLAYBOOK ──────────────────────────────────────────────────────────────────
 FALLBACK_PLAYBOOK = {
-    'TREND_UP':   {'strategy': 'S05_V3_Sell_Exhaust', 'tf': 'H1'},
-    'TREND_DOWN': {'strategy': 'S01_EXHAUSTION',       'tf': 'M15'},
-    'WEAK_UP':    {'strategy': 'S09_MFKK_SCALPING',    'tf': 'H1'},
-    'WEAK_DOWN':  {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
-    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
-    'RANGE':      {'strategy': 'S13_STRUC_BREAK',       'tf': 'H1'},
-    'UNKNOWN':    {'strategy': 'S00_MFKK',              'tf': 'H1'},
+    'TREND_UP':   {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
+    'TREND_DOWN': {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
+    'WEAK_UP':    {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
+    'WEAK_DOWN':  {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
+    'VOLATILE':   {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
+    'RANGE':      {'strategy': 'S05_MFKK_INTRADAY', 'tf': 'H1'},
+    'UNKNOWN':    {'strategy': 'S00_MFKK',           'tf': 'H1'},
 }
 
 def load_playbook(path):
@@ -320,8 +320,8 @@ def s_mfkk_score(I, i):
     cs=min(abs(c or 0)/100*100,100)
     if (c or 0)>=0: bull+=cs*0.10
     else:           bear+=cs*0.10
-    if bull>=90: return 'buy'
-    if bear>=75: return 'sell'
+    if bull>=85: return 'buy'
+    if bear>=70: return 'sell'
     return None
 
 SIGNAL_FNS = {
@@ -396,7 +396,7 @@ def simulate(h1, m15, m30, playbook):
 
     trades = []
     equity_curve = []   # (timestamp, equity)
-    INITIAL_BALANCE = 2000.0
+    INITIAL_BALANCE = 1000.0
     equity = INITIAL_BALANCE
 
     # Inizializza RiskManager (simula lotto medio proporzionato al conto)
@@ -623,6 +623,7 @@ def stats(trades, equity_curve):
         'pf': pf,
         'total_pnl': round(total_pnl, 2),
         'max_dd': round(max_dd, 2),
+        'peak_pnl': round(peak, 2),
         'pnl_1m':  pnl_last(1),   'trades_1m':  trades_last(1),
         'pnl_6m':  pnl_last(6),   'trades_6m':  trades_last(6),
         'pnl_12m': pnl_last(12),  'trades_12m': trades_last(12),
@@ -682,8 +683,8 @@ if not s:
 print(f"\n{'='*60}")
 print(f"RISULTATI SISTEMA COMBINATO (con Compounding e Multi-Trade)")
 print(f"{'='*60}")
-print(f"  Saldo iniziale: $2000.00")
-print(f"  Saldo finale  : ${2000.00 + s['total_pnl']:.2f}")
+print(f"  Saldo iniziale: $1000.00")
+print(f"  Saldo finale  : ${1000.00 + s['total_pnl']:.2f}")
 print(f"  Trade totali  : {s['total_trades']} ({s['wins']} TP / {s['losses']} SL)")
 print(f"  Win Rate      : {s['wr']}%")
 print(f"  Profit Factor : {s['pf']}")
@@ -704,7 +705,8 @@ for reg, rv in sorted(s['by_regime'].items(), key=lambda x: -x[1]['pnl']):
     print(f"  {reg:12s}  {rv['n']:4d} trade  P&L ${rv['pnl']:.2f}")
 
 # Genera snippet per strategy.js
-max_dd_pct = round(s['max_dd'] / max(abs(s['pnl_24m']), 1) * 100, 1)
+peak_equity = 1000.0 + s.get('peak_pnl', s['total_pnl'])
+max_dd_pct = round(s['max_dd'] / peak_equity * 100, 1)
 print(f"\n{'='*60}")
 print("SNIPPET per strategy.js — sostituisci BOT_STATS:")
 print(f"  const BOT_STATS = {{")

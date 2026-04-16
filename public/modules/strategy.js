@@ -1260,8 +1260,25 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       }).join('')}
 </div>`;
 
-  // ── AI GOLD BOT — pannello principale
-  const activeList = SE.regimePriority[seRegime] || [];
+  // ── MFKK AI GOLD BOT — pannello principale
+  // DD-gated multi-strategy activation: aggiunge strategie finché DD portfolio < budget
+  const DD_BUDGET = 30.0;      // max portfolio DD% tollerata
+  const DIV_FACTOR = 0.80;     // 20% diversification discount per strategia aggiuntiva
+  const regimeAll = SE.regimePriority[seRegime] || ['S00_MFKK'];
+  const activeList = [];
+  let portfolioDdPct = 0;
+  for (let _k = 0; _k < regimeAll.length; _k++) {
+    const _sid = regimeAll[_k];
+    const _st = SE.strategies[_sid]?.stats || {};
+    const _dd = parseFloat(String(_st.maxdd_pct || '0').replace('%','')) || 0;
+    const _marginal = _k === 0 ? _dd : _dd * DIV_FACTOR;
+    if (portfolioDdPct + _marginal <= DD_BUDGET) {
+      portfolioDdPct += _marginal;
+      activeList.push(_sid);
+    }
+  }
+  portfolioDdPct = Math.round(portfolioDdPct * 10) / 10;
+  const ddColor = portfolioDdPct < 20 ? 'var(--green)' : portfolioDdPct < 25 ? '#ffd700' : '#ff4757';
   const activeSname = activeList[0] || 'S00_MFKK';
   const activeSt    = SE.strategies[activeSname] || {};
   const activeTF    = (() => {
@@ -1270,7 +1287,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   })();
   // Stats aggregate sistema (somma backtest regime-aware 24m)
   // Aggiornato da backtest_combined.py — simulazione PARALLELA con RiskManager compounding
-  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'12.5%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:6 };
+  const BOT_STATS = { pnl_1m:1660.68, pnl_6m:12969.32, pnl_12m:15729.14, pnl_24m:22042.58, maxdd:2746.8, maxdd_pct:'11.9%', trades_12m:123, pf:2.068, wr:'42.3%', n_strat:6 };
   const balStr  = acc.balance  ? `€${acc.balance.toFixed(0)}`  : '—';
   const eqStr   = acc.equity   ? `€${acc.equity.toFixed(0)}`   : '—';
   const pnlOggiStr = (bs.pnl_today||0)>=0 ? `+€${(bs.pnl_today||0).toFixed(2)}` : `€${(bs.pnl_today||0).toFixed(2)}`;
@@ -1289,7 +1306,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:20px">🤖</span>
         <div>
-          <div style="font-size:14px;font-weight:900;color:#c8a96e;letter-spacing:.06em">AI GOLD BOT</div>
+          <div style="font-size:14px;font-weight:900;color:#c8a96e;letter-spacing:.06em">MFKK AI GOLD BOT</div>
           <div style="font-size:8px;color:var(--dim);letter-spacing:.04em">XAU/USD · Sistema Multi-Strategia</div>
         </div>
       </div>
@@ -1299,14 +1316,25 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       </div>
     </div>
 
-    <!-- regime → strategia attiva -->
-    <div style="background:#ffffff08;border:1px solid ${rm.col}35;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">REGIME</div>
-      <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
-      <div style="color:var(--dim);font-size:10px">→</div>
-      <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIA</div>
-      <div style="font-size:11px;font-weight:800;color:#c8a96e">${activeSt.label||activeSname}</div>
-      <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
+    <!-- regime → strategie attive (multi-strategy + DD gauge) -->
+    <div style="background:#ffffff08;border:1px solid ${rm.col}35;border-radius:8px;padding:8px 10px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">REGIME</div>
+        <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
+        <div style="color:var(--dim);font-size:10px">→</div>
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIE ATTIVE</div>
+        <div style="font-size:10px;font-weight:800;color:#c8a96e">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
+        <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:8px">
+        <span style="color:var(--dim)">Portfolio DD:</span>
+        <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div style="width:${Math.min(portfolioDdPct/DD_BUDGET*100,100).toFixed(0)}%;height:100%;background:${ddColor};border-radius:2px"></div>
+        </div>
+        <span style="font-weight:700;color:${ddColor}">${portfolioDdPct}%</span>
+        <span style="color:var(--dim)">/ ${DD_BUDGET}% budget</span>
+        <span style="color:${ddColor};font-weight:700">${portfolioDdPct<=DD_BUDGET?'✓ OK':'⚠ OVER'}</span>
+      </div>
     </div>
 
     <!-- stats aggregate -->
@@ -1341,9 +1369,9 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
-      const isPrimary   = activeList[0] === id;
-      const isSecondary = !isPrimary && activeList.includes(id);
-      const isActive    = isPrimary || isSecondary;
+      const isActive    = activeList.includes(id);
+      const isPrimary   = isActive;   // tutte le attive ottengono badge ✓ ATTIVA
+      const isSecondary = false;      // rimosso: non più gerarchia primaria/secondaria
       const st = s.stats || {};
       const pnl1col   = (st.pnl_1m||0)>0  ?'var(--green)':'var(--red)';
       const pnl6col   = (st.pnl_6m||0)>0  ?'var(--green)':'var(--red)';
@@ -1366,8 +1394,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       return `
       <div style="background:var(--bg2); border:1px solid ${isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
-        ${isPrimary  ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
-        ${isSecondary? `<div style="position:absolute;top:0;right:0;background:${rm.col}30;border:1px solid ${rm.col}50;color:${rm.col};font-size:7px;font-weight:700;padding:2px 6px;border-bottom-left-radius:6px">▸ SECONDARY</div>` : ''}
+        ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:7px;font-size:10px">

@@ -364,11 +364,7 @@ def detect_regime(I, i):
 
 # ── STRATEGY SIGNALS (playbook regime-aware) ─────────────────────────────────
 def signal_mfkk_score(I, i):
-    """
-    S00_MFKK — MFKK Score ponderato (identico a strategy.js)
-    Score = 80% ADX + 10% MACD + 10% CCI
-    BUY se score_bull >= 90 | SELL se score_bear >= 75
-    """
+    """S00_MFKK — BUY se bull>=65 | SELL se bear>=65. Soglia simmetrica 65/65. ADX 80% + MACD 10% + CCI 10%."""
     if i < 50: return None
     a=I['adx'][i]; dp=I['dip'][i]; dm=I['dim'][i]
     m=I['ml'][i]; c=I['cci'][i] if I['cci'][i] is not None else 0
@@ -387,8 +383,8 @@ def signal_mfkk_score(I, i):
     if c >= 0: bull += cs*0.10
     else:      bear += cs*0.10
 
-    if bull >= 80: return 'buy'
-    if bear >= 65: return 'sell'
+    if bull >= 65: return 'buy'   # threshold simmetrico su scala bull
+    if bear >= 65: return 'sell'  # threshold simmetrico su scala bear
     return None
 
 def signal_mfkk_intraday(I, i):

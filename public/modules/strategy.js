@@ -1263,7 +1263,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
   // ── MFKK AI GOLD BOT — pannello principale
   // Stats aggregate sistema (da backtest_combined.py — capitale $1000, RM attivo, max 2 trade, AI Score dinamico, lot=0.05, config A: ADX25+RSI+2)
-  const BOT_STATS = { pnl_1m:2639.47, pnl_6m:7786.13, pnl_12m:7589.96, pnl_24m:9794.58, maxdd:1324.83, maxdd_pct:'11.8%', trades_12m:386, pf:1.376, wr:'36.4%', n_strat:7 };
+  const BOT_STATS = { pnl_1m:2266.03, pnl_6m:6782.11, pnl_12m:6780.16, pnl_24m:9012.97, maxdd:1427.68, maxdd_pct:'13.2%', trades_12m:424, pf:1.334, wr:'36.0%', n_strat:7 };
 
   // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in backtest_combined.py e mt5-bot.py)
   const PLAYBOOK_UI = {
@@ -1382,7 +1382,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const pnl12col  = (st.pnl_12m||0)>0 ?'var(--green)':'var(--red)';
       const pnl24col  = (st.pnl_24m||0)>0 ?'var(--green)':'var(--red)';
       const inds = id==='S00_MFKK'
-        ? 'ADX 80% + MACD 10% + CCI(50) 10% · BUY≥80 · SELL≥65 · WR 30% · 12.5 trade/mese · P&L +$885/24m · attiva tutti i regimi'
+        ? 'ADX 80% + MACD 10% + CCI(50) 10% · BUY bull≥65 · SELL bear≥65 · WR 30% · 16 trade/mese · P&L +$321/24m · attiva tutti i regimi'
         : id==='S00_MFKK_HWR'
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'

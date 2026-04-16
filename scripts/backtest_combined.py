@@ -320,6 +320,7 @@ def s_struc_break(I, i):
     return None
 
 def s_mfkk_score(I, i):
+    """Score simmetrico: BUY quando bull>=65 / SELL quando bear>=65 (stessa soglia, scale separate)."""
     if i<50: return None
     a=I['adx'][i]; dp=I['dip'][i]; dm=I['dim'][i]
     m=I['macd'][i]; c=I['cci'][i]
@@ -334,8 +335,8 @@ def s_mfkk_score(I, i):
     cs=min(abs(c or 0)/100*100,100)
     if (c or 0)>=0: bull+=cs*0.10
     else:           bear+=cs*0.10
-    if bull>=80: return 'buy'
-    if bear>=65: return 'sell'
+    if bull >= 65: return 'buy'   # threshold simmetrico su scala bull
+    if bear >= 65: return 'sell'  # threshold simmetrico su scala bear
     return None
 
 # ── AI SCORE SIMULATOR ───────────────────────────────────────────────────────

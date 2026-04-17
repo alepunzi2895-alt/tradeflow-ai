@@ -416,11 +416,15 @@ function calcMfkk(){
         cciCol='var(--green)';
         cciHint='ZONA SELL ('+cciVal.toFixed(0)+') — Overbought con momentum in inversione';
       }
-      else if(cciVal<=25){cciScore=65;cciCol='var(--green)';cciHint='OS_DEEP ('+cciVal.toFixed(0)+') — downtrend forte, SELL momentum (WR 48% storico)';}
-      else if(cciVal<=35){cciScore=58;cciCol='var(--green)';cciHint='OS_EXIT ('+cciVal.toFixed(0)+') — buon momentum SELL in trend ribassista';}
-      else if(cciVal<=50){cciScore=50;cciCol='var(--yellow)';cciHint='Zona centrale-bassa ('+cciVal.toFixed(0)+') — SELL neutro, peso su ADX';}
-      else if(cciVal<=65){cciScore=40;cciCol='var(--yellow)';cciHint='Zona alta ('+cciVal.toFixed(0)+') — SELL moderato, servono ADX+MACD';}
-      else{cciScore=25;cciCol='var(--red)';cciHint='OB_DEEP ('+cciVal.toFixed(0)+') — uptrend dominante, evita SELL';}
+      else if(cciVal<=35){
+        // ZONA VERDE (Oversold) -> Pessimo per SELL per l'utente (supporto)
+        cciScore=15;
+        cciCol='var(--red)';
+        cciHint='OS_DEEP ('+cciVal.toFixed(0)+') — ZONA BUY (Oversold), evita SELL';
+      }
+      else if(cciVal<=50){cciScore=40;cciCol='var(--yellow)';cciHint='Zona centrale-bassa ('+cciVal.toFixed(0)+') — SELL neutro, pericolo rimbalzo';}
+      else if(cciVal<=65){cciScore=50;cciCol='var(--yellow)';cciHint='Zona alta ('+cciVal.toFixed(0)+') — momentum SELL debole';}
+      else{cciScore=20;cciCol='var(--red)';cciHint='OB_DEEP ('+cciVal.toFixed(0)+') — trend rialzista, evita SELL';}
     }
     const pct=Math.max(0,Math.min(100,cciScore));
     const bar=document.getElementById('mfkk-cci-bar');
@@ -452,13 +456,13 @@ function calcMfkk(){
       else{macdScore=20;macdCol='var(--red)';macdHint='ROSSO>BLU '+diff.toFixed(2)+' — trend ribassista forte';}
     } else {
       if(crossStatus === 'cross_sell'){macdScore=100; macdCol='var(--green)'; macdHint='BOOM! Incrocio SELL confermato (H1)';}
+      else if(crossStatus === 'cross_buy'){macdScore=5; macdCol='var(--red)'; macdHint='ALT! Incrocio BUY in corso — no SELL';}
       else if(diff<-0.5){macdScore=Math.round(75+str*20)+histBonus;macdCol='var(--green)';macdHint='ROSSO>BLU '+diff.toFixed(2)+(hasHist?' Hist:'+macdHist.toFixed(2):'')+(Math.abs(diff)>1?' FORTE':'');}
       else if(diff<0){macdScore=70+histBonus;macdCol='var(--yellow)';macdHint='Appena incrociato SELL'+(hasHist?' · Hist:'+macdHist.toFixed(2):'');}
-      else if(diff<0.2){macdScore=60;macdCol='var(--yellow)';macdHint='Prossimo cross SELL — imminente';}
-      else if(diff<1){macdScore=40;macdCol='var(--yellow)';macdHint='Prossimo cross SELL — attendi';}
-      // Backtest finding: MACD bullish forte + SELL + ADX DI- forte = esaurimento 82-88% WR
-      else if(diff<3){macdScore=50;macdCol='var(--yellow)';macdHint='MACD bullish ('+diff.toFixed(2)+') — ESAURIMENTO: se ADX≥35+DI-, WR 82%+ storico';}
-      else{macdScore=52;macdCol='var(--yellow)';macdHint='MACD super-esteso rialzista ('+diff.toFixed(2)+') — ESAURIMENTO MASSIMO';}
+      else if(diff<0.5){macdScore=45;macdCol='var(--yellow)';macdHint='Prossimo cross SELL — attendi';}
+      // Backtest: MACD bullish forte + SELL + ADX DI- forte = esaurimento 82-88% WR
+      else if(diff<3){macdScore=50;macdCol='var(--yellow)';macdHint='MACD bullish ('+diff.toFixed(2)+') — possibili inversioni, attendi ADX';}
+      else{macdScore=20;macdCol='var(--red)';macdHint='BLU>ROSSO '+diff.toFixed(2)+' — trend rialzista forte';}
     }
     const pct=Math.max(0,Math.min(100,macdScore));
     const bar=document.getElementById('mfkk-macd-bar');

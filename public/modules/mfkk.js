@@ -539,22 +539,13 @@ function calcMfkk(){
   const dirLabel=isBuy?'BUY':'SELL';
   let bias='', desc='';
   
-  // Thresholds calibrati 2 anni (BUY>=90, SELL>=68). 
-  // BUGFIX: Abbassiamo la soglia BUY a 82 se abbiamo Exhaustion o MACD Cross, per catturare i reversal ideali.
-  const isCrossover = dashContext.indicators?.macd?.cross?.includes('cross');
-  const BUY_THR = (isExhaustion || isCrossover) ? 82 : 90;
-  const SELL_THR = 68;
-  const isValidEntry = isBuy ? (score >= BUY_THR) : (score >= SELL_THR);
-
   // Rilevamento pattern esaurimento: ADX forte con MACD contro-trend (backtest: 82-88% WR sell)
   const macdDiff = hasMacd ? (macdFast - macdSlow) : 0;
   const isExhaustionSell = !isBuy && hasAdx && hasMacd && adxScore >= 75 && macdDiff > 1.0;
   const isExhaustionBuy  = isBuy && hasAdx && hasMacd && adxScore >= 75 && macdDiff < -1.0;
   const isExhaustion = isExhaustionSell || isExhaustionBuy;
 
-  // HIGH-WR SIGNAL: hard filter rules da optimize-highwr.py (backtest 730gg H1 XAU)
-  // ADX>=35 + DI spread>=20 + MACD diff>=1.0 (bullish MACD = esaurimento SELL) + CCI not OS + London/NY
-  // Risultato: 95% WR (20 trade), 92.9% WR (28 trade) — SELL ONLY (BUY non affidabile)
+  // HIGH-WR SIGNAL: hard filter rules da optimize-highwr.py
   const nowHour = new Date().getUTCHours();
   const isLondonNY = nowHour >= 7 && nowHour < 17;
   const diSpreadAbs = hasAdx ? Math.abs(diPlus - diMinus) : 0;
@@ -562,10 +553,17 @@ function calcMfkk(){
     && adxVal >= 35
     && diMinus > diPlus       // DI- dominante (bearish)
     && diSpreadAbs >= 20      // spread ampio = trend forte e chiaro
-    && macdDiff >= 1.0        // MACD bullish esteso = esaurimento del rialzo (pattern inversione)
-    && cciVal >= 25           // CCI non in OS (ob_or_neutral)
-    && isLondonNY;            // sessione London/NY (7-17 UTC)
-  const isHighWrSignal = isHighWrSell; // BUY WR ~46% — non abbastanza per HIGH-WR flag
+    && macdDiff >= 1.0        // MACD bullish esteso = esaurimento del rialzo
+    && cciVal >= 25           // CCI non in OS
+    && isLondonNY;
+  const isHighWrSignal = isHighWrSell;
+
+  // Thresholds calibrati 2 anni (BUY>=90, SELL>=68). 
+  // BUGFIX: Abbassiamo la soglia BUY a 82 se abbiamo Exhaustion o MACD Cross, per catturare i reversal ideali.
+  const isCrossover = dashContext.indicators?.macd?.cross?.includes('cross');
+  const BUY_THR = (isExhaustion || isCrossover) ? 82 : 90;
+  const SELL_THR = 68;
+  const isValidEntry = isBuy ? (score >= BUY_THR) : (score >= SELL_THR);
 
   if(isHighWrSignal){
     bias='💎 HIGH-WR SELL';

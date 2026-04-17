@@ -814,35 +814,53 @@ def _deal_to_dict(d):
         'volume':      d.volume,
     }
 
-def get_recent_trades_data(n=200):
+def get_recent_trades_data(n=200, retries=3, retry_delay=2.0):
     """
-    Legge gli ultimi N deal chiusi da MT5 (solo bot: filtro MAGIC).
-    Fallback su mt5-trades.json se MT5 non disponibile.
+    Legge gli ultimi N deal chiusi da MT5.
+
+    Mostra TUTTI i deal chiusi dell'account (inclusi manuali) — il filtro
+    magic è applicato solo nel PerformanceTracker per il self-learning.
+    Retry con delay per gestire la race condition MT5: il deal appare in
+    history_deals_get 1-5s dopo che la posizione sparisce da positions_get.
     """
-    try:
-        now_ts  = int(time.time())
-        from_ts = now_ts - 365 * 86400  # ultimi 12 mesi
-        to_ts   = now_ts + 3600
-        deals = mt5.history_deals_get(from_ts, to_ts)
-        if deals is not None and len(deals) > 0:
+    for attempt in range(retries):
+        try:
+            now_ts  = int(time.time())
+            from_ts = now_ts - 365 * 86400   # ultimi 12 mesi
+            to_ts   = now_ts + 3600
+
+            deals = mt5.history_deals_get(from_ts, to_ts)
+
+            # Diagnosi MT5: logga l'errore se deals è None
+            if deals is None:
+                err = mt5.last_error()
+                log.warning(f"📋 history_deals_get → None (attempt {attempt+1}/{retries}) | MT5 error: {err}")
+                if attempt < retries - 1:
+                    time.sleep(retry_delay)
+                continue
+
+            total_raw = len(deals)
             result = []
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
-                # Solo deal del bot (magic) e solo trade buy/sell chiusi
-                if d.magic != MAGIC:
+                if d.type not in (0, 1):      # solo BUY/SELL deal
                     continue
-                if d.type not in (0, 1):
-                    continue
-                if d.entry == 0:   # DEAL_ENTRY_IN → apertura, non ci interessa
+                if d.entry == 0:              # DEAL_ENTRY_IN → apertura, skip
                     continue
                 result.append(_deal_to_dict(d))
                 if len(result) >= n:
                     break
-            log.debug(f"📋 Trade chiusi (magic={MAGIC}): {len(result)}")
-            if result:
-                return result
-    except Exception as e:
-        log.warning(f"MT5 history_deals errore: {e}")
-    # Fallback su file locale
+
+            log.debug(f"📋 MT5 history: {total_raw} deal raw → {len(result)} chiusi mostrati")
+            # Ritorna sempre da MT5 anche se lista vuota (non cade nel fallback file)
+            return result
+
+        except Exception as e:
+            log.warning(f"MT5 history_deals errore (attempt {attempt+1}/{retries}): {e}")
+            if attempt < retries - 1:
+                time.sleep(retry_delay)
+
+    # Fallback su file locale solo se MT5 ha dato eccezione tutti i tentativi
+    log.warning("📋 Fallback su mt5-trades.json (MT5 non disponibile)")
     fname = 'mt5-trades.json'
     if not os.path.exists(fname):
         return []
@@ -1093,9 +1111,12 @@ def run():
                         # position_id è p['position_id'] = pos.identifier in MT5
                         _tracked_positions[ticket] = p.get('position_id') or ticket
 
-                # Se ci sono chiusure rilevate, forza sync immediato al prossimo ciclo
+                # Se ci sono chiusure rilevate: attendi 3s (race condition MT5),
+                # poi forza sync immediato così il deal è già in history
                 if closed_this_cycle:
-                    last_sync_time = 0  # azzera timer → sync immediato nel prossimo giro
+                    time.sleep(3)
+                    trades_data = get_recent_trades_data(200)  # re-fetch dopo il delay
+                    last_sync_time = 0  # forza anche il prossimo sync a breve
 
                 trades_data = get_recent_trades_data(200)
                 today_str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()

@@ -256,12 +256,16 @@ STRATEGIA PRE-NEWS: riduci size o evita nuove entries 30 min prima di eventi ad 
 Profilo: ${P.name} | Rischio: ${P.risk}%/trade | Max DD: ${P.dd}% | TP1: ${P.tp1}R | TP2: ${P.tp2}R | Errori noti: ${e}${mktCtx}${confCtx}${mfkkCtx}${memCtx}${newsCtx}${k}${news}
 
 REGOLE FONDAMENTALI:
-1. ${active}/USD vale ATTUALMENTE $${dashContext.prices?.[active]?.price||'~4400'} — non $2000, non $1900. Usa SEMPRE il prezzo live sopra.
-2. Per screenshot MT5: leggi SOLO trade reali (buy/sell su strumenti finanziari). IGNORA: Balance, Credit, Deposit, Withdrawal, Bonus, EXP, SC-CC.
-3. Per TradingView: struttura, setup, manipulation score 1-10 (1=pulito, 10=manipolato), peso trade.
+1. PREZZO REALE: ${active}/USD vale ATTUALMENTE $${dashContext.prices?.[active]?.price||'~4400'}. Inizia ogni analisi citando il prezzo live della Dashboard. La verità assoluta è il prezzo live, non quello che vedi negli screenshot (che possono essere vecchi).
+2. ANALISI STORICO (MT4/MT5): Quando analizzi uno screenshot dello storico (Cronologia):
+   - Leggi SOLO trade reali (Buy/Sell).
+   - IGNORA CATEGORICAMENTE ogni riga con scritto: Deposit, Withdrawal, Balance, Credit, Bonus, SC-CC, Transfer, Interest.
+   - NON calcolare i depositi (es. +1000.00 Deposit) come profitto. Sono solo entrate di capitale. Il P/L deve basarsi solo sui trade chiusi.
+3. Per TradingView: struttura, setup, manipulation score 1-10 (1=pulito, 10=manipolato).
 4. Integra SEMPRE il Confluence Score attuale nel giudizio finale.
 5. Se ci sono news importanti imminenti, segnalalo chiaramente.
-6. Usa ### per sezioni.`;
+6. Usa ### per sezioni.
+`;
 }
 
 // ── MARKDOWN ───────────────────────────────────────────

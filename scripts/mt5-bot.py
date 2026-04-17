@@ -739,7 +739,7 @@ def get_recent_trades_data(n=30):
                 result.append({
                     'ticket':    d.ticket,
                     'time':      datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
-                    'direction': 'buy' if d.type == 0 else 'sell',
+                    'direction': 'sell' if d.type == 0 else 'buy',  # exit deal type è opposto alla posizione originale
                     'strategy':  d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
                     'price':     round(d.price, 2),
                     'profit':    round(d.profit, 2),
@@ -922,13 +922,16 @@ def run():
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(200)
+                today_str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+                pnl_today_real = round(sum(t['profit'] for t in trades_data if t['time'][:10] == today_str), 2)
+                trades_today_real = sum(1 for t in trades_data if t['time'][:10] == today_str)
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
                     'symbol': SYMBOL,
                     'lot': LOT_SIZE,
-                    'trades_today': state.trades_today,
-                    'pnl_today': round(state.pnl_today, 2),
+                    'trades_today': trades_today_real,
+                    'pnl_today': pnl_today_real,
                     'regime': current_regime,
                     'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
                 }

@@ -22,7 +22,7 @@
 | S00_MFKK | 1597 | 38.3% | 1.033 | +$388 | M30 (H4: PF 1.319) | Fallback; migliore su H4 |
 | S09_MFKK_SCALPING | 267 | 37.8% | 1.637 | +$703 | **M30** | Molto meglio su M30 che M5 |
 | S10_OB_FVG_SCALP | 73 | 42.5% | 1.796 | +$533 | M30 | Fragile (73 trade) |
-| S17_CONVERGENCE_SCALP | 641 | 25.7% | 1.107 | +$291 | M30 (H4: PF 1.710) | Migliore su H4 |
+| S17_CONVERGENCE_SCALP | 94 | 41.5% | 1.710 | +$741 | **H4** | Migrato a H4 (da M30 PF 1.107) |
 | S05_MFKK_INTRADAY | 301 | 36.9% | 1.124 | +$221 | **H1** | PF 1.361 su H1 vs 1.124 su M30 |
 
 ### Sistema adattivo per TF (senza RM)
@@ -46,7 +46,7 @@
 | S09_MFKK_SCALPING | **M30** | **1.637** | 37.8% | Scoperta: M30 >> M5 (PF 1.143) |
 | S10_OB_FVG_SCALP | M30 | 1.796 | 42.5% | — |
 | S05_MFKK_INTRADAY | **H1** | **1.361** | 41.5% | Confermato: H1 >> M30 (PF 1.124) |
-| S17_CONVERGENCE_SCALP | M30 | 1.107 | 25.7% | H4 PF 1.710 WR 41.5% — upgrade futuro |
+| S17_CONVERGENCE_SCALP | **H4** | **1.710** | **41.5%** | Migrato da M30 (1.107) a H4 (1.710) |
 
 ## Strategie Attive nel Bot
 
@@ -57,7 +57,7 @@
 | `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 1.64 | 37.8% |
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 1.80 | 42.5% |
 | `S16_GOLDEN_SQUEEZE` | Elite Golden Squeeze | ATR×3.0 | ATR×1.2 | TREND/WEAK | M30 | 1.29 | 31.7% |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.5 | ATR×0.8 | VOLATILE/TREND | M30 | 1.11 | 25.7% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.5 | ATR×0.8 | VOLATILE/TREND | **H4** | **1.71** | **41.5%** |
 
 ## Strategy Selector Agent (`strategy_selector.py`)
 

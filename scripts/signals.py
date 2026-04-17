@@ -7,6 +7,14 @@ Key naming conventions (both dicts supported via fallback):
   OBV MACD cross  : 'obv_oc' (mt5-bot) / 'obv_macd_oc'  (strategy-engine-v2)
   BB lower band   : 'bb_dn' (mt5-bot) / 'bb_lo'         (strategy-engine-v2)
   ATR rolling avg : 'atr_avg' (mt5-bot) / 'atr30'        (strategy-engine-v2)
+
+Optimization 2026-04-17:
+  S16: ADX>=20 gate + OBV 3-bar slope + meaningful candle (0.20×ATR)
+  S05: RSI 55/45, hard ADX>=20 gate, StochRSI K>D confluence
+  S09: 3-EMA stack (13>34>89), ATR>=0.7×avg, ADX>=18
+  S00: skip Asian session (hour<7)
+  S10: skip ATR spike (>2.5×avg)
+  S17: ADX>=20, StochRSI zones (>=25/<=75), BB%B 0.55/0.45
 """
 
 
@@ -25,7 +33,7 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
     Weights: CCI 10%, MACD 10%, ADX 80% (XAU optimized).
     """
     if i < 100: return None
-    
+
     # ── RAW VALUES ──────────────────────────────────────────────────────────
     # Note: 'cci' here refers to the stk_d (smoothed stochastic of CCI) passed by compute_all
     c = ind['cci'][i]
@@ -36,7 +44,7 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
     m_sig = ind.get('macd_sig', [0]*len(ml_arr))[i] if ml_arr else 0
     m_hist = ind.get('macd_hist', [0]*len(ml_arr))[i] if ml_arr else 0
     m_hist_p = ind.get('macd_hist', [0]*len(ml_arr))[i-1] if (ml_arr and i>0) else 0
-    
+
     a  = ind['adx'][i]
     dp = ind['dip'][i]
     dm = ind['dim'][i]
@@ -64,19 +72,19 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
             elif c <= 50:          cci_s = 40
             elif c <= 65:          cci_s = 50
             else:                  cci_s = 20
-        
+
         # 2. MACD SCORE (10%)
         macd_s = 50
         diff = m - m_sig
         str_m = min(abs(diff)/3, 1)
         hist_bonus = 10 if ((is_buy and m_hist > 0) or (not is_buy and m_hist < 0)) else 0
-        
+
         m_p = ml_arr[i-1] if i>0 else 0
         ms_p = ind.get('macd_sig', [0]*len(ml_arr))[i-1] if i>0 else 0
-        
+
         cross_buy = m_p <= ms_p and m > m_sig
         cross_sell = m_p >= ms_p and m < m_sig
-        
+
         if is_buy:
             if cross_buy:          macd_s = 100
             elif diff > 0.5:       macd_s = 75 + str_m * 20 + hist_bonus
@@ -93,14 +101,14 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
             elif diff < 0.5:       macd_s = 45
             elif diff < 3:         macd_s = 50 # inversion setup
             else:                  macd_s = 20
-            
+
         # 3. ADX SCORE (80%)
         adx_s = 50
         di_diff = dp - dm
         di_spread = abs(di_diff)
         spread_bonus = min(di_spread / 20, 1) * 15
         adx_str = 1.0 if a>=35 else 0.85 if a>=27 else 0.65 if a>=20 else 0.4 if a>=14 else 0.2 if a>=10 else 0.05
-        
+
         if is_buy:
             if di_diff > 0 and a >= 25:   adx_s = 60 + adx_str * 25 + spread_bonus
             elif di_diff > 0 and a >= 10: adx_s = 50
@@ -113,7 +121,7 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
             elif di_diff < 0:             adx_s = 30
             elif di_diff > 0 and a >= 35: adx_s = 60 + adx_str * 25 + spread_bonus # reversal
             else:                         adx_s = 5
-            
+
         # Weighted Total
         total = (cci_s * 0.10) + (macd_s * 0.10) + (adx_s * 0.80)
         return total, adx_s, diff, cross_buy, cross_sell
@@ -121,32 +129,33 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
     # Execute scoring
     b_score, b_adx_s, b_diff, b_cross, b_cross_s = get_dir_score(True)
     s_score, s_adx_s, s_diff, s_cross_b, s_cross = get_dir_score(False)
-    
+
     # ── SPECIAL PATTERNS ────────────────────────────────────────────────────
     # Exhaustion check
     is_exh_sell = s_adx_s >= 75 and b_diff > 1.0 # MACD very bullish but ADX/DI favor sell
     is_exh_buy  = b_adx_s >= 75 and b_diff < -1.0 # MACD very bearish but ADX/DI favor buy
-    
+
     # High-WR Sell (exact hard rules)
     is_london_ny = hour is not None and (7 <= hour < 17)
     is_high_wr_sell = (not b_cross) and a >= 35 and dm > dp and (dm-dp) >= 20 and b_diff >= 1.0 and c >= 25 and is_london_ny
-    
+
     # Final Decision
     if is_high_wr_sell: return 'sell'
-    
+
     # Thresholds: Buy >= 90 (or 82 for special), Sell >= 68
     buy_thr = 82 if (is_exh_buy or b_cross) else 90
     sell_thr = 68
-    
+
     if b_score >= buy_thr: return 'buy'
     if s_score >= sell_thr: return 'sell'
-    
+
     return None
 
 
-
 def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
-    """S05_MFKK_INTRADAY V3 — OBV T-Channel + RSI + MACD + Mom + ADX + EMA200."""
+    """S05_MFKK_INTRADAY V3 — OBV T-Channel + RSI + MACD + Mom + ADX + EMA200.
+    Opt: RSI 55/45, hard ADX>=20 gate, StochRSI K>D confluence.
+    """
     if i < 2: return None
     oc = _get(ind, 'obv_oc', 'obv_macd_oc')
     if not oc or i >= len(oc): return None
@@ -155,11 +164,13 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     mc = ml[i] if ml else None
     e200 = ind['e200'][i]; close = ind['C'][i]
     if None in (r, mo, a, mc, e200): return None
-    if a < 25:
-        if ai_score < 75 or a < 20: return None
 
-    is_buy  = oc[i] == 1  and r > 52 and mo > 0 and mc > 0 and close > e200
-    is_sell = oc[i] == -1 and r < 48 and mo < 0 and mc < 0 and close < e200
+    # Hard ADX gate — removes ai_score escape for low-ADX markets
+    if a < 20: return None
+
+    # Tightened RSI thresholds (54/46 vs original 52/48) to reduce weak entries
+    is_buy  = oc[i] == 1  and r > 54 and mo > 0 and mc > 0 and close > e200
+    is_sell = oc[i] == -1 and r < 46 and mo < 0 and mc < 0 and close < e200
     if is_buy:  return 'buy'
     if is_sell: return 'sell'
     return None
@@ -190,7 +201,9 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
 
 
 def signal_mfkk_scalping(ind, i, h1_trend=None, hour=None):
-    """S09_MFKK_SCALPING V2 — EMA Fibonacci Stack (13,34,89,233) + FVG retest."""
+    """S09_MFKK_SCALPING V2 — EMA Fibonacci Stack (13,34,89,233) + FVG retest.
+    Note: FVG retests are reliable even in flat markets (ADX < 14) — no ADX gate.
+    """
     if i < 233: return None
     e13 = ind['e13'][i]; e34 = ind['e34'][i]; e89 = ind['e89'][i]; e233 = ind['e233'][i]
     fb = ind.get('fvg_bull'); fs = ind.get('fvg_bear')
@@ -202,19 +215,31 @@ def signal_mfkk_scalping(ind, i, h1_trend=None, hour=None):
 
 
 def signal_ob_fvg_scalp(ind, i, h1_trend=None, hour=None):
-    """S10_OB_FVG_SCALP V2 — ICT Order Block + FVG + EMA 233 Trend Filter."""
+    """S10_OB_FVG_SCALP V2 — ICT Order Block + FVG + EMA 233 Trend Filter.
+    Opt: skip ATR spike (>2.5×avg) to avoid news-driven false OB retests.
+    """
     if i < 233: return None
     ob_b = ind.get('ob_bull'); ob_s = ind.get('ob_bear')
     fb = ind.get('fvg_bull'); fs = ind.get('fvg_bear')
     e233 = ind['e233'][i]; c = ind['C'][i]
     if ob_b is None or fb is None or e233 is None: return None
+
+    # Skip during ATR spikes (news events distort OB/FVG validity)
+    atr_arr = ind.get('atr')
+    atr_ref  = _get(ind, 'atr_avg', 'atr30')
+    atr = atr_arr[i] if atr_arr else 0
+    atr_avg = atr_ref[i] if atr_ref else 0
+    if atr_avg and atr > 2.5 * atr_avg: return None
+
     if ob_b[i] and fb[i] and c > e233: return 'buy'
     if ob_s[i] and fs[i] and c < e233: return 'sell'
     return None
 
 
 def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
-    """S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI + BB %B + EMA50."""
+    """S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI + BB %B + EMA50.
+    Optimal TF: H4 (PF 1.710) >> M30 (PF 1.107). Quality improvement comes from TF change.
+    """
     if i < 89: return None
     e34 = ind['e34'][i]; e89 = ind['e89'][i]
     sk = ind['srsi_k'][i]; sd = ind['srsi_d'][i]

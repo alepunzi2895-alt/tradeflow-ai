@@ -244,7 +244,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">STORICO RECENTE (REAL TRADES)</div>
   ${history.length===0
     ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade storico trovato</div>`
-    : history.slice(-5).reverse().map(t=>{
+    : history.slice(0,5).map(t=>{
         const dc=t.direction==='buy'?'#00e676':'#ff4757';
         return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:4px 0;border-bottom:1px solid var(--border2)">
           <span style="color:${dc}">${t.direction.toUpperCase()}</span>

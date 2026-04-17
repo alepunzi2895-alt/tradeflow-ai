@@ -771,10 +771,13 @@ def sync_to_vercel(acc, positions, trades, bot_status):
             method='POST'
         )
         with urllib.request.urlopen(req, timeout=10) as r:
+            body = r.read().decode('utf-8')
             if r.status == 200:
-                log.debug("Sync Vercel OK")
+                log.info(f"✅ Sync Vercel OK — {len(positions)} posizioni, {len(trades)} trade")
+            else:
+                log.warning(f"⚠️ Sync Vercel HTTP {r.status}: {body[:200]}")
     except Exception as e:
-        log.debug(f"Sync Vercel fallito (non critico): {e}")
+        log.warning(f"❌ Sync Vercel fallito: {e}")
 
 def fetch_pending_command():
     """Controlla se la UI ha inviato un comando manuale da eseguire su MT5"""

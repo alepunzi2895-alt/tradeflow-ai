@@ -28,7 +28,16 @@
       "Bash(ping github.com -n 2)",
       "Bash(curl -s --max-time 5 https://github.com)",
       "Bash(ls C:/Users/f45038c/Downloads/tradeflow-ai/tradeflow-ai/*.json)",
-      "Bash(ls C:/Users/f45038c/Downloads/tradeflow-ai/tradeflow-ai/scripts/*.json)"
+      "Bash(ls C:/Users/f45038c/Downloads/tradeflow-ai/tradeflow-ai/scripts/*.json)",
+      "Bash(grep *)",
+      "Bash(awk '{print $9, $5}')",
+      "Bash(sed -i \"s|'xauusd_h1_730d.json'|'data/xauusd_h1_730d.json'|g\" scripts/optimize-full.py scripts/optimize-intraday.py scripts/optimize_rm_tp_sl.py scripts/optimize_rm_tp_sl_compound.py)",
+      "Bash(sed -i \"s|CACHE_FILE  = 'xauusd_h1_730d.json'|CACHE_FILE  = 'data/xauusd_h1_730d.json'|g\" scripts/backtest-all.py)",
+      "Bash(sed -i \"s|'xauusd_m15_mt5.json', 'xauusd_h1_mt5.json'|'data/xauusd_m15_mt5.json', 'data/xauusd_h1_mt5.json'|g\" scripts/optimize_confluences.py)",
+      "Bash(sed -i \"s|'xauusd_h1_730d.json'|'data/xauusd_h1_730d.json'|g\" scripts/optimize_rm_tp_sl_compound.py)",
+      "Bash(find C:\\\\Users\\\\f45038c\\\\Downloads\\\\tradeflow-ai\\\\tradeflow-ai *)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(sort -k2)"
     ]
   }
 }

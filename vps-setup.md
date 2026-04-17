@@ -19,7 +19,7 @@ Apri il terminale (PowerShell) sulla VPS:
 
 ```powershell
 # 1. Clona il progetto (o copia solo la cartella scripts)
-git clone https://github.com/tuo-username/tradeflow-ai.git
+git clone https://github.com/alepunzi2895-alt/tradeflow-ai.git
 cd tradeflow-ai
 
 # 2. Installa le dipendenze Python

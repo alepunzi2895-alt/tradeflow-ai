@@ -54,3 +54,4 @@
 | 2026-04-17 | Funzioni segnale duplicate tra mt5-bot.py e strategy-engine-v2.py | Divergenza silenziosa a ogni modifica | Creato scripts/signals.py come source of truth; entrambi i file importano da lì |
 | 2026-04-17 | S16_GOLDEN_SQUEEZE in sessione asiatica | Bassa liquidità XAU 00:00-07:59 UTC → WR basso | Aggiunto SESSION_FILTER in mt5-bot.py: skip S16 in ore 0-7 UTC |
 | 2026-04-17 | File JSON backtest sparsi nella root (27 file) | Nessuna struttura chiara per risultati vs dati | Creato backtests/results/, backtests/archive/, data/; aggiornati path in tutti gli script |
+| 2026-04-17 | Bot sempre offline in UI + posizioni/storico vuoti | sync_to_vercel() gated da `rm and` → mai chiamata se RiskManager fallisce import | Spostata sync nel blocco 20s (indipendente da rm); AI score fetch rimane a 60s senza rm guard |

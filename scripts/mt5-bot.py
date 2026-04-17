@@ -888,7 +888,7 @@ def run():
                             )
                             last_sync_time = now_ts
 
-            # ── Sync periodico a Vercel (ogni 20s) + fetch AI score ────────
+            # ── Sync periodico a Vercel (ogni 20s) ────────────────────────
             now_ts = time.time()
             if now_ts - last_sync_time >= 20:
                 # Verifica connessione MT5 — riconnetti con exponential backoff
@@ -909,14 +909,6 @@ def run():
                 else:
                     reconnect_attempts = 0
 
-            # ── Fetch AI Score ogni 60s ────────────────────────────────────
-            if rm and (now_ts - last_score_ts) >= 60:
-                global current_ai_score
-                current_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
-                last_ai_score = current_ai_score
-                last_score_ts = now_ts
-                log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f} — tier: {rm.get_tier(last_ai_score)['label']}")
-
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(20)
@@ -932,6 +924,17 @@ def run():
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
+
+            # ── Fetch AI Score ogni 60s ────────────────────────────────────
+            if (now_ts - last_score_ts) >= 60:
+                global current_ai_score
+                current_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                last_ai_score = current_ai_score
+                last_score_ts = now_ts
+                if rm:
+                    log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f} — tier: {rm.get_tier(last_ai_score)['label']}")
+                else:
+                    log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f}")
 
             # ── Controlla nuova candela H1 ────────────────────────────────────
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa

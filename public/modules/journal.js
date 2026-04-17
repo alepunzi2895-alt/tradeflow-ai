@@ -373,21 +373,42 @@ function renderJournal(){
       <div style="font-size:11px;color:var(--text);margin-bottom:8px;opacity:0.8">
         Entry: ${e.entry} · SL: ${e.sl} · TP: ${e.tp1}
       </div>
-      <div class="etag2">
-        ${e.emo!=='Neutro'?`<span class="etag" style="border-color:var(--blue);color:var(--blue)">${e.emo}</span>`:''}
-        ${e.err&&e.err!=='Nessuno'?`<span class="etag" style="border-color:var(--yellow);color:var(--yellow)">${e.err}</span>`:''}
       </div>
-      ${tradeMemory.entries?.[e.id] ? `<div class="trade-coach" style="margin-top:10px;padding:10px;background:rgba(200,169,110,0.05);border:1px solid rgba(200,169,110,0.1);border-radius:10px;font-size:11px;color:var(--text);line-height:1.6">💡 ${tradeMemory.entries[e.id]}</div>` : ''}
+      ${tradeMemory.entries?.[e.id] ? `
+        <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(200,169,110,0.06);border:1px solid rgba(200,169,110,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
+          <button class="coach-close" data-id="${e.id}" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px">✕</button>
+          💡 ${tradeMemory.entries[e.id]}
+        </div>
+      ` : ''}
     `;
 
-    d.querySelector('.bdel').onclick=()=>{
-      if(!confirm('Eliminare questo trade?'))return;
-      const id=e.id;
-      entries=entries.filter(x=>x.id!==id);
-      S.set(K.j,entries);
-      renderJournal();
-      dbSave('delete_trade',{id,user_id:window.userId}).catch(()=>{});
-    };
+    // Handle Delete
+    const delBtn = d.querySelector('.bdel');
+    if(delBtn) {
+      delBtn.onclick=(ev)=>{
+        ev.stopPropagation(); 
+        if(!confirm('Eliminare questo trade?'))return;
+        const id=e.id;
+        entries=entries.filter(x=>String(x.id)!==String(id));
+        S.set(K.j,entries);
+        renderJournal();
+        updateHdr();
+        dbSave('delete_trade',{id,user_id:window.userId}).catch(()=>{});
+      };
+    }
+
+    // Handle Coach Close
+    const closeBtn = d.querySelector('.coach-close');
+    if(closeBtn) {
+      closeBtn.onclick=(ev)=>{
+        ev.stopPropagation();
+        if(tradeMemory.entries) {
+          delete tradeMemory.entries[e.id];
+          S.set(K.mem, tradeMemory);
+          renderJournal();
+        }
+      };
+    }
 
     const cbtn=d.querySelector('.bcoach');
     if(cbtn)cbtn.onclick=async()=>{

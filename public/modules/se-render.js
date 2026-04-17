@@ -302,18 +302,18 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (backtest M30 · 730gg · Elite 4 strategie · RM AI Score attivo · lot=0.01 · $1/punto)
-  const BOT_STATS = { pnl_1m:380, pnl_6m:2279, pnl_12m:4621, pnl_24m:6150, maxdd:1502, maxdd_pct:'13.9%', trades_12m:1695, pf:1.202, wr:'31.9%', n_strat:4 };
+  // Stats aggregate sistema (backtest M30+RM · 730gg · 6 strategie · RM AI Score attivo · lot=0.01 · $1/punto)
+  const BOT_STATS = { pnl_1m:275, pnl_6m:1649, pnl_12m:3297, pnl_24m:6594, maxdd:1298, maxdd_pct:'12.0%', trades_12m:2299, pf:1.196, wr:'32.6%', n_strat:6 };
 
-  // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in backtest_combined.py e mt5-bot.py)
+  // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in mt5-bot.py)
   const PLAYBOOK_UI = {
-    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY'],                        tf:'M30'},
-    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY'],                        tf:'M30'},
-    'WEAK_UP':    {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING'],    tf:'M30'},
-    'WEAK_DOWN':  {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING'],    tf:'M30'},
-    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP'],                        tf:'M5'},
-    'RANGE':      {strategy:'S10_OB_FVG_SCALP',   others:['S09_MFKK_SCALPING'],                       tf:'M30'},
-    'UNKNOWN':    {strategy:'S16_GOLDEN_SQUEEZE',  others:[],                                          tf:'M30'},
+    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30'},
+    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30'},
+    'WEAK_UP':    {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING','S00_MFKK'],      tf:'M30'},
+    'WEAK_DOWN':  {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING','S00_MFKK'],      tf:'M30'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M5'},
+    'RANGE':      {strategy:'S10_OB_FVG_SCALP',   others:['S09_MFKK_SCALPING','S17_CONVERGENCE_SCALP'],            tf:'M30'},
+    'UNKNOWN':    {strategy:'S16_GOLDEN_SQUEEZE',  others:['S00_MFKK'],                                             tf:'M30'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];

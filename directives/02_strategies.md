@@ -14,41 +14,50 @@
 | Media $/giorno | **+$13.44** |
 | Mesi positivi | 17/25 |
 
-### Breakdown per strategia (M30 adattivo + RM)
+### Breakdown per strategia (M30 adattivo senza RM — dati verificati)
 
-| Strategia | Trade | WR% | P&L contrib | Note |
-|---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | 1721 | 31.7% | +$4,416 | Primaria trend/weak |
-| S00_MFKK | 1595 | 34.0% | +$848 | Fallback trend/weak |
-| S17_CONVERGENCE_SCALP | 641 | 25.7% | +$220 | Complementare |
-| S05_MFKK_INTRADAY | 301 | 36.9% | +$288 | H1 trend |
-| S09_MFKK_SCALPING | 267 | 37.8% | +$583 | M5 volatile |
-| S10_OB_FVG_SCALP | 73 | 42.5% | +$514 | M30 ranging |
+| Strategia | Trade | WR% | PF | P&L contrib | TF ottimale | Note |
+|---|---|---|---|---|---|---|
+| S16_GOLDEN_SQUEEZE | 1720 | 31.7% | 1.285 | +$3,395 | M30 | Motore principale |
+| S00_MFKK | 1597 | 38.3% | 1.033 | +$388 | M30 (H4: PF 1.319) | Fallback; migliore su H4 |
+| S09_MFKK_SCALPING | 267 | 37.8% | 1.637 | +$703 | **M30** | Molto meglio su M30 che M5 |
+| S10_OB_FVG_SCALP | 73 | 42.5% | 1.796 | +$533 | M30 | Fragile (73 trade) |
+| S17_CONVERGENCE_SCALP | 641 | 25.7% | 1.107 | +$291 | M30 (H4: PF 1.710) | Migliore su H4 |
+| S05_MFKK_INTRADAY | 301 | 36.9% | 1.124 | +$221 | **H1** | PF 1.361 su H1 vs 1.124 su M30 |
 
 ### Sistema adattivo per TF (senza RM)
 
-| TF | WR% | P&L | PF | DD | $/gg |
-|---|---|---|---|---|---|
-| M5 | 30.8% | +$509 | 1.036 | $674 | +$1.4 |
-| M15 | 31.7% | +$2,942 | 1.114 | $1,051 | +$5.7 |
-| **M30** | **34.0%** | **+$5,530** | **1.184** | **$592** | **+$10.8** |
-| H1 | 34.1% | +$2,918 | 1.086 | $2,230 | +$5.9 |
-| H4 | 38.6% | +$7,584 | 1.393 | $1,113 | +$19.7 |
+| TF | WR% | P&L | PF | DD | $/gg | Trade/gg |
+|---|---|---|---|---|---|---|
+| M5 | 30.8% | +$509 | 1.036 | $674 | +$1.4 | 9.5 |
+| M15 | 31.7% | +$2,942 | 1.114 | $1,051 | +$5.7 | 13.2 |
+| **M30** | **34.0%** | **+$5,531** | **1.184** | **$803** | **+$10.8** | 12.0 |
+| H1 | 34.1% | +$2,918 | 1.086 | $2,230 | +$5.9 | 9.9 |
+| H4 | 38.6% | +$7,584 | 1.393 | $1,113 | +$19.7 | 4.0 |
 
-> M30 è il TF canonico: miglior equilibrio frequenza/DD. H4 ha PnL/gg superiore ma solo 4 trade/gg.
+> M30 è il TF canonico: miglior equilibrio frequenza/DD. H4 ha PF e WR superiori ma solo 4 trade/gg.
+
+### TF ottimale per strategia (da backtest multi-TF 2026-04-17)
+
+| Strategia | TF Ottimale | PF | WR | Note |
+|---|---|---|---|---|
+| S16_GOLDEN_SQUEEZE | M30 | 1.285 | 31.7% | H4 superiore (PF 1.570) ma meno trade |
+| S00_MFKK | M30 (fallback) | 1.033 | 38.3% | H4 PF 1.319 WR 44.2% — upgrade futuro |
+| S09_MFKK_SCALPING | **M30** | **1.637** | 37.8% | Scoperta: M30 >> M5 (PF 1.143) |
+| S10_OB_FVG_SCALP | M30 | 1.796 | 42.5% | — |
+| S05_MFKK_INTRADAY | **H1** | **1.361** | 41.5% | Confermato: H1 >> M30 (PF 1.124) |
+| S17_CONVERGENCE_SCALP | M30 | 1.107 | 25.7% | H4 PF 1.710 WR 41.5% — upgrade futuro |
 
 ## Strategie Attive nel Bot
 
-| ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema |
-|---|---|---|---|---|---|---|
-| `S00_MFKK` | MFKK Score | ATR×2.0 | ATR×1.0 | TREND/WEAK (fallback) | M30 | 1.15* |
-| `S05_MFKK_INTRADAY` | MFKK Intraday V3 | ATR×2.0 | ATR×1.0 | TREND_UP, TREND_DOWN | H1 | 1.21 |
-| `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | M5 | 1.18 |
-| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 1.85 |
-| `S16_GOLDEN_SQUEEZE` | Elite Golden Squeeze | ATR×3.0 | ATR×1.2 | TREND/WEAK | M30 | 1.25 |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.5 | ATR×0.8 | VOLATILE/TREND | M15 | 1.20 |
-
-*S00_MFKK: standalone non proficua; contribuisce positivamente come fallback nel sistema adattivo M30.
+| ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema | WR |
+|---|---|---|---|---|---|---|---|
+| `S00_MFKK` | MFKK Score | ATR×2.0 | ATR×1.0 | TREND/WEAK (fallback) | M30 | 1.03 | 38.3% |
+| `S05_MFKK_INTRADAY` | MFKK Intraday V3 | ATR×2.0 | ATR×1.0 | TREND_UP, TREND_DOWN | **H1** | 1.36 | 41.5% |
+| `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 1.64 | 37.8% |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 1.80 | 42.5% |
+| `S16_GOLDEN_SQUEEZE` | Elite Golden Squeeze | ATR×3.0 | ATR×1.2 | TREND/WEAK | M30 | 1.29 | 31.7% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.5 | ATR×0.8 | VOLATILE/TREND | M30 | 1.11 | 25.7% |
 
 ## Strategy Selector Agent (`strategy_selector.py`)
 

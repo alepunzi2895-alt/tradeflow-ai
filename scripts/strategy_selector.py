@@ -23,9 +23,10 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Score",
         "signal_function": "signal_mfkk_score",
         "performance_by_tf": {
-            # In the adaptive M30 system: 1595 trades, WR 34.0%, +$848 / 25 months
-            # Works as complement/fallback when S16+S05 don't fire
-            "M30": {"wr": 0.340, "pf": 1.15, "daily_pnl": 1.84, "dd": 300},
+            # M30 adaptive: 1597 trade, WR 38.3%, +$388 / 25 months (fallback role)
+            # H4 adaptive: 618 trade, WR 44.2%, +$1320 / 25 months (best standalone)
+            "M30": {"wr": 0.383, "pf": 1.033, "daily_pnl": 1.01, "dd": 300},
+            "H4":  {"wr": 0.442, "pf": 1.319, "daily_pnl": 3.43, "dd": 400},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
         "base_params": {"tp_atr_mult": 2.0, "sl_atr_mult": 1.0},
@@ -35,8 +36,9 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Intraday",
         "signal_function": "signal_mfkk_intraday",
         "performance_by_tf": {
-            "H1":  {"wr": 0.385, "pf": 1.15, "daily_pnl": 7.70,  "dd": 3622},
-            "M30": {"wr": 0.385, "pf": 1.21, "daily_pnl": 12.66, "dd": 1502},
+            # H1 confirmed optimal: 282 trade, WR 41.5%, +$834 / 25 months
+            "H1":  {"wr": 0.415, "pf": 1.361, "daily_pnl": 1.68, "dd": 800},
+            "M30": {"wr": 0.369, "pf": 1.124, "daily_pnl": 0.58, "dd": 500},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
         "base_params": {"tp_atr_mult": 2.0, "sl_atr_mult": 1.0},
@@ -46,8 +48,10 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Scalping",
         "signal_function": "signal_mfkk_scalping",
         "performance_by_tf": {
-            "M5":  {"wr": 0.351, "pf": 1.18, "daily_pnl": 5.20,  "dd": 890},
-            "M15": {"wr": 0.28,  "pf": 0.92, "daily_pnl": -1.50, "dd": 1200},
+            # M30 adaptive: 267 trade, WR 37.8%, PF 1.637 — much better than M5
+            "M30": {"wr": 0.378, "pf": 1.637, "daily_pnl": 1.83, "dd": 400},
+            "M5":  {"wr": 0.284, "pf": 1.143, "daily_pnl": 0.28, "dd": 200},
+            "M15": {"wr": 0.245, "pf": 1.282, "daily_pnl": 0.87, "dd": 500},
         },
         "optimal_regimes": ["VOLATILE", "WEAK"],
         "base_params": {"tp_atr_mult": 3.0, "sl_atr_mult": 1.0},
@@ -57,8 +61,9 @@ STRATEGIES_CONFIG = [
         "name": "OB+FVG Scalp",
         "signal_function": "signal_ob_fvg_scalp",
         "performance_by_tf": {
-            "M30": {"wr": 0.44,  "pf": 1.85, "daily_pnl": 8.80, "dd": 620},
-            "M15": {"wr": 0.38,  "pf": 1.42, "daily_pnl": 4.50, "dd": 890},
+            # M30 adaptive: 73 trade, WR 42.5%, PF 1.796
+            "M30": {"wr": 0.425, "pf": 1.796, "daily_pnl": 1.39, "dd": 300},
+            "H1":  {"wr": 0.333, "pf": 1.476, "daily_pnl": 0.77, "dd": 400},
         },
         "optimal_regimes": ["RANGING", "WEAK"],
         "min_confidence": 0.70,
@@ -69,8 +74,11 @@ STRATEGIES_CONFIG = [
         "name": "Elite Golden Squeeze",
         "signal_function": "signal_golden_squeeze",
         "performance_by_tf": {
-            "M30": {"wr": 0.30, "pf": 1.25, "daily_pnl": 10.50, "dd": 1800},
-            "H1":  {"wr": 0.28, "pf": 1.10, "daily_pnl": 6.20,  "dd": 2400},
+            # M30 adaptive: 1720 trade, WR 31.7%, PF 1.285, +$3395 — primary engine
+            # H4 adaptive: 600 trade, WR 36.7%, PF 1.570, +$6073 — fewer but stronger
+            "M30": {"wr": 0.317, "pf": 1.285, "daily_pnl": 8.84, "dd": 800},
+            "H4":  {"wr": 0.367, "pf": 1.570, "daily_pnl": 15.77, "dd": 1800},
+            "H1":  {"wr": 0.323, "pf": 1.101, "daily_pnl": 4.45, "dd": 1200},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
         "session_filter": ["london", "ny"],
@@ -81,8 +89,12 @@ STRATEGIES_CONFIG = [
         "name": "Convergence Scalp",
         "signal_function": "signal_convergence_scalp",
         "performance_by_tf": {
-            "M5":  {"wr": 0.42, "pf": 1.55, "daily_pnl": 9.20, "dd": 1100},
-            "M15": {"wr": 0.36, "pf": 1.28, "daily_pnl": 5.80, "dd": 1450},
+            # H4 adaptive: 94 trade, WR 41.5%, PF 1.710 — best TF
+            # H1 adaptive: 357 trade, WR 30.3%, PF 1.323 — good secondary
+            "H4":  {"wr": 0.415, "pf": 1.710, "daily_pnl": 2.05, "dd": 400},
+            "H1":  {"wr": 0.303, "pf": 1.323, "daily_pnl": 1.70, "dd": 700},
+            "M30": {"wr": 0.257, "pf": 1.107, "daily_pnl": 0.76, "dd": 600},
+            "M5":  {"wr": 0.269, "pf": 1.167, "daily_pnl": 0.86, "dd": 500},
         },
         "optimal_regimes": ["VOLATILE", "TREND_UP", "TREND_DOWN"],
         "min_atr_percentile": 0.60,

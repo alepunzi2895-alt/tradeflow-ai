@@ -724,7 +724,7 @@ def get_recent_trades_data(n=30):
     """
     try:
         utc = datetime.timezone.utc
-        from_date = datetime.datetime.now(utc) - datetime.timedelta(days=60)
+        from_date = datetime.datetime.now(utc) - datetime.timedelta(days=180)
         to_date   = datetime.datetime.now(utc)
         deals = mt5.history_deals_get(from_date, to_date)
         if deals is not None and len(deals) > 0:
@@ -891,7 +891,7 @@ def run():
                             state.record_trade(0, now_utc)
                             acc_data = get_account_info()
                             sync_to_vercel(
-                                acc_data, get_open_positions_data(), get_recent_trades_data(20),
+                                acc_data, get_open_positions_data(), get_recent_trades_data(200),
                                 {'running': True, 'dry_run': DRY_RUN, 'symbol': SYMBOL,
                                  'lot': LOT_SIZE, 'trades_today': state.trades_today,
                                  'pnl_today': state.pnl_today, 'last_signal': f'MANUAL_{strategy}'}
@@ -921,7 +921,7 @@ def run():
 
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
-                trades_data = get_recent_trades_data(20)
+                trades_data = get_recent_trades_data(200)
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
@@ -1047,7 +1047,7 @@ def run():
                                 if acc:
                                     log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
                                 sync_to_vercel(
-                                    acc, get_open_positions_data(), get_recent_trades_data(20),
+                                    acc, get_open_positions_data(), get_recent_trades_data(200),
                                     {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
                                      'trades_today':state.trades_today,'pnl_today':state.pnl_today,
                                      'regime':current_regime,'last_signal':strategy_name}
@@ -1164,7 +1164,7 @@ def run():
                                     state.record_trade(0, now_utc)
                                     acc = get_account_info()
                                     if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
-                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(20),
+                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),
                                                    {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
                                                     'trades_today':state.trades_today,'pnl_today':state.pnl_today,
                                                     'regime':current_regime,'last_signal':sname})
@@ -1230,7 +1230,7 @@ def run():
                                     state.record_trade(0, now_utc)
                                     acc = get_account_info()
                                     if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
-                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(20),
+                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),
                                                    {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
                                                     'trades_today':state.trades_today,'pnl_today':state.pnl_today,
                                                     'regime':current_regime,'last_signal':sname})

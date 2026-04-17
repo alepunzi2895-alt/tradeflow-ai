@@ -238,22 +238,58 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       }).join('')}
 </div>`;
 
-  // ── STORICO REALE
+  // ── STORICO REALE — con filtro temporale
+  function _filterTrades(arr){
+    const f=window._seTradeFilter||'week';
+    const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    if(f==='today') return arr.filter(t=>new Date(t.time)>=today);
+    if(f==='week'){const d=new Date(today);d.setDate(d.getDate()-7);return arr.filter(t=>new Date(t.time)>=d);}
+    if(f==='month'){const d=new Date(today);d.setDate(d.getDate()-30);return arr.filter(t=>new Date(t.time)>=d);}
+    if(f==='custom'){
+      const from=window._seTradeFrom?new Date(window._seTradeFrom):null;
+      const to=window._seTradeTo?new Date(window._seTradeTo+'T23:59:59'):null;
+      return arr.filter(t=>{const d=new Date(t.time);return(!from||d>=from)&&(!to||d<=to);});
+    }
+    return arr;
+  }
+  const filtered=_filterTrades(history);
+  const fBtns=[['today','OGGI'],['week','7G'],['month','30G'],['all','TUTTO'],['custom','CUSTOM']].map(([k,lbl])=>{
+    const active=window._seTradeFilter===k;
+    return `<button onclick="window._seTradeFilter='${k}'" style="padding:2px 7px;font-size:8px;border-radius:4px;border:1px solid ${active?'var(--green)':'var(--border2)'};background:${active?'#00e67615':'transparent'};color:${active?'var(--green)':'var(--dim)'};cursor:pointer">${lbl}</button>`;
+  }).join('');
+  const customInputs=window._seTradeFilter==='custom'?`
+    <div style="display:flex;gap:4px;margin-top:4px;align-items:center">
+      <span style="font-size:8px;color:var(--dim)">Da</span>
+      <input type="date" value="${window._seTradeFrom}" onchange="window._seTradeFrom=this.value" style="font-size:8px;background:var(--card2);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:1px 4px">
+      <span style="font-size:8px;color:var(--dim)">A</span>
+      <input type="date" value="${window._seTradeTo}" onchange="window._seTradeTo=this.value" style="font-size:8px;background:var(--card2);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:1px 4px">
+    </div>`:'';
+  const pnlTot=filtered.reduce((s,t)=>s+(t.profit||0),0);
   const histHtml=`
 <div style="margin-bottom:10px">
-  <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">STORICO RECENTE (REAL TRADES)</div>
-  ${history.length===0
-    ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade storico trovato</div>`
-    : history.slice(0,5).map(t=>{
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+    <span style="font-size:9px;color:var(--dim);letter-spacing:.08em">STORICO TRADE (REAL MT5)</span>
+    <span style="font-size:9px;font-weight:700;color:${pnlTot>=0?'var(--green)':'var(--red)'}">${pnlTot>=0?'+':''}${pnlTot.toFixed(2)} €</span>
+  </div>
+  <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">${fBtns}</div>
+  ${customInputs}
+  <div style="max-height:180px;overflow-y:auto;margin-top:4px">
+  ${filtered.length===0
+    ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade nel periodo selezionato</div>`
+    : filtered.map(t=>{
         const dc=t.direction==='buy'?'#00e676':'#ff4757';
-        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:4px 0;border-bottom:1px solid var(--border2)">
-          <span style="color:${dc}">${t.direction.toUpperCase()}</span>
-          <span style="color:var(--dim)">${new Date(t.time).toLocaleTimeString()}</span>
-          <span>${t.strategy||'—'}</span>
-          <span>$${t.price?.toFixed(2)}</span>
-          <span style="color:${t.profit>=0?'var(--green)':'var(--red)'}">${t.profit>=0?'+':''}${t.profit?.toFixed(2)}</span>
+        const dt=new Date(t.time);
+        const dtStr=`${dt.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})} ${dt.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}`;
+        return `<div style="display:flex;justify-content:space-between;font-size:8px;padding:3px 0;border-bottom:1px solid var(--border2)">
+          <span style="color:${dc};min-width:28px">${t.direction.toUpperCase()}</span>
+          <span style="color:var(--dim);min-width:60px">${dtStr}</span>
+          <span style="min-width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.strategy||'—'}</span>
+          <span style="min-width:48px;text-align:right">$${t.price?.toFixed(2)}</span>
+          <span style="color:${t.profit>=0?'var(--green)':'var(--red)'};min-width:42px;text-align:right">${t.profit>=0?'+':''}${t.profit?.toFixed(2)}</span>
         </div>`;
       }).join('')}
+  </div>
+  <div style="font-size:8px;color:var(--dim);margin-top:3px;text-align:right">${filtered.length} trade nel periodo</div>
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale

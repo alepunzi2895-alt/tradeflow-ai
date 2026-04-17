@@ -60,6 +60,10 @@ let seTimer = null;
 let seInds = null;
 let seRegime = 'UNKNOWN';
 let _lastScorePush = 0;
+// Trade history filter state (persiste attraverso i rebuild di seRender ogni 1s)
+window._seTradeFilter = window._seTradeFilter || 'week';
+window._seTradeFrom   = window._seTradeFrom   || '';
+window._seTradeTo     = window._seTradeTo     || '';
 
 // ── MAIN LOOP ────────────────────────────────────────────────────────────────
 async function seRefresh() {

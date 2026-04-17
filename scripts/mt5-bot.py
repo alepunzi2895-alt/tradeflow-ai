@@ -728,12 +728,7 @@ def get_recent_trades_data(n=30):
         to_date   = datetime.datetime.now(utc)
         deals = mt5.history_deals_get(from_date, to_date)
         total = len(deals) if deals is not None else 0
-        log.info(f"📋 history_deals raw: {total} deal (180gg)")
         if deals is not None and total > 0:
-            # Log ultimi 10 deal per diagnostica
-            for d in sorted(deals, key=lambda x: x.time, reverse=True)[:10]:
-                dt = datetime.datetime.fromtimestamp(d.time, tz=utc).strftime('%m-%d %H:%M')
-                log.info(f"  deal {dt} type={d.type} entry={d.entry} profit={d.profit:.2f} comment={d.comment!r}")
             result = []
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
                 if d.type not in (0, 1):
@@ -751,7 +746,7 @@ def get_recent_trades_data(n=30):
                     'volume':    d.volume,
                 })
                 if len(result) >= n: break
-            log.info(f"📋 Trade chiusi: {len(result)}")
+            log.debug(f"📋 Trade chiusi: {len(result)}")
             if result:
                 return result
     except Exception as e:

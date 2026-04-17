@@ -1,8 +1,22 @@
-# TradeFlow AI — Directive Layer (DOE Framework)
+# TradeFlow AI — Directive Layer (MIGRATED)
 
-> Questo documento è la **Directive Layer** del Framework DOE applicato al progetto TradeFlow AI.
-> L'agente AI (Orchestration Layer) **deve leggere questo file per intero** prima di qualsiasi intervento.
-> Dopo ogni correzione o nuova feature, aggiornare questo file aggiungendo la riga nel Self-Learning Log.
+> Questo file è stato suddiviso in documenti specializzati. Leggere i file corrispondenti in `directives/`.
+
+| Contenuto | Nuovo file |
+|---|---|
+| Architettura, identità, flusso dati | `directives/00_overview.md` |
+| Fonti dati, TV Scanner, parametri | `directives/01_data_sources.md` |
+| Strategie, backtest, regime priority | `directives/02_strategies.md` |
+| Risk Manager, tier, BE/TS | `directives/03_risk_manager.md` |
+| Bot MT5, comandi, retcode | `directives/04_bot_operations.md` |
+| Procedure backtest, risultati canonici | `directives/05_backtest.md` |
+| Bug aperti, backlog | `directives/06_known_issues.md` |
+| Self-learning log | `directives/07_self_learning_log.md` |
+| DOM rules, Vercel constraints | `directives/08_dev_rules.md` |
+
+---
+
+> Il contenuto originale è conservato sotto per riferimento storico.
 
 ---
 

@@ -39,7 +39,7 @@ def simulate_s05(candles, ind, rsi_thr, adx_thr, rsi_os):
 
 if __name__ == '__main__':
     print("Loading data...")
-    with open('xauusd_h1_730d.json', 'r') as f:
+    with open('data/xauusd_h1_730d.json', 'r') as f:
         data = json.load(f)
         candles = data.get('candles', data) if isinstance(data, dict) else data
 

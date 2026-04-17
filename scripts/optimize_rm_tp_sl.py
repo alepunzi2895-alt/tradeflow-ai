@@ -52,7 +52,7 @@ def optimize_mfkk_intraday(c_h1, ind_h1):
     return best_params, best_stats
 
 if __name__ == '__main__':
-    c_h1 = load_json('xauusd_h1_730d.json')
+    c_h1 = load_json('data/xauusd_h1_730d.json')
     ind_h1 = compute(c_h1)
     b_params_score, b_stats_score = optimize_mfkk_score(c_h1, ind_h1)
     b_params_intra, b_stats_intra = optimize_mfkk_intraday(c_h1, ind_h1)

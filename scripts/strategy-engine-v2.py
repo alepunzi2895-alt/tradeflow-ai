@@ -11,11 +11,21 @@ USO:
   python scripts/strategy-engine-v2.py --file xauusd_h1_mt5.json  # dati reali MT5 ✅
   python scripts/strategy-engine-v2.py --file xauusd_h1_730d.json # dati storici salvati
 """
-import sys, io, argparse
+import sys, io, argparse, os
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 import json, datetime, math
 from collections import defaultdict
+
+# ── SIGNAL FUNCTIONS (single source of truth) ────────────────────────────────
+sys.path.insert(0, os.path.dirname(__file__))
+from signals import (
+    signal_mfkk_intraday as s_mfkk_intraday,
+    signal_golden_squeeze as s_golden_squeeze,
+    signal_mfkk_scalping as s_mfkk_scalping,
+    signal_ob_fvg_scalp as s_ob_fvg_scalp,
+    signal_convergence_scalp as s_convergence_scalp,
+)
 try:
     import yfinance as yf
     HAS_YF = True
@@ -730,105 +740,6 @@ def s15_obv_macd(ind,i,hour=None):
     if oc is None: return None
     if oc[i]==1  and oc[i-1]!=1:  return 'buy'
     if oc[i]==-1 and oc[i-1]!=-1: return 'sell'
-    return None
-
-def s_mfkk_scalping(ind,i,hour=None):
-    """
-    S09_MFKK_SCALPING V2 — EMA Fibonacci Stack (13,34,89,233) + FVG retest + Trend Bias
-    TP: 3.0×ATR | SL: 1.0×ATR
-    """
-    if i < 233: return None
-    e13=ind['e13'][i]; e34=ind['e34'][i]; e89=ind['e89'][i]; e233=ind['e233'][i]
-    fvg_b=ind.get('fvg_bull'); fvg_s=ind.get('fvg_bear')
-    c=ind['C'][i]
-    if None in (e13, e34, e89, e233) or fvg_b is None: return None
-    
-    # Bullish Stack + Price > EMA 233 + FVG
-    if e13 > e34 > e89 > e233 and c > e233 and fvg_b[i]:
-        return 'buy'
-    # Bearish Stack + Price < EMA 233 + FVG
-    if e13 < e34 < e89 < e233 and c < e233 and fvg_s[i]:
-        return 'sell'
-    return None
-
-def s_ob_fvg_scalp(ind, i, hour=None):
-    """
-    S10_OB_FVG_SCALP V2 — Order Block + FVG + EMA 233 Trend Filter
-    TP: 2.5×ATR | SL: 1.2×ATR | TF: M30
-    """
-    if i < 233: return None
-    ob_b = ind.get('ob_bull'); ob_s = ind.get('ob_bear')
-    fb = ind.get('fvg_bull'); fs = ind.get('fvg_bear')
-    e233 = ind['e233'][i]
-    c = ind['C'][i]
-    if ob_b is None or fb is None or e233 is None: return None
-    
-    if ob_b[i] and fb[i] and c > e233: return 'buy'
-    if ob_s[i] and fs[i] and c < e233: return 'sell'
-    return None
-
-def s_mfkk_intraday(ind, i, hour=None):
-    """
-    S05_MFKK_INTRADAY V3 — V2 Triple MACD + EMA 200 Trend Filter
-    OBV T-Channel + RSI + MACD + Mom + ADX + EMA 200 Bias
-    """
-    if i < 200: return None
-    oc = ind.get('obv_macd_oc')
-    r = ind['rsi'][i]; mo = ind['mom'][i]; a = ind['adx'][i]
-    mc = ind['macd'][i]; e200 = ind['e200'][i]; close = ind['C'][i]
-    if None in (r, mo, a, mc, e200) or oc is None: return None
-    
-    is_buy = oc[i] == 1 and r > 52 and mo > 0 and mc > 0 and close > e200
-    is_sell = oc[i] == -1 and r < 48 and mo < 0 and mc < 0 and close < e200
-    if is_buy: return 'buy'
-    if is_sell: return 'sell'
-    return None
-
-def s_golden_squeeze(ind, i, hour=None):
-    """
-    S16: ELITE CONFLUENCE V2 — OBV Momentum + Trend Alignment (ST Proxy) + EMA 233
-    """
-    if i < 233: return None
-    obv_val = ind.get('obv')[i]; obv_ema = ind.get('obv_ema')[i]
-    c = ind['C'][i]; cp = ind['C'][i-1]; st = ind.get('st')[i]
-    e233 = ind['e233'][i]
-    if None in (obv_val, obv_ema, st, e233): return None
-    
-    if st == -1: # BULLISH Proxy
-        if c > e233 and obv_val > obv_ema and c > cp: return 'buy'
-    if st == 1: # BEARISH Proxy
-        if c < e233 and obv_val < obv_ema and c < cp: return 'sell'
-    return None
-
-def s_convergence_scalp(ind, i, hour=None):
-    """
-    S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI alignment + BB %B + EMA50 bias
-    Configurazione ottimizzata: PF 1.28 | TP: 2.5×ATR | SL: 0.8×ATR
-    """
-    if i < 89: return None
-    e34 = ind['e34'][i]; e89 = ind['e89'][i]
-    sk = ind['srsi_k'][i]; sd = ind['srsi_d'][i]
-    bbu = ind['bb_up'][i]; bbl = ind['bb_lo'][i]
-    c = ind['C'][i]; e50 = ind['e50'][i]
-    atr = ind['atr'][i]; atr30 = ind['atr30'][i]
-    if None in (e34, e89, sk, sd, bbu, bbl, c, e50, atr): return None
-    if atr30 and atr > 2.2 * atr30: return None  # manipolazione
-    
-    bb_range = bbu - bbl
-    bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
-    
-    e34_p = ind['e34'][i-1]; e89_p = ind['e89'][i-1]
-    sk_p = ind['srsi_k'][i-1]; sd_p = ind['srsi_d'][i-1]
-    if None in (e34_p, e89_p, sk_p, sd_p): return None
-    
-    bull_prev = e34_p > e89_p and sk_p > sd_p
-    bear_prev = e34_p < e89_p and sk_p < sd_p
-    
-    bull = e34 > e89 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
-    bear = e34 < e89 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
-    
-    if bull: return 'buy'
-    if bear: return 'sell'
     return None
 
 # ── STRATEGY MAP ───────────────────────────────────────────────────────────────

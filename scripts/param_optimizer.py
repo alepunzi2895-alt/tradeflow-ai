@@ -25,8 +25,8 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 # ── ARGS ──────────────────────────────────────────────────────────────────────
 ap = argparse.ArgumentParser()
 ap.add_argument('--mt5',      action='store_true')
-ap.add_argument('--m15-file', default='xauusd_m15_mt5.json')
-ap.add_argument('--h1-file',  default='xauusd_h1_mt5.json')
+ap.add_argument('--m15-file', default='data/xauusd_m15_mt5.json')
+ap.add_argument('--h1-file',  default='data/xauusd_h1_mt5.json')
 ap.add_argument('--n-trials', type=int, default=300, help='Iterazioni random search')
 ap.add_argument('--max-dd',   type=float, default=0.40, help='Max DrawDown % (0.40 = 40%%)')
 ap.add_argument('--global',   dest='global_opt', action='store_true', help='Ottimizza anche soglie globali')
@@ -298,7 +298,7 @@ def main():
     if args.mt5:
         candles = fetch_mt5('M15', 8000)
         if candles:
-            with open('xauusd_m15_mt5.json','w') as f: json.dump({'candles':candles},f)
+            with open('data/xauusd_m15_mt5.json','w') as f: json.dump({'candles':candles},f)
             print(f"  {len(candles)} barre scaricate e salvate")
         else:
             candles = load_json(args.m15_file) if os.path.exists(args.m15_file) else []

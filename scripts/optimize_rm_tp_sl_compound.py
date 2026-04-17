@@ -4,7 +4,7 @@ from backtest_mfkk_intraday import (load_json, compute, mfkk_score, INTRADAY_VAR
 
 if __name__ == '__main__':
     # 1. Carica candele H1 (2 anni)
-    candles = load_json('xauusd_h1_730d.json')
+    candles = load_json('data/xauusd_h1_730d.json')
     ind = compute(candles)
     print(f"  Caricato {len(candles)} candele da xauusd_h1_730d.json")
 

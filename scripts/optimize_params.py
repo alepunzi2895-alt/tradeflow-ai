@@ -15,9 +15,9 @@ import sys, io, json, math, datetime, argparse, bisect, itertools
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--h1',  default='xauusd_h1_mt5.json')
-ap.add_argument('--m15', default='xauusd_m15_mt5.json')
-ap.add_argument('--m30', default='xauusd_m30_mt5.json')
+ap.add_argument('--h1',  default='data/xauusd_h1_mt5.json')
+ap.add_argument('--m15', default='data/xauusd_m15_mt5.json')
+ap.add_argument('--m30', default='data/xauusd_m30_mt5.json')
 ap.add_argument('--phase', default='all', choices=['1','2','3','all'])
 ap.add_argument('--out', default='optimize_results.json')
 args = ap.parse_args()

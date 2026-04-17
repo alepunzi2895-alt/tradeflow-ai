@@ -108,7 +108,7 @@ def run_elite_backtest(m15_file, h1_file):
 
 def main():
     print("Testing ELITE COMBO: Golden Squeeze (H1 Trend + M15 Momentum)")
-    res = run_elite_backtest('xauusd_m15_mt5.json', 'xauusd_h1_mt5.json')
+    res = run_elite_backtest('data/xauusd_m15_mt5.json', 'data/xauusd_h1_mt5.json')
     if res:
         print("\n" + "="*40)
         print(f"RESULTS FOR GOLDEN SQUEEZE (CONFLUENCE)")

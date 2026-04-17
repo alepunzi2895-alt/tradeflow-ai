@@ -17,6 +17,14 @@ load_dotenv() # Carica .env dal root se presente
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
+# ── SIGNAL FUNCTIONS (single source of truth) ────────────────────────────────
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(__file__))
+from signals import (
+    signal_mfkk_score, signal_mfkk_intraday, signal_golden_squeeze,
+    signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp,
+)
+
 # ── RISK MANAGER ─────────────────────────────────────────────────────────────
 try:
     from risk_manager import get_risk_manager, RiskManager
@@ -417,164 +425,22 @@ def detect_regime(I, i):
         return 'VOLATILE'
     return 'RANGE'
 
-# ── STRATEGY SIGNALS (playbook regime-aware) ─────────────────────────────────
-def signal_mfkk_score(I, i):
-    """S00_MFKK — BUY se bull>=65 | SELL se bear>=65. Soglia simmetrica 65/65. ADX 80% + MACD 10% + CCI 10%."""
-    if i < 50: return None
-    a=I['adx'][i]; dp=I['dip'][i]; dm=I['dim'][i]
-    m=I['ml'][i]; c=I['cci'][i] if I['cci'][i] is not None else 0
-    if None in (a, dp, dm, m): return None
-
-    bull = bear = 0.0
-    adx_c = min(a/40*100, 100)
-    if dm > dp: bear += adx_c*0.80
-    else:       bull += adx_c*0.80
-
-    ms = min(abs(m)/0.5*100, 100)
-    if m >= 0: bull += ms*0.10
-    else:      bear += ms*0.10
-
-    cs = min(abs(c)/100*100, 100)
-    if c >= 0: bull += cs*0.10
-    else:      bear += cs*0.10
-
-    if bull >= 65: return 'buy'   # threshold simmetrico su scala bull
-    if bear >= 65: return 'sell'  # threshold simmetrico su scala bear
-    return None
-
-def signal_mfkk_intraday(I, i):
-    """
-    S05_MFKK_INTRADAY V3 — V2 Triple MACD + EMA 200 Trend Filter
-    OBV T-Channel + RSI + MACD + Mom + ADX + EMA 200 Bias
-    """
-    if i < 2: return None
-    oc  = I.get('obv_oc', [])
-    if not oc or i >= len(oc): return None
-    r   = I['rsi'][i]
-    mo  = I['mom'][i]
-    a   = I['adx'][i]
-    mc  = I['ml'][i]   # MACD line
-    e200 = I['e200'][i]
-    close = I['C'][i]
-    
-    if None in (r, mo, a, mc, e200): return None
-    if a < 25: 
-        # Rilassamento se AI Score è alto
-        if current_ai_score < 75 or a < 20: return None
-        
-    # V3: Solo segnali a favore dell'EMA 200
-    is_buy = oc[i] == 1  and r > 52 and mo > 0 and mc > 0 and close > e200
-    is_sell = oc[i] == -1 and r < 48 and mo < 0 and mc < 0 and close < e200
-    
-    if is_buy: return 'buy'
-    if is_sell: return 'sell'
-    return None
-
-def signal_golden_squeeze(I, i, h1_trend=0):
-    """
-    S16: ELITE CONFLUENCE V2 (Institutional Squeeze)
-    Requires H1 Supertrend (h1_trend), M15 OBV Momentum, and EMA 233 Filter.
-    """
-    if h1_trend == 0 or i < 233: return None
-    
-    obv_val = I.get('obv', [0]*len(I['C']))[i]
-    if 'obv_ema' not in I: return None
-    obv_ema = I['obv_ema'][i]
-    
-    curr_c = I['C'][i]
-    prev_c = I['C'][i-1]
-    e233 = I['e233'][i]
-    
-    # Logic: H1 Trend Alignment + Institutional Bias (EMA 233) + OBV Momentum
-    if h1_trend == -1: # BULLISH H1
-        if curr_c > e233 and obv_val > obv_ema and curr_c > prev_c:
-            return 'buy'
-    elif h1_trend == 1: # BEARISH H1
-        if curr_c < e233 and obv_val < obv_ema and curr_c < prev_c:
-            return 'sell'
-    return None
-
-def signal_mfkk_scalping(I, i):
-    """S09_MFKK_SCALPING V2 — EMA Fibonacci Stack (13,34,89,233) + FVG retest + Trend Bias (M5)"""
-    if i < 233: return None
-    e13 = I['e13'][i]; e34 = I['e34'][i]; e89 = I['e89'][i]; e233 = I['e233'][i]
-    fb = I.get('fvg_bull'); fs = I.get('fvg_bear')
-    c = I['C'][i]
-    
-    if None in (e13, e34, e89, e233) or fb is None: return None
-    
-    # Bullish Stack + Trend Bias (Price > EMA 233) + FVG
-    if e13 > e34 > e89 > e233 and c > e233 and fb[i]:
-        return 'buy'
-    
-    # Bearish Stack + Trend Bias (Price < EMA 233) + FVG
-    if e13 < e34 < e89 < e233 and c < e233 and fs[i]:
-        return 'sell'
-        
-    return None
-
-def signal_ob_fvg_scalp(I, i):
-    """
-    S10_OB_FVG_SCALP V2 — ICT Order Block + FVG + Trend Filter EMA 233
-    Timeframe ideale: M30
-    """
-    if i < 233: return None
-    ob_b = I.get('ob_bull'); ob_s = I.get('ob_bear')
-    fb = I.get('fvg_bull'); fs = I.get('fvg_bear')
-    e233 = I['e233'][i]
-    c = I['C'][i]
-    
-    if ob_b is None or fb is None or e233 is None: return None
-
-    # Bullish: Prezzo in OB + FVG attivo + Sopra Trend istituzionale
-    if ob_b[i] and fb[i] and c > e233:
-        return 'buy'
-    
-    # Bearish: Prezzo in OB + FVG attivo + Sotto Trend istituzionale
-    if ob_s[i] and fs[i] and c < e233:
-        return 'sell'
-        
-    return None
-
-def signal_convergence_scalp(I, i):
-    """
-    S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI alignment + BB %B + EMA50 bias
-    Ottimizzato per XAU M30/M15 — Profit Factor 1.28
-    """
-    if i < 89: return None
-    e34 = I['e34'][i]; e89 = I['e89'][i]
-    sk = I['srsi_k'][i]; sd = I['srsi_d'][i]
-    bbu = I['bb_up'][i]; bbl = I['bb_dn'][i]
-    c = I['C'][i]; e50 = I['e50'][i]
-    atr = I['atr'][i]; atr_avg = I.get('atr_avg', [None]*(i+1))[i]
-    if None in (e34, e89, sk, sd, bbu, bbl, c, e50, atr): return None
-    if atr_avg and atr > 2.2 * atr_avg: return None  # filtro manipolazione
-
-    bb_range = bbu - bbl
-    bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
-
-    e34_p = I['e34'][i-1]; e89_p = I['e89'][i-1]
-    sk_p = I['srsi_k'][i-1]; sd_p = I['srsi_d'][i-1]
-    if None in (e34_p, e89_p, sk_p, sd_p): return None
-
-    # Segnale solo sulla barra di transizione o allineamento fresco
-    bull_prev = e34_p > e89_p and sk_p > sd_p
-    bear_prev = e34_p < e89_p and sk_p < sd_p
-
-    bull = e34 > e89 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
-    bear = e34 < e89 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
-
-    if bull: return 'buy'
-    if bear: return 'sell'
-    return None
+# ── STRATEGY SIGNALS — imported from scripts/signals.py ─────────────────────
+# signal_mfkk_score, signal_mfkk_intraday, signal_golden_squeeze,
+# signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp
 
 SIGNAL_FNS = {
-    'S00_MFKK':            signal_mfkk_score,
-    'S05_MFKK_INTRADAY':   signal_mfkk_intraday,
-    'S09_MFKK_SCALPING':   signal_mfkk_scalping,
-    'S10_OB_FVG_SCALP':    signal_ob_fvg_scalp,
+    'S00_MFKK':             signal_mfkk_score,
+    'S05_MFKK_INTRADAY':    signal_mfkk_intraday,
+    'S09_MFKK_SCALPING':    signal_mfkk_scalping,
+    'S10_OB_FVG_SCALP':     signal_ob_fvg_scalp,
     'S16_GOLDEN_SQUEEZE':   signal_golden_squeeze,
     'S17_CONVERGENCE_SCALP': signal_convergence_scalp,
+}
+
+# Asian session (00:00–07:59 UTC): low XAU/USD liquidity, high spreads — skip S16
+SESSION_FILTER = {
+    'S16_GOLDEN_SQUEEZE': {'block_hours': range(0, 8)},
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
@@ -600,7 +466,10 @@ def get_signal(I, i, hour, regime):
     fn = SIGNAL_FNS.get(sname)
     if fn is None:
         return None, None
-    direction = fn(I, i)
+    if sname == 'S05_MFKK_INTRADAY':
+        direction = fn(I, i, ai_score=current_ai_score)
+    else:
+        direction = fn(I, i)
     return (sname, direction) if direction else (None, None)
 
 # ── STATO GIORNALIERO ─────────────────────────────────────────────────────────
@@ -1234,13 +1103,17 @@ def run():
                             I_m15 = compute_indicators(candles_m15)
                             idx = len(candles_m15) - 2
                             sname = pb_entry['strategy']
+                            sf = SESSION_FILTER.get(sname)
+                            if sf and bar_dt_m15.hour in sf['block_hours']:
+                                log.info(f"[M15] {sname} saltato — sessione asiatica ({bar_dt_m15.strftime('%H:%M')} UTC)")
+                                continue
                             fn    = SIGNAL_FNS.get(sname)
-                            
+
                             # Calcolo trend H1 corrente per confluenza
                             curr_h1_trend = I_h1['st'][i_h1] if 'st' in I_h1 else 0
-                            
+
                             if sname == 'S16_GOLDEN_SQUEEZE':
-                                direction = fn(I_m15, idx, curr_h1_trend)
+                                direction = fn(I_m15, idx, h1_trend=curr_h1_trend)
                             else:
                                 direction = fn(I_m15, idx) if fn else None
                                 
@@ -1304,6 +1177,10 @@ def run():
                             I_m30 = compute_indicators(candles_m30)
                             idx = len(candles_m30) - 2
                             sname = pb_entry['strategy']
+                            sf = SESSION_FILTER.get(sname)
+                            if sf and bar_dt_m30.hour in sf['block_hours']:
+                                log.info(f"[M30] {sname} saltato — sessione asiatica ({bar_dt_m30.strftime('%H:%M')} UTC)")
+                                continue
                             fn    = SIGNAL_FNS.get(sname)
                             direction = fn(I_m30, idx) if fn else None
                             if direction and has_position_in_direction(direction):

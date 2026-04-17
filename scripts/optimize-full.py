@@ -290,7 +290,7 @@ def main():
     print("MFKK Full Optimizer — 2 anni XAU H1")
     print("="*60)
     print("Caricamento candele locali...")
-    with open('xauusd_h1_730d.json', 'r') as f:
+    with open('data/xauusd_h1_730d.json', 'r') as f:
         data = json.load(f)
         candles = data.get('candles', data) if isinstance(data, dict) else data
     print(f"  {len(candles)} candele locali caricate")

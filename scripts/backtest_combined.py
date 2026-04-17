@@ -24,9 +24,9 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 ap = argparse.ArgumentParser()
 ap.add_argument('--playbook', default='regime_playbook.json')
 ap.add_argument('--out',      default='combined_backtest.json')
-ap.add_argument('--h1',  default='xauusd_h1_mt5.json')
-ap.add_argument('--m15', default='xauusd_m15_mt5.json')
-ap.add_argument('--m30', default='xauusd_m30_mt5.json')
+ap.add_argument('--h1',  default='data/xauusd_h1_mt5.json')
+ap.add_argument('--m15', default='data/xauusd_m15_mt5.json')
+ap.add_argument('--m30', default='data/xauusd_m30_mt5.json')
 args = ap.parse_args()
 
 TP_MULT    = 1.5

@@ -36,7 +36,7 @@ args = parser.parse_args()
 
 DAYS     = args.days
 TF_NAME  = args.tf.upper()
-OUT_FILE = args.out or f"xauusd_{TF_NAME.lower()}_mt5.json"
+OUT_FILE = args.out or f"data/xauusd_{TF_NAME.lower()}_mt5.json"
 
 TF_MAP = {
     'M5':  ('TIMEFRAME_M5',   5),

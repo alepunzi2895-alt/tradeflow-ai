@@ -727,30 +727,32 @@ def get_recent_trades_data(n=30):
         from_date = datetime.datetime.now(utc) - datetime.timedelta(days=180)
         to_date   = datetime.datetime.now(utc)
         deals = mt5.history_deals_get(from_date, to_date)
+        log.info(f"📋 history_deals: {len(deals) if deals is not None else 'None'} deal totali (180gg)")
         if deals is not None and len(deals) > 0:
             result = []
+            skipped_entry = 0
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
-                # Escludi tutto ciò che non è un trade reale BUY/SELL:
-                # type 0=BUY, 1=SELL, 2=BALANCE (deposito/prelievo), 3=CREDIT, 4=CHARGE, 5=CORRECTION, ecc.
                 if d.type not in (0, 1):
-                    log.debug(f"  Skip deal type={d.type} (non trade: deposito/prelievo/credito)")
                     continue
-                if d.entry != 1: continue   # solo deal di chiusura (exit)
+                if d.entry not in (1, 2):  # OUT o INOUT (hedge close by opposite)
+                    skipped_entry += 1
+                    continue
                 result.append({
                     'ticket':    d.ticket,
                     'time':      datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
-                    'direction': 'sell' if d.type == 0 else 'buy',  # exit deal type è opposto alla posizione originale
+                    'direction': 'sell' if d.type == 0 else 'buy',
                     'strategy':  d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
                     'price':     round(d.price, 2),
                     'profit':    round(d.profit, 2),
                     'volume':    d.volume,
                 })
                 if len(result) >= n: break
+            log.info(f"📋 Trade chiusi trovati: {len(result)} (skip entry-open: {skipped_entry})")
             if result:
-                log.debug(f"🎯 Recuperati {len(result)} deal dallo storico MT5")
+                log.info(f"📋 Più recente: {result[0]['time'][:10]} {result[0]['direction']} profit={result[0]['profit']}")
                 return result
     except Exception as e:
-        log.debug(f"MT5 history_deals fallback su JSON: {e}")
+        log.warning(f"MT5 history_deals errore: {e}")
     # Fallback su file locale
     fname = 'mt5-trades.json'
     if not os.path.exists(fname): return []

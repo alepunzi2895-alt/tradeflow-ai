@@ -168,9 +168,11 @@ class RiskManager:
             base_tp = sb['base_tp'] or (atr * ATR_TP_MULT_BASE if atr else 20.0)
             base_sl = sb['base_sl'] or (atr * ATR_SL_MULT_BASE if atr else 12.0)
 
-        # ── Applica moltiplicatori tier ───────────────────────────────────
-        tp_usd = round(base_tp * tier['tp_mult'], 2)
-        sl_usd = round(base_sl * tier['sl_mult'], 2)
+        # ── SL/TP DELEGATED TO STRATEGY ───────────────────────────────────
+        # Risk Manager no longer overrides SL/TP based on Tiers.
+        # It uses the strategy's own risk profile as requested by the user.
+        tp_usd = round(base_tp, 2)
+        sl_usd = round(base_sl, 2)
 
         # ── Manipulation mult ─────────────────────────────────────────────
         manip_mult = self.get_manipulation_mult(
@@ -219,7 +221,7 @@ class RiskManager:
         else:
             log.info(
                 f"📊 RiskManager [{tier['label']}] score={ai_score:.0f} manip={manip_mult:.2f} | "
-                f"lot={lot} | TP=${tp_usd} | SL=${sl_usd} | "
+                f"lot={lot} | Using Strategy TP/SL | "
                 f"BE@+${be_trigger} | TS step=${ts_step}"
                 + (f" | Partial {int(partial_pct*100)}% @TP${tp2_usd}" if tier.get('partial') else "")
             )

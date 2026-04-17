@@ -77,6 +77,42 @@ Ogni barra H1 `StrategySelector.select()` esegue:
 - Strategia corrente score > 60 → nessun switch
 - Nuovo leader deve battere il corrente di almeno **15 pt**
 
+## Performance Tracker — Self-Learning Agent (`performance_tracker.py`)
+
+Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento ordine `"TF-AI {strategy_id}"`), calcola WR/PF rolling su 30 trade e retroalimenta il StrategySelector.
+
+### Flusso
+
+1. `tracker.update_from_mt5(mt5)` — accoppia entry+exit per `position_id`, aggiunge nuovi trade a `data/performance_cache.json`
+2. `tracker.auto_apply_adjustments()` — confronta WR recente vs baseline backtest, scrive `data/strategy_overrides.json`
+3. `tracker.get_recent_wr_map()` → `{strategy_id: wr}` passato a `StrategySelector.select(recent_wr_map=...)`
+4. In `_score_strategy()`: punteggio finale moltiplicato per `score_mult` da overrides
+
+### Regole di aggiustamento (richiede ≥ 10 trade recenti)
+
+| Condizione | score_mult | Tipo |
+|---|---|---|
+| WR recente < 70% del baseline | 0.70 | underperform |
+| WR recente > 125% del baseline | 1.30 | outperform |
+| ≥ 6 perdite consecutive | 0.50 | streak_penalty |
+| Nella norma | 1.00 | normal |
+
+### Baseline backtest (fonte di verità)
+
+| Strategia | WR baseline | PF baseline |
+|---|---|---|
+| S16_GOLDEN_SQUEEZE | 31.7% | 1.285 |
+| S05_MFKK_INTRADAY | 41.5% | 1.361 |
+| S09_MFKK_SCALPING | 37.8% | 1.637 |
+| S10_OB_FVG_SCALP | 42.5% | 1.796 |
+| S00_MFKK | 38.3% | 1.033 |
+| S17_CONVERGENCE_SCALP | 25.7% | 1.107 |
+
+> Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.
+> Cache trade: `data/performance_cache.json` (max 500 trade). Overrides: `data/strategy_overrides.json`.
+
+---
+
 ## Regime Detection (esteso)
 
 ```python

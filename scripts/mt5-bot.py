@@ -65,6 +65,14 @@ except ImportError:
     log_placeholder4 = logging.getLogger('tf-bot')
     log_placeholder4.warning("key_levels.py non trovato — TP/SL non verranno aggiustati")
 
+# ── PERFORMANCE TRACKER (self-learning) ───────────────────────────────────────
+try:
+    from performance_tracker import get_performance_tracker
+except ImportError:
+    get_performance_tracker = None
+    log_placeholder5 = logging.getLogger('tf-bot')
+    log_placeholder5.warning("performance_tracker.py non trovato — self-learning disabilitato")
+
 # ── CONFIGURAZIONE (Legacy fallback, ora legge da .env) ───────────────
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
 MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
@@ -946,6 +954,12 @@ def run():
     if kla:
         log.info("KeyLevelsAgent attivo — multi-TF (D1 1.0 / H4 0.9 / H1 0.7)")
 
+    # Inizializza Performance Tracker (self-learning)
+    perf_tracker     = get_performance_tracker(MAGIC) if get_performance_tracker else None
+    last_perf_report = 0  # timestamp ultimo report 6h
+    if perf_tracker:
+        log.info("PerformanceTracker attivo — self-learning abilitato")
+
     while True:
         try:
             now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -1054,6 +1068,11 @@ def run():
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
 
+            # ── Performance Tracker: report ogni 6 ore ─────────────────────
+            if perf_tracker and (now_ts - last_perf_report) >= 21600:
+                log.info(perf_tracker.get_performance_report())
+                last_perf_report = now_ts
+
             # ── Fetch AI Score ogni 60s ────────────────────────────────────
             if (now_ts - last_score_ts) >= 60:
                 global current_ai_score
@@ -1089,10 +1108,21 @@ def run():
                 # ── Aggiorna Regime ───────────────────────────────────────────
                 current_regime = detect_regime(I_h1, i_h1)
 
+                # ── Performance Tracker: aggiorna storico + applica aggiustamenti ──
+                recent_wr_map = {}
+                if perf_tracker:
+                    try:
+                        perf_tracker.update_from_mt5(mt5)
+                        perf_tracker.auto_apply_adjustments()
+                        recent_wr_map = perf_tracker.get_recent_wr_map()
+                    except Exception as e:
+                        log.warning(f"[PerfTracker] update error: {e}")
+
                 # ── Strategy Selector Agent (ogni barra H1) ───────────────────
                 if strategy_selector:
                     current_selector_result = strategy_selector.select(
-                        I_h1, i_h1, bar_dt.hour
+                        I_h1, i_h1, bar_dt.hour,
+                        recent_wr_map=recent_wr_map or None
                     )
                     last_selector_bar_time = latest_bar_time
 

@@ -11,7 +11,9 @@ USAGE:
 ═══════════════════════════════════════════════════════════════════
 """
 import datetime
+import json
 import logging
+import os
 
 log = logging.getLogger('tf-bot')
 
@@ -189,6 +191,18 @@ def detect_regime_extended(I: dict, i: int) -> dict:
     }
 
 
+def _load_score_overrides() -> dict:
+    """Legge data/strategy_overrides.json → {strategy_id: score_mult}. Silent on error."""
+    try:
+        _base = os.path.dirname(os.path.abspath(__file__))
+        path  = os.path.join(_base, '..', 'data', 'strategy_overrides.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        return {sid: v.get("score_mult", 1.0) for sid, v in raw.items()}
+    except Exception:
+        return {}
+
+
 def _score_strategy(strategy: dict, regime: dict, session: str,
                     recent_wr: float = None) -> dict:
     """Score a single strategy 0-100."""
@@ -230,6 +244,11 @@ def _score_strategy(strategy: dict, regime: dict, session: str,
     if "min_confidence" in strategy:
         if (score / 100.0) < strategy["min_confidence"]:
             score *= 0.5
+
+    # ── Performance Tracker override (self-learning) ──────────────────────────
+    overrides = _load_score_overrides()
+    score_mult = overrides.get(strategy["id"], 1.0)
+    score *= score_mult
 
     return {
         "strategy_id": strategy["id"],

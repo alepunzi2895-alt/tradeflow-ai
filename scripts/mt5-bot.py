@@ -925,6 +925,7 @@ def run():
                 positions_data = get_open_positions_data()
                 trades_data = get_recent_trades_data(200)
                 today_str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+                log.info(f"📊 Sync: {len(trades_data)} trade totali, {sum(1 for t in trades_data if t['time'][:10]==today_str)} oggi | last: {trades_data[0]['time'][:16] if trades_data else 'nessuno'}")
                 pnl_today_real = round(sum(t['profit'] for t in trades_data if t['time'][:10] == today_str), 2)
                 trades_today_real = sum(1 for t in trades_data if t['time'][:10] == today_str)
                 bot_status = {

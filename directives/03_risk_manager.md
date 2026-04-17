@@ -72,13 +72,28 @@ lot = base_lot × tier.lot_multiplier × min(sqrt(equity / initial_equity), 3.0)
 
 Ogni barra H1, `kla.get_levels(I, i, candles)` calcola:
 
-| Tipo | Descrizione | Strength base |
+**Gerarchia timeframe** — la strength di ogni livello viene moltiplicata per il peso TF sorgente:
+
+| TF sorgente | Peso | Autorità |
+|---|---|---|
+| D1 | 1.00 | Massima — pivot daily dominano |
+| H4 | 0.90 | Alta |
+| H1 | 0.70 | Media |
+| M30 | 0.55 | Bassa |
+| M15 | 0.40 | Molto bassa |
+| M5 | 0.25 | Minima |
+
+**Tipi di livello rilevati:**
+
+| Tipo | Descrizione | Strength base (prima del peso TF) |
 |---|---|---|
 | `prev_session` | H/L sessione precedente (Asian/London/NY) | 1.0 |
 | `liquidity_pool` | Equal highs/lows clusters (stop hunt zones) | 0.6–0.95 |
 | `swing_high/low` | Pivot N-bar (5 barre ciascun lato) | 0.65–0.90 |
 | `order_block` | Ultima candela OB prima di impulso forte | 0.80 |
 | `round_number` | Multipli di $50 XAU psicologici | 0.60 |
+
+In pratica: un swing_high D1 (0.85 × 1.0 = **0.85**) supera un swing_high H1 (0.85 × 0.7 = **0.60**), e il merge di entrambi sullo stesso prezzo porta a strength ≥ 0.90.
 
 **Aggiustamenti automatici in `place_order()`:**
 - **TP snap**: se un livello forte (strength ≥ 0.65) è tra entry e TP → TP si posiziona subito prima di quel livello (−0.15×ATR). TP minimo garantito: 0.8×ATR.
@@ -90,7 +105,8 @@ Ogni barra H1, `kla.get_levels(I, i, candles)` calcola:
 ```
 1. Ogni 60s: fetch AI Score da Vercel DB → aggiorna signal_quality
 2. Ad ogni nuova barra H1:
-   a. kla.get_levels(I, i, candles) → current_levels_result
+   a. fetch D1 (200 barre) + H4 (300 barre) se nuova barra disponibile
+   b. kla.get_multi_tf_levels([D1, H4, H1]) → current_levels_result (ponderato per TF)
    b. StrategySelector.select() → strategy_confidence
 3. Ad ogni segnale:
    a. rg.get_order_params(strategy_confidence, ai_score, atr, ...) → lot/TP/SL/BE/TS

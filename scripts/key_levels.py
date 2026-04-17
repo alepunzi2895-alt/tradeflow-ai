@@ -14,12 +14,30 @@ Level Types (by priority):
   order_block     — last OB candle before an impulse move: 0.7-0.9
   round_number    — $50 psychological multiples for XAU: 0.6
 
-Strength composite: base type weight + recency bonus + touch count bonus
+Timeframe strength weights (applied as multiplier to all level strengths):
+  D1:  1.00  — massima autorità
+  H4:  0.90  — alta importanza
+  H1:  0.70  — media importanza
+  M30: 0.55  — bassa importanza
+  M15: 0.40
+  M5:  0.25
+
+Strength composite: base type weight × TF weight + recency bonus + touch count bonus
 ════════════════════════════════════════════════════════════
 """
 import logging
 
 log = logging.getLogger('tf-bot')
+
+# Timeframe strength multipliers — higher TF = more authoritative level
+TF_STRENGTH_MULT = {
+    "D1":  1.00,
+    "H4":  0.90,
+    "H1":  0.70,
+    "M30": 0.55,
+    "M15": 0.40,
+    "M5":  0.25,
+}
 
 # Proximity tolerance: levels within (ATR × this) are merged into one
 CLUSTER_ATR_FRAC = 0.30
@@ -264,15 +282,18 @@ class KeyLevelsAgent:
 
     def get_levels(self, I: dict, i: int,
                    candles: list = None,
-                   atr: float = None) -> dict:
+                   atr: float = None,
+                   tf: str = "H1") -> dict:
         """
-        Compute all key levels at bar index i.
+        Compute all key levels at bar index i for a single timeframe.
 
         Args:
             I: indicator dict with keys H, L, O, C (from compute_indicators)
             i: current bar index
             candles: raw candle list for session H/L detection (optional)
             atr: override ATR value (defaults to I['atr'][i])
+            tf: timeframe label ('D1','H4','H1','M30','M15','M5') — controls
+                strength weight applied to all detected levels
 
         Returns:
             {levels, resistance, support, current_price, atr}
@@ -287,6 +308,8 @@ class KeyLevelsAgent:
             return {"levels": [], "resistance": [], "support": [],
                     "current_price": current_price, "atr": atr}
 
+        tf_mult = TF_STRENGTH_MULT.get(tf, 0.70)
+
         all_levels = []
         all_levels += _find_swing_highs(H, i, lookback)
         all_levels += _find_swing_lows(L, i, lookback)
@@ -295,6 +318,11 @@ class KeyLevelsAgent:
         all_levels += _round_number_levels(current_price, atr)
         if candles:
             all_levels += _find_session_levels(candles, i)
+
+        # Apply TF weight multiplier to all level strengths
+        for lvl in all_levels:
+            lvl["strength"] = round(min(lvl["strength"] * tf_mult, 1.0), 3)
+            lvl["tf"] = tf
 
         merged = _merge(all_levels, atr)
 
@@ -309,9 +337,9 @@ class KeyLevelsAgent:
         )
 
         log.debug(
-            f"[KeyLevels] {len(merged)} levels merged "
-            f"({len(resistance)} resistance, {len(support)} support) "
-            f"@ {current_price:.2f} ATR={atr:.2f}"
+            f"[KeyLevels/{tf}] {len(merged)} levels "
+            f"({len(resistance)} res, {len(support)} sup) "
+            f"@ {current_price:.2f} ATR={atr:.2f} weight={tf_mult}"
         )
 
         return {
@@ -320,6 +348,83 @@ class KeyLevelsAgent:
             "support":       support,
             "current_price": current_price,
             "atr":           atr,
+        }
+
+    def get_multi_tf_levels(self, tf_inputs: list, atr: float = None) -> dict:
+        """
+        Compute and merge key levels from multiple timeframes.
+        D1/H4 levels dominate; H1 is secondary; M30 and below are tertiary.
+
+        Args:
+            tf_inputs: list of dicts, each:
+                {
+                  "tf":      "D1" | "H4" | "H1" | "M30" | "M15" | "M5",
+                  "I":       indicator dict from compute_indicators(),
+                  "i":       current bar index (use len(candles)-2),
+                  "candles": raw candle list (optional, for session H/L)
+                }
+            atr: reference ATR for merging tolerance (uses H1 ATR if None)
+
+        Returns:
+            {levels, resistance, support, current_price, atr, tf_summary}
+        """
+        all_raw = []
+        current_price = None
+        ref_atr = atr
+
+        for inp in tf_inputs:
+            tf_name = inp["tf"]
+            I       = inp["I"]
+            i       = inp["i"]
+            candles = inp.get("candles")
+
+            if I is None or i is None or i < SWING_N * 2:
+                continue
+
+            tf_atr = I['atr'][i] if I['atr'][i] else 10.0
+            if ref_atr is None and tf_name == "H1":
+                ref_atr = tf_atr
+
+            result = self.get_levels(I, i, candles=candles, atr=tf_atr, tf=tf_name)
+            all_raw += result["levels"]
+
+            if current_price is None and tf_name in ("H1", "M30", "H4"):
+                current_price = result["current_price"]
+
+        if ref_atr is None:
+            ref_atr = 10.0
+        if current_price is None and all_raw:
+            current_price = all_raw[0]["price"]
+
+        merged = _merge(all_raw, ref_atr)
+
+        gap = ref_atr * 0.1
+        resistance = sorted(
+            [l for l in merged if l["price"] > current_price + gap],
+            key=lambda x: x["price"]
+        )
+        support = sorted(
+            [l for l in merged if l["price"] < current_price - gap],
+            key=lambda x: -x["price"]
+        )
+
+        tf_counts = {}
+        for inp in tf_inputs:
+            tf_counts[inp["tf"]] = sum(1 for l in merged if l.get("tf") == inp["tf"])
+
+        log.info(
+            f"[KeyLevels] Multi-TF merge: {len(merged)} levels total "
+            f"({len(resistance)} res, {len(support)} sup) | "
+            + " ".join(f"{k}:{v}" for k, v in tf_counts.items())
+        )
+
+        return {
+            "levels":        merged,
+            "resistance":    resistance,
+            "support":       support,
+            "current_price": current_price,
+            "atr":           ref_atr,
+            "tf_summary":    tf_counts,
         }
 
     def adjust_tp_sl(self,

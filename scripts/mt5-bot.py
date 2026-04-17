@@ -940,8 +940,11 @@ def run():
     # Inizializza Key Levels Agent
     kla = get_key_levels_agent() if get_key_levels_agent else None
     current_levels_result = None  # aggiornato ogni barra H1
+    # Cache per TF higher (D1 aggiornato ogni 24h, H4 ogni 4h)
+    cached_I_d1  = None;  cached_candles_d1  = None;  last_d1_bar_time  = None
+    cached_I_h4  = None;  cached_candles_h4  = None;  last_h4_bar_time  = None
     if kla:
-        log.info("KeyLevelsAgent attivo — TP/SL snapping abilitato")
+        log.info("KeyLevelsAgent attivo — multi-TF (D1 1.0 / H4 0.9 / H1 0.7)")
 
     while True:
         try:
@@ -1093,15 +1096,49 @@ def run():
                     )
                     last_selector_bar_time = latest_bar_time
 
-                # ── Key Levels Agent (ogni barra H1) ─────────────────────────
+                # ── Key Levels Agent: fetch D1 / H4, merge multi-TF ──────────
                 if kla:
                     try:
-                        current_levels_result = kla.get_levels(
-                            I_h1, i_h1, candles=candles,
-                            atr=I_h1['atr'][i_h1]
+                        # D1: aggiorna solo se nuova candela daily
+                        candles_d1_new = get_candles_tf('D1', 200)
+                        if candles_d1_new:
+                            d1_bar = candles_d1_new[-2]['t']
+                            if d1_bar != last_d1_bar_time:
+                                cached_candles_d1 = candles_d1_new
+                                cached_I_d1 = compute_indicators(candles_d1_new)
+                                last_d1_bar_time = d1_bar
+
+                        # H4: aggiorna solo se nuova candela H4
+                        candles_h4_new = get_candles_tf('H4', 300)
+                        if candles_h4_new:
+                            h4_bar = candles_h4_new[-2]['t']
+                            if h4_bar != last_h4_bar_time:
+                                cached_candles_h4 = candles_h4_new
+                                cached_I_h4 = compute_indicators(candles_h4_new)
+                                last_h4_bar_time = h4_bar
+
+                        tf_inputs = [
+                            {"tf": "H1",  "I": I_h1,        "i": i_h1,
+                             "candles": candles},
+                        ]
+                        if cached_I_h4:
+                            tf_inputs.insert(0, {
+                                "tf": "H4", "I": cached_I_h4,
+                                "i": len(cached_candles_h4) - 2,
+                                "candles": cached_candles_h4,
+                            })
+                        if cached_I_d1:
+                            tf_inputs.insert(0, {
+                                "tf": "D1", "I": cached_I_d1,
+                                "i": len(cached_candles_d1) - 2,
+                                "candles": cached_candles_d1,
+                            })
+
+                        current_levels_result = kla.get_multi_tf_levels(
+                            tf_inputs, atr=I_h1['atr'][i_h1]
                         )
                     except Exception as _kl_err:
-                        log.debug(f"[KeyLevels] get_levels error: {_kl_err}")
+                        log.debug(f"[KeyLevels] multi-tf error: {_kl_err}")
                         current_levels_result = None
 
                 # ── Controllo giorno estremo ──────────────────────────────────

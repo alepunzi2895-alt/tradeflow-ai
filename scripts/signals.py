@@ -20,29 +20,129 @@ def _get(ind, *keys):
 
 
 def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
-    """S00_MFKK — ADX 80% + MACD 10% + CCI 10%. BUY/SELL threshold 65."""
-    if i < 50: return None
-    a = ind['adx'][i]; dp = ind['dip'][i]; dm = ind['dim'][i]
-    ml = _get(ind, 'ml', 'macd')
-    m = ml[i] if ml else None
-    cci_arr = ind.get('cci')
-    c = cci_arr[i] if (cci_arr and cci_arr[i] is not None) else 0
-    if None in (a, dp, dm, m): return None
+    """
+    S00_MFKK — Highly specialized multi-tier scoring (port of mfkk.js).
+    Weights: CCI 10%, MACD 10%, ADX 80% (XAU optimized).
+    """
+    if i < 100: return None
+    
+    # ── RAW VALUES ──────────────────────────────────────────────────────────
+    # Note: 'cci' here refers to the stk_d (smoothed stochastic of CCI) passed by compute_all
+    c = ind['cci'][i]
+    if c is None: c = 50.0
 
-    bull = bear = 0.0
-    adx_c = min(a / 40 * 100, 100)
-    if dm > dp: bear += adx_c * 0.80
-    else:       bull += adx_c * 0.80
-    ms = min(abs(m) / 0.5 * 100, 100)
-    if m >= 0: bull += ms * 0.10
-    else:      bear += ms * 0.10
-    cs = min(abs(c) / 100 * 100, 100)
-    if c >= 0: bull += cs * 0.10
-    else:      bear += cs * 0.10
+    ml_arr = _get(ind, 'ml', 'macd')
+    m = ml_arr[i] if ml_arr else 0
+    m_sig = ind.get('macd_sig', [0]*len(ml_arr))[i] if ml_arr else 0
+    m_hist = ind.get('macd_hist', [0]*len(ml_arr))[i] if ml_arr else 0
+    m_hist_p = ind.get('macd_hist', [0]*len(ml_arr))[i-1] if (ml_arr and i>0) else 0
+    
+    a  = ind['adx'][i]
+    dp = ind['dip'][i]
+    dm = ind['dim'][i]
+    if None in (a, dp, dm): return None
 
-    if bull >= 65: return 'buy'
-    if bear >= 65: return 'sell'
+    # ── DIRECTION DETECTION (for scoring bias) ──────────────────────────────
+    # We calculate both and return 'buy' or 'sell' if one crosses threshold
+    def get_dir_score(is_buy):
+        # 1. CCI SCORE (10%) — exact tiered logic from mfkk.js
+        cci_s = 50
+        if is_buy:
+            macd_rising = m_hist > m_hist_p
+            is_cci_reversal = c < 35 and (macd_rising or m > m_sig)
+            if is_cci_reversal:    cci_s = 85 + (35 - c) * 0.5
+            elif c >= 75:          cci_s = 70
+            elif c >= 65:          cci_s = 55
+            elif c >= 50:          cci_s = 45
+            elif c >= 35:          cci_s = 35
+            else:                  cci_s = 20
+        else:
+            macd_falling = m_hist < m_hist_p
+            is_cci_reversal = c > 65 and (macd_falling or m < m_sig)
+            if is_cci_reversal:    cci_s = 85 + (c - 65) * 0.5
+            elif c <= 35:          cci_s = 15
+            elif c <= 50:          cci_s = 40
+            elif c <= 65:          cci_s = 50
+            else:                  cci_s = 20
+        
+        # 2. MACD SCORE (10%)
+        macd_s = 50
+        diff = m - m_sig
+        str_m = min(abs(diff)/3, 1)
+        hist_bonus = 10 if ((is_buy and m_hist > 0) or (not is_buy and m_hist < 0)) else 0
+        
+        m_p = ml_arr[i-1] if i>0 else 0
+        ms_p = ind.get('macd_sig', [0]*len(ml_arr))[i-1] if i>0 else 0
+        
+        cross_buy = m_p <= ms_p and m > m_sig
+        cross_sell = m_p >= ms_p and m < m_sig
+        
+        if is_buy:
+            if cross_buy:          macd_s = 100
+            elif diff > 0.5:       macd_s = 75 + str_m * 20 + hist_bonus
+            elif diff > 0:         macd_s = 70 + hist_bonus
+            elif diff > -0.2:      macd_s = 60
+            elif diff > -1:        macd_s = 40
+            elif diff > -3:        macd_s = 45 # exhaustion hint
+            else:                  macd_s = 20
+        else:
+            if cross_sell:         macd_s = 100
+            elif cross_buy:        macd_s = 5
+            elif diff < -0.5:      macd_s = 75 + str_m * 20 + hist_bonus
+            elif diff < 0:         macd_s = 70 + hist_bonus
+            elif diff < 0.5:       macd_s = 45
+            elif diff < 3:         macd_s = 50 # inversion setup
+            else:                  macd_s = 20
+            
+        # 3. ADX SCORE (80%)
+        adx_s = 50
+        di_diff = dp - dm
+        di_spread = abs(di_diff)
+        spread_bonus = min(di_spread / 20, 1) * 15
+        adx_str = 1.0 if a>=35 else 0.85 if a>=27 else 0.65 if a>=20 else 0.4 if a>=14 else 0.2 if a>=10 else 0.05
+        
+        if is_buy:
+            if di_diff > 0 and a >= 25:   adx_s = 60 + adx_str * 25 + spread_bonus
+            elif di_diff > 0 and a >= 10: adx_s = 50
+            elif di_diff > 0:             adx_s = 30
+            elif di_diff < 0 and a >= 35: adx_s = 60 + adx_str * 25 + spread_bonus # reversal
+            else:                         adx_s = 5
+        else:
+            if di_diff < 0 and a >= 25:   adx_s = 60 + adx_str * 25 + spread_bonus
+            elif di_diff < 0 and a >= 10: adx_s = 50
+            elif di_diff < 0:             adx_s = 30
+            elif di_diff > 0 and a >= 35: adx_s = 60 + adx_str * 25 + spread_bonus # reversal
+            else:                         adx_s = 5
+            
+        # Weighted Total
+        total = (cci_s * 0.10) + (macd_s * 0.10) + (adx_s * 0.80)
+        return total, adx_s, diff, cross_buy, cross_sell
+
+    # Execute scoring
+    b_score, b_adx_s, b_diff, b_cross, b_cross_s = get_dir_score(True)
+    s_score, s_adx_s, s_diff, s_cross_b, s_cross = get_dir_score(False)
+    
+    # ── SPECIAL PATTERNS ────────────────────────────────────────────────────
+    # Exhaustion check
+    is_exh_sell = s_adx_s >= 75 and b_diff > 1.0 # MACD very bullish but ADX/DI favor sell
+    is_exh_buy  = b_adx_s >= 75 and b_diff < -1.0 # MACD very bearish but ADX/DI favor buy
+    
+    # High-WR Sell (exact hard rules)
+    is_london_ny = hour is not None and (7 <= hour < 17)
+    is_high_wr_sell = (not b_cross) and a >= 35 and dm > dp and (dm-dp) >= 20 and b_diff >= 1.0 and c >= 25 and is_london_ny
+    
+    # Final Decision
+    if is_high_wr_sell: return 'sell'
+    
+    # Thresholds: Buy >= 90 (or 82 for special), Sell >= 68
+    buy_thr = 82 if (is_exh_buy or b_cross) else 90
+    sell_thr = 68
+    
+    if b_score >= buy_thr: return 'buy'
+    if s_score >= sell_thr: return 'sell'
+    
     return None
+
 
 
 def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):

@@ -30,7 +30,7 @@ python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
 | Architettura, stack, flusso dati | `directives/00_overview.md` |
 | Prezzi, TV Scanner, Yahoo, parametri MFKK | `directives/01_data_sources.md` |
 | Strategie attive, backtest, regime priority | `directives/02_strategies.md` |
-| Risk Manager, tier, BE/TS | `directives/03_risk_manager.md` |
+| Risk Guardian, composite score, tier, BE/TS/early-exit | `directives/03_risk_manager.md` |
 | Bot MT5, comandi, retcode, checklist deploy | `directives/04_bot_operations.md` |
 | Procedure backtest, risultati canonici | `directives/05_backtest.md` |
 | Bug aperti, backlog | `directives/06_known_issues.md` |
@@ -57,15 +57,17 @@ python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
 
 ```
 public/modules/
-  se-signals.js   — indicator helpers + SE_STRATEGY_FNS (browser)
-  strategy.js     — SE config, seRefresh(), loop 1s
-  se-render.js    — seRender(), seRenderNoData()
+  se-signals.js      — indicator helpers + SE_STRATEGY_FNS (browser)
+  strategy.js        — SE config, seRefresh(), loop 1s
+  se-render.js       — seRender(), seRenderNoData()
 
 scripts/
-  signals.py      — funzioni segnale unificate (source of truth)
-  mt5-bot.py      — bot trading, importa da signals.py
+  signals.py         — funzioni segnale unificate (source of truth)
+  mt5-bot.py         — bot trading, integra StrategySelector + RiskGuardian
+  strategy_selector.py — Strategy Selector Agent: regime scoring → best strategy+TF
+  risk_guardian.py   — Risk Guardian Agent: composite score → tier → lot/TP/SL + position lifecycle
+  risk_manager.py    — Legacy (backward compat, non usato direttamente)
   strategy-engine-v2.py — backtester, importa da signals.py
-  risk_manager.py — AI Score → lot/TP/SL/BE/TS
 
 data/             — xauusd_*.json (price history)
 backtests/        — results/ + archive/

@@ -32,13 +32,29 @@ from signals import (
     signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp,
 )
 
-# ── RISK MANAGER ─────────────────────────────────────────────────────────────
+# ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
 try:
     from risk_manager import get_risk_manager, RiskManager
 except ImportError:
     get_risk_manager = None
     log_placeholder = logging.getLogger('tf-bot')
     log_placeholder.warning("risk_manager.py non trovato — uso lot size fisso")
+
+# ── RISK GUARDIAN (new adaptive agent) ───────────────────────────────────────
+try:
+    from risk_guardian import get_risk_guardian, RiskGuardian
+except ImportError:
+    get_risk_guardian = None
+    log_placeholder2 = logging.getLogger('tf-bot')
+    log_placeholder2.warning("risk_guardian.py non trovato — fallback a risk_manager")
+
+# ── STRATEGY SELECTOR AGENT ───────────────────────────────────────────────────
+try:
+    from strategy_selector import StrategySelector
+except ImportError:
+    StrategySelector = None
+    log_placeholder3 = logging.getLogger('tf-bot')
+    log_placeholder3.warning("strategy_selector.py non trovato — uso playbook statico")
 
 # ── CONFIGURAZIONE (Legacy fallback, ora legge da .env) ───────────────
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
@@ -141,6 +157,25 @@ def rsi(src, p=14):
         out[i+1]=100-100/(1+(ag/al if al>0 else 100))
     return out
 
+def cci_standard(src, p=50):
+    n = len(src); out = [None] * n
+    if n < p: return out
+    for i in range(p - 1, n):
+        sl = src[i - p + 1 : i + 1]
+        mn = sum(sl) / p
+        md = sum(abs(x - mn) for x in sl) / p
+        out[i] = (src[i] - mn) / (0.015 * md) if md != 0 else 0
+    return out
+
+def stochastic(src, p=14):
+    n = len(src); out = [None] * n
+    for i in range(p - 1, n):
+        sl = [x for x in src[i - p + 1 : i + 1] if x is not None]
+        if len(sl) < p: continue
+        lo = min(sl); hi = max(sl)
+        out[i] = ((src[i] - lo) / (hi - lo) * 100) if hi > lo else 50
+    return out
+
 def atr(H,L,C,p=14):
     tr=[0]
     for i in range(1,len(C)):
@@ -210,14 +245,6 @@ def obv(C,V):
     return out
 
 # ── MATH HELPERS AGGIUNTIVI ──────────────────────────────────────────────────
-def cci(H, L, C, p=50):
-    tp = [(H[i]+L[i]+C[i])/3 for i in range(len(C))]
-    out = [None]*(p-1)
-    for i in range(p-1, len(tp)):
-        sl = tp[i-p+1:i+1]; mn = sum(sl)/p
-        md = sum(abs(x-mn) for x in sl)/p
-        out.append((tp[i]-mn)/(0.015*md) if md > 0 else 0)
-    return out
 
 def mom(src, p=10):
     out = [None]*p
@@ -384,7 +411,11 @@ def compute_indicators(candles):
     I['adx'],I['dip'],I['dim']=adx_calc(H,L,C,14)
     I['ml'],I['ms'],I['mh']=macd(C,12,26,9)
     I['macd_sig']=I['ms']   # alias usato da s_exhaustion
-    I['cci']=cci(H,L,C,50)
+    # CCI_S: CCI(50) -> stochastic(50) -> SMA(8) -> SMA(8)
+    cci_tmp = cci_standard(C, 50)
+    stk_tmp = stochastic(cci_tmp, 50)
+    stk_k = sma([x if x is not None else 50 for x in stk_tmp], 8)
+    I['cci'] = sma([x if x is not None else 50 for x in stk_k], 8)
     I['mom']=mom(C,10)
     I['bb_mid'],I['bb_up'],I['bb_dn']=bb(C,20,2.0)
     I['wpr']=wpr(H,L,C,14)
@@ -452,15 +483,15 @@ SESSION_FILTER = {
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
-# Identico a backtest_combined.py — S00_MFKK su tutti i regimi (BUY>=80/SELL>=65)
+# S00_MFKK aggiunto come fallback M30 in TREND/WEAK (backtest: +$848, 34% WR, 1595 trade su 25m)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','M15',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','M15',None)],
-    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M15',None)],
-    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M15',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
     'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M5',None)],
-    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
+    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','M15',None)],
 }
 
 def get_signal(I, i, hour, regime):
@@ -851,12 +882,33 @@ def run():
     cached_I_h1          = None  # cache indicatori (ricalcolati solo su nuova barra)
     _tracked_positions   = {}    # {ticket: position_id} per rilevare chiusure istantanee
 
-    # Inizializza RiskManager
+    # Inizializza RiskManager (legacy, mantiene compatibilità)
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
     if rm:
         log.info(f"RiskManager attivo — base_lot={LOT_SIZE} max_lot={LOT_SIZE*5}")
     else:
         log.warning("RiskManager disabilitato — uso lot size fisso")
+
+    # Inizializza Risk Guardian (nuovo agente adattivo)
+    acc_init = get_account_info()
+    initial_equity = acc_init['equity'] if acc_init else 10000.0
+    rg = get_risk_guardian(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5,
+                           initial_equity=initial_equity) if get_risk_guardian else None
+    if rg:
+        log.info(f"RiskGuardian attivo — equity iniziale={initial_equity:.2f}")
+    else:
+        log.info("RiskGuardian non disponibile — uso RiskManager legacy")
+
+    # Inizializza Strategy Selector Agent
+    strategy_selector = StrategySelector() if StrategySelector else None
+    if strategy_selector:
+        log.info("StrategySelector attivo — selezione dinamica regime-based")
+    else:
+        log.info("StrategySelector non disponibile — uso playbook statico")
+
+    # Stato agente selettore (aggiornato ogni barra M30/H1)
+    current_selector_result = None
+    last_selector_bar_time  = None
 
     while True:
         try:
@@ -959,6 +1011,9 @@ def run():
                     'pnl_today': pnl_today_real,
                     'regime': current_regime,
                     'last_bar': datetime.datetime.fromtimestamp(last_bar_time, tz=datetime.timezone.utc).isoformat() if last_bar_time else None,
+                    'active_strategy': current_selector_result['selected_strategy'] if current_selector_result else None,
+                    'strategy_confidence': current_selector_result['confidence'] if current_selector_result else None,
+                    'selector_reasoning': current_selector_result['reasoning'] if current_selector_result else None,
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
@@ -984,8 +1039,10 @@ def run():
             I_h1 = cached_I_h1
             i_h1 = len(candles) - 2
 
-            if rm:
-                atr_now = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else 10.0
+            atr_now = I_h1['atr'][i_h1] if I_h1['atr'][i_h1] else 10.0
+            if rg:
+                rg.manage_positions(mt5, SYMBOL, MAGIC, atr_now, current_regime)
+            elif rm:
                 rm.manage_positions(mt5, SYMBOL, MAGIC, atr_now)
 
             if new_h1_bar:
@@ -995,6 +1052,13 @@ def run():
 
                 # ── Aggiorna Regime ───────────────────────────────────────────
                 current_regime = detect_regime(I_h1, i_h1)
+
+                # ── Strategy Selector Agent (ogni barra H1) ───────────────────
+                if strategy_selector:
+                    current_selector_result = strategy_selector.select(
+                        I_h1, i_h1, bar_dt.hour
+                    )
+                    last_selector_bar_time = latest_bar_time
 
                 # ── Controllo giorno estremo ──────────────────────────────────
                 atr_v   = I_h1['atr'][i_h1]
@@ -1012,29 +1076,72 @@ def run():
                     else:
                         # ── Segnale primario H1 ───────────────────────────────
                         hour = bar_dt.hour
-                        strategy_name, direction = get_signal(I_h1, i_h1, hour, current_regime)
+
+                        # Use Strategy Selector result if available
+                        if current_selector_result and strategy_selector:
+                            sel_id = current_selector_result["selected_strategy"]
+                            sel_tf = current_selector_result["timeframe"]
+                            sel_conf = current_selector_result["confidence"]
+                            sel_tp_mult = current_selector_result.get("tp_atr_mult", 2.0)
+                            sel_sl_mult = current_selector_result.get("sl_atr_mult", 1.0)
+                            # Only proceed here if selector chose an H1 strategy
+                            fn_sel = SIGNAL_FNS.get(sel_id)
+                            if sel_tf == 'H1' and fn_sel:
+                                if sel_id == 'S05_MFKK_INTRADAY':
+                                    direction = fn_sel(I_h1, i_h1, ai_score=current_ai_score)
+                                elif sel_id == 'S16_GOLDEN_SQUEEZE':
+                                    direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1])
+                                else:
+                                    direction = fn_sel(I_h1, i_h1)
+                                strategy_name = sel_id if direction else None
+                            else:
+                                strategy_name, direction = get_signal(I_h1, i_h1, hour, current_regime)
+                                sel_conf = current_selector_result["confidence"]
+                                sel_tp_mult = current_selector_result.get("tp_atr_mult", 2.0)
+                                sel_sl_mult = current_selector_result.get("sl_atr_mult", 1.0)
+                        else:
+                            strategy_name, direction = get_signal(I_h1, i_h1, hour, current_regime)
+                            sel_conf = last_ai_score / 100.0
+                            sel_tp_mult = STRATEGY_PARAMS.get(strategy_name or 'S00_MFKK', {}).get('tp_mult', 2.0)
+                            sel_sl_mult = STRATEGY_PARAMS.get(strategy_name or 'S00_MFKK', {}).get('sl_mult', 1.0)
 
                         if strategy_name is None:
                             log.info(f"Regime: {current_regime} | Nessun segnale primario H1 su {bar_dt.strftime('%H:%M')}")
                         elif has_position_in_direction(direction):
                             log.debug(f"[H1] Direzione {direction} già occupata, skip {strategy_name}")
                         else:
-                            # ── CALCOLO TP/SL DI STRATEGIA ──────────────────
-                            base_tp = 20.0; base_sl = 12.0
-                            if params.get('tp_usd') == 'ATR' and atr_i:
-                                base_tp = atr_i * params.get('tp_mult', 1.5)
-                            elif isinstance(params.get('tp_usd'), (int, float)):
-                                base_tp = params['tp_usd']
-                            
-                            if params.get('sl_usd') == 'ATR' and atr_i:
-                                base_sl = atr_i * params.get('sl_mult', 1.0)
-                            elif isinstance(params.get('sl_usd'), (int, float)):
-                                base_sl = params['sl_usd']
+                            atr_i = I_h1['atr'][i_h1] or 10.0
+                            base_tp = round(atr_i * sel_tp_mult, 2)
+                            base_sl = round(atr_i * sel_sl_mult, 2)
 
-                            # ── RISK MANAGER PER POSITION SIZING ──────────
-                            if rm:
-                                # Nota: rm.get_order_params ora ritorna tp_usd/sl_usd base 
-                                # (senza moltiplicatori tier) come richiesto dall'utente.
+                            # ── RISK GUARDIAN (primary) or RiskManager (fallback) ──
+                            rp = None
+                            if rg:
+                                acc_now = get_account_info()
+                                rp = rg.get_order_params(
+                                    strategy_confidence=sel_conf,
+                                    atr=atr_i,
+                                    strategy_id=strategy_name,
+                                    ai_score=last_ai_score,
+                                    atr_avg=I_h1['atr_avg'][i_h1],
+                                    adx=I_h1['adx'][i_h1],
+                                    dip=I_h1['dip'][i_h1],
+                                    dim=I_h1['dim'][i_h1],
+                                    hour_utc=bar_dt.hour,
+                                    today_pnl=state.pnl_today,
+                                    current_equity=acc_now['equity'] if acc_now else None,
+                                    weekly_dd_pct=0.0,
+                                    tp_atr_mult=sel_tp_mult,
+                                    sl_atr_mult=sel_sl_mult,
+                                    direction=direction,
+                                )
+                                if rp.get('paused'):
+                                    log.info(f"⛔ SEGNALE H1 SOSPESO (Risk Guardian) | {strategy_name}")
+                                    continue
+                                lot_use = rp['lot']
+                                tp_use  = rp['tp_usd']
+                                sl_use  = rp['sl_usd']
+                            elif rm:
                                 rp = rm.get_order_params(
                                     ai_score=last_ai_score, atr=atr_i,
                                     strategy=strategy_name, direction=direction,
@@ -1042,41 +1149,33 @@ def run():
                                     adx=I_h1['adx'][i_h1], dip=I_h1['dip'][i_h1],
                                     dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour
                                 )
-                                # Sovrascriviamo con i parametri calcolati sopra per coerenza con la strategia bot
                                 if rp.get('paused'):
-                                    log.info(f"⛔ SEGNALE H1 SOSPESO (manipolazione/spike) | manip_mult=0")
+                                    log.info(f"⛔ SEGNALE H1 SOSPESO (RiskManager) | {strategy_name}")
                                     continue
-                                
                                 lot_use = rp['lot']
                                 tp_use  = base_tp
                                 sl_use  = base_sl
-                                log.info(
-                                    f"★ SEGNALE H1: {direction.upper()} | {params['label']} | Regime: {current_regime} "
-                                    f"| score={last_ai_score:.0f} | {rp['tier_label']} manip={rp['manip_mult']:.2f} "
-                                    f"| lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f} (Base Strategy)"
-                                )
                             else:
                                 lot_use = LOT_SIZE
                                 tp_use  = base_tp
                                 sl_use  = base_sl
-                                rp = None
-                                log.info(
-                                    f"★ SEGNALE H1: {direction.upper()} | {params['label']} | Regime: {current_regime} "
-                                    f"| TP=${tp_use:.2f} SL=${sl_use:.2f} (Fixed Lot)"
-                                )
-                            else:
-                                continue  # paused — skip order
+
+                            params = STRATEGY_PARAMS.get(strategy_name, STRATEGY_PARAMS.get('S00_MFKK', {}))
+                            log.info(
+                                f"★ SEGNALE H1: {direction.upper()} | {params.get('label', strategy_name)} "
+                                f"| Regime: {current_regime} | score={last_ai_score:.0f} "
+                                f"| tier={rp.get('tier_label','N/A') if rp else 'FIXED'} "
+                                f"| lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}"
+                            )
+
                             result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
                             if result:
-                                # Registra BE trigger nel RiskManager per questo ticket
-                                if rm and rp and 'be_trigger' in rp:
-                                    rm._pos_state[result.order] = {
-                                        'be_done': False,
-                                        'partial_done': False,
-                                        'ts_price': None,
-                                        'ts_step': rp.get('ts_step', 5.0),
-                                        'be_trigger': rp['be_trigger']
-                                    }
+                                # Register with Risk Guardian for lifecycle management
+                                if rg and rp:
+                                    rg.register_position(
+                                        result.order, rp, strategy_name, 'H1',
+                                        current_regime, direction
+                                    )
                                 
                                 tick = mt5.symbol_info_tick(SYMBOL)
                                 price = tick.ask if direction=='buy' else tick.bid if tick else 0

@@ -40,20 +40,21 @@ api/
   webhook.js    — Ricezione trades e notifiche push
 
 scripts/
-  mt5-bot.py              — Bot trading Python: loop 1s, bridge MT5 ↔ Vercel DB
-  risk_manager.py         — Gestione rischio adattiva (AI Score → lot/TP/SL/BE/TS)
-  signals.py              — Funzioni segnale unificate (importate da bot + backtester)
-  fetch_mt5_history.py    — Scarica GOLD da MT5 → data/xauusd_*.json
-  strategy-engine-v2.py  — Backtester Python principale
-  backtest_mfkk_intraday.py — Backtester dedicato MFKK + Intraday
+  mt5-bot.py              — Bot trading Python: loop 1s, due agenti AI integrati
+  strategy_selector.py   — [NUOVO] Strategy Selector Agent: regime scoring + selezione dinamica
+  risk_guardian.py       — [NUOVO] Risk Guardian Agent: composite confidence + position management
+  risk_manager.py        — Legacy risk manager (mantenuto per backward compat, non usato direttamente)
+  signals.py             — Funzioni segnale unificate (importate da bot + backtester)
+  fetch_mt5_history.py   — Scarica GOLD da MT5 → data/xauusd_*.json
+  strategy-engine-v2.py — Backtester Python principale
+  backtest_mfkk_intraday.py — Backtester dedicato MFKK
 
 data/                     — Price data JSON (xauusd_h1_mt5.json, etc.)
 backtests/
-  results/M30/            — Risultati canonici M30
-  results/H1/             — Risultati canonici H1
-  archive/                — Risultati storici
+  results/               — Risultati backtest per TF
+  archive/               — Risultati storici
 
-directives/               — QUESTO progetto di documentazione
+directives/               — Documentazione progetto
 ```
 
 ## Flusso Dati Globale
@@ -66,15 +67,16 @@ Browser (strategy.js) — seRefresh() ogni 1s:
   4. POST /api/db action=mt5_get → dati account reali MT5
   5. seRender() → rebuild completo #se-content
 
-mfkk.js — loadIndicatorCandles() ogni 60s:
-  - BROWSER: fetch Yahoo XAUUSD=X candles → CCI_S + EMA50 + ATR + swings
-  - SERVER: TV Scanner → MACD + ADX (IP Vercel non bloccati da Scanner)
-
 mt5-bot.py — loop ogni 1s:
-  - manage_positions() → Break Even + Trailing Stop
-  - fetch_remote_commands() → POST /api/db action=mt5_command_get
-  - sync_to_vercel() ogni 20s → POST /api/db action=mt5_push
-  - Su nuova candela M30/H1 chiusa → analisi regime + ordine autonomo
+  manage_positions()          → RiskGuardian: BE + TS + early exit + regime shift
+  fetch_remote_commands()     → POST /api/db action=mt5_command_get
+  sync_to_vercel() (ogni 20s) → POST /api/db action=mt5_push
+  Su nuova candela H1 chiusa:
+    StrategySelector.select() → regime scoring → sceglie strategy + TF
+    signal_fn()               → genera segnale (buy/sell) per la strategia scelta
+    RiskGuardian.get_order_params() → composite score → tier → lot/TP/SL/BE/TS
+    place_order()             → esegue ordine su MT5
+    RiskGuardian.register_position() → avvia tracking lifecycle posizione
 ```
 
 ## Protocollo Autoapprendimento (obbligatorio)

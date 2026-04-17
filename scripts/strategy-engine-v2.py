@@ -25,6 +25,7 @@ from signals import (
     signal_mfkk_scalping as s_mfkk_scalping,
     signal_ob_fvg_scalp as s_ob_fvg_scalp,
     signal_convergence_scalp as s_convergence_scalp,
+    signal_mfkk_score as se_signal_mfkk_score,
 )
 try:
     import yfinance as yf
@@ -113,6 +114,24 @@ def rsi(src, p=14):
     for i in range(p,len(g)):
         ag=(ag*(p-1)+g[i])/p; al=(al*(p-1)+l[i])/p
         out[i+1]=100-100/(1+(ag/al if al>0 else 100))
+    return out
+def cci(src, p=50):
+    n = len(src); out = [None] * n
+    if n < p: return out
+    for i in range(p - 1, n):
+        sl = src[i - p + 1 : i + 1]
+        mn = sum(sl) / p
+        md = sum(abs(x - mn) for x in sl) / p
+        out[i] = (src[i] - mn) / (0.015 * md) if md != 0 else 0
+    return out
+
+def stochastic(src, p=14):
+    n = len(src); out = [None] * n
+    for i in range(p - 1, n):
+        sl = [x for x in src[i - p + 1 : i + 1] if x is not None]
+        if len(sl) < p: continue
+        lo = min(sl); hi = max(sl)
+        out[i] = ((src[i] - lo) / (hi - lo) * 100) if hi > lo else 50
     return out
 
 def stoch_rsi(src, rsi_p=14, stoch_p=14, k_p=3, d_p=3):
@@ -440,6 +459,12 @@ def compute_all(candles):
     # FVG (Fair Value Gap) — per S09_MFKK_SCALPING
     fvg_bull, fvg_bear = calc_fvg(O,H,L,C)
 
+    # CCI_S: CCI(50) -> stochastic(50) -> SMA(8) -> SMA(8)
+    cci50 = cci(C, 50)
+    stk50 = stochastic(cci50, 50)
+    stk_k = sma([x if x is not None else 50 for x in stk50], 8)
+    stk_d = sma([x if x is not None else 50 for x in stk_k], 8)
+
     return {
         'n':n,'H':H,'L':L,'C':C,'V':V,'O':O,
         'e13':e13,'e34':e34,'e89':e89,'e233':e233,
@@ -457,6 +482,7 @@ def compute_all(candles):
         'mom':mom,'wpr':wpr,'vwap':vwap,
         'ob_bull':ob_bull,'ob_bear':ob_bear,
         'fvg_bull':fvg_bull,'fvg_bear':fvg_bear,
+        'cci':stk_d, # MFKK uses the smoothed stochastic of CCI
     }
 
 # ── REGIME DETECTION ─────────────────────────────────────────────────────────
@@ -749,16 +775,17 @@ STRATS = {
     'S10_OB_FVG_SCALP':       (s_ob_fvg_scalp,        ['RANGE', 'VOLATILE', 'WEAK_UP', 'WEAK_DOWN']),
     'S16_GOLDEN_SQUEEZE':     (s_golden_squeeze,      ['TREND_UP', 'TREND_DOWN', 'WEAK_UP', 'WEAK_DOWN']),
     'S17_CONVERGENCE_SCALP':  (s_convergence_scalp,   ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
+    'S00_MFKK':               (se_signal_mfkk_score,  ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
 }
 
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S17_CONVERGENCE_SCALP'],
-    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S17_CONVERGENCE_SCALP'],
-    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
-    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
+    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
     'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
-    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
-    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
+    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
+    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
 }
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
@@ -802,8 +829,18 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         elif name == 'S17_CONVERGENCE_SCALP':
             curr_tp = round(av * 2.5, 2)
             curr_sl = round(av * 0.8, 2)
+        elif name == 'S00_MFKK':
+            curr_tp = round(av * 2.0, 2)
+            curr_sl = round(av * 1.0, 2)
 
-        sig=fn(ind,i,hour)
+        # Route hour/h1_trend correctly per signal function signature
+        if name == 'S00_MFKK':
+            sig = fn(ind, i, hour=hour)
+        elif name == 'S16_GOLDEN_SQUEEZE':
+            h1t = ind['st'][i] if ind.get('st') else None
+            sig = fn(ind, i, h1_trend=h1t, hour=hour)
+        else:
+            sig = fn(ind, i, hour)
         if sig is None: continue
         
         entry=c['c']
@@ -889,10 +926,16 @@ def run_adaptive(candles, ind, tf='H1'):
         r=regime(ind,i)
         pool=REGIME_PRIORITY.get(r,['S16_GOLDEN_SQUEEZE'])
         sig=None; used=None
+        h1t_st = ind['st'][i] if ind.get('st') else None
         for name in pool:
             if name not in STRATS: continue
             fn=STRATS[name][0]
-            s=fn(ind,i,hour)
+            if name == 'S16_GOLDEN_SQUEEZE':
+                s=fn(ind,i,h1_trend=h1t_st,hour=hour)
+            elif name == 'S00_MFKK':
+                s=fn(ind,i,hour=hour)
+            else:
+                s=fn(ind,i,hour)
             if s: sig=s; used=name; break
         if not sig: continue
         entry=c['c']
@@ -987,10 +1030,16 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         r=regime(ind,i)
         pool=REGIME_PRIORITY.get(r,['S16_GOLDEN_SQUEEZE'])
         sig=None; used=None
+        h1t_st = ind['st'][i] if ind.get('st') else None
         for name in pool:
             if name not in STRATS: continue
             fn=STRATS[name][0]
-            s=fn(ind,i,hour)
+            if name == 'S16_GOLDEN_SQUEEZE':
+                s=fn(ind,i,h1_trend=h1t_st,hour=hour)
+            elif name == 'S00_MFKK':
+                s=fn(ind,i,hour=hour)
+            else:
+                s=fn(ind,i,hour)
             if s: sig=s; used=name; break
         if not sig: continue
 
@@ -1005,6 +1054,8 @@ def run_adaptive_rm(candles, ind, tf='H1'):
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
             tp_d = round(av*2.5, 2); sl_d = round(av*0.8, 2)
+        elif used == 'S00_MFKK':
+            tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
 

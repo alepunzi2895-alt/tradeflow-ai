@@ -52,8 +52,9 @@ lot = base_lot × tier.lot_multiplier × min(sqrt(equity / initial_equity), 3.0)
 
 1. **Break-Even**: quando profit ≥ `be_trigger` → SL a entry+0.02
 2. **Trailing Stop**: dopo BE, quando profit ≥ `trailing_activation` (BE+10%) → trail di `ts_step` ATR
-3. **Early Exit**: se BE attivo ma trade stalled oltre `1.5 × expected_duration` con profit < `early_exit_threshold`
-4. **Regime Shift Override**: chiude posizione se il regime attuale è ostile alla strategia di entrata (solo se già a BE o in profitto)
+3. **Partial Close**: quando il prezzo tocca un key level target (da KeyLevelsAgent) → chiude 50% del volume residuo
+4. **Early Exit**: se BE attivo ma trade stalled oltre `1.5 × expected_duration` con profit < `early_exit_threshold`
+5. **Regime Shift Override**: chiude posizione se il regime attuale è ostile alla strategia di entrata (solo se già a BE o in profitto)
 
 ### Durate Stimate per Strategia
 
@@ -67,15 +68,36 @@ lot = base_lot × tier.lot_multiplier × min(sqrt(equity / initial_equity), 3.0)
 | S17_CONVERGENCE_SCALP | M15 | 30 min |
 | S17_CONVERGENCE_SCALP | M5 | 15 min |
 
+## Key Levels Agent (`key_levels.py`) — integrazione TP/SL
+
+Ogni barra H1, `kla.get_levels(I, i, candles)` calcola:
+
+| Tipo | Descrizione | Strength base |
+|---|---|---|
+| `prev_session` | H/L sessione precedente (Asian/London/NY) | 1.0 |
+| `liquidity_pool` | Equal highs/lows clusters (stop hunt zones) | 0.6–0.95 |
+| `swing_high/low` | Pivot N-bar (5 barre ciascun lato) | 0.65–0.90 |
+| `order_block` | Ultima candela OB prima di impulso forte | 0.80 |
+| `round_number` | Multipli di $50 XAU psicologici | 0.60 |
+
+**Aggiustamenti automatici in `place_order()`:**
+- **TP snap**: se un livello forte (strength ≥ 0.65) è tra entry e TP → TP si posiziona subito prima di quel livello (−0.15×ATR). TP minimo garantito: 0.8×ATR.
+- **SL avoidance**: se una liquidity pool è tra SL e entry → SL si sposta oltre il cluster (−0.20×ATR) per evitare stop hunt sweep.
+- **Partial targets**: livelli forti tra entry e TP vengono registrati nel position state; al tocco vengono eseguiti partial close del 50% del volume.
+
 ## Flusso Operativo
 
 ```
 1. Ogni 60s: fetch AI Score da Vercel DB → aggiorna signal_quality
-2. Ad ogni segnale:
-   a. StrategySelector.select() → strategy_confidence
-   b. rg.get_order_params(strategy_confidence, ai_score, atr, ...) → lot/TP/SL/BE/TS
-   c. place_order() → rg.register_position(ticket, params, strategy_id, tf, regime)
-3. Ogni 10s: rg.manage_positions(mt5, symbol, magic, atr, current_regime)
+2. Ad ogni nuova barra H1:
+   a. kla.get_levels(I, i, candles) → current_levels_result
+   b. StrategySelector.select() → strategy_confidence
+3. Ad ogni segnale:
+   a. rg.get_order_params(strategy_confidence, ai_score, atr, ...) → lot/TP/SL/BE/TS
+   b. place_order(..., key_levels_result, atr) → kla.adjust_tp_sl() → ordine inviato
+   c. rg.register_position(ticket, params, ..., partial_targets=key_levels)
+4. Ogni 10s: rg.manage_positions(mt5, symbol, magic, atr, current_regime)
+   → BE / TS / partial close / early exit / regime override
 ```
 
 ## Parametri ATR per Strategia (STRATEGY_ATR_PARAMS)
@@ -93,9 +115,13 @@ lot = base_lot × tier.lot_multiplier × min(sqrt(equity / initial_equity), 3.0)
 ## Esempio Log
 
 ```
+[KeyLevels] 24 levels merged (12 resistance, 9 support) @ 3245.80 ATR=9.20
+[KeyLevels] BUY adjustments: TP 3290.00→3268.50 (swing_high @3270.00 str=0.85)
+🎯 Partial targets [S16_GOLDEN_SQUEEZE]: 3255.00(prev_session), 3268.50(swing_high)
 🛡️ RiskGuardian [🟡 AGGRESSIVE] strat=S16_GOLDEN_SQUEEZE comp=68 (str=0.85/sig=0.72/mkt=0.90)
-   | lot=0.05 | TP=$45.00 SL=$20.00 | BE@+$27.00 | TS step=$8.00
-🛡️  BE ticket#12345: SL→3238.74 — Profit 27.5 ≥ BE trigger 27.0
+   | lot=0.05 | TP=$22.70 SL=$11.04 | BE@+$13.62 | TS step=$8.00
+🛡️  BE ticket#12345: SL→3238.74 — Profit 27.5 ≥ BE trigger 13.6
+🎯  Partial close ticket#12345 — 0.025 @ 3255.00 — prev_session target
 📈 Trail ticket#12345: SL→3245.80 (+7.06)
 ⏱️  Early exit ticket#12346 — Stalled: 8% profit after 135min (expected 90min)
 🔄 Regime exit ticket#12347 — Regime shift: TREND_UP → RANGING (hostile to S05_MFKK_INTRADAY)

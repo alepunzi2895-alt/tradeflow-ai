@@ -56,6 +56,15 @@ except ImportError:
     log_placeholder3 = logging.getLogger('tf-bot')
     log_placeholder3.warning("strategy_selector.py non trovato — uso playbook statico")
 
+# ── KEY LEVELS AGENT ──────────────────────────────────────────────────────────
+try:
+    from key_levels import get_key_levels_agent, KeyLevelsAgent
+except ImportError:
+    get_key_levels_agent = None
+    KeyLevelsAgent = None
+    log_placeholder4 = logging.getLogger('tf-bot')
+    log_placeholder4.warning("key_levels.py non trovato — TP/SL non verranno aggiustati")
+
 # ── CONFIGURAZIONE (Legacy fallback, ora legge da .env) ───────────────
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
 MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
@@ -648,7 +657,8 @@ def has_position_in_direction(direction):
         if direction == 'sell' and p.type == mt5.ORDER_TYPE_SELL: return True
     return False
 
-def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None):
+def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
+                key_levels_result=None, atr=None):
     """Invia un ordine market su MT5 con lot size adattivo da RiskManager"""
     tick = mt5.symbol_info_tick(SYMBOL)
     sym_info = mt5.symbol_info(SYMBOL)
@@ -675,6 +685,23 @@ def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None):
         price = tick.bid
         tp_price = round(price - tp_usd, digits)
         sl_price = round(price + sl_usd, digits)
+
+    # ── KEY LEVELS: snap TP before strong levels, move SL beyond liquidity ──
+    if key_levels_result and get_key_levels_agent and atr:
+        try:
+            kla = get_key_levels_agent()
+            adj = kla.adjust_tp_sl(
+                key_levels_result, price, direction,
+                tp_price, sl_price, atr
+            )
+            tp_price = round(adj["tp_price"], digits)
+            sl_price = round(adj["sl_price"], digits)
+            if adj.get("partial_targets"):
+                targets_str = ", ".join(f"{t['price']:.2f}({t['type']})"
+                                        for t in adj["partial_targets"][:3])
+                log.info(f"🎯 Partial targets [{strategy_name}]: {targets_str}")
+        except Exception as e:
+            log.warning(f"[KeyLevels] adjust_tp_sl error: {e}")
 
     request = {
         "action":    mt5.TRADE_ACTION_DEAL,
@@ -910,6 +937,12 @@ def run():
     current_selector_result = None
     last_selector_bar_time  = None
 
+    # Inizializza Key Levels Agent
+    kla = get_key_levels_agent() if get_key_levels_agent else None
+    current_levels_result = None  # aggiornato ogni barra H1
+    if kla:
+        log.info("KeyLevelsAgent attivo — TP/SL snapping abilitato")
+
     while True:
         try:
             now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -1060,6 +1093,17 @@ def run():
                     )
                     last_selector_bar_time = latest_bar_time
 
+                # ── Key Levels Agent (ogni barra H1) ─────────────────────────
+                if kla:
+                    try:
+                        current_levels_result = kla.get_levels(
+                            I_h1, i_h1, candles=candles,
+                            atr=I_h1['atr'][i_h1]
+                        )
+                    except Exception as _kl_err:
+                        log.debug(f"[KeyLevels] get_levels error: {_kl_err}")
+                        current_levels_result = None
+
                 # ── Controllo giorno estremo ──────────────────────────────────
                 atr_v   = I_h1['atr'][i_h1]
                 atr_avg = I_h1['atr_avg'][i_h1]
@@ -1168,13 +1212,22 @@ def run():
                                 f"| lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}"
                             )
 
-                            result = place_order(direction, tp_use, sl_use, strategy_name, lot_size=lot_use)
+                            result = place_order(
+                                direction, tp_use, sl_use, strategy_name,
+                                lot_size=lot_use,
+                                key_levels_result=current_levels_result,
+                                atr=atr_i,
+                            )
                             if result:
                                 # Register with Risk Guardian for lifecycle management
                                 if rg and rp:
+                                    _kl_targets = (current_levels_result or {}).get(
+                                        "resistance" if direction == "buy" else "support", []
+                                    )[:3]
                                     rg.register_position(
                                         result.order, rp, strategy_name, 'H1',
-                                        current_regime, direction
+                                        current_regime, direction,
+                                        partial_targets=_kl_targets,
                                     )
                                 
                                 tick = mt5.symbol_info_tick(SYMBOL)
@@ -1240,7 +1293,9 @@ def run():
                             else:
                                 lot2, tp2, sl2 = LOT_SIZE, base_tp2, base_sl2
                                 log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)} | lot={lot2} | TP=${tp2:.2f} | SL=${sl2:.2f}")
-                            result2 = place_order(sec_dir, tp2, sl2, sec_id, lot_size=lot2)
+                            result2 = place_order(sec_dir, tp2, sl2, sec_id, lot_size=lot2,
+                                                  key_levels_result=current_levels_result,
+                                                  atr=atr_i2)
                             if result2:
                                 tick2 = mt5.symbol_info_tick(SYMBOL)
                                 price2 = tick2.ask if sec_dir=='buy' else tick2.bid if tick2 else 0
@@ -1315,7 +1370,9 @@ def run():
                                     lot_use, tp_use, sl_use = LOT_SIZE, base_tp_m15, base_sl_m15
                                     log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
                                 
-                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use)
+                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use,
+                                                    key_levels_result=current_levels_result,
+                                                    atr=atr_now)
                                 if result:
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
@@ -1390,7 +1447,9 @@ def run():
                                     lot_use, tp_use, sl_use = LOT_SIZE, base_tp_m30, base_sl_m30
                                     log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
                                 
-                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use)
+                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use,
+                                                    key_levels_result=current_levels_result,
+                                                    atr=atr_now)
                                 if result:
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0

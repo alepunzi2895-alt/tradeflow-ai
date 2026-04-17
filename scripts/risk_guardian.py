@@ -335,11 +335,14 @@ class RiskGuardian:
     # ── REGISTER NEW POSITION ──────────────────────────────────────────────────
     def register_position(self, ticket: int, order_params: dict,
                           strategy_id: str, timeframe: str,
-                          entry_regime: str, direction: str):
+                          entry_regime: str, direction: str,
+                          partial_targets: list = None):
         """Call after place_order() to track BE/TS state for this ticket."""
         self._pos_state[ticket] = {
             "be_done": False,
             "ts_active": False,
+            "partial_done": set(),  # set of target prices already hit
+            "partial_targets": partial_targets or [],
             "entry_regime": entry_regime,
             "strategy_id": strategy_id,
             "timeframe": timeframe,
@@ -439,7 +442,32 @@ class RiskGuardian:
                             log.info(f"📉 Trail ticket#{ticket}: SL→{ideal_sl:.2f} (-{entry-ideal_sl:.2f})")
                             actions.append({"type": "trail", "ticket": ticket, "sl": ideal_sl})
 
-            # ── 3. EARLY EXIT (stalled trade after BE) ────────────────────
+            # ── 3. PARTIAL CLOSE at key level targets ─────────────────────
+            partial_targets = ps.get("partial_targets", [])
+            partial_done    = ps.get("partial_done", set())
+            if partial_targets and pos.volume >= 0.02:
+                for tgt in partial_targets:
+                    tgt_price = tgt["price"]
+                    if tgt_price in partial_done:
+                        continue
+                    hit = (is_buy and curr >= tgt_price) or (not is_buy and curr <= tgt_price)
+                    if hit:
+                        close_vol = self._round_lot(pos.volume * 0.50)
+                        if close_vol >= 0.01:
+                            ok = self._partial_close(mt5, pos, symbol, close_vol)
+                            if ok:
+                                partial_done.add(tgt_price)
+                                ps["partial_done"] = partial_done
+                                reason = (
+                                    f"Partial close {close_vol} @ {curr:.2f} — "
+                                    f"{tgt['type']} target {tgt_price:.2f}"
+                                )
+                                log.info(f"🎯  Partial close ticket#{ticket} — {reason}")
+                                actions.append({"type": "partial_close", "ticket": ticket,
+                                                "volume": close_vol, "reason": reason})
+                        break  # only one partial per manage() call
+
+            # ── 4. EARLY EXIT (stalled trade after BE) ────────────────────
             if ps["be_done"] and not ps["ts_active"]:
                 elapsed_min = (time.time() - ps["entry_time"]) / 60
                 expected_min = TRADE_DURATIONS.get(
@@ -530,6 +558,31 @@ class RiskGuardian:
         if result and result.retcode == mt5.TRADE_RETCODE_DONE:
             return True
         log.warning(f"⚠️  Modify SL failed ticket#{pos.ticket}: {result.comment if result else 'err'}")
+        return False
+
+    def _partial_close(self, mt5, pos, symbol: str, volume: float) -> bool:
+        tick = mt5.symbol_info_tick(symbol)
+        if not tick:
+            return False
+        close_type = mt5.ORDER_TYPE_SELL if pos.type == 0 else mt5.ORDER_TYPE_BUY
+        price = tick.bid if pos.type == 0 else tick.ask
+        req = {
+            "action":       mt5.TRADE_ACTION_DEAL,
+            "symbol":       symbol,
+            "volume":       volume,
+            "type":         close_type,
+            "position":     pos.ticket,
+            "price":        price,
+            "deviation":    20,
+            "magic":        pos.magic,
+            "comment":      "TF-AI partial",
+            "type_time":    mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(req)
+        if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+            return True
+        log.warning(f"⚠️  Partial close failed ticket#{pos.ticket}: {result.comment if result else 'err'}")
         return False
 
     def _close_position(self, mt5, pos, symbol: str) -> bool:

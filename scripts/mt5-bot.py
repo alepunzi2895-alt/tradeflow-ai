@@ -724,9 +724,11 @@ def get_recent_trades_data(n=30):
     """
     try:
         utc = datetime.timezone.utc
-        from_date = datetime.datetime.now(utc) - datetime.timedelta(days=180)
-        to_date   = datetime.datetime.now(utc)
+        # MT5 Python API vuole datetime naive (local time), non timezone-aware
+        from_date = datetime.datetime.now() - datetime.timedelta(days=180)
+        to_date   = datetime.datetime.now() + datetime.timedelta(hours=1)
         deals = mt5.history_deals_get(from_date, to_date)
+        log.info(f"📋 MT5 history: {len(deals) if deals is not None else 0} deal raw")
         total = len(deals) if deals is not None else 0
         if deals is not None and total > 0:
             result = []

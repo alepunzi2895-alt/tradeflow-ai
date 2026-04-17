@@ -778,66 +778,79 @@ def get_open_positions_data():
     result = []
     for p in pos:
         if p.magic != MAGIC: continue
+        net_p = round((p.profit or 0) + (p.swap or 0), 2)
         result.append({
-            'ticket':    p.ticket,
-            'direction': 'buy' if p.type == 0 else 'sell',
-            'lot':       p.volume,
-            'entry':     round(p.price_open, 2),
-            'current':   round(p.price_current, 2),
-            'tp':        round(p.tp, 2),
-            'sl':        round(p.sl, 2),
-            'profit':    round(p.profit, 2),
-            'strategy':  p.comment.replace('TF-AI ', ''),
-            'time':        datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
+            'ticket':      p.ticket,
             'position_id': p.identifier,
+            'direction':   'buy' if p.type == 0 else 'sell',
+            'lot':         p.volume,
+            'entry':       round(p.price_open, 2),
+            'current':     round(p.price_current, 2),
+            'tp':          round(p.tp, 2),
+            'sl':          round(p.sl, 2),
+            'profit':      net_p,
+            'strategy':    p.comment.replace('TF-AI ', '') if p.comment else 'N/A',
+            'time':        datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
         })
     return result
 
 def _deal_to_dict(d):
     utc = datetime.timezone.utc
+    # profit netto = profit + commission + swap (tutti e tre presenti nel deal MT5)
+    net_profit = round(
+        (d.profit or 0.0) + (d.commission or 0.0) + (d.swap or 0.0), 2
+    )
     return {
-        'ticket':    d.ticket,
-        'time':      datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
-        'direction': 'sell' if d.type == 0 else 'buy',
-        'strategy':  d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
-        'price':     round(d.price, 2),
-        'profit':    round(d.profit, 2),
-        'volume':    d.volume,
+        'ticket':      d.ticket,
+        'position_id': d.position_id,
+        'time':        datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
+        'direction':   'sell' if d.type == 0 else 'buy',  # exit deal type è inverso all'entry
+        'strategy':    d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
+        'price':       round(d.price, 2),
+        'profit':      net_profit,
+        'profit_raw':  round(d.profit or 0.0, 2),
+        'commission':  round(d.commission or 0.0, 2),
+        'swap':        round(d.swap or 0.0, 2),
+        'volume':      d.volume,
     }
 
-def get_recent_trades_data(n=30):
+def get_recent_trades_data(n=200):
     """
-    Legge gli ultimi N deal chiusi direttamente da MT5 (storico reale).
+    Legge gli ultimi N deal chiusi da MT5 (solo bot: filtro MAGIC).
     Fallback su mt5-trades.json se MT5 non disponibile.
     """
     try:
-        utc = datetime.timezone.utc
-        now_ts = int(time.time())
-        from_ts = now_ts - 180 * 86400
+        now_ts  = int(time.time())
+        from_ts = now_ts - 365 * 86400  # ultimi 12 mesi
         to_ts   = now_ts + 3600
         deals = mt5.history_deals_get(from_ts, to_ts)
-        total = len(deals) if deals is not None else 0
-        log.info(f"📋 MT5 history: {total} deal raw")
-        if deals is not None and total > 0:
+        if deals is not None and len(deals) > 0:
             result = []
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
+                # Solo deal del bot (magic) e solo trade buy/sell chiusi
+                if d.magic != MAGIC:
+                    continue
                 if d.type not in (0, 1):
                     continue
-                if d.entry == 0:
+                if d.entry == 0:   # DEAL_ENTRY_IN → apertura, non ci interessa
                     continue
                 result.append(_deal_to_dict(d))
-                if len(result) >= n: break
-            log.debug(f"📋 Trade chiusi: {len(result)}")
+                if len(result) >= n:
+                    break
+            log.debug(f"📋 Trade chiusi (magic={MAGIC}): {len(result)}")
             if result:
                 return result
     except Exception as e:
         log.warning(f"MT5 history_deals errore: {e}")
     # Fallback su file locale
     fname = 'mt5-trades.json'
-    if not os.path.exists(fname): return []
+    if not os.path.exists(fname):
+        return []
     with open(fname, encoding='utf-8') as f:
-        try: trades = json.load(f)
-        except: return []
+        try:
+            trades = json.load(f)
+        except Exception:
+            return []
     return trades[-n:]
 
 def sync_to_vercel(acc, positions, trades, bot_status):
@@ -1052,21 +1065,37 @@ def run():
 
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
-                # Rileva posizioni chiuse tra un sync e l'altro via position ID
+                # Rileva posizioni chiuse tra un sync e l'altro via position_id reale
                 cur_pos_ids = {p['ticket']: p for p in positions_data}
+                closed_this_cycle = []
                 for ticket, pos_id in list(_tracked_positions.items()):
                     if ticket not in cur_pos_ids:
-                        # Posizione appena chiusa — cerca il deal di chiusura
+                        # position_id MT5 reale (p.identifier) salvato all'apertura
                         extra = mt5.history_deals_get(position=pos_id)
+                        net_profit = 0.0
+                        strategy_closed = 'N/A'
                         if extra:
                             for d in extra:
                                 if d.type in (0, 1) and d.entry != 0:
-                                    log.info(f"🎯 Chiusura rilevata via position_id={pos_id}: profit={d.profit:.2f}")
+                                    net_profit += (d.profit or 0) + (d.commission or 0) + (d.swap or 0)
+                                    if d.comment and d.comment.startswith('TF-AI '):
+                                        strategy_closed = d.comment.replace('TF-AI ', '')
+                        if extra:
+                            log.info(
+                                f"🎯 Chiusura rilevata: ticket#{ticket} pos_id={pos_id} "
+                                f"| {strategy_closed} | net_profit={net_profit:+.2f}"
+                            )
+                            closed_this_cycle.append(ticket)
                         _tracked_positions.pop(ticket, None)
-                # Aggiorna tracking posizioni correnti
+                # Aggiorna tracking posizioni correnti (usa identifier MT5 come pos_id)
                 for ticket, p in cur_pos_ids.items():
                     if ticket not in _tracked_positions:
-                        _tracked_positions[ticket] = p.get('position_id', ticket)
+                        # position_id è p['position_id'] = pos.identifier in MT5
+                        _tracked_positions[ticket] = p.get('position_id') or ticket
+
+                # Se ci sono chiusure rilevate, forza sync immediato al prossimo ciclo
+                if closed_this_cycle:
+                    last_sync_time = 0  # azzera timer → sync immediato nel prossimo giro
 
                 trades_data = get_recent_trades_data(200)
                 today_str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()

@@ -92,6 +92,8 @@ LOT_SIZE     = 0.05          # lot size base (0.05 = config A ottimizzata, ~€1
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 1             # ore di cooldown tra trade
+MAX_OPEN_ORDERS = 3          # max ordini aperti contemporaneamente
+SL_COOLDOWN_H   = 1          # ore di pausa dopo 2 SL consecutivi
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 10            # polling ogni 10 secondi
@@ -673,6 +675,10 @@ def has_position_in_direction(direction):
         if direction == 'sell' and p.type == mt5.ORDER_TYPE_SELL: return True
     return False
 
+def count_open_positions():
+    """Conta le posizioni aperte del bot sul simbolo corrente."""
+    return sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
+
 def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
                 key_levels_result=None, atr=None):
     """Invia un ordine market su MT5 con lot size adattivo da RiskManager"""
@@ -794,35 +800,20 @@ def get_open_positions_data():
         })
     return result
 
-def _deal_to_dict(d):
-    utc = datetime.timezone.utc
-    # profit netto = profit + commission + swap (tutti e tre presenti nel deal MT5)
-    net_profit = round(
-        (d.profit or 0.0) + (d.commission or 0.0) + (d.swap or 0.0), 2
-    )
-    return {
-        'ticket':      d.ticket,
-        'position_id': d.position_id,
-        'time':        datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
-        'direction':   'sell' if d.type == 0 else 'buy',  # exit deal type è inverso all'entry
-        'strategy':    d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
-        'price':       round(d.price, 2),
-        'profit':      net_profit,
-        'profit_raw':  round(d.profit or 0.0, 2),
-        'commission':  round(d.commission or 0.0, 2),
-        'swap':        round(d.swap or 0.0, 2),
-        'volume':      d.volume,
-    }
-
 def get_recent_trades_data(n=200, retries=3, retry_delay=2.0):
     """
-    Legge gli ultimi N deal chiusi da MT5.
+    Legge gli ultimi N trade chiusi da MT5, raggruppati per position_id.
 
-    Mostra TUTTI i deal chiusi dell'account (inclusi manuali) — il filtro
+    Raggruppa ENTRY + EXIT deal per position_id in modo da leggere il nome
+    della strategia dall'ENTRY deal (unico con commento "TF-AI Sxx_...").
+    EXIT deal ha commento "tp"/"sl"/"" → usato solo per profit/close_reason.
+
+    Mostra TUTTI i trade chiusi dell'account (inclusi manuali) — il filtro
     magic è applicato solo nel PerformanceTracker per il self-learning.
     Retry con delay per gestire la race condition MT5: il deal appare in
     history_deals_get 1-5s dopo che la posizione sparisce da positions_get.
     """
+    utc = datetime.timezone.utc
     for attempt in range(retries):
         try:
             now_ts  = int(time.time())
@@ -831,7 +822,6 @@ def get_recent_trades_data(n=200, retries=3, retry_delay=2.0):
 
             deals = mt5.history_deals_get(from_ts, to_ts)
 
-            # Diagnosi MT5: logga l'errore se deals è None
             if deals is None:
                 err = mt5.last_error()
                 log.warning(f"📋 history_deals_get → None (attempt {attempt+1}/{retries}) | MT5 error: {err}")
@@ -840,18 +830,59 @@ def get_recent_trades_data(n=200, retries=3, retry_delay=2.0):
                 continue
 
             total_raw = len(deals)
-            result = []
-            for d in sorted(deals, key=lambda x: x.time, reverse=True):
-                if d.type not in (0, 1):      # solo BUY/SELL deal
-                    continue
-                if d.entry == 0:              # DEAL_ENTRY_IN → apertura, skip
-                    continue
-                result.append(_deal_to_dict(d))
-                if len(result) >= n:
-                    break
 
-            log.debug(f"📋 MT5 history: {total_raw} deal raw → {len(result)} chiusi mostrati")
-            # Ritorna sempre da MT5 anche se lista vuota (non cade nel fallback file)
+            # Raggruppa per position_id: entry (entry==0) + exit(s) (entry==1/2/3)
+            by_pos = {}
+            for d in deals:
+                if d.type not in (0, 1):  # solo BUY/SELL deal
+                    continue
+                pid = d.position_id
+                if pid not in by_pos:
+                    by_pos[pid] = {'entry': None, 'exits': []}
+                if d.entry == 0:
+                    by_pos[pid]['entry'] = d
+                else:
+                    by_pos[pid]['exits'].append(d)
+
+            # Costruisci trade chiusi (quelli con sia entry che exit)
+            closed_trades = []
+            for pid, pos_deals in by_pos.items():
+                entry_d = pos_deals['entry']
+                exits   = pos_deals['exits']
+                if not entry_d or not exits:
+                    continue  # posizione ancora aperta o deal incompleto
+
+                last_exit  = max(exits, key=lambda d: d.time)
+                net_profit = round(sum(
+                    (d.profit or 0) + (d.commission or 0) + (d.swap or 0)
+                    for d in exits
+                ), 2)
+                raw_comment = entry_d.comment or ''
+                if 'TF-AI' in raw_comment:
+                    strategy = raw_comment.replace('TF-AI ', '').strip()
+                else:
+                    strategy = raw_comment.strip() or 'manual'
+
+                closed_trades.append({
+                    'position_id': pid,
+                    'ticket':      entry_d.ticket,
+                    'time':        datetime.datetime.fromtimestamp(last_exit.time, tz=utc).isoformat(),
+                    'time_open':   datetime.datetime.fromtimestamp(entry_d.time, tz=utc).isoformat(),
+                    'direction':   'buy' if entry_d.type == 0 else 'sell',
+                    'strategy':    strategy,
+                    'entry_price': round(entry_d.price, 2),
+                    'price':       round(last_exit.price, 2),
+                    'volume':      entry_d.volume,
+                    'profit':      net_profit,
+                    'profit_raw':  round(sum(d.profit or 0 for d in exits), 2),
+                    'commission':  round(sum(d.commission or 0 for d in exits), 2),
+                    'swap':        round(sum(d.swap or 0 for d in exits), 2),
+                    'close_reason': last_exit.comment or '',
+                })
+
+            closed_trades.sort(key=lambda t: t['time'], reverse=True)
+            result = closed_trades[:n]
+            log.info(f"📋 MT5 history: {total_raw} deal raw → {len(by_pos)} posizioni → {len(result)} chiuse mostrate")
             return result
 
         except Exception as e:
@@ -955,6 +986,8 @@ def run():
     cached_candles       = None  # cache candele (aggiornata ogni 60s)
     cached_I_h1          = None  # cache indicatori (ricalcolati solo su nuova barra)
     _tracked_positions   = {}    # {ticket: position_id} per rilevare chiusure istantanee
+    consecutive_sl_count = 0    # SL consecutivi: azzerato a ogni TP/profit
+    sl_cooldown_until    = None  # datetime UTC fino a cui nuovi ordini sono bloccati
 
     # Inizializza RiskManager (legacy, mantiene compatibilità)
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
@@ -1104,6 +1137,17 @@ def run():
                                 f"| {strategy_closed} | net_profit={net_profit:+.2f}"
                             )
                             closed_this_cycle.append(ticket)
+                            # Aggiorna contatore SL consecutivi
+                            if net_profit < 0:
+                                consecutive_sl_count += 1
+                                if consecutive_sl_count >= 2:
+                                    sl_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=SL_COOLDOWN_H)
+                                    log.warning(
+                                        f"🛑 COOLDOWN ATTIVO: {consecutive_sl_count} SL consecutivi "
+                                        f"→ pausa fino a {sl_cooldown_until.strftime('%H:%M')} UTC"
+                                    )
+                            else:
+                                consecutive_sl_count = 0  # profit → reset streak
                         _tracked_positions.pop(ticket, None)
                 # Aggiorna tracking posizioni correnti (usa identifier MT5 come pos_id)
                 for ticket, p in cur_pos_ids.items():
@@ -1115,7 +1159,6 @@ def run():
                 # poi forza sync immediato così il deal è già in history
                 if closed_this_cycle:
                     time.sleep(3)
-                    trades_data = get_recent_trades_data(200)  # re-fetch dopo il delay
                     last_sync_time = 0  # forza anche il prossimo sync a breve
 
                 trades_data = get_recent_trades_data(200)
@@ -1123,6 +1166,7 @@ def run():
                 log.info(f"📊 Sync: {len(trades_data)} trade totali, {sum(1 for t in trades_data if t['time'][:10]==today_str)} oggi | last: {trades_data[0]['time'][:16] if trades_data else 'nessuno'}")
                 pnl_today_real = round(sum(t['profit'] for t in trades_data if t['time'][:10] == today_str), 2)
                 trades_today_real = sum(1 for t in trades_data if t['time'][:10] == today_str)
+                _sl_cd_ts = sl_cooldown_until.isoformat() if sl_cooldown_until else None
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
@@ -1135,6 +1179,9 @@ def run():
                     'active_strategy': current_selector_result['selected_strategy'] if current_selector_result else None,
                     'strategy_confidence': current_selector_result['confidence'] if current_selector_result else None,
                     'selector_reasoning': current_selector_result['reasoning'] if current_selector_result else None,
+                    'open_positions': count_open_positions(),
+                    'consecutive_sl': consecutive_sl_count,
+                    'sl_cooldown_until': _sl_cd_ts,
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
@@ -1308,6 +1355,11 @@ def run():
                             log.debug(f"[H1] Direzione {direction} già occupata, skip {strategy_name}")
                         elif current_news_risk.get('paused'):
                             log.warning(f"⛔ SEGNALE H1 SOSPESO (News) | {strategy_name} | {current_news_risk['reason']}")
+                        elif count_open_positions() >= MAX_OPEN_ORDERS:
+                            log.info(f"⏸ H1 skip {strategy_name} — max ordini aperti ({MAX_OPEN_ORDERS}) raggiunto")
+                        elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
+                            remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                            log.warning(f"🛑 H1 skip {strategy_name} — cooldown SL attivo ({remaining}min rimanenti)")
                         else:
                             atr_i = I_h1['atr'][i_h1] or 10.0
                             base_tp = round(atr_i * sel_tp_mult, 2)
@@ -1412,7 +1464,8 @@ def run():
                         for (sec_id, sec_tf, sec_dir_filter) in REGIME_MULTI_STRATEGIES.get(current_regime, []):
                             if sec_tf != 'H1': continue
                             if sec_id == strategy_name: continue   # già provata come primaria
-                            if count_open_positions() >= 2: break
+                            if count_open_positions() >= MAX_OPEN_ORDERS: break
+                            if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
                             if state.trades_today >= MAX_TRADES: break
                             fn2 = SIGNAL_FNS.get(sec_id)
                             if not fn2: continue
@@ -1478,8 +1531,11 @@ def run():
                         can, reason = state.can_trade(now_utc)
                         if not can:
                             log.debug(f"[M15] Trade non permesso: {reason}")
-                        elif count_open_positions() >= 2:
-                            log.debug(f"[M15] Max posizioni aperte (2)")
+                        elif count_open_positions() >= MAX_OPEN_ORDERS:
+                            log.debug(f"[M15] Max posizioni aperte ({MAX_OPEN_ORDERS})")
+                        elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
+                            remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                            log.warning(f"🛑 M15 skip — cooldown SL attivo ({remaining}min rimanenti)")
                         else:
                             I_m15 = compute_indicators(candles_m15)
                             idx = len(candles_m15) - 2
@@ -1497,7 +1553,7 @@ def run():
                                 direction = fn(I_m15, idx, h1_trend=curr_h1_trend)
                             else:
                                 direction = fn(I_m15, idx) if fn else None
-                                
+
                             if direction and has_position_in_direction(direction):
                                 log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
                             elif direction and current_news_risk.get('paused'):
@@ -1565,8 +1621,11 @@ def run():
                         can, reason = state.can_trade(now_utc)
                         if not can:
                             log.debug(f"[M30] Trade non permesso: {reason}")
-                        elif count_open_positions() >= 2:
-                            log.debug(f"[M30] Max posizioni aperte (2)")
+                        elif count_open_positions() >= MAX_OPEN_ORDERS:
+                            log.debug(f"[M30] Max posizioni aperte ({MAX_OPEN_ORDERS})")
+                        elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
+                            remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                            log.warning(f"🛑 M30 skip — cooldown SL attivo ({remaining}min rimanenti)")
                         else:
                             I_m30 = compute_indicators(candles_m30)
                             idx = len(candles_m30) - 2

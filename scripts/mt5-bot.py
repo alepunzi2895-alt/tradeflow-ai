@@ -728,14 +728,16 @@ def get_recent_trades_data(n=30):
         from_ts = now_ts - 180 * 86400
         to_ts   = now_ts + 3600
         deals = mt5.history_deals_get(from_ts, to_ts)
-        log.info(f"📋 MT5 history: {len(deals) if deals is not None else 0} deal raw")
         total = len(deals) if deals is not None else 0
+        log.info(f"📋 MT5 history: {total} deal raw")
         if deals is not None and total > 0:
+            for d in sorted(deals, key=lambda x: x.time, reverse=True)[:15]:
+                dt = datetime.datetime.fromtimestamp(d.time, tz=utc).strftime('%m-%d %H:%M')
+                log.info(f"  {dt} t={d.type} e={d.entry} p={d.profit:.2f} vol={d.volume} [{d.comment[:20]!r}]")
             result = []
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
                 if d.type not in (0, 1):
                     continue
-                # entry: 0=IN, 1=OUT, 2=INOUT, 3=OUT_BY (hedge)
                 if d.entry == 0:
                     continue
                 result.append({

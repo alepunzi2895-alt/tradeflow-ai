@@ -171,18 +171,27 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   if(pending.length>0&&!isExtreme){
     const qualColors={elite:'#c8a96e', high:'#00e676', medium:'#ffd700'};
     const qualLabels={elite:'💎 ELITE', high:'🔥 FORTE', medium:'⚠️ MODERATO'};
+    const autoOn = typeof SE !== 'undefined' && SE.autoTrade;
+    const autoStyle = autoOn
+      ? 'background:#00e67622;border:1px solid #00e676;color:#00e676;cursor:pointer;font-weight:800'
+      : 'background:var(--bg2);border:1px solid var(--border);color:var(--dim);cursor:pointer;font-weight:600';
     pendingHtml=`<div style="margin-bottom:10px">
-      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:5px">🔔 SEGNALI ATTIVI</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.08em">🔔 SEGNALI ATTIVI</div>
+        <button onclick="seToggleAutoTrade()" style="font-size:9px;padding:3px 8px;border-radius:4px;${autoStyle}">
+          ${autoOn ? '🤖 AUTO ON' : '⏸ AUTO OFF'}
+        </button>
+      </div>
       ${pending.map((s)=>{
         const dc=s.dir==='buy'?'#00e676':'#ff4757';
         const qc=qualColors[s.quality]||'#ffd700';
         const ql=qualLabels[s.quality]||'';
-        // Bottone MT5: abilitato solo se bot online
+        // Bottone MT5: abilitato solo se bot online e auto-trading non attivo
         const btnStyle=botOnline
           ?`background:${dc};color:${s.dir==='buy'?'#000':'#fff'};cursor:pointer;opacity:1`
           :`background:var(--bg2);color:var(--dim);cursor:not-allowed;opacity:0.5`;
-        const btnLabel=botOnline?`🚀 ESEGUI SU MT5`:`🔴 Bot offline — avvia mt5-bot.py`;
-        const btnDisabled=botOnline?'':'disabled';
+        const btnLabel=botOnline?(autoOn?`🤖 AUTO — in esecuzione`:`🚀 ESEGUI SU MT5`):`🔴 Bot offline — avvia mt5-bot.py`;
+        const btnDisabled=(botOnline&&!autoOn)?'':'disabled';
         return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:8px;padding:9px 11px;margin-bottom:6px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <div style="display:flex;align-items:center;gap:6px">

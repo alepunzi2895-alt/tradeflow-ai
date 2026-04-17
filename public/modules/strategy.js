@@ -10,6 +10,9 @@ const SE = {
   session: { start: 0, end: 24 },
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
+  // AUTO-TRADING: se true, segnali vengono inviati al bot senza click
+  autoTrade: localStorage.getItem('se_auto_trade') === '1',
+  _autoExecuted: new Set(),  // dedup: strategy_dir_5minWindow
   strategies: {
     // ── STRATEGIE ATTIVE [BACKTEST 25 MESI · MT5 GOLD M30 · lot 0.01] ──
     // Sistema adattivo M30+RM: 4598 trade · WR 32.6% · PF 1.196 · +$13.44/gg · DD $1,298
@@ -233,6 +236,24 @@ async function seRefresh() {
   window._seLastMt5Data = mt5Data; // cache per seSendTradeToMt5
   seRender(mt5Data, pending, snap, isExtreme, inSession, hour);
 
+  // ── AUTO TRADING: esegui segnali senza click se toggle attivo ──────────
+  if (SE.autoTrade && pending.length > 0 && mt5Data) {
+    const syncAge = mt5Data.synced_at
+      ? Math.round((Date.now() - new Date(mt5Data.synced_at).getTime()) / 1000)
+      : 999;
+    if (syncAge < 180) {
+      const win5m = Math.floor(Date.now() / (5 * 60 * 1000));
+      for (const s of pending) {
+        const key = `${s.name}_${s.dir}_${win5m}`;
+        if (!SE._autoExecuted.has(key)) {
+          SE._autoExecuted.add(key);
+          if (SE._autoExecuted.size > 100) SE._autoExecuted.clear();
+          seSendTradeToMt5(s);
+        }
+      }
+    }
+  }
+
   // Push AI score al DB ogni 60s così il bot Python può leggerlo
   const nowTs = Date.now();
   if (nowTs - _lastScorePush > 60000) {
@@ -253,4 +274,16 @@ async function seFetchMt5Data() {
     return j.ok ? j.data : null;
   } catch(e) { return null; }
 }
+
+function seToggleAutoTrade() {
+  SE.autoTrade = !SE.autoTrade;
+  localStorage.setItem('se_auto_trade', SE.autoTrade ? '1' : '0');
+  // Reset dedup set quando si (ri)attiva — evita segnali già visti da bloccare
+  if (SE.autoTrade) SE._autoExecuted.clear();
+  seToast(
+    SE.autoTrade ? '🤖 Auto-trading ATTIVO — segnali eseguiti automaticamente' : '⏸ Auto-trading disattivato',
+    SE.autoTrade ? '#00e676' : '#ffca28'
+  );
+}
+window.seToggleAutoTrade = seToggleAutoTrade;
 

@@ -377,11 +377,18 @@ class RiskManager:
         Recupera l'AI Score corrente dal tab Dashboard via Vercel DB.
         Ritorna un float 0-100 (default 50 se non disponibile).
         """
-        import urllib.request
+        import urllib.request, ssl
         try:
+            try:
+                import certifi
+                _ctx = ssl.create_default_context(cafile=certifi.where())
+            except ImportError:
+                _ctx = ssl.create_default_context()
+                _ctx.check_hostname = False
+                _ctx.verify_mode = ssl.CERT_NONE
             url = f"{vercel_url}/api/db?action=mt5_get"
             req = urllib.request.Request(url, headers={'Content-Type': 'application/json'})
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
                 import json
                 data = json.loads(r.read().decode())
                 # La risposta ha struttura {ok, data: {..., ai_score: ...}}

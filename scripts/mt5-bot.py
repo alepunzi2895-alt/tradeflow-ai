@@ -11,7 +11,14 @@ USO:
   python scripts/mt5-bot.py
   python scripts/mt5-bot.py --dry-run   (simula senza inviare ordini)
 """
-import sys, io, time, json, math, datetime, argparse, os, logging, urllib.request, urllib.error
+import sys, io, time, json, math, datetime, argparse, os, logging, urllib.request, urllib.error, ssl
+try:
+    import certifi
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    _SSL_CTX = ssl.create_default_context()
+    _SSL_CTX.check_hostname = False
+    _SSL_CTX.verify_mode = ssl.CERT_NONE
 from dotenv import load_dotenv
 load_dotenv() # Carica .env dal root se presente
 
@@ -770,7 +777,7 @@ def sync_to_vercel(acc, positions, trades, bot_status):
             headers={'Content-Type': 'application/json'},
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=10, context=_SSL_CTX) as r:
             body = r.read().decode('utf-8')
             if r.status == 200:
                 log.info(f"✅ Sync Vercel OK — {len(positions)} posizioni, {len(trades)} trade")
@@ -793,7 +800,7 @@ def fetch_pending_command():
             headers={'Content-Type': 'application/json'},
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=8) as r:
+        with urllib.request.urlopen(req, timeout=8, context=_SSL_CTX) as r:
             if r.status == 200:
                 data = json.loads(r.read().decode('utf-8'))
                 if data.get('ok') and data.get('command'):

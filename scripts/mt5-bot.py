@@ -77,7 +77,7 @@ STRATEGY_PARAMS = {
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
-PLAYBOOK_FILE = "regime_playbook.json"
+PLAYBOOK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'regime_playbook.json')
 FALLBACK_PLAYBOOK = {
     'TREND_UP':   {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
     'TREND_DOWN': {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},

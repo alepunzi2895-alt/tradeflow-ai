@@ -73,6 +73,14 @@ except ImportError:
     log_placeholder5 = logging.getLogger('tf-bot')
     log_placeholder5.warning("performance_tracker.py non trovato — self-learning disabilitato")
 
+# ── NEWS GUARDIAN ─────────────────────────────────────────────────────────────
+try:
+    from news_guardian import get_news_guardian
+except ImportError:
+    get_news_guardian = None
+    log_placeholder6 = logging.getLogger('tf-bot')
+    log_placeholder6.warning("news_guardian.py non trovato — pausa news disabilitata")
+
 # ── CONFIGURAZIONE (Legacy fallback, ora legge da .env) ───────────────
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
 MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
@@ -960,6 +968,19 @@ def run():
     if perf_tracker:
         log.info("PerformanceTracker attivo — self-learning abilitato")
 
+    # Inizializza News Guardian
+    news_guardian      = get_news_guardian() if get_news_guardian else None
+    current_news_risk  = {'paused': False, 'risk_mult': 1.0, 'reason': 'clear'}
+    last_news_check_ts = 0  # refresh ogni 15min
+    if news_guardian:
+        news_guardian.refresh(force=True)
+        upcoming = news_guardian.get_upcoming_high_impact(hours_ahead=12)
+        if upcoming:
+            log.info(f"[NewsGuardian] {len(upcoming)} news HIGH USD/XAU prossime 12h:")
+            for e in upcoming[:3]:
+                log.info(f"  • {e['dt'][11:16]} UTC (+{e['minutes_away']}min) {e['currency']} {e['title']}")
+        log.info("NewsGuardian attivo — pausa automatica attorno a news USD/XAU HIGH impact")
+
     while True:
         try:
             now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -1067,6 +1088,21 @@ def run():
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
+
+            # ── News Guardian: aggiorna rischio ogni 15min ─────────────────
+            if news_guardian and (now_ts - last_news_check_ts) >= 900:
+                last_news_check_ts = now_ts
+                new_risk = news_guardian.check_news_risk(now_utc)
+                # Log solo se cambia stato
+                if new_risk['paused'] != current_news_risk['paused'] or \
+                   new_risk['risk_mult'] != current_news_risk['risk_mult']:
+                    if new_risk['paused']:
+                        log.warning(f"[NewsGuardian] {new_risk['reason']}")
+                    elif new_risk['risk_mult'] < 1.0:
+                        log.info(f"[NewsGuardian] {new_risk['reason']}")
+                    elif current_news_risk['paused'] or current_news_risk['risk_mult'] < 1.0:
+                        log.info("[NewsGuardian] ✅ Finestra news terminata — trading ripreso")
+                current_news_risk = new_risk
 
             # ── Performance Tracker: report ogni 6 ore ─────────────────────
             if perf_tracker and (now_ts - last_perf_report) >= 21600:
@@ -1220,6 +1256,8 @@ def run():
                             log.info(f"Regime: {current_regime} | Nessun segnale primario H1 su {bar_dt.strftime('%H:%M')}")
                         elif has_position_in_direction(direction):
                             log.debug(f"[H1] Direzione {direction} già occupata, skip {strategy_name}")
+                        elif current_news_risk.get('paused'):
+                            log.warning(f"⛔ SEGNALE H1 SOSPESO (News) | {strategy_name} | {current_news_risk['reason']}")
                         else:
                             atr_i = I_h1['atr'][i_h1] or 10.0
                             base_tp = round(atr_i * sel_tp_mult, 2)
@@ -1270,6 +1308,12 @@ def run():
                                 lot_use = LOT_SIZE
                                 tp_use  = base_tp
                                 sl_use  = base_sl
+
+                            # ── News risk_mult: riduce lot se news media importanza ──
+                            news_mult = current_news_risk.get('risk_mult', 1.0)
+                            if news_mult < 1.0:
+                                lot_use = max(0.01, round(lot_use * news_mult, 2))
+                                log.info(f"[NewsGuardian] Lot ridotto ×{news_mult:.0%} → {lot_use} | {current_news_risk['reason']}")
 
                             params = STRATEGY_PARAMS.get(strategy_name, STRATEGY_PARAMS.get('S00_MFKK', {}))
                             log.info(
@@ -1406,6 +1450,8 @@ def run():
                                 
                             if direction and has_position_in_direction(direction):
                                 log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
+                            elif direction and current_news_risk.get('paused'):
+                                log.warning(f"⛔ SEGNALE M15 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
                             elif direction:
                                 # ── CALCOLO TP/SL DI STRATEGIA (M15) ────────────
                                 params = STRATEGY_PARAMS.get(sname, {'tp_usd': 15.0, 'sl_usd': 10.0, 'label': sname})
@@ -1483,6 +1529,8 @@ def run():
                             direction = fn(I_m30, idx) if fn else None
                             if direction and has_position_in_direction(direction):
                                 log.debug(f"[M30] Direzione {direction} già occupata, skip {sname}")
+                            elif direction and current_news_risk.get('paused'):
+                                log.warning(f"⛔ SEGNALE M30 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
                             elif direction:
                                 # ── CALCOLO TP/SL DI STRATEGIA (M30) ────────────
                                 params = STRATEGY_PARAMS.get(sname, {'tp_usd': 15.0, 'sl_usd': 10.0, 'label': sname})

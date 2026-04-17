@@ -1,4 +1,4 @@
-# TradeFlow AI — Risk Guardian Agent (`risk_guardian.py`)
+# TradeFlow AI — Risk Guardian Agent + News Guardian + Manutenzione Quotidiana
 
 > **Sostituisce** `risk_manager.py` come agente primario dal 2026-04-17.
 > `risk_manager.py` è mantenuto come fallback per backward compat ma non viene usato direttamente.
@@ -141,4 +141,91 @@ In pratica: un swing_high D1 (0.85 × 1.0 = **0.85**) supera un swing_high H1 (0
 📈 Trail ticket#12345: SL→3245.80 (+7.06)
 ⏱️  Early exit ticket#12346 — Stalled: 8% profit after 135min (expected 90min)
 🔄 Regime exit ticket#12347 — Regime shift: TREND_UP → RANGING (hostile to S05_MFKK_INTRADAY)
+```
+
+
+---
+
+## News Guardian (`news_guardian.py`)
+
+Monitora il calendario economico ForexFactory e regola rischio/pausa automaticamente.
+
+### Comportamento
+
+| Condizione | risk_mult | Azione bot |
+|---|---|---|
+| HIGH impact USD/XAU entro ±30/60min | 0.0 | Pausa totale apertura nuovi trade |
+| HIGH impact altre valute entro ±30/20min | 0.5 | Lot size ridotto al 50% |
+| Nessuna news imminente | 1.0 | Operatività normale |
+
+### Finestre di pausa
+
+- **PAUSE_BEFORE_MIN = 30** — 30 min prima dell'evento
+- **PAUSE_AFTER_MIN = 60** — 60 min dopo l'evento
+- Refresh calendario: ogni **6 ore** (cache in `data/news_calendar_cache.json`)
+- Fonti: `https://nfs.faireconomy.media/ff_calendar_thisweek.json` + nextweek
+
+### Integrazione nel bot
+
+```
+ogni 15s nel loop:
+  news_risk = news_guardian.check_news_risk(now_utc)
+  → se news_risk['paused'] → skip place_order su H1/M15/M30
+  → se news_risk['risk_mult'] < 1.0 → lot_use *= risk_mult
+
+startup:
+  news_guardian.refresh(force=True)
+  → log eventi HIGH USD/XAU prossime 12h
+```
+
+### Uso standalone
+
+```bash
+python scripts/news_guardian.py              # eventi prossime 12h
+python scripts/news_guardian.py --hours 24  # prossime 24h
+python scripts/news_guardian.py --force     # forza re-fetch
+```
+
+---
+
+## Daily Maintenance (`daily_maintenance.py`)
+
+Script da eseguire ogni giorno sulla VPS (es. **06:00 UTC**).
+
+### Step eseguiti
+
+| Step | Azione |
+|---|---|
+| 1 | Fetch dati storici MT5 per M5, M15, M30, H1, H4 (richiede MT5 aperto) |
+| 2 | Backtest adattivo per ogni TF (strategy-engine-v2.py) |
+| 3 | Drift analysis: confronta PF/WR recenti vs baseline canonico |
+| 4 | Parameter drift hints: flag se PF cambia >15% o WR >5pp |
+| 5 | Report `.txt` + update `07_self_learning_log.md` per drift significativi |
+
+### Soglie drift
+
+| Metrica | Soglia flag | Tipo |
+|---|---|---|
+| PF cambia | ±15% vs baseline | PF_DRIFT_UP / PF_DRIFT_DOWN |
+| WR cambia | ±5pp vs baseline | WR_DRIFT_UP / WR_DRIFT_DOWN |
+
+> Se PF_DRIFT_DOWN: suggerisci aumentare SL mult o ridurre TP mult.
+> Se PF_DRIFT_UP: aggiorna baseline in BASELINE_STATS.
+
+### Task Scheduler Windows
+
+```
+Task: TradeFlow Daily Maintenance
+Trigger: ogni giorno alle 06:00
+Action: python -X utf8 C:\...\scripts\daily_maintenance.py
+Start in: C:\...\tradeflow-ai
+```
+
+### Uso manuale
+
+```bash
+python scripts/daily_maintenance.py                       # completo
+python scripts/daily_maintenance.py --skip-fetch          # salta download MT5
+python scripts/daily_maintenance.py --tfs M30,H1          # solo TF specifici
+python scripts/daily_maintenance.py --dry-run             # nessuna scrittura
 ```

@@ -46,11 +46,11 @@ const SE = {
         pnl_12m: 1629, td_12m: 2.76, pnl_24m: 3258, td_24m: 2.76,
         maxdd: 800, maxdd_pct: '7.4%', trades_12m: 826, best_regime: 'TREND/WEAK'
       } },
-    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [M30] V2', pf: 1.11, wr: '25.7%', tp: 'ATR×2.5', sl: 'ATR×0.8',
+    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [H4] V2', pf: 1.71, wr: '41.5%', tp: 'ATR×2.5', sl: 'ATR×0.8',
       stats: {
-        pnl_1m: 12, td_1m: 1.05, pnl_6m: 70, td_6m: 1.05,
-        pnl_12m: 140, td_12m: 1.05, pnl_24m: 279, td_24m: 1.05,
-        maxdd: 600, maxdd_pct: '5.5%', trades_12m: 308, best_regime: 'VOLATILE/TREND'
+        pnl_1m: 32, td_1m: 0.14, pnl_6m: 193, td_6m: 0.14,
+        pnl_12m: 386, td_12m: 0.14, pnl_24m: 741, td_24m: 0.14,
+        maxdd: 350, maxdd_pct: '3.2%', trades_12m: 49, best_regime: 'VOLATILE/TREND · TF H4'
       } },
   },
   // ── REGIME PRIORITY ──

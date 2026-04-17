@@ -713,9 +713,22 @@ def get_open_positions_data():
             'sl':        round(p.sl, 2),
             'profit':    round(p.profit, 2),
             'strategy':  p.comment.replace('TF-AI ', ''),
-            'time':      datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
+            'time':        datetime.datetime.fromtimestamp(p.time, tz=datetime.timezone.utc).isoformat(),
+            'position_id': p.identifier,
         })
     return result
+
+def _deal_to_dict(d):
+    utc = datetime.timezone.utc
+    return {
+        'ticket':    d.ticket,
+        'time':      datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
+        'direction': 'sell' if d.type == 0 else 'buy',
+        'strategy':  d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
+        'price':     round(d.price, 2),
+        'profit':    round(d.profit, 2),
+        'volume':    d.volume,
+    }
 
 def get_recent_trades_data(n=30):
     """
@@ -731,24 +744,13 @@ def get_recent_trades_data(n=30):
         total = len(deals) if deals is not None else 0
         log.info(f"📋 MT5 history: {total} deal raw")
         if deals is not None and total > 0:
-            for d in sorted(deals, key=lambda x: x.time, reverse=True)[:15]:
-                dt = datetime.datetime.fromtimestamp(d.time, tz=utc).strftime('%m-%d %H:%M')
-                log.info(f"  {dt} t={d.type} e={d.entry} p={d.profit:.2f} vol={d.volume} [{d.comment[:20]!r}]")
             result = []
             for d in sorted(deals, key=lambda x: x.time, reverse=True):
                 if d.type not in (0, 1):
                     continue
                 if d.entry == 0:
                     continue
-                result.append({
-                    'ticket':    d.ticket,
-                    'time':      datetime.datetime.fromtimestamp(d.time, tz=utc).isoformat(),
-                    'direction': 'sell' if d.type == 0 else 'buy',
-                    'strategy':  d.comment.replace('TF-AI ', '') if d.comment else 'N/A',
-                    'price':     round(d.price, 2),
-                    'profit':    round(d.profit, 2),
-                    'volume':    d.volume,
-                })
+                result.append(_deal_to_dict(d))
                 if len(result) >= n: break
             log.debug(f"📋 Trade chiusi: {len(result)}")
             if result:
@@ -846,6 +848,7 @@ def run():
     last_candle_fetch_ts = 0     # timestamp ultimo fetch candele H1
     cached_candles       = None  # cache candele (aggiornata ogni 60s)
     cached_I_h1          = None  # cache indicatori (ricalcolati solo su nuova barra)
+    _tracked_positions   = {}    # {ticket: position_id} per rilevare chiusure istantanee
 
     # Inizializza RiskManager
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
@@ -925,6 +928,22 @@ def run():
 
                 acc_data = get_account_info()
                 positions_data = get_open_positions_data()
+                # Rileva posizioni chiuse tra un sync e l'altro via position ID
+                cur_pos_ids = {p['ticket']: p for p in positions_data}
+                for ticket, pos_id in list(_tracked_positions.items()):
+                    if ticket not in cur_pos_ids:
+                        # Posizione appena chiusa — cerca il deal di chiusura
+                        extra = mt5.history_deals_get(position=pos_id)
+                        if extra:
+                            for d in extra:
+                                if d.type in (0, 1) and d.entry != 0:
+                                    log.info(f"🎯 Chiusura rilevata via position_id={pos_id}: profit={d.profit:.2f}")
+                        _tracked_positions.pop(ticket, None)
+                # Aggiorna tracking posizioni correnti
+                for ticket, p in cur_pos_ids.items():
+                    if ticket not in _tracked_positions:
+                        _tracked_positions[ticket] = p.get('position_id', ticket)
+
                 trades_data = get_recent_trades_data(200)
                 today_str = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
                 log.info(f"📊 Sync: {len(trades_data)} trade totali, {sum(1 for t in trades_data if t['time'][:10]==today_str)} oggi | last: {trades_data[0]['time'][:16] if trades_data else 'nessuno'}")

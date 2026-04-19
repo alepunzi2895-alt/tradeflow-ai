@@ -1496,7 +1496,27 @@ def run():
                             elif isinstance(sec_params.get('sl_usd'), (int, float)):
                                 base_sl2 = sec_params['sl_usd']
 
-                            if rm:
+                            rp2 = None
+                            if rg:
+                                acc_now = get_account_info()
+                                rp2 = rg.get_order_params(
+                                    strategy_confidence=last_ai_score / 100.0,
+                                    atr=atr_i2, strategy_id=sec_id, ai_score=last_ai_score,
+                                    atr_avg=I_h1['atr_avg'][i_h1], adx=I_h1['adx'][i_h1],
+                                    dip=I_h1['dip'][i_h1], dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour,
+                                    today_pnl=state.pnl_today,
+                                    current_equity=acc_now['equity'] if acc_now else None,
+                                    weekly_dd_pct=0.0,
+                                    tp_atr_mult=sec_params.get('tp_mult', 1.5),
+                                    sl_atr_mult=sec_params.get('sl_mult', 1.0),
+                                    direction=sec_dir,
+                                )
+                                if rp2.get('paused'):
+                                    log.info(f"⛔ SEGNALE H1 (sec) SOSPESO (Risk Guardian) | {sec_id}")
+                                    continue
+                                lot2, tp2, sl2 = rp2['lot'], rp2['tp_usd'], rp2['sl_usd']
+                                log.info(f"★ SEGNALE H1 (sec): {sec_dir.upper()} | {sec_params.get('label',sec_id)} | tier={rp2.get('tier_label','N/A')} | lot={lot2} | TP=${tp2:.2f} | SL=${sl2:.2f}")
+                            elif rm:
                                 rp2 = rm.get_order_params(
                                     ai_score=last_ai_score, atr=atr_i2, strategy=sec_id, direction=sec_dir,
                                     atr_avg=I_h1['atr_avg'][i_h1], adx=I_h1['adx'][i_h1],
@@ -1514,6 +1534,15 @@ def run():
                                                   key_levels_result=current_levels_result,
                                                   atr=atr_i2)
                             if result2:
+                                if rg and rp2:
+                                    _kl_targets2 = (current_levels_result or {}).get(
+                                        "resistance" if sec_dir == "buy" else "support", []
+                                    )[:3]
+                                    rg.register_position(
+                                        result2.order, rp2, sec_id, 'H1',
+                                        current_regime, sec_dir,
+                                        partial_targets=_kl_targets2,
+                                    )
                                 tick2 = mt5.symbol_info_tick(SYMBOL)
                                 price2 = tick2.ask if sec_dir=='buy' else tick2.bid if tick2 else 0
                                 log_trade_to_json(sec_dir, sec_id, price2,
@@ -1576,7 +1605,28 @@ def run():
                                 elif isinstance(params.get('sl_usd'), (int, float)):
                                     base_sl_m15 = params['sl_usd']
 
-                                if rm:
+                                rp = None
+                                if rg:
+                                    acc_now = get_account_info()
+                                    rp = rg.get_order_params(
+                                        strategy_confidence=last_ai_score / 100.0,
+                                        atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
+                                        atr_avg=I_m15.get('atr_avg', [None]*len(candles_m15))[idx],
+                                        adx=I_m15['adx'][idx], dip=I_m15['dip'][idx],
+                                        dim=I_m15['dim'][idx], hour_utc=bar_dt_m15.hour,
+                                        today_pnl=state.pnl_today,
+                                        current_equity=acc_now['equity'] if acc_now else None,
+                                        weekly_dd_pct=0.0,
+                                        tp_atr_mult=params.get('tp_mult', 1.5),
+                                        sl_atr_mult=params.get('sl_mult', 1.0),
+                                        direction=direction,
+                                    )
+                                    if rp.get('paused'):
+                                        log.info(f"⛔ SEGNALE M15 SOSPESO (Risk Guardian) | {sname}")
+                                        continue
+                                    lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                    log.info(f"★ SEGNALE M15: {direction.upper()} | {params['label']} | Regime: {current_regime} | tier={rp.get('tier_label','N/A')} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
+                                elif rm:
                                     rp = rm.get_order_params(
                                         ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction,
                                         atr_avg=I_m15.get('atr_avg', [None]*len(candles_m15))[idx],
@@ -1596,6 +1646,15 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
+                                    if rg and rp:
+                                        _kl_targets = (current_levels_result or {}).get(
+                                            "resistance" if direction == "buy" else "support", []
+                                        )[:3]
+                                        rg.register_position(
+                                            result.order, rp, sname, 'M15',
+                                            current_regime, direction,
+                                            partial_targets=_kl_targets,
+                                        )
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                     log_trade_to_json(direction, sname, price,
@@ -1658,7 +1717,28 @@ def run():
                                 elif isinstance(params.get('sl_usd'), (int, float)):
                                     base_sl_m30 = params['sl_usd']
 
-                                if rm:
+                                rp = None
+                                if rg:
+                                    acc_now = get_account_info()
+                                    rp = rg.get_order_params(
+                                        strategy_confidence=last_ai_score / 100.0,
+                                        atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
+                                        atr_avg=I_m30.get('atr_avg', [None]*len(candles_m30))[idx],
+                                        adx=I_m30['adx'][idx], dip=I_m30['dip'][idx],
+                                        dim=I_m30['dim'][idx], hour_utc=bar_dt_m30.hour,
+                                        today_pnl=state.pnl_today,
+                                        current_equity=acc_now['equity'] if acc_now else None,
+                                        weekly_dd_pct=0.0,
+                                        tp_atr_mult=params.get('tp_mult', 1.5),
+                                        sl_atr_mult=params.get('sl_mult', 1.0),
+                                        direction=direction,
+                                    )
+                                    if rp.get('paused'):
+                                        log.info(f"⛔ SEGNALE M30 SOSPESO (Risk Guardian) | {sname}")
+                                        continue
+                                    lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | tier={rp.get('tier_label','N/A')} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
+                                elif rm:
                                     rp = rm.get_order_params(
                                         ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction,
                                         atr_avg=I_m30.get('atr_avg', [None]*len(candles_m30))[idx],
@@ -1678,6 +1758,15 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
+                                    if rg and rp:
+                                        _kl_targets = (current_levels_result or {}).get(
+                                            "resistance" if direction == "buy" else "support", []
+                                        )[:3]
+                                        rg.register_position(
+                                            result.order, rp, sname, 'M30',
+                                            current_regime, direction,
+                                            partial_targets=_kl_targets,
+                                        )
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                     log_trade_to_json(direction, sname, price,
@@ -1733,7 +1822,28 @@ def run():
                                     base_sl_h4 = atr_i * params.get('sl_mult', 1.0)
                                 elif isinstance(params.get('sl_usd'), (int, float)):
                                     base_sl_h4 = params['sl_usd']
-                                if rm:
+                                rp = None
+                                if rg:
+                                    acc_now = get_account_info()
+                                    rp = rg.get_order_params(
+                                        strategy_confidence=last_ai_score / 100.0,
+                                        atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
+                                        atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
+                                        adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],
+                                        dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour,
+                                        today_pnl=state.pnl_today,
+                                        current_equity=acc_now['equity'] if acc_now else None,
+                                        weekly_dd_pct=0.0,
+                                        tp_atr_mult=params.get('tp_mult', 2.0),
+                                        sl_atr_mult=params.get('sl_mult', 1.0),
+                                        direction=direction,
+                                    )
+                                    if rp.get('paused'):
+                                        log.info(f"⛔ SEGNALE H4 SOSPESO (Risk Guardian) | {sname}")
+                                        continue
+                                    lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                    log.info(f"★ SEGNALE H4: {direction.upper()} | {params['label']} | Regime: {current_regime} | tier={rp.get('tier_label','N/A')} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
+                                elif rm:
                                     rp = rm.get_order_params(
                                         ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction,
                                         atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
@@ -1752,6 +1862,15 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
+                                    if rg and rp:
+                                        _kl_targets = (current_levels_result or {}).get(
+                                            "resistance" if direction == "buy" else "support", []
+                                        )[:3]
+                                        rg.register_position(
+                                            result.order, rp, sname, 'H4',
+                                            current_regime, direction,
+                                            partial_targets=_kl_targets,
+                                        )
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                     log_trade_to_json(direction, sname, price,

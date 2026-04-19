@@ -1,52 +1,50 @@
 # TradeFlow AI — Strategie Attive
 
-## Backtest Canonico (2026-04-17 · MT5 GOLD M30 · lot 0.01 · $1/punto)
+## Backtest Canonico (2026-04-19 · MT5 GOLD M30 · lot 0.01 · $1/punto)
 
-### Sistema Adattivo M30 + Risk Manager (fonte di verità)
+### Sistema Adattivo M30 (senza RM — fonte di verità per confronto TF)
 
-| Metrica | Valore |
-|---|---|
-| Trade totali (25 mesi) | 4598 |
-| Win Rate | 32.6% |
-| P&L totale | +$6,869 |
-| Profit Factor | 1.196 |
-| Max Drawdown | $1,298 |
-| Media $/giorno | **+$13.44** |
-| Mesi positivi | 17/25 |
+| Metrica | Prima (2026-04-17) | Dopo (2026-04-19) | Delta |
+|---|---|---|---|
+| Trade totali (25 mesi) | 4599 | 3385 | -26% |
+| Win Rate | 34.1% | **37.4%** | +3.3pp |
+| P&L totale | +$5,556 | **+$5,794** | +4.3% |
+| Profit Factor | 1.185 | **1.258** | +6.1% |
+| Max Drawdown | $803 | **$759** | -5.5% |
+| Media $/giorno | +$10.87 | **+$12.02** | +10.6% |
+| Mesi positivi | 17/25 | **18/25** | +1 |
 
-### Breakdown per strategia (M30 adattivo senza RM — dati verificati)
+### Breakdown per strategia (M30 adattivo senza RM — 2026-04-19)
 
-| Strategia | Trade | WR% | PF | P&L contrib | TF ottimale | Note |
-|---|---|---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | 1720 | 31.7% | 1.285 | +$3,395 | M30 | Motore principale |
-| S00_MFKK | 1597 | 38.3% | 1.033 | +$388 | M30 (H4: PF 1.319) | Fallback; migliore su H4 |
-| S09_MFKK_SCALPING | 267 | 37.8% | 1.637 | +$703 | **M30** | Molto meglio su M30 che M5 |
-| S10_OB_FVG_SCALP | 73 | 42.5% | 1.796 | +$533 | M30 | Fragile (73 trade) |
-| S17_CONVERGENCE_SCALP | 94 | 41.5% | 1.710 | +$741 | **H4** | Migrato a H4 (da M30 PF 1.107) |
-| S05_MFKK_INTRADAY | 301 | 36.9% | 1.124 | +$221 | **H1** | PF 1.361 su H1 vs 1.124 su M30 |
+| Strategia | Trade | WR% | P&L contrib | TF ottimale | Note |
+|---|---|---|---|---|---|
+| S00_MFKK | 1493 | 40.9% | +$1,636 | M30 | Sell thr 72 + DI spread gate |
+| S16_GOLDEN_SQUEEZE | 900 | 31.7% | +$1,136 | M30 | ADX>=20 + session 7-18 + OBV slope |
+| S09_MFKK_SCALPING | 355 | 36.1% | +$887 | **M30** | Invariato — FVG no ADX gate |
+| S05_MFKK_INTRADAY | 382 | 39.3% | +$1,021 | **H1** | StochRSI K>D aggiunto |
+| S10_OB_FVG_SCALP | 113 | 46.9% | +$1,082 | M30 | Invariato — regime routing migliorato |
+| S17_CONVERGENCE_SCALP | 142 | 26.8% | +$32 | **H4** | ADX>=18 + BB%B 0.55/0.45 |
 
-### Sistema adattivo per TF (senza RM)
+### Sistema adattivo per TF (senza RM — 2026-04-19)
 
 | TF | WR% | P&L | PF | DD | $/gg | Trade/gg |
 |---|---|---|---|---|---|---|
-| M5 | 30.8% | +$509 | 1.036 | $674 | +$1.4 | 9.5 |
-| M15 | 31.7% | +$2,942 | 1.114 | $1,051 | +$5.7 | 13.2 |
-| **M30** | **34.0%** | **+$5,531** | **1.184** | **$803** | **+$10.8** | 12.0 |
-| H1 | 34.1% | +$2,918 | 1.086 | $2,230 | +$5.9 | 9.9 |
-| H4 | 38.6% | +$7,584 | 1.393 | $1,113 | +$19.7 | 4.0 |
+| **M30** | **37.4%** | **+$5,794** | **1.258** | **$759** | **+$12.0** | 7.0 |
+| H1 | 36.0% | +$3,831 | 1.162 | $964 | +$9.1 | 6.6 |
+| H4 | 43.1% | +$7,022 | **1.660** | **$626** | +$25.2 | 3.7 |
 
-> M30 è il TF canonico: miglior equilibrio frequenza/DD. H4 ha PF e WR superiori ma solo 4 trade/gg.
+> M30 è il TF canonico: miglior equilibrio frequenza/DD. H4 ha PF 1.660 WR 43.1% ma solo 3.7 trade/gg.
 
-### TF ottimale per strategia (da backtest multi-TF 2026-04-17)
+### TF ottimale per strategia (da backtest 2026-04-19)
 
-| Strategia | TF Ottimale | PF | WR | Note |
+| Strategia | TF Ottimale | PF sistema | WR | Note |
 |---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | M30 | 1.285 | 31.7% | H4 superiore (PF 1.570) ma meno trade |
-| S00_MFKK | M30 (fallback) | 1.033 | 38.3% | H4 PF 1.319 WR 44.2% — upgrade futuro |
-| S09_MFKK_SCALPING | **M30** | **1.637** | 37.8% | Scoperta: M30 >> M5 (PF 1.143) |
-| S10_OB_FVG_SCALP | M30 | 1.796 | 42.5% | — |
-| S05_MFKK_INTRADAY | **H1** | **1.361** | 41.5% | Confermato: H1 >> M30 (PF 1.124) |
-| S17_CONVERGENCE_SCALP | **H4** | **1.710** | **41.5%** | Migrato da M30 (1.107) a H4 (1.710) |
+| S16_GOLDEN_SQUEEZE | M30 | ~1.27 | 31.7% | ADX>=20 + session filter riduce trade, PF migliore |
+| S00_MFKK | M30 (fallback) | ~1.10 | 40.9% | Sell thr 72 + DI spread: WR migliorata +2.6pp |
+| S09_MFKK_SCALPING | **M30** | **1.637** | 36.1% | FVG invariato — no filtri aggiuntivi |
+| S10_OB_FVG_SCALP | M30 | 1.796 | 46.9% | — |
+| S05_MFKK_INTRADAY | **H1** | ~1.20 | 39.3% | StochRSI K>D aggiunto |
+| S17_CONVERGENCE_SCALP | **H4** | **~1.71** | **41.5%** | ADX>=18 + BB%B 0.55/0.45 → H4 ottimale |
 
 ## Strategie Attive nel Bot
 

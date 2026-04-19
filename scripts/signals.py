@@ -8,13 +8,13 @@ Key naming conventions (both dicts supported via fallback):
   BB lower band   : 'bb_dn' (mt5-bot) / 'bb_lo'         (strategy-engine-v2)
   ATR rolling avg : 'atr_avg' (mt5-bot) / 'atr30'        (strategy-engine-v2)
 
-Optimization 2026-04-17:
-  S16: ADX>=20 gate + OBV 3-bar slope + meaningful candle (0.20×ATR)
-  S05: RSI 55/45, hard ADX>=20 gate, StochRSI K>D confluence
-  S09: 3-EMA stack (13>34>89), ATR>=0.7×avg, ADX>=18
-  S00: skip Asian session (hour<7)
-  S10: skip ATR spike (>2.5×avg)
-  S17: ADX>=20, StochRSI zones (>=25/<=75), BB%B 0.55/0.45
+Optimization 2026-04-19:
+  S16: ADX>=20 gate + OBV 1-bar slope + candle>=0.20×ATR + session 7-18 UTC
+  S05: StochRSI K>D confluence (buy) / K<D (sell) added
+  S09: no change — FVG retests reliable in flat markets, filters hurt WR
+  S00: sell threshold raised 68→72, DI spread>=5 gate
+  S10: skip ATR spike (>2.5×avg)  [unchanged]
+  S17: ADX>=18 gate + BB%B tightened 0.55/0.45
 """
 
 
@@ -145,12 +145,15 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     is_london_ny = hour is not None and (7 <= hour < 17)
     is_high_wr_sell = (not b_cross) and a >= 35 and dm > dp and (dm-dp) >= 20 and b_diff >= 1.0 and c >= 25 and is_london_ny
 
+    # DI spread gate: require at least minimal directional conviction
+    if abs(dp - dm) < 5: return None
+
     # Final Decision
     if is_high_wr_sell: return 'sell'
 
-    # Thresholds: Buy >= 90 (or 82 for special), Sell >= 68
+    # Thresholds: Buy >= 90 (or 82 for special), Sell >= 72 (raised from 68)
     buy_thr = 82 if (is_exh_buy or b_cross) else 90
-    sell_thr = 68
+    sell_thr = 72
 
     if b_score >= buy_thr: return 'buy'
     if s_score >= sell_thr: return 'sell'
@@ -169,14 +172,20 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     ml = _get(ind, 'ml', 'macd')
     mc = ml[i] if ml else None
     e200 = ind['e200'][i]; close = ind['C'][i]
+    sk = ind.get('srsi_k', [None] * (i + 1))[i]
+    sd = ind.get('srsi_d', [None] * (i + 1))[i]
     if None in (r, mo, a, mc, e200): return None
 
     # Hard ADX gate — removes ai_score escape for low-ADX markets
     if a < 20: return None
 
+    # StochRSI K>D: momentum turning in entry direction
+    srsi_bull = (sk is None or sd is None) or (sk > sd)
+    srsi_bear = (sk is None or sd is None) or (sk < sd)
+
     # Tightened RSI thresholds (54/46 vs original 52/48) to reduce weak entries
-    is_buy  = oc[i] == 1  and r > 54 and mo > 0 and mc > 0 and close > e200
-    is_sell = oc[i] == -1 and r < 46 and mo < 0 and mc < 0 and close < e200
+    is_buy  = oc[i] == 1  and r > 54 and mo > 0 and mc > 0 and close > e200 and srsi_bull
+    is_sell = oc[i] == -1 and r < 46 and mo < 0 and mc < 0 and close < e200 and srsi_bear
     if is_buy:  return 'buy'
     if is_sell: return 'sell'
     return None
@@ -185,6 +194,9 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
 def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
     """S16: ELITE CONFLUENCE V2 — OBV Momentum + Trend Alignment (ST/h1_trend) + EMA 233."""
     if i < 233: return None
+    # Session filter: London + NY only (XAU/USD cleaner directional moves)
+    if hour is not None and not (7 <= hour < 18): return None
+
     # h1_trend: explicit H1 Supertrend value from bot; None → use ind['st'] proxy (backtester)
     if h1_trend is not None:
         st = h1_trend
@@ -193,16 +205,28 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
         st = st_arr[i] if st_arr else 0
     if st == 0: return None
 
+    # ADX >= 20 gate: only trade when market is actually trending
+    a = ind['adx'][i]
+    if a is None or a < 20: return None
+
     obv_arr = ind.get('obv'); obv_ema_arr = ind.get('obv_ema')
     if obv_arr is None or obv_ema_arr is None: return None
     obv_val = obv_arr[i]; obv_ema = obv_ema_arr[i]
     c = ind['C'][i]; cp = ind['C'][i - 1]; e233 = ind['e233'][i]
     if None in (obv_val, obv_ema, e233): return None
 
+    # Candle size filter: require meaningful bar (not a Doji)
+    atr_arr = ind.get('atr')
+    atr_val = atr_arr[i] if atr_arr else None
+    candle = abs(c - cp)
+    big_enough = (atr_val is None) or (candle >= 0.20 * atr_val)
+
     if st == -1:  # BULLISH
-        if c > e233 and obv_val > obv_ema and c > cp: return 'buy'
+        obv_slope = obv_val > obv_arr[i - 1]  # OBV still rising (not topping)
+        if c > e233 and obv_val > obv_ema and obv_slope and c > cp and big_enough: return 'buy'
     elif st == 1:  # BEARISH
-        if c < e233 and obv_val < obv_ema and c < cp: return 'sell'
+        obv_slope = obv_val < obv_arr[i - 1]  # OBV still falling (not bottoming)
+        if c < e233 and obv_val < obv_ema and obv_slope and c < cp and big_enough: return 'sell'
     return None
 
 
@@ -244,7 +268,7 @@ def signal_ob_fvg_scalp(ind, i, h1_trend=None, hour=None):
 
 def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
     """S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI + BB %B + EMA50.
-    Optimal TF: H4 (PF 1.710) >> M30 (PF 1.107). Quality improvement comes from TF change.
+    Optimal TF: H4 (PF 1.710) >> M30. Opt: ADX>=18 gate + BB%B 0.55/0.45 tighter.
     """
     if i < 89: return None
     e34 = ind['e34'][i]; e89 = ind['e89'][i]
@@ -253,10 +277,14 @@ def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
     bbl_arr = _get(ind, 'bb_dn', 'bb_lo')
     bbl = bbl_arr[i] if bbl_arr else None
     c = ind['C'][i]; e50 = ind['e50'][i]; atr = ind['atr'][i]
+    a = ind['adx'][i]
     atr_ref = _get(ind, 'atr_avg', 'atr30')
     atr_avg = atr_ref[i] if atr_ref else None
     if None in (e34, e89, sk, sd, bbu, bbl, c, e50, atr): return None
     if atr_avg and atr > 2.2 * atr_avg: return None
+
+    # ADX >= 18: EMA crossovers need at least modest directional bias
+    if a is not None and a < 18: return None
 
     bb_range = bbu - bbl
     bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
@@ -266,8 +294,9 @@ def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
 
     bull_prev = e34_p > e89_p and sk_p > sd_p
     bear_prev = e34_p < e89_p and sk_p < sd_p
-    bull = e34 > e89 and sk > sd and bb_pct > 0.50 and c > e50 and not bull_prev
-    bear = e34 < e89 and sk < sd and bb_pct < 0.50 and c < e50 and not bear_prev
+    # BB%B tightened 0.55/0.45: price must be clearly above/below midline
+    bull = e34 > e89 and sk > sd and bb_pct > 0.55 and c > e50 and not bull_prev
+    bear = e34 < e89 and sk < sd and bb_pct < 0.45 and c < e50 and not bear_prev
 
     if bull: return 'buy'
     if bear: return 'sell'

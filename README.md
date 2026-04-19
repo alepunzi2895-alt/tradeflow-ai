@@ -38,7 +38,9 @@ scripts/
   fetch_mt5_history.py    — Downloads GOLD H1 from live MT5 → JSON
 
 directives/
-  tradeflow_ai_directive.md — Full directive layer: historical bugs, design decisions, self-learning log
+directives/
+  00-08_*.md         — Spacchettamento direttive: architettura, strategie, risk manager, log.
+
 ```
 
 ## Deploy

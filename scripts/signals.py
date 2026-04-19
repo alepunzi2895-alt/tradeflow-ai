@@ -27,12 +27,18 @@ def _get(ind, *keys):
     return None
 
 
-def signal_mfkk_score(ind, i, h1_trend=None, hour=None):
+def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     """
     S00_MFKK — Highly specialized multi-tier scoring (port of mfkk.js).
     Weights: CCI 10%, MACD 10%, ADX 80% (XAU optimized).
     """
     if i < 100: return None
+    # H4: block only true dead zone (0-3 UTC, 1 bar/day)
+    # M30/H1: block Asia chop 0-6 UTC + NY close chop 22-23 UTC
+    if hour is not None:
+        if tf == 'H4':
+            if hour < 4: return None
+        elif not (7 <= hour < 22): return None
 
     # ── RAW VALUES ──────────────────────────────────────────────────────────
     # Note: 'cci' here refers to the stk_d (smoothed stochastic of CCI) passed by compute_all

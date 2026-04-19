@@ -778,14 +778,27 @@ STRATS = {
     'S00_MFKK':               (se_signal_mfkk_score,  ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
 }
 
+# H4: S09/S10 hurt performance (PF 0.446/0.658) — use S16+S17+S00 only
+REGIME_PRIORITY_H4 = {
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S00_MFKK'],
+    'RANGE':      ['S17_CONVERGENCE_SCALP', 'S00_MFKK'],
+    'VOLATILE':   ['S17_CONVERGENCE_SCALP', 'S00_MFKK'],
+    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
+}
+
+# M30/H1/M15: S10 first in WEAK/TREND (PF 1.79-1.82), S09 in RANGE/VOLATILE (PF 1.65)
+# S17 excluded from TREND/WEAK — only works on H4
 REGIME_PRIORITY = {
-    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
-    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
-    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
-    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+    'WEAK_UP':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
     'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
-    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
-    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S00_MFKK', 'S17_CONVERGENCE_SCALP'],
+    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
+    'UNKNOWN':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
@@ -906,14 +919,13 @@ def stats(trades, tp=TP_USD, sl=SL_USD):
 def run_adaptive(candles, ind, tf='H1'):
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
-    
+    priority = REGIME_PRIORITY_H4 if tf == 'H4' else REGIME_PRIORITY
+
     tf_mult = 1
     if tf == 'M30': tf_mult = 2
     elif tf == 'M15': tf_mult = 4
-    lookahead = 25 * tf_mult # adaptive uses slightly shorter exit
-    # Se S17 è presente nel pool, permettiamo un'uscita più lunga per catturare i trend Elite
     lookahead = 150
-    
+
     for i in range(220,n):
         c=candles[i]; ts=c['t']
         dt=datetime.datetime.utcfromtimestamp(ts)
@@ -924,7 +936,7 @@ def run_adaptive(candles, ind, tf='H1'):
         if day_n[day]>=MAX_TRADES: continue
         if hour-day_h[day]<COOLDOWN_H: continue
         r=regime(ind,i)
-        pool=REGIME_PRIORITY.get(r,['S16_GOLDEN_SQUEEZE'])
+        pool=priority.get(r,['S16_GOLDEN_SQUEEZE'])
         sig=None; used=None
         h1t_st = ind['st'][i] if ind.get('st') else None
         for name in pool:
@@ -933,7 +945,7 @@ def run_adaptive(candles, ind, tf='H1'):
             if name == 'S16_GOLDEN_SQUEEZE':
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             elif name == 'S00_MFKK':
-                s=fn(ind,i,hour=hour)
+                s=fn(ind,i,hour=hour,tf=tf)
             else:
                 s=fn(ind,i,hour)
             if s: sig=s; used=name; break
@@ -1012,10 +1024,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
     """
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
-    tf_mult = 1
-    if tf == 'M30': tf_mult = 2
-    elif tf == 'M15': tf_mult = 4
-    lookahead = 25 * tf_mult
+    priority = REGIME_PRIORITY_H4 if tf == 'H4' else REGIME_PRIORITY
     lookahead = 150
 
     for i in range(220, n):
@@ -1028,7 +1037,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         if day_n[day]>=MAX_TRADES: continue
         if hour-day_h[day]<COOLDOWN_H: continue
         r=regime(ind,i)
-        pool=REGIME_PRIORITY.get(r,['S16_GOLDEN_SQUEEZE'])
+        pool=priority.get(r,['S16_GOLDEN_SQUEEZE'])
         sig=None; used=None
         h1t_st = ind['st'][i] if ind.get('st') else None
         for name in pool:
@@ -1037,7 +1046,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
             if name == 'S16_GOLDEN_SQUEEZE':
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             elif name == 'S00_MFKK':
-                s=fn(ind,i,hour=hour)
+                s=fn(ind,i,hour=hour,tf=tf)
             else:
                 s=fn(ind,i,hour)
             if s: sig=s; used=name; break
@@ -1178,7 +1187,7 @@ def main():
             print(f"  ${tp:>4} ${sl:>4} {rr:>5.2f} | {s2['n']:>5} {s2['wr']:>6.1f}% {s2['pnl']:>8.1f} {s2['pf']:>6.3f}")
 
     # ── FASE 5: Sistema adattivo + Risk Manager (--rm) ───────────────────────
-    rm_trades = []; srm = {}
+    rm_trades = []; srm = {}; by_rm = defaultdict(list)
     if _args.rm:
         print("\n" + "="*72)
         print(f"FASE 5: Sistema ADATTIVO + RISK MANAGER (AI Score simulato · {tf})")
@@ -1249,10 +1258,9 @@ def main():
         'ranking':[{'rank':i+1,'name':n,'pf':r['stats']['pf'],'wr':r['stats']['wr'],
                     'n':r['stats']['n'],'use':r['stats']['pf']>=1.10 and r['stats']['n']>=30}
                    for i,(n,r) in enumerate(ranked)],
-        'regime_priority':REGIME_PRIORITY,
+        'regime_priority':REGIME_PRIORITY_H4 if tf == 'H4' else REGIME_PRIORITY,
         'adaptive':{'stats':sa,'by_strategy':{n:stats(tl) for n,tl in by_s.items()}},
-        'adaptive_rm':{'stats':srm,'by_strategy':{n:stats(tl) for n,tl in defaultdict(list,
-            {t['strategy']:[t] for t in rm_trades}).items()}} if rm_trades else {},
+        'adaptive_rm':{'stats':srm,'by_strategy':{n:stats(tl) for n,tl in by_rm.items()}} if rm_trades else {},
         'last_signals':adap[-50:],
         'config':{'tp':TP_USD,'sl':SL_USD,'max_trades':MAX_TRADES,'cooldown_h':COOLDOWN_H,
                   'session_utc':[SESSION_S,SESSION_E],'extreme_mult':EXTREME_K}

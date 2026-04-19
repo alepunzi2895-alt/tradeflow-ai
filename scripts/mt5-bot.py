@@ -504,21 +504,23 @@ SIGNAL_FNS = {
     'S17_CONVERGENCE_SCALP': signal_convergence_scalp,
 }
 
-# Asian session (00:00–07:59 UTC): low XAU/USD liquidity, high spreads — skip S16
+# Session filter: S16 skip 0-7 UTC (Asia low vol); S00 skip 0-6 UTC (noise)
 SESSION_FILTER = {
     'S16_GOLDEN_SQUEEZE': {'block_hours': range(0, 8)},
+    'S00_MFKK':           {'block_hours': range(0, 7)},
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
-# S00_MFKK aggiunto come fallback M30 in TREND/WEAK (backtest: +$848, 34% WR, 1595 trade su 25m)
+# Priorities based on adaptive backtest: S10 PF 1.79 > S16 PF 1.29 in WEAK; S10 2nd in TREND
+# S17 only on H4 (PF 1.71); S09 only in RANGE/VOLATILE (PF 1.65 M30)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_UP':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_DOWN':  [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','M5',None)],
-    'UNKNOWN':    [('S16_GOLDEN_SQUEEZE','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'UNKNOWN':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
 }
 
 def get_signal(I, i, hour, regime):

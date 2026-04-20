@@ -91,10 +91,14 @@ SYMBOL       = os.getenv("SYMBOL", "GOLD")
 LOT_SIZE     = 0.05          # lot size base (0.05 = config A ottimizzata, ~€1000+ capital)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
-COOLDOWN_H   = 1             # ore di cooldown tra trade
+COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)
 MAX_OPEN_ORDERS = 3          # max ordini aperti contemporaneamente
 SL_COOLDOWN_H   = 1          # ore di pausa dopo 2 SL consecutivi
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
+
+# ── IN-MEMORY ORDER TRACKING (resiliente a race condition MT5) ────────────────
+# Aggiornato immediatamente dopo place_order(), eliminato alla chiusura posizione
+_strategy_order_tickets: dict = {}  # {strategy_name: deal_ticket}
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 10            # polling ogni 10 secondi
 
@@ -665,8 +669,9 @@ def get_account_info():
     }
 
 def count_open_positions():
-    """Conta le posizioni aperte del bot sul simbolo corrente."""
-    return sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
+    """Conta le posizioni aperte del bot. Usa max(MT5, in-memory) per robustezza."""
+    mt5_count = sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
+    return max(mt5_count, len(_strategy_order_tickets))
 
 def has_position_in_direction(direction):
     """True se esiste già una posizione aperta nella direzione specificata."""
@@ -677,10 +682,20 @@ def has_position_in_direction(direction):
     return False
 
 def has_open_position_for_strategy(strategy_name):
-    """True se esiste già un ordine aperto per questa specifica strategia (max 1 per strategia)."""
+    """True se esiste già un ordine aperto per questa strategia (controllo doppio: memory + MT5)."""
+    # In-memory check first (immune a latenza MT5)
+    if strategy_name in _strategy_order_tickets:
+        ticket = _strategy_order_tickets[strategy_name]
+        positions = mt5.positions_get(symbol=SYMBOL) or []
+        if any(p.ticket == ticket and p.magic == MAGIC for p in positions):
+            return True
+        # Ticket scomparso (posizione chiusa) → rimuovi da memory
+        _strategy_order_tickets.pop(strategy_name, None)
+    # Fallback: scan MT5 per commento
     target_comment = f"TF-AI {strategy_name}"
     for p in mt5.positions_get(symbol=SYMBOL) or []:
         if p.magic == MAGIC and (p.comment or '') == target_comment:
+            _strategy_order_tickets[strategy_name] = p.ticket
             return True
     return False
 
@@ -1012,6 +1027,15 @@ def run():
     else:
         log.info("RiskGuardian non disponibile — uso RiskManager legacy")
 
+    # Sincronizza _strategy_order_tickets da posizioni MT5 già aperte (riavvio bot)
+    _existing = mt5.positions_get(symbol=SYMBOL) or []
+    for _p in _existing:
+        if _p.magic == MAGIC and _p.comment and _p.comment.startswith('TF-AI '):
+            _strat = _p.comment.replace('TF-AI ', '').strip()
+            _strategy_order_tickets[_strat] = _p.ticket
+    if _strategy_order_tickets:
+        log.info(f"Posizioni rilevate al riavvio: {list(_strategy_order_tickets.keys())}")
+
     # Inizializza Strategy Selector Agent
     strategy_selector = StrategySelector() if StrategySelector else None
     if strategy_selector:
@@ -1154,6 +1178,9 @@ def run():
                                     )
                             else:
                                 consecutive_sl_count = 0  # profit → reset streak
+                            # Rimuovi dalla tracking in-memory
+                            if strategy_closed != 'N/A':
+                                _strategy_order_tickets.pop(strategy_closed, None)
                         _tracked_positions.pop(ticket, None)
                 # Aggiorna tracking posizioni correnti (usa identifier MT5 come pos_id)
                 for ticket, p in cur_pos_ids.items():
@@ -1440,23 +1467,28 @@ def run():
                                 atr=atr_i,
                             )
                             if result:
+                                # Tracking in-memory immediato (PRIMA di qualsiasi altro codice)
+                                deal_ticket = getattr(result, 'deal', 0)
+                                _strategy_order_tickets[strategy_name] = deal_ticket
+                                state.record_trade(0, now_utc)
                                 # Register with Risk Guardian for lifecycle management
                                 if rg and rp:
-                                    _kl_targets = (current_levels_result or {}).get(
-                                        "resistance" if direction == "buy" else "support", []
-                                    )[:3]
-                                    rg.register_position(
-                                        result.deal, rp, strategy_name, 'H1',
-                                        current_regime, direction,
-                                        partial_targets=_kl_targets,
-                                    )
-                                
+                                    try:
+                                        _kl_targets = (current_levels_result or {}).get(
+                                            "resistance" if direction == "buy" else "support", []
+                                        )[:3]
+                                        rg.register_position(
+                                            deal_ticket, rp, strategy_name, 'H1',
+                                            current_regime, direction,
+                                            partial_targets=_kl_targets,
+                                        )
+                                    except Exception as _rg_err:
+                                        log.warning(f"[H1] register_position error: {_rg_err}")
                                 tick = mt5.symbol_info_tick(SYMBOL)
                                 price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                 log_trade_to_json(direction, strategy_name, price,
                                                   round(price+(tp_use if direction=='buy' else -tp_use),2),
                                                   round(price-(sl_use if direction=='buy' else -sl_use),2), result)
-                                state.record_trade(0, now_utc)
                                 acc = get_account_info()
                                 if acc:
                                     log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
@@ -1541,21 +1573,26 @@ def run():
                                                   key_levels_result=current_levels_result,
                                                   atr=atr_i2)
                             if result2:
+                                deal2 = getattr(result2, 'deal', 0)
+                                _strategy_order_tickets[sec_id] = deal2
+                                state.record_trade(0, now_utc)
                                 if rg and rp2:
-                                    _kl_targets2 = (current_levels_result or {}).get(
-                                        "resistance" if sec_dir == "buy" else "support", []
-                                    )[:3]
-                                    rg.register_position(
-                                        result2.deal, rp2, sec_id, 'H1',
-                                        current_regime, sec_dir,
-                                        partial_targets=_kl_targets2,
-                                    )
+                                    try:
+                                        _kl_targets2 = (current_levels_result or {}).get(
+                                            "resistance" if sec_dir == "buy" else "support", []
+                                        )[:3]
+                                        rg.register_position(
+                                            deal2, rp2, sec_id, 'H1',
+                                            current_regime, sec_dir,
+                                            partial_targets=_kl_targets2,
+                                        )
+                                    except Exception as _rg_err:
+                                        log.warning(f"[H1sec] register_position error: {_rg_err}")
                                 tick2 = mt5.symbol_info_tick(SYMBOL)
                                 price2 = tick2.ask if sec_dir=='buy' else tick2.bid if tick2 else 0
                                 log_trade_to_json(sec_dir, sec_id, price2,
                                                   round(price2+(tp2 if sec_dir=='buy' else -tp2),2),
                                                   round(price2-(sl2 if sec_dir=='buy' else -sl2),2), result2)
-                                state.record_trade(0, now_utc)
 
             # ── Controlla nuova candela M15 (es. S01_EXHAUSTION in TREND_DOWN) ─
             pb_entry = PLAYBOOK.get(current_regime, {})
@@ -1656,21 +1693,26 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
+                                    deal_m15 = getattr(result, 'deal', 0)
+                                    _strategy_order_tickets[sname] = deal_m15
+                                    state.record_trade(0, now_utc)
                                     if rg and rp:
-                                        _kl_targets = (current_levels_result or {}).get(
-                                            "resistance" if direction == "buy" else "support", []
-                                        )[:3]
-                                        rg.register_position(
-                                            result.deal, rp, sname, 'M15',
-                                            current_regime, direction,
-                                            partial_targets=_kl_targets,
-                                        )
+                                        try:
+                                            _kl_targets = (current_levels_result or {}).get(
+                                                "resistance" if direction == "buy" else "support", []
+                                            )[:3]
+                                            rg.register_position(
+                                                deal_m15, rp, sname, 'M15',
+                                                current_regime, direction,
+                                                partial_targets=_kl_targets,
+                                            )
+                                        except Exception as _rg_err:
+                                            log.warning(f"[M15] register_position error: {_rg_err}")
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                     log_trade_to_json(direction, sname, price,
                                                       round(price+(tp_use if direction=='buy' else -tp_use),2),
                                                       round(price-(sl_use if direction=='buy' else -sl_use),2), result)
-                                    state.record_trade(0, now_utc)
                                     acc = get_account_info()
                                     if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
                                     sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),
@@ -1771,21 +1813,26 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
+                                    deal_m30 = getattr(result, 'deal', 0)
+                                    _strategy_order_tickets[sname] = deal_m30
+                                    state.record_trade(0, now_utc)
                                     if rg and rp:
-                                        _kl_targets = (current_levels_result or {}).get(
-                                            "resistance" if direction == "buy" else "support", []
-                                        )[:3]
-                                        rg.register_position(
-                                            result.deal, rp, sname, 'M30',
-                                            current_regime, direction,
-                                            partial_targets=_kl_targets,
-                                        )
+                                        try:
+                                            _kl_targets = (current_levels_result or {}).get(
+                                                "resistance" if direction == "buy" else "support", []
+                                            )[:3]
+                                            rg.register_position(
+                                                deal_m30, rp, sname, 'M30',
+                                                current_regime, direction,
+                                                partial_targets=_kl_targets,
+                                            )
+                                        except Exception as _rg_err:
+                                            log.warning(f"[M30] register_position error: {_rg_err}")
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                     log_trade_to_json(direction, sname, price,
                                                       round(price+(tp_use if direction=='buy' else -tp_use),2),
                                                       round(price-(sl_use if direction=='buy' else -sl_use),2), result)
-                                    state.record_trade(0, now_utc)
                                     acc = get_account_info()
                                     if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
                                     sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),
@@ -1878,21 +1925,26 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
+                                    deal_h4 = getattr(result, 'deal', 0)
+                                    _strategy_order_tickets[sname] = deal_h4
+                                    state.record_trade(0, now_utc)
                                     if rg and rp:
-                                        _kl_targets = (current_levels_result or {}).get(
-                                            "resistance" if direction == "buy" else "support", []
-                                        )[:3]
-                                        rg.register_position(
-                                            result.deal, rp, sname, 'H4',
-                                            current_regime, direction,
-                                            partial_targets=_kl_targets,
-                                        )
+                                        try:
+                                            _kl_targets = (current_levels_result or {}).get(
+                                                "resistance" if direction == "buy" else "support", []
+                                            )[:3]
+                                            rg.register_position(
+                                                deal_h4, rp, sname, 'H4',
+                                                current_regime, direction,
+                                                partial_targets=_kl_targets,
+                                            )
+                                        except Exception as _rg_err:
+                                            log.warning(f"[H4] register_position error: {_rg_err}")
                                     tick = mt5.symbol_info_tick(SYMBOL)
                                     price = tick.ask if direction=='buy' else tick.bid if tick else 0
                                     log_trade_to_json(direction, sname, price,
                                                       round(price+(tp_use if direction=='buy' else -tp_use),2),
                                                       round(price-(sl_use if direction=='buy' else -sl_use),2), result)
-                                    state.record_trade(0, now_utc)
                                     acc = get_account_info()
                                     if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
                                     sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),

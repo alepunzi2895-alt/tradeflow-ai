@@ -1505,8 +1505,9 @@ def run():
                             rp2 = None
                             if rg:
                                 acc_now = get_account_info()
+                                _sec_conf = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
                                 rp2 = rg.get_order_params(
-                                    strategy_confidence=last_ai_score / 100.0,
+                                    strategy_confidence=_sec_conf,
                                     atr=atr_i2, strategy_id=sec_id, ai_score=last_ai_score,
                                     atr_avg=I_h1['atr_avg'][i_h1], adx=I_h1['adx'][i_h1],
                                     dip=I_h1['dip'][i_h1], dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour,
@@ -1616,8 +1617,9 @@ def run():
                                 rp = None
                                 if rg:
                                     acc_now = get_account_info()
+                                    _sel_conf_m15 = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
                                     rp = rg.get_order_params(
-                                        strategy_confidence=last_ai_score / 100.0,
+                                        strategy_confidence=_sel_conf_m15,
                                         atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
                                         atr_avg=I_m15.get('atr_avg', [None]*len(candles_m15))[idx],
                                         adx=I_m15['adx'][idx], dip=I_m15['dip'][idx],
@@ -1730,8 +1732,9 @@ def run():
                                 rp = None
                                 if rg:
                                     acc_now = get_account_info()
+                                    _sel_conf_m30 = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
                                     rp = rg.get_order_params(
-                                        strategy_confidence=last_ai_score / 100.0,
+                                        strategy_confidence=_sel_conf_m30,
                                         atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
                                         atr_avg=I_m30.get('atr_avg', [None]*len(candles_m30))[idx],
                                         adx=I_m30['adx'][idx], dip=I_m30['dip'][idx],
@@ -1837,8 +1840,9 @@ def run():
                                 rp = None
                                 if rg:
                                     acc_now = get_account_info()
+                                    _sel_conf_h4 = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
                                     rp = rg.get_order_params(
-                                        strategy_confidence=last_ai_score / 100.0,
+                                        strategy_confidence=_sel_conf_h4,
                                         atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
                                         atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
                                         adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],

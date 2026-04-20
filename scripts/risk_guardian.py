@@ -218,6 +218,9 @@ class RiskGuardian:
         self._consecutive_losses: int = 0
         self._last_closed_profits: list = []
 
+        # Last computed order params (exposed to bot_status)
+        self._last_params: dict = None
+
     # ── COMPOSITE SCORE ────────────────────────────────────────────────────────
     def build_composite(self, strategy_confidence: float, ai_score: float,
                         atr: float, atr_avg: float,
@@ -317,7 +320,7 @@ class RiskGuardian:
             f"BE@+${be_dist:.2f} | TS step=${ts_step_usd:.2f}"
         )
 
-        return {
+        result = {
             "paused": False,
             "lot": lot,
             "tp_usd": base_tp,
@@ -332,6 +335,8 @@ class RiskGuardian:
             "confidence_breakdown": conf,
             "manip_mult": conf["market_conditions"],  # backward compat alias
         }
+        self._last_params = result
+        return result
 
     # ── REGISTER NEW POSITION ──────────────────────────────────────────────────
     def register_position(self, ticket: int, order_params: dict,

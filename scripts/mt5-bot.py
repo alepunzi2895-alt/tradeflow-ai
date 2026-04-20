@@ -1200,6 +1200,7 @@ def run():
                 pnl_today_real = round(sum(t['profit'] for t in trades_data if t['time'][:10] == today_str), 2)
                 trades_today_real = sum(1 for t in trades_data if t['time'][:10] == today_str)
                 _sl_cd_ts = sl_cooldown_until.isoformat() if sl_cooldown_until else None
+                _rg_last = rg._last_params if rg and getattr(rg, '_last_params', None) else None
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
@@ -1215,6 +1216,12 @@ def run():
                     'open_positions': count_open_positions(),
                     'consecutive_sl': consecutive_sl_count,
                     'sl_cooldown_until': _sl_cd_ts,
+                    'news_paused':    current_news_risk.get('paused', False),
+                    'news_reason':    current_news_risk.get('reason', ''),
+                    'news_risk_mult': current_news_risk.get('risk_mult', 1.0),
+                    'rg_tier':        _rg_last.get('tier_label', '—') if _rg_last else '—',
+                    'rg_composite':   _rg_last.get('composite_score') if _rg_last else None,
+                    'rg_lot':         _rg_last.get('lot') if _rg_last else None,
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts

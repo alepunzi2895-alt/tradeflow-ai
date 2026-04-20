@@ -38,6 +38,34 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>`;
   statusHtml = botStatusHtml + statusHtml;
 
+  // ── GUARDIAN STATUS (News + Risk Guardian)
+  const _ngPaused   = bs.news_paused;
+  const _ngMult     = bs.news_risk_mult ?? 1.0;
+  const _ngReason   = bs.news_reason || '';
+  const _ngCol      = _ngPaused ? '#ff4757' : _ngMult < 1.0 ? '#ffca28' : 'var(--green)';
+  const _ngLabel    = _ngPaused ? '🔴 SOSPESO' : _ngMult < 1.0 ? `⚠️ RIDOTTO ×${_ngMult}` : '🟢 OK';
+  const _rgTier     = bs.rg_tier || '—';
+  const _rgComp     = bs.rg_composite != null ? bs.rg_composite.toFixed(0) : '—';
+  const _rgLot      = bs.rg_lot != null ? bs.rg_lot.toFixed(2) : '—';
+  const _rgTierCol  = _rgTier.includes('MAX')||_rgTier.includes('STRONG') ? '#ff4757'
+                    : _rgTier.includes('AGGRESS') ? '#ffca28'
+                    : _rgTier.includes('NORMAL') ? 'var(--green)'
+                    : 'var(--dim)';
+  const guardianHtml = botOnline ? `
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+  <div style="background:${_ngPaused?'#ff475712':'#ffffff06'};border:1px solid ${_ngCol}35;border-radius:7px;padding:7px 9px">
+    <div style="font-size:7px;color:var(--dim);letter-spacing:.08em;margin-bottom:3px">NEWS GUARDIAN</div>
+    <div style="font-size:10px;font-weight:800;color:${_ngCol}">${_ngLabel}</div>
+    ${_ngReason?`<div style="font-size:8px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${_ngReason}">${_ngReason}</div>`:''}
+  </div>
+  <div style="background:#ffffff06;border:1px solid ${_rgTierCol}35;border-radius:7px;padding:7px 9px">
+    <div style="font-size:7px;color:var(--dim);letter-spacing:.08em;margin-bottom:3px">RISK GUARDIAN</div>
+    <div style="font-size:10px;font-weight:800;color:${_rgTierCol}">${_rgTier}</div>
+    <div style="font-size:8px;color:var(--dim);margin-top:2px">Score <b style="color:var(--fg)">${_rgComp}</b> · Lot <b style="color:var(--fg)">${_rgLot}</b></div>
+  </div>
+</div>` : '';
+  statusHtml = statusHtml + guardianHtml;
+
   // ── REGIME + P&L REALE
   const pnlOggi = bs.pnl_today || 0;
   const regimeHtml=`
@@ -307,13 +335,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
   // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in mt5-bot.py)
   const PLAYBOOK_UI = {
-    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30'},
-    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S05_MFKK_INTRADAY','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30'},
-    'WEAK_UP':    {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING','S00_MFKK'],      tf:'M30'},
-    'WEAK_DOWN':  {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING','S00_MFKK'],      tf:'M30'},
-    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M5'},
-    'RANGE':      {strategy:'S10_OB_FVG_SCALP',   others:['S09_MFKK_SCALPING','S17_CONVERGENCE_SCALP'],            tf:'M30'},
-    'UNKNOWN':    {strategy:'S16_GOLDEN_SQUEEZE',  others:['S00_MFKK'],                                             tf:'M30'},
+    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S05_MFKK_INTRADAY','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S05_MFKK_INTRADAY','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'WEAK_UP':    {strategy:'S10_OB_FVG_SCALP',   others:['S16_GOLDEN_SQUEEZE','S09_MFKK_SCALPING','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'WEAK_DOWN':  {strategy:'S10_OB_FVG_SCALP',   others:['S16_GOLDEN_SQUEEZE','S09_MFKK_SCALPING','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'], tf:'M5/H4'},
+    'RANGE':      {strategy:'S10_OB_FVG_SCALP',   others:['S09_MFKK_SCALPING','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'UNKNOWN':    {strategy:'S10_OB_FVG_SCALP',   others:['S16_GOLDEN_SQUEEZE','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];
@@ -376,9 +404,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;font-size:8px;text-align:center">
       ${[['1 MESE',BOT_STATS.pnl_1m,null],['6 MESI',BOT_STATS.pnl_6m,null],['12 MESI',BOT_STATS.pnl_12m,null],['24 MESI',BOT_STATS.pnl_24m,null],['MAX DD',-BOT_STATS.maxdd,BOT_STATS.maxdd_pct]].map(([lbl,val,ddPct])=>{
         const col = ddPct ? 'var(--red)' : (val>=0?'var(--green)':'var(--red)');
-        // Backtest a lot=0.01 → bot reale lot=0.05 = ×5
-        const LOT_SCALE = 5;
-        const pctStr = ddPct ? ddPct : `lot0.05: $${Math.abs(val*LOT_SCALE).toFixed(0)}`;
+        const pctStr = ddPct ? ddPct : `lot0.01: $${Math.abs(val).toFixed(0)}`;
         return `<div style="background:#0d0f12;border:1px solid #c8a96e25;border-radius:5px;padding:5px 2px">
           <div style="color:var(--dim);margin-bottom:2px;font-size:7px">${lbl}</div>
           <div style="font-weight:800;color:${col};font-size:10px">${val>=0&&!ddPct?'+':''}\$${Math.abs(val).toFixed(0)}</div>

@@ -256,6 +256,34 @@ class RiskGuardian:
 
         return False, ""
 
+    # ── PREVIEW (no order, no log) ────────────────────────────────────────────
+    def update_preview(self, strategy_confidence: float, ai_score: float,
+                       atr: float, atr_avg: float, hour_utc: int,
+                       adx: float = None, today_pnl: float = 0.0,
+                       current_equity: float = None, weekly_dd_pct: float = 0.0):
+        """
+        Compute composite+tier without placing an order or logging.
+        Updates self._last_params so bot_status always has current RG state.
+        """
+        try:
+            conf = self.build_composite(strategy_confidence, ai_score, atr, atr_avg or atr, hour_utc, adx)
+            comp = conf["composite_score"]
+            if conf["market_conditions"] == 0.0:
+                tier_name, tier_label = "CONSERVATIVE", "🔵 CONSERVATIVE"
+            else:
+                tier = assign_risk_tier(comp, today_pnl, current_equity, self.initial_equity, weekly_dd_pct)
+                tier_name, tier_label = tier["name"], tier["label"]
+            if self._last_params is None:
+                self._last_params = {}
+            self._last_params.update({
+                "composite_score": comp,
+                "tier": tier_name,
+                "tier_label": tier_label,
+                "lot": self._last_params.get("lot"),
+            })
+        except Exception:
+            pass
+
     # ── ORDER PARAMS ───────────────────────────────────────────────────────────
     def get_order_params(self,
                          strategy_confidence: float,

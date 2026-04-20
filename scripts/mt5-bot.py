@@ -1349,6 +1349,21 @@ def run():
                 atr_avg = I_h1['atr_avg'][i_h1]
                 current_is_extreme = bool(atr_v and atr_avg and atr_v > EXTREME_MULT * atr_avg)
 
+                # ── RiskGuardian preview (aggiorna tier/composite senza ordine) ─
+                if rg and atr_v:
+                    _prev_conf = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
+                    _acc_prev = get_account_info()
+                    rg.update_preview(
+                        strategy_confidence=_prev_conf,
+                        ai_score=last_ai_score,
+                        atr=atr_v,
+                        atr_avg=atr_avg or atr_v,
+                        hour_utc=bar_dt.hour,
+                        adx=I_h1['adx'][i_h1],
+                        today_pnl=state.pnl_today,
+                        current_equity=_acc_prev['equity'] if _acc_prev else None,
+                    )
+
                 if current_is_extreme:
                     log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip H1")
                 else:

@@ -15,42 +15,42 @@ const SE = {
   _autoExecuted: new Set(),  // dedup: strategy_dir_5minWindow
   strategies: {
     // ── STRATEGIE ATTIVE [BACKTEST 25 MESI · MT5 GOLD M30 · lot 0.01] ──
-    // Sistema adattivo M30+RM: 4598 trade · WR 32.6% · PF 1.196 · +$13.44/gg · DD $1,298
-    'S00_MFKK': { label: 'MFKK Score [M30]', pf: 1.03, wr: '38.3%', tp: 'ATR×2.0', sl: 'ATR×1.0',
+    // Sistema adattivo M30: 3385 trade · WR 37.4% · PF 1.258 · +$12.02/gg · DD $759 · 18/25 mesi+
+    'S00_MFKK': { label: 'MFKK Score [M30]', pf: 1.16, wr: '40.9%', tp: 'ATR×2.0', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: 16, td_1m: 2.6, pnl_6m: 93, td_6m: 2.6,
-        pnl_12m: 186, td_12m: 2.6, pnl_24m: 372, td_24m: 2.6,
-        maxdd: 300, maxdd_pct: '3.0%', trades_12m: 766, best_regime: 'TREND/WEAK (fallback M30)'
+        pnl_1m: 65, td_1m: 3.87, pnl_6m: 392, td_6m: 3.87,
+        pnl_12m: 785, td_12m: 3.87, pnl_24m: 1570, td_24m: 3.87,
+        maxdd: 540, maxdd_pct: '5.0%', trades_12m: 717, best_regime: 'TREND/WEAK (fallback M30)'
       } },
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.36, wr: '41.5%', tp: 'ATR×2.0', sl: 'ATR×1.0',
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.44, wr: '39.3%', tp: 'ATR×2.0', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: 33, td_1m: 0.46, pnl_6m: 200, td_6m: 0.46,
-        pnl_12m: 400, td_12m: 0.46, pnl_24m: 800, td_24m: 0.46,
-        maxdd: 800, maxdd_pct: '7.4%', trades_12m: 135, best_regime: 'TREND_UP/DOWN · TF H1'
+        pnl_1m: 41, td_1m: 1.99, pnl_6m: 245, td_6m: 1.99,
+        pnl_12m: 490, td_12m: 1.99, pnl_24m: 980, td_24m: 1.99,
+        maxdd: 160, maxdd_pct: '1.5%', trades_12m: 183, best_regime: 'TREND_UP/DOWN · TF H1'
       } },
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30] V2', pf: 1.64, wr: '37.8%', tp: 'ATR×3.0', sl: 'ATR×1.0',
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30] V2', pf: 1.55, wr: '36.1%', tp: 'ATR×3.0', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: 28, td_1m: 0.44, pnl_6m: 169, td_6m: 0.44,
-        pnl_12m: 337, td_12m: 0.44, pnl_24m: 674, td_24m: 0.44,
-        maxdd: 400, maxdd_pct: '3.7%', trades_12m: 128, best_regime: 'VOLATILE/WEAK · TF M30'
+        pnl_1m: 35, td_1m: 2.20, pnl_6m: 213, td_6m: 2.20,
+        pnl_12m: 426, td_12m: 2.20, pnl_24m: 851, td_24m: 2.20,
+        maxdd: 151, maxdd_pct: '1.4%', trades_12m: 170, best_regime: 'VOLATILE/WEAK · TF M30'
       } },
-    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V2', pf: 1.80, wr: '42.5%', tp: 'ATR×2.5', sl: 'ATR×1.2',
+    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V2', pf: 1.92, wr: '46.9%', tp: 'ATR×2.5', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: 21, td_1m: 0.12, pnl_6m: 128, td_6m: 0.12,
-        pnl_12m: 256, td_12m: 0.12, pnl_24m: 511, td_24m: 0.12,
-        maxdd: 300, maxdd_pct: '2.8%', trades_12m: 35, best_regime: 'WEAK/RANGE · TF M30'
+        pnl_1m: 43, td_1m: 2.26, pnl_6m: 260, td_6m: 2.26,
+        pnl_12m: 520, td_12m: 2.26, pnl_24m: 1040, td_24m: 2.26,
+        maxdd: 301, maxdd_pct: '2.8%', trades_12m: 54, best_regime: 'WEAK/RANGE · TF M30'
       } },
-    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze [M30]', pf: 1.29, wr: '31.7%', tp: 'ATR×3.0', sl: 'ATR×1.2',
+    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze [M30]', pf: 1.18, wr: '31.7%', tp: 'ATR×3.0', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: 136, td_1m: 2.76, pnl_6m: 815, td_6m: 2.76,
-        pnl_12m: 1629, td_12m: 2.76, pnl_24m: 3258, td_24m: 2.76,
-        maxdd: 800, maxdd_pct: '7.4%', trades_12m: 826, best_regime: 'TREND/WEAK'
+        pnl_1m: 45, td_1m: 2.80, pnl_6m: 272, td_6m: 2.80,
+        pnl_12m: 545, td_12m: 2.80, pnl_24m: 1089, td_24m: 2.80,
+        maxdd: 712, maxdd_pct: '6.6%', trades_12m: 432, best_regime: 'TREND/WEAK'
       } },
-    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [H4] V2', pf: 1.71, wr: '41.5%', tp: 'ATR×2.5', sl: 'ATR×0.8',
+    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [H4] V2', pf: 2.18, wr: '41.5%', tp: 'ATR×2.5', sl: 'ATR×0.8',
       stats: {
-        pnl_1m: 32, td_1m: 0.14, pnl_6m: 193, td_6m: 0.14,
-        pnl_12m: 386, td_12m: 0.14, pnl_24m: 741, td_24m: 0.14,
-        maxdd: 350, maxdd_pct: '3.2%', trades_12m: 49, best_regime: 'VOLATILE/TREND · TF H4'
+        pnl_1m: 59, td_1m: 1.07, pnl_6m: 354, td_6m: 1.07,
+        pnl_12m: 708, td_12m: 1.07, pnl_24m: 1358, td_24m: 1.07,
+        maxdd: 208, maxdd_pct: '1.9%', trades_12m: 49, best_regime: 'VOLATILE/TREND · TF H4'
       } },
   },
   // ── REGIME PRIORITY ──

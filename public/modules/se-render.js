@@ -302,8 +302,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (backtest M30+RM · 730gg · 6 strategie · RM AI Score attivo · lot=0.01 · $1/punto)
-  const BOT_STATS = { pnl_1m:275, pnl_6m:1649, pnl_12m:3297, pnl_24m:6594, maxdd:1298, maxdd_pct:'12.0%', trades_12m:2299, pf:1.196, wr:'32.6%', n_strat:6 };
+  // Stats aggregate sistema (backtest M30 · 25 mesi · 6 strategie · lot=0.01 · $1/punto · 2026-04-19)
+  const BOT_STATS = { pnl_1m:232, pnl_6m:1393, pnl_12m:2785, pnl_24m:5570, maxdd:759, maxdd_pct:'7.0%', trades_12m:1623, pf:1.258, wr:'37.4%', n_strat:6 };
 
   // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in mt5-bot.py)
   const PLAYBOOK_UI = {

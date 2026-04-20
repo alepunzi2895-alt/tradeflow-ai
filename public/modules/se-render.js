@@ -66,6 +66,26 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>` : '';
   statusHtml = statusHtml + guardianHtml;
 
+  // ── BOT LOG PANEL
+  const _logs = (bs.last_logs || []).slice().reverse(); // più recenti in cima
+  const _lvlCol = l => l==='WARNING'?'#ffca28':l==='ERROR'||l==='CRITICAL'?'#ff4757':'var(--dim)';
+  const _lvlBg  = l => l==='WARNING'?'#ffca2808':l==='ERROR'||l==='CRITICAL'?'#ff475708':'transparent';
+  const logHtml = botOnline && _logs.length ? `
+<div style="background:#0a0c0f;border:1px solid var(--border);border-radius:7px;margin-bottom:8px;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 9px;border-bottom:1px solid var(--border)">
+    <span style="font-size:7px;color:var(--dim);letter-spacing:.08em">BOT LOG (ultimi ${_logs.length})</span>
+    <span style="font-size:7px;color:var(--dim)">● live</span>
+  </div>
+  <div style="max-height:140px;overflow-y:auto;font-family:monospace;font-size:8.5px;line-height:1.55">
+    ${_logs.map(r=>`<div style="display:flex;gap:6px;padding:2px 9px;background:${_lvlBg(r.lvl)};border-bottom:1px solid #ffffff05">
+      <span style="color:#444;flex-shrink:0">${r.ts}</span>
+      <span style="color:${_lvlCol(r.lvl)};flex-shrink:0;width:16px">${r.lvl==='WARNING'?'⚠':r.lvl==='ERROR'||r.lvl==='CRITICAL'?'✖':'·'}</span>
+      <span style="color:var(--fg);word-break:break-all">${r.msg.replace(/</g,'&lt;')}</span>
+    </div>`).join('')}
+  </div>
+</div>` : '';
+  statusHtml = statusHtml + logHtml;
+
   // ── REGIME + P&L REALE
   const pnlOggi = bs.pnl_today || 0;
   const regimeHtml=`

@@ -138,12 +138,29 @@ FALLBACK_PLAYBOOK = {
 PLAYBOOK = FALLBACK_PLAYBOOK  # verrà sovrascritta da load_playbook()
 
 # ── LOGGING ───────────────────────────────────────────────────────────────────
+class _RingBufferHandler(logging.Handler):
+    """Keeps the last N log records in memory for UI sync."""
+    def __init__(self, capacity=30):
+        super().__init__()
+        from collections import deque
+        self._buf = deque(maxlen=capacity)
+    def emit(self, record):
+        self._buf.append({
+            'ts':  self.formatTime(record, '%H:%M:%S'),
+            'lvl': record.levelname,
+            'msg': record.getMessage(),
+        })
+    def get_lines(self):
+        return list(self._buf)
+
+_ring_handler = _RingBufferHandler(capacity=30)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.FileHandler(LOG_FILE, encoding='utf-8'),
         logging.StreamHandler(sys.stdout),
+        _ring_handler,
     ]
 )
 log = logging.getLogger('tf-bot')
@@ -1222,6 +1239,7 @@ def run():
                     'rg_tier':        _rg_last.get('tier_label', '—') if _rg_last else '—',
                     'rg_composite':   _rg_last.get('composite_score') if _rg_last else None,
                     'rg_lot':         _rg_last.get('lot') if _rg_last else None,
+                    'last_logs':      _ring_handler.get_lines(),
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts

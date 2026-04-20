@@ -307,7 +307,7 @@ class RiskGuardian:
         be_dist = round(base_tp * tier["be_trigger"], 2)
         # Trailing activation = BE + 10% of TP
         trailing_activation = round(base_tp * (tier["be_trigger"] + 0.10), 2)
-        ts_step_usd = round(atr * tier["ts_step"], 2) if atr else round(base_sl * 0.3, 2)
+        ts_step_usd = round(atr * 0.4, 2) if atr else round(base_sl * 0.3, 2)
 
         log.info(
             f"🛡️ RiskGuardian [{tier['label']}] strat={strategy_id} "
@@ -402,7 +402,7 @@ class RiskGuardian:
                     "entry_time": pos.time,
                     "direction": "buy" if is_buy else "sell",
                     "be_trigger": be_dist,
-                    "ts_step": current_atr * 1.5 if current_atr else 7.5,
+                    "ts_step": current_atr * 0.4 if current_atr else 3.0,
                     "trailing_activation": be_dist * 1.1,
                     "early_exit_threshold": 0.20,
                 }

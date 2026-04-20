@@ -518,12 +518,12 @@ SESSION_FILTER = {
 # Priorities based on adaptive backtest: S10 PF 1.79 > S16 PF 1.29 in WEAK; S10 2nd in TREND
 # S17 only on H4 (PF 1.71); S09 only in RANGE/VOLATILE (PF 1.65 M30)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'UNKNOWN':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
 }
 
@@ -1843,8 +1843,10 @@ def run():
                             else:
                                 log.info(f"[M30] Regime: {current_regime} | Nessun segnale su {bar_dt_m30.strftime('%H:%M')}")
 
-            # ── Controlla nuova candela H4 (S17_CONVERGENCE_SCALP su H4) ──────────
-            elif pb_entry.get('tf') == 'H4' and not current_is_extreme:
+            # ── Controlla nuova candela H4 (strategie H4 da REGIME_MULTI_STRATEGIES) ──
+            # Gira sempre in parallelo a M30/M15 — non è un elif
+            _h4_entries = [(s, d) for (s, t, d) in REGIME_MULTI_STRATEGIES.get(current_regime, []) if t == 'H4']
+            if _h4_entries and not current_is_extreme:
                 candles_h4 = get_candles_tf('H4', 300)
                 if candles_h4 and len(candles_h4) >= 89:
                     latest_h4 = candles_h4[-2]['t']
@@ -1852,108 +1854,112 @@ def run():
                         last_bar_time_h4 = latest_h4
                         bar_dt_h4 = datetime.datetime.fromtimestamp(latest_h4, tz=datetime.timezone.utc)
                         log.info(f"─── Nuova barra H4 chiusa: {bar_dt_h4.strftime('%Y-%m-%d %H:%M')} UTC ───")
-                        can, reason = state.can_trade(now_utc)
-                        if not can:
-                            log.debug(f"[H4] Trade non permesso: {reason}")
-                        elif count_open_positions() >= MAX_OPEN_ORDERS:
-                            log.debug(f"[H4] Max posizioni aperte ({MAX_OPEN_ORDERS})")
-                        elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
-                            remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
-                            log.warning(f"🛑 H4 skip — cooldown SL attivo ({remaining}min rimanenti)")
-                        else:
-                            I_h4 = compute_indicators(candles_h4)
-                            idx = len(candles_h4) - 2
-                            sname = pb_entry['strategy']
-                            fn = SIGNAL_FNS.get(sname)
-                            direction = fn(I_h4, idx) if fn else None
-                            if direction and has_open_position_for_strategy(sname):
-                                log.debug(f"[H4] skip {sname} — già 1 ordine aperto per questa strategia")
-                            elif direction and has_position_in_direction(direction):
-                                log.debug(f"[H4] Direzione {direction} già occupata, skip {sname}")
-                            elif direction and current_news_risk.get('paused'):
-                                log.warning(f"⛔ SEGNALE H4 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
-                            elif direction:
-                                params = STRATEGY_PARAMS.get(sname, {'tp_usd': 15.0, 'sl_usd': 10.0, 'label': sname})
-                                atr_i = I_h4['atr'][idx] if I_h4['atr'][idx] else None
-                                base_tp_h4 = 15.0; base_sl_h4 = 10.0
-                                if params.get('tp_usd') == 'ATR' and atr_i:
-                                    base_tp_h4 = atr_i * params.get('tp_mult', 1.5)
-                                elif isinstance(params.get('tp_usd'), (int, float)):
-                                    base_tp_h4 = params['tp_usd']
-                                if params.get('sl_usd') == 'ATR' and atr_i:
-                                    base_sl_h4 = atr_i * params.get('sl_mult', 1.0)
-                                elif isinstance(params.get('sl_usd'), (int, float)):
-                                    base_sl_h4 = params['sl_usd']
-                                rp = None
-                                if rg:
-                                    acc_now = get_account_info()
-                                    _sel_conf_h4 = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
-                                    rp = rg.get_order_params(
-                                        strategy_confidence=_sel_conf_h4,
-                                        atr=atr_i, strategy_id=sname, ai_score=last_ai_score,
-                                        atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
-                                        adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],
-                                        dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour,
-                                        today_pnl=state.pnl_today,
-                                        current_equity=acc_now['equity'] if acc_now else None,
-                                        weekly_dd_pct=0.0,
-                                        tp_atr_mult=params.get('tp_mult', 2.0),
-                                        sl_atr_mult=params.get('sl_mult', 1.0),
-                                        direction=direction,
-                                    )
-                                    if rp.get('paused'):
-                                        log.info(f"⛔ SEGNALE H4 SOSPESO (Risk Guardian) | {sname}")
-                                        continue
-                                    lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
-                                    log.info(f"★ SEGNALE H4: {direction.upper()} | {params['label']} | Regime: {current_regime} | tier={rp.get('tier_label','N/A')} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
-                                elif rm:
-                                    rp = rm.get_order_params(
-                                        ai_score=last_ai_score, atr=atr_i, strategy=sname, direction=direction,
-                                        atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
-                                        adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],
-                                        dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour
-                                    )
-                                    if rp.get('paused'):
-                                        log.info(f"⛔ SEGNALE H4 SOSPESO (manipolazione) | {sname}")
-                                        continue
-                                    lot_use, tp_use, sl_use = rp['lot'], base_tp_h4, base_sl_h4
-                                    log.info(f"★ SEGNALE H4: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
-                                else:
-                                    lot_use, tp_use, sl_use = LOT_SIZE, base_tp_h4, base_sl_h4
-                                    log.info(f"★ SEGNALE H4: {direction.upper()} | {params['label']} | Regime: {current_regime} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
-                                result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use,
-                                                    key_levels_result=current_levels_result,
-                                                    atr=atr_now)
-                                if result:
-                                    deal_h4 = getattr(result, 'deal', 0)
-                                    _strategy_order_tickets[sname] = deal_h4
-                                    state.record_trade(0, now_utc)
-                                    if rg and rp:
-                                        try:
-                                            _kl_targets = (current_levels_result or {}).get(
-                                                "resistance" if direction == "buy" else "support", []
-                                            )[:3]
-                                            rg.register_position(
-                                                deal_h4, rp, sname, 'H4',
-                                                current_regime, direction,
-                                                partial_targets=_kl_targets,
-                                            )
-                                        except Exception as _rg_err:
-                                            log.warning(f"[H4] register_position error: {_rg_err}")
-                                    tick = mt5.symbol_info_tick(SYMBOL)
-                                    price = tick.ask if direction=='buy' else tick.bid if tick else 0
-                                    log_trade_to_json(direction, sname, price,
-                                                      round(price+(tp_use if direction=='buy' else -tp_use),2),
-                                                      round(price-(sl_use if direction=='buy' else -sl_use),2), result)
-                                    acc = get_account_info()
-                                    if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
-                                    sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),
-                                                   {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
-                                                    'trades_today':state.trades_today,'pnl_today':state.pnl_today,
-                                                    'regime':current_regime,'last_signal':sname})
-                                    last_sync_time = time.time()
+                        I_h4 = compute_indicators(candles_h4)
+                        idx = len(candles_h4) - 2
+                        for (h4_id, h4_dir_filter) in _h4_entries:
+                            can, reason = state.can_trade(now_utc)
+                            if not can:
+                                log.debug(f"[H4] Trade non permesso: {reason}")
+                                break
+                            if count_open_positions() >= MAX_OPEN_ORDERS:
+                                log.debug(f"[H4] Max posizioni aperte ({MAX_OPEN_ORDERS})")
+                                break
+                            if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
+                                remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                                log.warning(f"🛑 H4 skip {h4_id} — cooldown SL attivo ({remaining}min rimanenti)")
+                                break
+                            fn_h4 = SIGNAL_FNS.get(h4_id)
+                            direction = fn_h4(I_h4, idx) if fn_h4 else None
+                            if not direction:
+                                log.info(f"[H4] {h4_id} — nessun segnale su {bar_dt_h4.strftime('%H:%M')}")
+                                continue
+                            if h4_dir_filter and direction != h4_dir_filter:
+                                continue
+                            if has_open_position_for_strategy(h4_id):
+                                log.debug(f"[H4] skip {h4_id} — già 1 ordine aperto")
+                                continue
+                            if has_position_in_direction(direction):
+                                log.debug(f"[H4] Direzione {direction} già occupata, skip {h4_id}")
+                                continue
+                            if current_news_risk.get('paused'):
+                                log.warning(f"⛔ SEGNALE H4 SOSPESO (News) | {h4_id} | {current_news_risk['reason']}")
+                                continue
+                            params = STRATEGY_PARAMS.get(h4_id, {'tp_usd': 15.0, 'sl_usd': 10.0, 'label': h4_id})
+                            atr_i = I_h4['atr'][idx] if I_h4['atr'][idx] else None
+                            base_tp_h4 = 15.0; base_sl_h4 = 10.0
+                            if params.get('tp_usd') == 'ATR' and atr_i:
+                                base_tp_h4 = atr_i * params.get('tp_mult', 1.5)
+                            elif isinstance(params.get('tp_usd'), (int, float)):
+                                base_tp_h4 = params['tp_usd']
+                            if params.get('sl_usd') == 'ATR' and atr_i:
+                                base_sl_h4 = atr_i * params.get('sl_mult', 1.0)
+                            elif isinstance(params.get('sl_usd'), (int, float)):
+                                base_sl_h4 = params['sl_usd']
+                            rp = None
+                            if rg:
+                                acc_now = get_account_info()
+                                _sel_conf_h4 = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
+                                rp = rg.get_order_params(
+                                    strategy_confidence=_sel_conf_h4,
+                                    atr=atr_i, strategy_id=h4_id, ai_score=last_ai_score,
+                                    atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
+                                    adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],
+                                    dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour,
+                                    today_pnl=state.pnl_today,
+                                    current_equity=acc_now['equity'] if acc_now else None,
+                                    weekly_dd_pct=0.0,
+                                    tp_atr_mult=params.get('tp_mult', 2.5),
+                                    sl_atr_mult=params.get('sl_mult', 0.8),
+                                    direction=direction,
+                                )
+                                if rp.get('paused'):
+                                    log.info(f"⛔ SEGNALE H4 SOSPESO (Risk Guardian) | {h4_id}")
+                                    continue
+                                lot_use, tp_use, sl_use = rp['lot'], rp['tp_usd'], rp['sl_usd']
+                                log.info(f"★ SEGNALE H4: {direction.upper()} | {params.get('label', h4_id)} | Regime: {current_regime} | tier={rp.get('tier_label','N/A')} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
+                            elif rm:
+                                rp = rm.get_order_params(
+                                    ai_score=last_ai_score, atr=atr_i, strategy=h4_id, direction=direction,
+                                    atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
+                                    adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],
+                                    dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour
+                                )
+                                if rp.get('paused'):
+                                    log.info(f"⛔ SEGNALE H4 SOSPESO (manipolazione) | {h4_id}")
+                                    continue
+                                lot_use, tp_use, sl_use = rp['lot'], base_tp_h4, base_sl_h4
+                                log.info(f"★ SEGNALE H4: {direction.upper()} | {params.get('label', h4_id)} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
                             else:
-                                log.info(f"[H4] Regime: {current_regime} | Nessun segnale su {bar_dt_h4.strftime('%Y-%m-%d %H:%M')}")
+                                lot_use, tp_use, sl_use = LOT_SIZE, base_tp_h4, base_sl_h4
+                                log.info(f"★ SEGNALE H4: {direction.upper()} | {params.get('label', h4_id)} | Regime: {current_regime} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
+                            result = place_order(direction, tp_use, sl_use, h4_id, lot_size=lot_use,
+                                                key_levels_result=current_levels_result, atr=atr_now)
+                            if result:
+                                deal_h4 = getattr(result, 'deal', 0)
+                                _strategy_order_tickets[h4_id] = deal_h4
+                                state.record_trade(0, now_utc)
+                                if rg and rp:
+                                    try:
+                                        _kl_targets = (current_levels_result or {}).get(
+                                            "resistance" if direction == "buy" else "support", []
+                                        )[:3]
+                                        rg.register_position(deal_h4, rp, h4_id, 'H4',
+                                                             current_regime, direction,
+                                                             partial_targets=_kl_targets)
+                                    except Exception as _rg_err:
+                                        log.warning(f"[H4] register_position error: {_rg_err}")
+                                tick = mt5.symbol_info_tick(SYMBOL)
+                                price = tick.ask if direction=='buy' else tick.bid if tick else 0
+                                log_trade_to_json(direction, h4_id, price,
+                                                  round(price+(tp_use if direction=='buy' else -tp_use),2),
+                                                  round(price-(sl_use if direction=='buy' else -sl_use),2), result)
+                                acc = get_account_info()
+                                if acc: log.info(f"Account aggiornato: {acc['equity']:.2f} {acc['currency']}")
+                                sync_to_vercel(acc, get_open_positions_data(), get_recent_trades_data(200),
+                                               {'running':True,'dry_run':DRY_RUN,'symbol':SYMBOL,'lot':LOT_SIZE,
+                                                'trades_today':state.trades_today,'pnl_today':state.pnl_today,
+                                                'regime':current_regime,'last_signal':h4_id})
+                                last_sync_time = time.time()
 
             time.sleep(CHECK_SEC)
 

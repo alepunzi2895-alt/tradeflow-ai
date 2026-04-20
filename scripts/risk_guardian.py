@@ -270,16 +270,19 @@ class RiskGuardian:
             comp = conf["composite_score"]
             if conf["market_conditions"] == 0.0:
                 tier_name, tier_label = "CONSERVATIVE", "🔵 CONSERVATIVE"
+                lot = self.base_lot
             else:
                 tier = assign_risk_tier(comp, today_pnl, current_equity, self.initial_equity, weekly_dd_pct)
                 tier_name, tier_label = tier["name"], tier["label"]
+                base_sl_usd = round(atr * tier["sl_multiplier"], 2)
+                lot = self._calc_lot(tier, current_equity, base_sl_usd)
             if self._last_params is None:
                 self._last_params = {}
             self._last_params.update({
                 "composite_score": comp,
                 "tier": tier_name,
                 "tier_label": tier_label,
-                "lot": self._last_params.get("lot"),
+                "lot": lot,
             })
         except Exception:
             pass

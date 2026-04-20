@@ -416,7 +416,8 @@ class RiskGuardian:
             profit_ratio = dist / tp_dist if tp_dist > 0 else 0.0
 
             # ── 1. BREAK-EVEN ─────────────────────────────────────────────
-            if not ps["be_done"] and profit_ratio >= ps["be_trigger"] / tp_dist if tp_dist > 0 else profit_ratio >= 0.5:
+            be_threshold = ps["be_trigger"] / tp_dist  # both in $, ratio 0-1
+            if not ps["be_done"] and profit_ratio >= be_threshold:
                 be_sl = round(entry + 0.02, 2) if is_buy else round(entry - 0.02, 2)
                 if (is_buy and sl < be_sl) or (not is_buy and (sl == 0 or sl > be_sl)):
                     if self._modify_sl(mt5, pos, be_sl, tp, symbol):

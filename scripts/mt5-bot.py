@@ -1446,7 +1446,7 @@ def run():
                                         "resistance" if direction == "buy" else "support", []
                                     )[:3]
                                     rg.register_position(
-                                        result.order, rp, strategy_name, 'H1',
+                                        result.deal, rp, strategy_name, 'H1',
                                         current_regime, direction,
                                         partial_targets=_kl_targets,
                                     )
@@ -1545,7 +1545,7 @@ def run():
                                         "resistance" if sec_dir == "buy" else "support", []
                                     )[:3]
                                     rg.register_position(
-                                        result2.order, rp2, sec_id, 'H1',
+                                        result2.deal, rp2, sec_id, 'H1',
                                         current_regime, sec_dir,
                                         partial_targets=_kl_targets2,
                                     )
@@ -1659,7 +1659,7 @@ def run():
                                             "resistance" if direction == "buy" else "support", []
                                         )[:3]
                                         rg.register_position(
-                                            result.order, rp, sname, 'M15',
+                                            result.deal, rp, sname, 'M15',
                                             current_regime, direction,
                                             partial_targets=_kl_targets,
                                         )
@@ -1773,7 +1773,7 @@ def run():
                                             "resistance" if direction == "buy" else "support", []
                                         )[:3]
                                         rg.register_position(
-                                            result.order, rp, sname, 'M30',
+                                            result.deal, rp, sname, 'M30',
                                             current_regime, direction,
                                             partial_targets=_kl_targets,
                                         )
@@ -1879,7 +1879,7 @@ def run():
                                             "resistance" if direction == "buy" else "support", []
                                         )[:3]
                                         rg.register_position(
-                                            result.order, rp, sname, 'H4',
+                                            result.deal, rp, sname, 'H4',
                                             current_regime, direction,
                                             partial_targets=_kl_targets,
                                         )

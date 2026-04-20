@@ -1369,9 +1369,9 @@ def run():
                 else:
                     can, reason = state.can_trade(now_utc)
                     if not can:
-                        log.debug(f"Trade non permesso: {reason}")
+                        log.info(f"[H1] Trade non permesso: {reason}")
                     elif count_open_positions() >= 2:
-                        log.debug(f"Max posizioni aperte (2)")
+                        log.info(f"[H1] Max posizioni aperte (2)")
                     else:
                         # ── Segnale primario H1 ───────────────────────────────
                         hour = bar_dt.hour
@@ -1745,7 +1745,7 @@ def run():
                             else:
                                 log.info(f"[M15] Regime: {current_regime} | Nessun segnale su {bar_dt_m15.strftime('%H:%M')}")
 
-            # ── Controlla nuova candela M30 (es. S09 in WEAK/VOLATILE) ──────────
+            # ── Controlla nuova candela M30 — tutte le strategie M30 del regime ──
             elif pb_entry.get('tf') == 'M30' and not current_is_extreme:
                 candles_m30 = get_candles_tf('M30', 450)
                 if candles_m30 and len(candles_m30) >= 50:
@@ -1756,42 +1756,66 @@ def run():
                         log.info(f"─── Nuova barra M30 chiusa: {bar_dt_m30.strftime('%Y-%m-%d %H:%M')} UTC ───")
                         can, reason = state.can_trade(now_utc)
                         if not can:
-                            log.debug(f"[M30] Trade non permesso: {reason}")
+                            log.info(f"[M30] Trade non permesso: {reason}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
-                            log.debug(f"[M30] Max posizioni aperte ({MAX_OPEN_ORDERS})")
+                            log.info(f"[M30] Max posizioni aperte ({MAX_OPEN_ORDERS})")
                         elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
                             remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
                             log.warning(f"🛑 M30 skip — cooldown SL attivo ({remaining}min rimanenti)")
                         else:
                             I_m30 = compute_indicators(candles_m30)
                             idx = len(candles_m30) - 2
-                            sname = pb_entry['strategy']
-                            sf = SESSION_FILTER.get(sname)
-                            if sf and bar_dt_m30.hour in sf['block_hours']:
-                                log.info(f"[M30] {sname} saltato — sessione asiatica ({bar_dt_m30.strftime('%H:%M')} UTC)")
-                                continue
-                            fn    = SIGNAL_FNS.get(sname)
-                            direction = fn(I_m30, idx) if fn else None
-                            if direction and has_open_position_for_strategy(sname):
-                                log.debug(f"[M30] skip {sname} — già 1 ordine aperto per questa strategia")
-                            elif direction and has_position_in_direction(direction):
-                                log.debug(f"[M30] Direzione {direction} già occupata, skip {sname}")
-                            elif direction and current_news_risk.get('paused'):
-                                log.warning(f"⛔ SEGNALE M30 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
-                            elif direction:
-                                # ── CALCOLO TP/SL DI STRATEGIA (M30) ────────────
+                            curr_h1_trend = I_h1['st'][i_h1] if 'st' in I_h1 else 0
+
+                            _m30_entries = [(s, d) for (s, t, d) in REGIME_MULTI_STRATEGIES.get(current_regime, []) if t == 'M30']
+                            if not _m30_entries:
+                                _m30_entries = [(pb_entry['strategy'], None)]
+
+                            for (sname, m30_dir_filter) in _m30_entries:
+                                if count_open_positions() >= MAX_OPEN_ORDERS: break
+                                if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
+
+                                sf = SESSION_FILTER.get(sname)
+                                if sf and bar_dt_m30.hour in sf['block_hours']:
+                                    log.info(f"[M30] {sname} saltato — sessione ({bar_dt_m30.strftime('%H:%M')} UTC)")
+                                    continue
+
+                                fn = SIGNAL_FNS.get(sname)
+                                if not fn: continue
+
+                                if sname == 'S16_GOLDEN_SQUEEZE':
+                                    direction = fn(I_m30, idx, h1_trend=curr_h1_trend, hour=bar_dt_m30.hour)
+                                else:
+                                    direction = fn(I_m30, idx)
+
+                                if not direction:
+                                    log.info(f"[M30] {sname} — nessun segnale ({bar_dt_m30.strftime('%H:%M')})")
+                                    continue
+                                if m30_dir_filter and direction != m30_dir_filter: continue
+                                if has_open_position_for_strategy(sname):
+                                    log.debug(f"[M30] skip {sname} — già aperto")
+                                    continue
+                                if has_position_in_direction(direction):
+                                    log.debug(f"[M30] Direzione {direction} già occupata, skip {sname}")
+                                    continue
+                                if current_news_risk.get('paused'):
+                                    log.warning(f"⛔ SEGNALE M30 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
+                                    continue
+
                                 params = STRATEGY_PARAMS.get(sname, {'tp_usd': 15.0, 'sl_usd': 10.0, 'label': sname})
                                 atr_i = I_m30['atr'][idx] if I_m30['atr'][idx] else None
-                                base_tp_m30 = 15.0; base_sl_m30 = 10.0
                                 if params.get('tp_usd') == 'ATR' and atr_i:
                                     base_tp_m30 = atr_i * params.get('tp_mult', 1.5)
                                 elif isinstance(params.get('tp_usd'), (int, float)):
                                     base_tp_m30 = params['tp_usd']
-                                
+                                else:
+                                    base_tp_m30 = 15.0
                                 if params.get('sl_usd') == 'ATR' and atr_i:
                                     base_sl_m30 = atr_i * params.get('sl_mult', 1.0)
                                 elif isinstance(params.get('sl_usd'), (int, float)):
                                     base_sl_m30 = params['sl_usd']
+                                else:
+                                    base_sl_m30 = 10.0
 
                                 rp = None
                                 if rg:
@@ -1826,11 +1850,11 @@ def run():
                                         log.info(f"⛔ SEGNALE M30 SOSPESO (manipolazione) | {sname}")
                                         continue
                                     lot_use, tp_use, sl_use = rp['lot'], base_tp_m30, base_sl_m30
-                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} manip={rp['manip_mult']:.2f} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
+                                    log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | {rp['tier_label']} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
                                 else:
                                     lot_use, tp_use, sl_use = LOT_SIZE, base_tp_m30, base_sl_m30
                                     log.info(f"★ SEGNALE M30: {direction.upper()} | {params['label']} | Regime: {current_regime} | lot={lot_use} | TP=${tp_use:.2f} | SL=${sl_use:.2f}")
-                                
+
                                 result = place_order(direction, tp_use, sl_use, sname, lot_size=lot_use,
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
@@ -1862,8 +1886,6 @@ def run():
                                                     'trades_today':state.trades_today,'pnl_today':state.pnl_today,
                                                     'regime':current_regime,'last_signal':sname})
                                     last_sync_time = time.time()
-                            else:
-                                log.info(f"[M30] Regime: {current_regime} | Nessun segnale su {bar_dt_m30.strftime('%H:%M')}")
 
             # ── Controlla nuova candela H4 (strategie H4 da REGIME_MULTI_STRATEGIES) ──
             # Gira sempre in parallelo a M30/M15 — non è un elif

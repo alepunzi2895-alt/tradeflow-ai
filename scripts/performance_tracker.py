@@ -33,7 +33,7 @@ BACKTEST_BASELINES = {
     "S09_MFKK_SCALPING":     {"wr": 0.378, "pf": 1.637},
     "S10_OB_FVG_SCALP":      {"wr": 0.425, "pf": 1.796},
     "S16_GOLDEN_SQUEEZE":    {"wr": 0.317, "pf": 1.285},
-    "S17_CONVERGENCE_SCALP": {"wr": 0.257, "pf": 1.107},
+    "S17_CONVERGENCE_SCALP": {"wr": 0.415, "pf": 1.710},
 }
 
 ROLLING_WINDOW      = 30    # trade recenti per WR/PF rolling

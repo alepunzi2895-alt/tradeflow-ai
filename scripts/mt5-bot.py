@@ -88,7 +88,7 @@ MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 
 SYMBOL       = os.getenv("SYMBOL", "GOLD")
 
-LOT_SIZE     = 0.05          # lot size base (0.05 = config A ottimizzata, ~€1000+ capital)
+LOT_SIZE     = 0.01          # lot size base calibrata per conto $1000 (SL~$12 = 1.2% equity)
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)

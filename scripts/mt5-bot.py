@@ -145,8 +145,9 @@ class _RingBufferHandler(logging.Handler):
         from collections import deque
         self._buf = deque(maxlen=capacity)
     def emit(self, record):
+        import datetime as _dt
         self._buf.append({
-            'ts':  self.formatTime(record, '%H:%M:%S'),
+            'ts':  _dt.datetime.fromtimestamp(record.created).strftime('%H:%M:%S'),
             'lvl': record.levelname,
             'msg': record.getMessage(),
         })

@@ -665,9 +665,8 @@ def get_account_info():
     }
 
 def count_open_positions():
-    pos = mt5.positions_get(symbol=SYMBOL)
-    if pos is None: return 0
-    return len([p for p in pos if p.magic == MAGIC])
+    """Conta le posizioni aperte del bot sul simbolo corrente."""
+    return sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
 
 def has_position_in_direction(direction):
     """True se esiste già una posizione aperta nella direzione specificata."""
@@ -677,9 +676,13 @@ def has_position_in_direction(direction):
         if direction == 'sell' and p.type == mt5.ORDER_TYPE_SELL: return True
     return False
 
-def count_open_positions():
-    """Conta le posizioni aperte del bot sul simbolo corrente."""
-    return sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
+def has_open_position_for_strategy(strategy_name):
+    """True se esiste già un ordine aperto per questa specifica strategia (max 1 per strategia)."""
+    target_comment = f"TF-AI {strategy_name}"
+    for p in mt5.positions_get(symbol=SYMBOL) or []:
+        if p.magic == MAGIC and (p.comment or '') == target_comment:
+            return True
+    return False
 
 def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
                 key_levels_result=None, atr=None):
@@ -1354,6 +1357,8 @@ def run():
 
                         if strategy_name is None:
                             log.info(f"Regime: {current_regime} | Nessun segnale primario H1 su {bar_dt.strftime('%H:%M')}")
+                        elif has_open_position_for_strategy(strategy_name):
+                            log.debug(f"[H1] skip {strategy_name} — già 1 ordine aperto per questa strategia")
                         elif has_position_in_direction(direction):
                             log.debug(f"[H1] Direzione {direction} già occupata, skip {strategy_name}")
                         elif current_news_risk.get('paused'):
@@ -1480,6 +1485,7 @@ def run():
                                 sec_dir = fn2(I_h1, i_h1)
                             if not sec_dir: continue
                             if sec_dir_filter and sec_dir != sec_dir_filter: continue
+                            if has_open_position_for_strategy(sec_id): continue
                             if has_position_in_direction(sec_dir): continue
                              
                             # ── CALCOLO TP/SL DI STRATEGIA (SEC) ─────────────
@@ -1586,7 +1592,9 @@ def run():
                             else:
                                 direction = fn(I_m15, idx) if fn else None
 
-                            if direction and has_position_in_direction(direction):
+                            if direction and has_open_position_for_strategy(sname):
+                                log.debug(f"[M15] skip {sname} — già 1 ordine aperto per questa strategia")
+                            elif direction and has_position_in_direction(direction):
                                 log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
                             elif direction and current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE M15 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
@@ -1698,7 +1706,9 @@ def run():
                                 continue
                             fn    = SIGNAL_FNS.get(sname)
                             direction = fn(I_m30, idx) if fn else None
-                            if direction and has_position_in_direction(direction):
+                            if direction and has_open_position_for_strategy(sname):
+                                log.debug(f"[M30] skip {sname} — già 1 ordine aperto per questa strategia")
+                            elif direction and has_position_in_direction(direction):
                                 log.debug(f"[M30] Direzione {direction} già occupata, skip {sname}")
                             elif direction and current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE M30 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
@@ -1806,7 +1816,9 @@ def run():
                             sname = pb_entry['strategy']
                             fn = SIGNAL_FNS.get(sname)
                             direction = fn(I_h4, idx) if fn else None
-                            if direction and has_position_in_direction(direction):
+                            if direction and has_open_position_for_strategy(sname):
+                                log.debug(f"[H4] skip {sname} — già 1 ordine aperto per questa strategia")
+                            elif direction and has_position_in_direction(direction):
                                 log.debug(f"[H4] Direzione {direction} già occupata, skip {sname}")
                             elif direction and current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE H4 SOSPESO (News) | {sname} | {current_news_risk['reason']}")

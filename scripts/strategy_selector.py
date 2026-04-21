@@ -167,9 +167,9 @@ def detect_regime_extended(I: dict, i: int) -> dict:
         regime_type = "TREND_UP" if dip > dim else "TREND_DOWN"
         # Strength: scale ADX 30-50 → 0.5-1.0
         strength = min(0.5 + (adx - 30) / 40, 1.0)
-    elif adx >= 22:
+    elif adx >= 18:
         regime_type = "WEAK"
-        strength = 0.35 + (adx - 22) / 60
+        strength = 0.35 + (adx - 18) / 60
     elif atr_v and atr_avg and atr_v > 1.4 * atr_avg:
         regime_type = "VOLATILE"
         strength = min(0.3 + (atr_ratio - 1.4) / 1.5, 0.9)

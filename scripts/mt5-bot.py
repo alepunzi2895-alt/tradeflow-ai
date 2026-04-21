@@ -507,7 +507,7 @@ def detect_regime(I, i):
         return 'EXTREME'
     if adx_v >= 30:
         return 'TREND_UP' if dip_v > dim_v else 'TREND_DOWN'
-    if adx_v >= 22:
+    if adx_v >= 18:
         return 'WEAK_UP' if dip_v > dim_v else 'WEAK_DOWN'
     if atr_v and atr_avg and atr_v > 1.4 * atr_avg:
         return 'VOLATILE'

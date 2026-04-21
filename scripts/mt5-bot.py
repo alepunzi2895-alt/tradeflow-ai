@@ -1389,8 +1389,8 @@ def run():
                     can, reason = state.can_trade(now_utc)
                     if not can:
                         log.info(f"[H1] Trade non permesso: {reason}")
-                    elif count_open_positions() >= 2:
-                        log.info(f"[H1] Max posizioni aperte (2)")
+                    elif count_open_positions() >= MAX_OPEN_ORDERS:
+                        log.info(f"[H1] Max posizioni aperte ({MAX_OPEN_ORDERS})")
                     else:
                         # ── Segnale primario H1 ───────────────────────────────
                         hour = bar_dt.hour
@@ -1547,7 +1547,7 @@ def run():
                             if sec_id == strategy_name: continue   # già provata come primaria
                             if count_open_positions() >= MAX_OPEN_ORDERS: break
                             if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
-                            if state.trades_today >= MAX_TRADES: break
+                            if MAX_TRADES > 0 and state.trades_today >= MAX_TRADES: break
                             fn2 = SIGNAL_FNS.get(sec_id)
                             if not fn2: continue
                             
@@ -1765,7 +1765,8 @@ def run():
                                 log.info(f"[M15] Regime: {current_regime} | Nessun segnale su {bar_dt_m15.strftime('%H:%M')}")
 
             # ── Controlla nuova candela M30 — tutte le strategie M30 del regime ──
-            elif pb_entry.get('tf') == 'M30' and not current_is_extreme:
+            # Gira anche quando il playbook usa M5 (es. VOLATILE) — M5 non ha un blocco dedicato
+            elif pb_entry.get('tf') != 'M15' and not current_is_extreme:
                 candles_m30 = get_candles_tf('M30', 450)
                 if candles_m30 and len(candles_m30) >= 50:
                     latest_m30 = candles_m30[-2]['t']

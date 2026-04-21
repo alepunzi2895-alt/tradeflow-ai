@@ -163,7 +163,7 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
 
 def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     """S05_MFKK_INTRADAY V3 — OBV T-Channel + RSI + MACD + Mom + ADX + EMA200.
-    Opt: RSI 55/45, hard ADX>=20 gate, StochRSI K>D confluence.
+    Opt: RSI 55/45, ADX>=15 gate, StochRSI K>D confluence.
     """
     if i < 2: return None
     oc = _get(ind, 'obv_oc', 'obv_macd_oc')
@@ -176,8 +176,8 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     sd = ind.get('srsi_d', [None] * (i + 1))[i]
     if None in (r, mo, a, mc, e200): return None
 
-    # Hard ADX gate — removes ai_score escape for low-ADX markets
-    if a < 20: return None
+    # ADX gate — skip flat/choppy markets (15 instead of 20 to reduce over-filtering)
+    if a < 15: return None
 
     # StochRSI K>D: momentum turning in entry direction
     srsi_bull = (sk is None or sd is None) or (sk > sd)

@@ -403,7 +403,7 @@ class RiskManager:
                 if score is not None:
                     return float(score)
         except Exception as e:
-            pass  # usa default
+            log.warning(f"[fetch_ai_score] FAIL ({type(e).__name__}): {e}")
         return 50.0  # score neutro di default
 
 

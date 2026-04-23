@@ -35,11 +35,11 @@
 
 > M30 è il TF canonico: miglior equilibrio frequenza/DD. H4 ha PF 1.660 WR 43.1% ma solo 3.7 trade/gg.
 
-### TF ottimale per strategia (da backtest 2026-04-19)
+### TF ottimale per strategia (da backtest 2026-04-23)
 
 | Strategia | TF Ottimale | PF sistema | WR | Note |
 |---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | M30 | 0.90 | 29.0% | V3 rescaled, downgraded to secondary |
+| S16_GOLDEN_SQUEEZE | **H1** | 1.36 | 43.7% | V3 (ADX≥25, OBV 3-bar, candle 0.35×ATR, SL×2.0). H1 adattivo RM +$2370 vs M30 +$1190 |
 | S00_MFKK | M30 (fallback) | 1.21 | 42.1% | Best performer in adaptive engine |
 | S09_MFKK_SCALPING | **M30** | 0.98 | 29.4% | FVG invariato — no filtri aggiuntivi |
 | S10_OB_FVG_SCALP | M30 | 0.80 | 33.0% | — |
@@ -54,7 +54,7 @@
 | `S05_MFKK_INTRADAY` | MFKK Intraday V3 | ATR×2.5 | ATR×1.0 | TREND_UP, TREND_DOWN | **H1** | 0.80 | 31.3% |
 | `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 0.98 | 29.4% |
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 0.80 | 33.0% |
-| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V3 | ATR×3.5 | ATR×2.0 | TREND | M30 | 0.90 | 29.0% |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V3 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.36 | 43.7% |
 | `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.8 | ATR×1.0 | VOLATILE | **H4** | 0.77 | 23.0% |
 
 ## Strategy Selector Agent (`strategy_selector.py`)

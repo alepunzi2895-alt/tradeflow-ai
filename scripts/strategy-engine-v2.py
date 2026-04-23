@@ -834,8 +834,8 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             curr_tp = round(av * 2.5, 2)
             curr_sl = round(av * 1.2, 2)
         elif name == 'S16_GOLDEN_SQUEEZE':
-            curr_tp = round(av * 3.0, 2)
-            curr_sl = round(av * 1.2, 2)
+            curr_tp = round(av * 3.5, 2)
+            curr_sl = round(av * 2.0, 2)
         elif name == 'S05_MFKK_INTRADAY':
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.0, 2)
@@ -957,7 +957,7 @@ def run_adaptive(candles, ind, tf='H1'):
         elif used == 'S10_OB_FVG_SCALP':
             tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
-            tp_d = round(av*3.0, 2); sl_d = round(av*1.2, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*2.0, 2)
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
@@ -1058,7 +1058,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         elif used == 'S10_OB_FVG_SCALP':
             tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
-            tp_d = round(av*3.0, 2); sl_d = round(av*1.2, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*2.0, 2)
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':

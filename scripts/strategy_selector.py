@@ -76,10 +76,11 @@ STRATEGIES_CONFIG = [
         "name": "Elite Golden Squeeze",
         "signal_function": "signal_golden_squeeze",
         "performance_by_tf": {
-            # Backtest canonico 2026-04-19 (MT5 GOLD M30, 25 mesi): 1006 trade, WR 29.0%, PF 0.904, -$1144
-            # V3 rescaled (ADX>=25, OBV 3-bar, candle 0.35xATR) — NON ancora backtestato in produzione
-            "M30": {"wr": 0.290, "pf": 0.904, "daily_pnl": -1.5, "dd": 1200},
-            "H1":  {"wr": 0.290, "pf": 0.900, "daily_pnl": -1.2, "dd": 1000},
+            # Sistema adattivo H1 MT5 (con RM, 2026-04-23): 343 trade, WR 43.7%, PF ~1.36, +$2370
+            # Sistema adattivo M30 MT5 (con RM, 2026-04-23): 343 trade, WR 39.7%, PF ~1.15, +$1190
+            # TF ottimale: H1 (WR +4pp, P&L doppio rispetto M30). Standalone PF < 1 ma adattivo > 1.
+            "H1":  {"wr": 0.437, "pf": 1.360, "daily_pnl": 5.74, "dd": 900},
+            "M30": {"wr": 0.397, "pf": 1.150, "daily_pnl": 2.88, "dd": 1100},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
         "session_filter": ["london", "ny"],

@@ -533,8 +533,9 @@ SESSION_FILTER = {
 # Priorities based on adaptive backtest: S10 PF 1.79 > S16 PF 1.29 in WEAK; S10 2nd in TREND
 # S17 only on H4 (PF 1.71); S09 only in RANGE/VOLATILE (PF 1.65 M30)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S05_MFKK_INTRADAY','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'TREND_DOWN': [('S05_MFKK_INTRADAY','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    # S16 spostato su H1 (WR 43.7% adattivo vs 39.7% M30): secondario H1 dopo S05, entra quando S05 non dà segnale
+    'TREND_UP':   [('S05_MFKK_INTRADAY','H1',None), ('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_DOWN': [('S05_MFKK_INTRADAY','H1',None), ('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],

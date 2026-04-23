@@ -122,7 +122,7 @@ In pratica: un swing_high D1 (0.85 × 1.0 = **0.85**) supera un swing_high H1 (0
 | S05_MFKK_INTRADAY | 2.5 | 1.0 |
 | S09_MFKK_SCALPING | 3.0 | 1.0 |
 | S10_OB_FVG_SCALP | 2.5 | 1.2 |
-| S16_GOLDEN_SQUEEZE | 3.5 | 1.5 |
+| S16_GOLDEN_SQUEEZE | 3.5 | 2.0 |
 | S17_CONVERGENCE_SCALP | 2.8 | 1.0 |
 | S00_MFKK | 2.5 | 1.0 |
 

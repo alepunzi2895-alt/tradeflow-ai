@@ -76,15 +76,14 @@ STRATEGIES_CONFIG = [
         "name": "Elite Golden Squeeze",
         "signal_function": "signal_golden_squeeze",
         "performance_by_tf": {
-            # M30 adaptive: 1720 trade, WR 31.7%, PF 1.285, +$3395 — primary engine
-            # H4 adaptive: 600 trade, WR 36.7%, PF 1.570, +$6073 — fewer but stronger
-            "M30": {"wr": 0.317, "pf": 1.285, "daily_pnl": 8.84, "dd": 800},
-            "H4":  {"wr": 0.367, "pf": 1.570, "daily_pnl": 15.77, "dd": 1800},
-            "H1":  {"wr": 0.323, "pf": 1.101, "daily_pnl": 4.45, "dd": 1200},
+            # Backtest canonico 2026-04-19 (MT5 GOLD M30, 25 mesi): 1006 trade, WR 29.0%, PF 0.904, -$1144
+            # V3 rescaled (ADX>=25, OBV 3-bar, candle 0.35xATR) — NON ancora backtestato in produzione
+            "M30": {"wr": 0.290, "pf": 0.904, "daily_pnl": -1.5, "dd": 1200},
+            "H1":  {"wr": 0.290, "pf": 0.900, "daily_pnl": -1.2, "dd": 1000},
         },
-        "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
+        "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
         "session_filter": ["london", "ny"],
-        "base_params": {"tp_atr_mult": 3.0, "sl_atr_mult": 1.2},
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 2.0},
     },
     {
         "id": "S17_CONVERGENCE_SCALP",

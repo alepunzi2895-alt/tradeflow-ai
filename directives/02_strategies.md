@@ -54,7 +54,7 @@
 | `S05_MFKK_INTRADAY` | MFKK Intraday V3 | ATR×2.5 | ATR×1.0 | TREND_UP, TREND_DOWN | **H1** | 0.80 | 31.3% |
 | `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 0.98 | 29.4% |
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 0.80 | 33.0% |
-| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V3 | ATR×3.5 | ATR×1.5 | TREND | M30 | 0.90 | 29.0% |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V3 | ATR×3.5 | ATR×2.0 | TREND | M30 | 0.90 | 29.0% |
 | `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.8 | ATR×1.0 | VOLATILE | **H4** | 0.77 | 23.0% |
 
 ## Strategy Selector Agent (`strategy_selector.py`)

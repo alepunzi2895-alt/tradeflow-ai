@@ -75,7 +75,7 @@ STRATEGY_ATR_PARAMS = {
     "S05_MFKK_INTRADAY":    {"tp_atr": 2.5, "sl_atr": 1.0},
     "S09_MFKK_SCALPING":    {"tp_atr": 3.0, "sl_atr": 1.0},
     "S10_OB_FVG_SCALP":     {"tp_atr": 2.5, "sl_atr": 1.2},
-    "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 1.5},
+    "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 2.0},
     "S17_CONVERGENCE_SCALP":{"tp_atr": 2.8, "sl_atr": 1.0},
     "S00_MFKK":             {"tp_atr": 2.5, "sl_atr": 1.0},
 }

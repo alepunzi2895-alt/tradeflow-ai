@@ -122,7 +122,7 @@ STRATEGY_PARAMS = {
     'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.5, 'sl_mult': 1.0},
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
     'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
-    'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 1.5, 'be_mult': 1.1},
+    'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 2.0, 'be_mult': 1.3},
     'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 2.8, 'sl_mult': 1.0},
     'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 2.5, 'sl_mult': 1.0},
 }
@@ -1869,6 +1869,10 @@ def run():
                             for (sname, m30_dir_filter) in _m30_entries:
                                 if count_open_positions() >= MAX_OPEN_ORDERS: break
                                 if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
+                                if sl_cooldowns_until.get(sname) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[sname]:
+                                    remaining = int((sl_cooldowns_until[sname] - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                                    log.warning(f"🛑 M30 skip {sname} — cooldown SL strategico ({remaining}min rimanenti)")
+                                    continue
 
                                 sf = SESSION_FILTER.get(sname)
                                 if sf and bar_dt_m30.hour in sf['block_hours']:
@@ -2011,6 +2015,10 @@ def run():
                                 remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
                                 log.warning(f"🛑 H4 skip {h4_id} — cooldown SL attivo ({remaining}min rimanenti)")
                                 break
+                            if sl_cooldowns_until.get(h4_id) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[h4_id]:
+                                remaining = int((sl_cooldowns_until[h4_id] - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                                log.warning(f"🛑 H4 skip {h4_id} — cooldown SL strategico ({remaining}min rimanenti)")
+                                continue
                             fn_h4 = SIGNAL_FNS.get(h4_id)
                             direction = fn_h4(I_h4, idx) if fn_h4 else None
                             if not direction:

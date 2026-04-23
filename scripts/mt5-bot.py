@@ -40,13 +40,8 @@ except ImportError:
     log_placeholder = logging.getLogger('tf-bot')
     log_placeholder.warning("risk_manager.py non trovato — uso lot size fisso")
 
-# ── RISK GUARDIAN (new adaptive agent) ───────────────────────────────────────
-try:
-    from risk_guardian import get_risk_guardian, RiskGuardian
-except ImportError:
-    get_risk_guardian = None
-    log_placeholder2 = logging.getLogger('tf-bot')
-    log_placeholder2.warning("risk_guardian.py non trovato — fallback a risk_manager")
+# ── RISK GUARDIAN (mandatory — bot non parte senza) ──────────────────────────
+from risk_guardian import get_risk_guardian, RiskGuardian
 
 # ── STRATEGY SELECTOR AGENT ───────────────────────────────────────────────────
 try:
@@ -119,12 +114,12 @@ LOG_FILE     = "mt5-bot.log"
 # tp_usd / sl_usd qui sono distanze in punti prezzo (non dollari assoluti).
 # Es. ATR≈9.5 pt × tp_mult=2.0 → tp_use=19.0 → price ± 19.0 → ~$19 per 0.01 lot.
 STRATEGY_PARAMS = {
-    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.5, 'sl_mult': 1.0},
-    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
-    'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
+    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 3.5, 'sl_mult': 1.0},
+    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 4.0, 'sl_mult': 1.0},
+    'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 3.5, 'sl_mult': 1.2},
     'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 2.0, 'be_mult': 1.3},
-    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 2.8, 'sl_mult': 1.0},
-    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 2.5, 'sl_mult': 1.0},
+    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.0},
+    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 3.5, 'sl_mult': 1.0},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -1059,15 +1054,12 @@ def run():
     else:
         log.warning("RiskManager disabilitato — uso lot size fisso")
 
-    # Inizializza Risk Guardian (nuovo agente adattivo)
+    # Inizializza Risk Guardian (obbligatorio)
     acc_init = get_account_info()
     initial_equity = acc_init['equity'] if acc_init else 10000.0
     rg = get_risk_guardian(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5,
-                           initial_equity=initial_equity) if get_risk_guardian else None
-    if rg:
-        log.info(f"RiskGuardian attivo — equity iniziale={initial_equity:.2f}")
-    else:
-        log.info("RiskGuardian non disponibile — uso RiskManager legacy")
+                           initial_equity=initial_equity)
+    log.info(f"RiskGuardian attivo — equity iniziale={initial_equity:.2f}")
 
     # Sincronizza _strategy_order_tickets da posizioni MT5 già aperte (riavvio bot)
     _existing = mt5.positions_get(symbol=SYMBOL) or []

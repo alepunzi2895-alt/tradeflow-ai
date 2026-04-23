@@ -828,22 +828,22 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         curr_tp = tp
         curr_sl = sl
         if name == 'S09_MFKK_SCALPING':
-            curr_tp = round(av * 3.0, 2)
+            curr_tp = round(av * 4.0, 2)
             curr_sl = round(av * 1.0, 2)
         elif name == 'S10_OB_FVG_SCALP':
-            curr_tp = round(av * 2.5, 2)
+            curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 1.2, 2)
         elif name == 'S16_GOLDEN_SQUEEZE':
             curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 2.0, 2)
         elif name == 'S05_MFKK_INTRADAY':
-            curr_tp = round(av * 2.0, 2)
+            curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 1.0, 2)
         elif name == 'S17_CONVERGENCE_SCALP':
-            curr_tp = round(av * 2.5, 2)
-            curr_sl = round(av * 0.8, 2)
+            curr_tp = round(av * 4.0, 2)
+            curr_sl = round(av * 1.0, 2)
         elif name == 'S00_MFKK':
-            curr_tp = round(av * 2.0, 2)
+            curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 1.0, 2)
 
         # Route hour/h1_trend correctly per signal function signature
@@ -953,15 +953,15 @@ def run_adaptive(candles, ind, tf='H1'):
         entry=c['c']
         # Strategia con ATR-based TP/SL d'élite
         if used == 'S09_MFKK_SCALPING':
-            tp_d = round(av*3.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S10_OB_FVG_SCALP':
-            tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.2, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
             tp_d = round(av*3.5, 2); sl_d = round(av*2.0, 2)
         elif used == 'S05_MFKK_INTRADAY':
-            tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*2.5, 2); sl_d = round(av*0.8, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d
@@ -1054,17 +1054,17 @@ def run_adaptive_rm(candles, ind, tf='H1'):
 
         # ATR-based TP/SL identici a run_adaptive (coerenza confronto)
         if used == 'S09_MFKK_SCALPING':
-            tp_d = round(av*3.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S10_OB_FVG_SCALP':
-            tp_d = round(av*2.5, 2); sl_d = round(av*1.2, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.2, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
             tp_d = round(av*3.5, 2); sl_d = round(av*2.0, 2)
         elif used == 'S05_MFKK_INTRADAY':
-            tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*2.5, 2); sl_d = round(av*0.8, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S00_MFKK':
-            tp_d = round(av*2.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
 

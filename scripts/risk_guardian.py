@@ -42,42 +42,42 @@ RISK_TIERS = {
     "CONSERVATIVE": {
         "score_min": 0,   "score_max": 40,
         "lot_multiplier": 0.5,  "tp_multiplier": 1.0, "sl_multiplier": 0.8,
-        "be_trigger": 0.80,     "ts_step": 1.5,       "early_exit_threshold": 0.30,
+        "be_trigger": 0.65,     "ts_step": 1.5,       "early_exit_threshold": 0.30,
         "label": "🔵 CONSERVATIVE",
     },
     "NORMAL": {
         "score_min": 40,  "score_max": 60,
         "lot_multiplier": 1.0,  "tp_multiplier": 1.0, "sl_multiplier": 1.0,
-        "be_trigger": 0.70,     "ts_step": 1.5,       "early_exit_threshold": 0.20,
+        "be_trigger": 0.55,     "ts_step": 1.2,       "early_exit_threshold": 0.20,
         "label": "⚪ NORMAL",
     },
     "AGGRESSIVE": {
         "score_min": 60,  "score_max": 75,
         "lot_multiplier": 1.5,  "tp_multiplier": 1.5, "sl_multiplier": 1.0,
-        "be_trigger": 0.60,     "ts_step": 1.2,       "early_exit_threshold": 0.10,
+        "be_trigger": 0.45,     "ts_step": 0.9,       "early_exit_threshold": 0.10,
         "label": "🟡 AGGRESSIVE",
     },
     "STRONG": {
         "score_min": 75,  "score_max": 85,
         "lot_multiplier": 2.0,  "tp_multiplier": 1.8, "sl_multiplier": 1.2,
-        "be_trigger": 0.50,     "ts_step": 1.0,       "early_exit_threshold": 0.05,
+        "be_trigger": 0.40,     "ts_step": 0.8,       "early_exit_threshold": 0.05,
         "label": "🟠 STRONG",
     },
     "MAX": {
         "score_min": 85,  "score_max": 100,
         "lot_multiplier": 2.5,  "tp_multiplier": 2.0, "sl_multiplier": 1.5,
-        "be_trigger": 0.50,     "ts_step": 1.0,       "early_exit_threshold": 0.05,
+        "be_trigger": 0.35,     "ts_step": 0.8,       "early_exit_threshold": 0.05,
         "label": "🔴 MAX",
     },
 }
 
 STRATEGY_ATR_PARAMS = {
-    "S05_MFKK_INTRADAY":    {"tp_atr": 2.5, "sl_atr": 1.0},
-    "S09_MFKK_SCALPING":    {"tp_atr": 3.0, "sl_atr": 1.0},
-    "S10_OB_FVG_SCALP":     {"tp_atr": 2.5, "sl_atr": 1.2},
+    "S05_MFKK_INTRADAY":    {"tp_atr": 3.5, "sl_atr": 1.0},
+    "S09_MFKK_SCALPING":    {"tp_atr": 4.0, "sl_atr": 1.0},
+    "S10_OB_FVG_SCALP":     {"tp_atr": 3.5, "sl_atr": 1.2},
     "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 2.0},
-    "S17_CONVERGENCE_SCALP":{"tp_atr": 2.8, "sl_atr": 1.0},
-    "S00_MFKK":             {"tp_atr": 2.5, "sl_atr": 1.0},
+    "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.0},
+    "S00_MFKK":             {"tp_atr": 3.5, "sl_atr": 1.0},
 }
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection
@@ -86,6 +86,7 @@ TRADE_DURATIONS = {
     ("S05_MFKK_INTRADAY",    "H1"):  180,
     ("S05_MFKK_INTRADAY",    "M30"): 90,
     ("S09_MFKK_SCALPING",    "M5"):  20,
+    ("S16_GOLDEN_SQUEEZE",   "H1"):  180,
     ("S16_GOLDEN_SQUEEZE",   "M30"): 90,
     ("S10_OB_FVG_SCALP",     "M30"): 60,
     ("S17_CONVERGENCE_SCALP","H4"):  240,
@@ -338,9 +339,9 @@ class RiskGuardian:
 
         # BE trigger price distance from entry
         be_dist = round(base_tp * tier["be_trigger"], 2)
-        # Trailing activation = BE + 10% of TP
-        trailing_activation = round(base_tp * (tier["be_trigger"] + 0.10), 2)
-        ts_step_usd = round(atr * 0.4, 2) if atr else round(base_sl * 0.3, 2)
+        # Trailing activation = BE + 5% of TP (activate sooner after BE)
+        trailing_activation = round(base_tp * (tier["be_trigger"] + 0.05), 2)
+        ts_step_usd = round(atr * 0.3, 2) if atr else round(base_sl * 0.25, 2)
 
         log.info(
             f"🛡️ RiskGuardian [{tier['label']}] strat={strategy_id} "
@@ -437,7 +438,7 @@ class RiskGuardian:
                     "entry_time": pos.time,
                     "direction": "buy" if is_buy else "sell",
                     "be_trigger": be_dist,
-                    "ts_step": current_atr * 0.4 if current_atr else 3.0,
+                    "ts_step": current_atr * 0.3 if current_atr else 2.5,
                     "trailing_activation": be_dist * 1.1,
                     "early_exit_threshold": 0.20,
                 }

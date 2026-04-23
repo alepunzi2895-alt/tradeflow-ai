@@ -31,7 +31,7 @@ STRATEGIES_CONFIG = [
             "H4":  {"wr": 0.442, "pf": 1.319, "daily_pnl": 3.43, "dd": 400},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
-        "base_params": {"tp_atr_mult": 2.0, "sl_atr_mult": 1.0},
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
     },
     {
         "id": "S05_MFKK_INTRADAY",
@@ -43,7 +43,7 @@ STRATEGIES_CONFIG = [
             "M30": {"wr": 0.369, "pf": 1.124, "daily_pnl": 0.58, "dd": 500},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
-        "base_params": {"tp_atr_mult": 2.0, "sl_atr_mult": 1.0},
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
     },
     {
         "id": "S09_MFKK_SCALPING",
@@ -56,7 +56,7 @@ STRATEGIES_CONFIG = [
             "M15": {"wr": 0.245, "pf": 1.282, "daily_pnl": 0.87, "dd": 500},
         },
         "optimal_regimes": ["VOLATILE", "WEAK"],
-        "base_params": {"tp_atr_mult": 3.0, "sl_atr_mult": 1.0},
+        "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.0},
     },
     {
         "id": "S10_OB_FVG_SCALP",
@@ -69,7 +69,7 @@ STRATEGIES_CONFIG = [
         },
         "optimal_regimes": ["RANGING", "WEAK"],
         "min_confidence": 0.70,
-        "base_params": {"tp_atr_mult": 2.5, "sl_atr_mult": 1.2},
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.2},
     },
     {
         "id": "S16_GOLDEN_SQUEEZE",
@@ -100,7 +100,7 @@ STRATEGIES_CONFIG = [
         },
         "optimal_regimes": ["VOLATILE", "TREND_UP", "TREND_DOWN"],
         "min_atr_percentile": 0.60,
-        "base_params": {"tp_atr_mult": 2.8, "sl_atr_mult": 1.1},
+        "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.1},
     },
 ]
 

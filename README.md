@@ -84,10 +84,12 @@ python scripts/fetch_mt5_history.py
 
 | ID | Label | TF | Regime |
 |---|---|---|---|
+| `S00_MFKK` | MFKK Core V2 | M30 | WEAK/fallback |
 | `S05_MFKK_INTRADAY` | MFKK Intraday V3 | H1 | TREND |
-| `S09_MFKK_SCALPING` | MFKK Scalping V2 | M5 | VOLATILE |
-| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | M15/M30 | All (fallback) |
+| `S09_MFKK_SCALPING` | MFKK Scalping V2 | M30 | VOLATILE/WEAK |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | M30 | RANGING/WEAK |
 | `S16_GOLDEN_SQUEEZE` | Golden Squeeze V2 | M30 | TREND + WEAK |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | H4 | VOLATILE/TREND |
 
 ## Env vars (Vercel)
 

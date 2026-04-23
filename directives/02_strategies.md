@@ -104,7 +104,7 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 | S09_MFKK_SCALPING | 37.8% | 1.637 |
 | S10_OB_FVG_SCALP | 42.5% | 1.796 |
 | S00_MFKK | 38.3% | 1.033 |
-| S17_CONVERGENCE_SCALP | 25.7% | 1.107 |
+| S17_CONVERGENCE_SCALP | **41.5%** | **1.710** |  ← H4 ottimale (non più M30)
 
 > Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.
 > Cache trade: `data/performance_cache.json` (max 500 trade). Overrides: `data/strategy_overrides.json`.

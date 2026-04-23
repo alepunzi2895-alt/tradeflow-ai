@@ -114,14 +114,16 @@ current_ai_score = 50.0      # Global per rilassamento filtri
 LOG_FILE     = "mt5-bot.log"
 
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
-# GOLD su XM: 1 punto = $0.01 (digits=2). TP=$20 → 2000 punti.
+# GOLD su XM: digits=2 → 1 punto prezzo = $1 per 0.01 lot.
+# tp_usd / sl_usd qui sono distanze in punti prezzo (non dollari assoluti).
+# Es. ATR≈9.5 pt × tp_mult=2.0 → tp_use=19.0 → price ± 19.0 → ~$19 per 0.01 lot.
 STRATEGY_PARAMS = {
     'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.0, 'sl_mult': 1.0},
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
     'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
     'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V2', 'tp_mult': 3.0, 'sl_mult': 1.2, 'be_mult': 1.1},
     'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 2.5, 'sl_mult': 0.8},
-    'S00_MFKK':            {'tp_usd': 20.0, 'sl_usd': 12.0, 'label': 'MFKK Core V2'},
+    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 2.0, 'sl_mult': 1.0},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -129,9 +131,9 @@ PLAYBOOK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '
 FALLBACK_PLAYBOOK = {
     'TREND_UP':   {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
     'TREND_DOWN': {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
-    'WEAK_UP':    {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
-    'WEAK_DOWN':  {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
-    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M5'},
+    'WEAK_UP':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
+    'WEAK_DOWN':  {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
+    'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
     'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
     'UNKNOWN':    {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
 }
@@ -255,13 +257,7 @@ def adx_calc(H,L,C,p=14):
     dx=[(abs(DIP[i]-DIM[i])/(DIP[i]+DIM[i])*100 if DIP[i]+DIM[i]>0 else 0) for i in range(n)]
     return sma(dx,p), DIP, DIM
 
-def bb(src,p=20,mult=2.0):
-    mid=sma(src,p)
-    up=[None]*len(src); dn=[None]*len(src)
-    for i in range(p-1,len(src)):
-        sd=math.sqrt(sum((src[i-j]-mid[i])**2 for j in range(p))/p)
-        up[i]=mid[i]+mult*sd; dn[i]=mid[i]-mult*sd
-    return mid, up, dn
+# bb() defined once below (removed duplicate — see BUG#4 fix 2026-04-23)
 
 def wpr(H,L,C,p=14):
     out=[None]*len(C)
@@ -472,7 +468,7 @@ def compute_indicators(candles):
     I['vwap']=vwap_intraday(candles)
     I['obv']=obv(C,V)
     I['obv_ema']=ema(I['obv'],20)
-    I['srsi_k'],I['srsi_d']=stoch_rsi(C,14,3,3)
+    I['srsi_k'],I['srsi_d']=stoch_rsi(C,14,14,3,3)  # fix: stoch_p=14 (era 3 → troppo reattivo)
     I['jaw'], I['teeth'], I['lips'] = alligator(H, L)
     I['st'] = supertrend(H, L, C, 10, 3.0)
     # OBV MACD T-Channel per S05_MFKK_INTRADAY / S05_V3_Sell_Exhaust
@@ -538,10 +534,10 @@ SESSION_FILTER = {
 REGIME_MULTI_STRATEGIES = {
     'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'VOLATILE':   [('S09_MFKK_SCALPING','M5',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M5',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'UNKNOWN':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
 }
 
@@ -1027,6 +1023,7 @@ def run():
     _tracked_positions   = {}    # {ticket: position_id} per rilevare chiusure istantanee
     consecutive_sl_count = 0    # SL consecutivi: azzerato a ogni TP/profit
     sl_cooldown_until    = None  # datetime UTC fino a cui nuovi ordini sono bloccati
+    weekly_dd_pct        = 0.0   # drawdown settimanale reale (aggiornato ogni sync)
 
     # Inizializza RiskManager (legacy, mantiene compatibilità)
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
@@ -1217,6 +1214,17 @@ def run():
                 log.info(f"📊 Sync: {len(trades_data)} trade totali, {sum(1 for t in trades_data if t['time'][:10]==today_str)} oggi | last: {trades_data[0]['time'][:16] if trades_data else 'nessuno'}")
                 pnl_today_real = round(sum(t['profit'] for t in trades_data if t['time'][:10] == today_str), 2)
                 trades_today_real = sum(1 for t in trades_data if t['time'][:10] == today_str)
+                # ── Weekly drawdown reale: somma profitti ultimi 7gg vs equity corrente ─
+                try:
+                    _week_ago = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)).date().isoformat()
+                    _weekly_pnl = sum(t['profit'] for t in trades_data if t.get('time','')[:10] >= _week_ago)
+                    _cur_equity = acc_data['equity'] if acc_data and acc_data.get('equity') else initial_equity
+                    if _cur_equity > 0 and _weekly_pnl < 0:
+                        weekly_dd_pct = round(abs(_weekly_pnl) / _cur_equity, 4)
+                    else:
+                        weekly_dd_pct = 0.0
+                except Exception:
+                    weekly_dd_pct = 0.0
                 _sl_cd_ts = sl_cooldown_until.isoformat() if sl_cooldown_until else None
                 _rg_last = rg._last_params if rg and getattr(rg, '_last_params', None) else None
                 bot_status = {
@@ -1268,7 +1276,21 @@ def run():
             # ── Fetch AI Score ogni 60s ────────────────────────────────────
             if (now_ts - last_score_ts) >= 60:
                 global current_ai_score
-                current_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                # Guard: RiskManager potrebbe non essere importato (BUG#2 fix 2026-04-23)
+                if RiskManager is not None:
+                    current_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                else:
+                    try:
+                        # Fallback: fetch diretto senza RiskManager
+                        import urllib.request as _ur, json as _json
+                        _req = _ur.Request(f"{VERCEL_URL}/api/db",
+                            data=_json.dumps({'action':'mt5_get','secret':MT5_SECRET}).encode(),
+                            headers={'Content-Type':'application/json'}, method='POST')
+                        with _ur.urlopen(_req, timeout=8, context=_SSL_CTX) as _r:
+                            _d = _json.loads(_r.read())
+                            current_ai_score = float((_d.get('bot_status') or {}).get('ai_score', current_ai_score))
+                    except Exception:
+                        pass  # mantieni valore precedente
                 last_ai_score = current_ai_score
                 last_score_ts = now_ts
                 if rm:
@@ -1457,7 +1479,7 @@ def run():
                                     hour_utc=bar_dt.hour,
                                     today_pnl=state.pnl_today,
                                     current_equity=acc_now['equity'] if acc_now else None,
-                                    weekly_dd_pct=0.0,
+                                    weekly_dd_pct=weekly_dd_pct,
                                     tp_atr_mult=sel_tp_mult,
                                     sl_atr_mult=sel_sl_mult,
                                     direction=direction,
@@ -1551,9 +1573,13 @@ def run():
                             fn2 = SIGNAL_FNS.get(sec_id)
                             if not fn2: continue
                             
-                            # Supporto per session hour se richiesto
-                            if sec_id == 'S10_ST_MACD_SESSION':
-                                sec_dir = fn2(I_h1, i_h1, hour)
+                            # Supporto per session hour e h1_trend se richiesto dalla strategia
+                            if sec_id == 'S16_GOLDEN_SQUEEZE':
+                                sec_dir = fn2(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], hour=hour)
+                            elif sec_id == 'S00_MFKK':
+                                sec_dir = fn2(I_h1, i_h1, hour=hour, tf='H1')
+                            elif sec_id == 'S05_MFKK_INTRADAY':
+                                sec_dir = fn2(I_h1, i_h1, ai_score=current_ai_score)
                             else:
                                 sec_dir = fn2(I_h1, i_h1)
                             if not sec_dir: continue
@@ -1586,7 +1612,7 @@ def run():
                                     dip=I_h1['dip'][i_h1], dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour,
                                     today_pnl=state.pnl_today,
                                     current_equity=acc_now['equity'] if acc_now else None,
-                                    weekly_dd_pct=0.0,
+                                    weekly_dd_pct=weekly_dd_pct,
                                     tp_atr_mult=sec_params.get('tp_mult', 1.5),
                                     sl_atr_mult=sec_params.get('sl_mult', 1.0),
                                     direction=sec_dir,
@@ -1704,7 +1730,7 @@ def run():
                                         dim=I_m15['dim'][idx], hour_utc=bar_dt_m15.hour,
                                         today_pnl=state.pnl_today,
                                         current_equity=acc_now['equity'] if acc_now else None,
-                                        weekly_dd_pct=0.0,
+                                        weekly_dd_pct=weekly_dd_pct,
                                         tp_atr_mult=params.get('tp_mult', 1.5),
                                         sl_atr_mult=params.get('sl_mult', 1.0),
                                         direction=direction,
@@ -1765,8 +1791,9 @@ def run():
                                 log.info(f"[M15] Regime: {current_regime} | Nessun segnale su {bar_dt_m15.strftime('%H:%M')}")
 
             # ── Controlla nuova candela M30 — tutte le strategie M30 del regime ──
-            # Gira anche quando il playbook usa M5 (es. VOLATILE) — M5 non ha un blocco dedicato
-            elif pb_entry.get('tf') != 'M15' and not current_is_extreme:
+            # IMPORTANTE: usa 'if' indipendente (NON elif) — deve girare in parallelo a M15.
+            # BUG#1 fix 2026-04-23: era 'elif' → bloccava M30 quando playbook usava M15.
+            if not current_is_extreme:
                 candles_m30 = get_candles_tf('M30', 450)
                 if candles_m30 and len(candles_m30) >= 50:
                     latest_m30 = candles_m30[-2]['t']
@@ -1805,6 +1832,10 @@ def run():
 
                                 if sname == 'S16_GOLDEN_SQUEEZE':
                                     direction = fn(I_m30, idx, h1_trend=curr_h1_trend, hour=bar_dt_m30.hour)
+                                elif sname == 'S00_MFKK':
+                                    direction = fn(I_m30, idx, hour=bar_dt_m30.hour, tf='M30')
+                                elif sname == 'S05_MFKK_INTRADAY':
+                                    direction = fn(I_m30, idx, ai_score=current_ai_score)
                                 else:
                                     direction = fn(I_m30, idx)
 
@@ -1849,7 +1880,7 @@ def run():
                                         dim=I_m30['dim'][idx], hour_utc=bar_dt_m30.hour,
                                         today_pnl=state.pnl_today,
                                         current_equity=acc_now['equity'] if acc_now else None,
-                                        weekly_dd_pct=0.0,
+                                        weekly_dd_pct=weekly_dd_pct,
                                         tp_atr_mult=params.get('tp_mult', 1.5),
                                         sl_atr_mult=params.get('sl_mult', 1.0),
                                         direction=direction,
@@ -1971,7 +2002,7 @@ def run():
                                     dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour,
                                     today_pnl=state.pnl_today,
                                     current_equity=acc_now['equity'] if acc_now else None,
-                                    weekly_dd_pct=0.0,
+                                    weekly_dd_pct=weekly_dd_pct,
                                     tp_atr_mult=params.get('tp_mult', 2.5),
                                     sl_atr_mult=params.get('sl_mult', 0.8),
                                     direction=direction,

@@ -65,8 +65,7 @@ lot = base_lot × tier.lot_multiplier × min(sqrt(equity / initial_equity), 3.0)
 | S09_MFKK_SCALPING | M5 | 20 min |
 | S16_GOLDEN_SQUEEZE | M30 | 90 min |
 | S10_OB_FVG_SCALP | M30 | 60 min |
-| S17_CONVERGENCE_SCALP | M15 | 30 min |
-| S17_CONVERGENCE_SCALP | M5 | 15 min |
+| S17_CONVERGENCE_SCALP | H4 | 240 min |
 
 ## Key Levels Agent (`key_levels.py`) — integrazione TP/SL
 
@@ -126,7 +125,7 @@ In pratica: un swing_high D1 (0.85 × 1.0 = **0.85**) supera un swing_high H1 (0
 | S16_GOLDEN_SQUEEZE | 3.0 | 1.2 |
 | S17_CONVERGENCE_SCALP | 2.8 | 1.1 |
 
-> I moltiplicatori tier (tp_mult, sl_mult) vengono applicati sopra i base ATR mult. Es.: AGGRESSIVE tier, S16: TP = ATR × 3.0 × 1.5 = ATR × 4.5.
+> `S17_CONVERGENCE_SCALP` usa H4 (PF 1.710), non più M15/M5. Durata attesa 240min.
 
 ## Esempio Log
 

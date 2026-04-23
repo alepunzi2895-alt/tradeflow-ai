@@ -76,11 +76,15 @@ Il `bot_status` pushato ogni 20s include ora:
 ```
 1. Utente clicca "ESEGUI SU MT5" in strategy.js
 2. POST /api/db action=mt5_command_push → salva in Turso DB
-3. mt5-bot.py loop → fetch_pending_command() → legge comando
+3. mt5-bot.py loop → fetch_pending_command() → legge comando ogni 5s
 4. Verifica scadenza < 60s (age_s > 60 → ignorato)
 5. place_order(direction, tp, sl, strategy) → mt5.order_send()
 6. sync_to_vercel() → aggiorna UI
 ```
+
+> **Latenza effettiva:** il polling è ogni 5s — un comando UI può richiedere fino a 10s
+> (5s polling + CHECK_SEC=10s loop). Finestra di validità totale: 60s dall'invio.
+> Se il bot non risponde entro 60s il comando scade silenziosamente.
 
 ## Retcode MT5 Comuni
 

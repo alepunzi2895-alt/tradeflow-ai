@@ -192,7 +192,9 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
 
 
 def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
-    """S16: ELITE CONFLUENCE V2 — OBV Momentum + Trend Alignment (ST/h1_trend) + EMA 233."""
+    """S16: ELITE CONFLUENCE V3 — OBV Momentum + Trend Alignment (ST/h1_trend) + EMA 233.
+    V3 fixes (2026-04-23): ADX>=25, DI agreement, 3-bar OBV slope, candle>=0.35×ATR.
+    """
     if i < 233: return None
     # Session filter: London + NY only (XAU/USD cleaner directional moves)
     if hour is not None and not (7 <= hour < 18): return None
@@ -205,9 +207,13 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
         st = st_arr[i] if st_arr else 0
     if st == 0: return None
 
-    # ADX >= 20 gate: only trade when market is actually trending
+    # ADX >= 25 gate (was 20): only trade in strong trends
     a = ind['adx'][i]
-    if a is None or a < 20: return None
+    if a is None or a < 25: return None
+
+    # DI directional agreement: trade direction must match DI dominance
+    dip_v = ind['dip'][i]; dim_v = ind['dim'][i]
+    if None in (dip_v, dim_v): return None
 
     obv_arr = ind.get('obv'); obv_ema_arr = ind.get('obv_ema')
     if obv_arr is None or obv_ema_arr is None: return None
@@ -215,18 +221,24 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
     c = ind['C'][i]; cp = ind['C'][i - 1]; e233 = ind['e233'][i]
     if None in (obv_val, obv_ema, e233): return None
 
-    # Candle size filter: require meaningful bar (not a Doji)
+    # Candle size filter: require meaningful bar (0.35×ATR, was 0.20 → too many Doji entries)
     atr_arr = ind.get('atr')
     atr_val = atr_arr[i] if atr_arr else None
     candle = abs(c - cp)
-    big_enough = (atr_val is None) or (candle >= 0.20 * atr_val)
+    big_enough = (atr_val is None) or (candle >= 0.35 * atr_val)
+
+    # OBV 3-bar slope: sustained volume momentum (was 1-bar → too noisy)
+    obv_rising_3 = i >= 3 and obv_arr[i] > obv_arr[i - 1] > obv_arr[i - 2]
+    obv_falling_3 = i >= 3 and obv_arr[i] < obv_arr[i - 1] < obv_arr[i - 2]
 
     if st == -1:  # BULLISH
-        obv_slope = obv_val > obv_arr[i - 1]  # OBV still rising (not topping)
-        if c > e233 and obv_val > obv_ema and obv_slope and c > cp and big_enough: return 'buy'
+        if dip_v <= dim_v: return None  # DI+ must dominate for BUY
+        if c > e233 and obv_val > obv_ema and obv_rising_3 and c > cp and big_enough:
+            return 'buy'
     elif st == 1:  # BEARISH
-        obv_slope = obv_val < obv_arr[i - 1]  # OBV still falling (not bottoming)
-        if c < e233 and obv_val < obv_ema and obv_slope and c < cp and big_enough: return 'sell'
+        if dim_v <= dip_v: return None  # DI- must dominate for SELL
+        if c < e233 and obv_val < obv_ema and obv_falling_3 and c < cp and big_enough:
+            return 'sell'
     return None
 
 

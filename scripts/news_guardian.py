@@ -64,18 +64,41 @@ except ImportError:
 
 
 # ── Date parsing ──────────────────────────────────────────────────────────────
-def _parse_dt(date_str: str, time_str: str) -> datetime.datetime | None:
-    """Parsa data e ora da vari formati ForexFactory."""
-    raw = (date_str.strip() + ' ' + time_str.strip()).strip()
-    formats = [
-        '%m-%d-%Y %I:%M%p',    # 04-10-2025 08:30am
-        '%Y-%m-%dT%H:%M:%S',   # ISO 8601
+def _parse_dt(date_str: str, time_str: str = '') -> datetime.datetime | None:
+    """
+    Parsa data/ora da ForexFactory, restituisce datetime UTC naive.
+    Formato nuovo (2025+): date='2026-04-21T08:30:00-04:00' (ISO con timezone).
+    Formato vecchio: date='04-10-2025', time='08:30am'.
+    """
+    import re as _re
+    clean = date_str.strip()
+
+    # Nuovo formato FF: ISO con offset timezone (+HH:MM / -HH:MM)
+    tz_m = _re.match(r'^(.+?)([+-])(\d{2}):(\d{2})$', clean)
+    if tz_m:
+        try:
+            dt_local = datetime.datetime.fromisoformat(tz_m.group(1))
+            offset = datetime.timedelta(hours=int(tz_m.group(3)), minutes=int(tz_m.group(4)))
+            return dt_local - offset if tz_m.group(2) == '+' else dt_local + offset
+        except ValueError:
+            pass
+
+    # ISO senza timezone
+    try:
+        return datetime.datetime.fromisoformat(clean)
+    except ValueError:
+        pass
+
+    # Vecchio formato: date + time separati
+    raw = (clean + ' ' + time_str.strip()).strip()
+    for fmt in [
+        '%m-%d-%Y %I:%M%p',
+        '%Y-%m-%dT%H:%M:%S',
         '%Y-%m-%d %H:%M:%S',
         '%Y-%m-%d %H:%M',
-        '%b %d, %Y %I:%M%p',   # Apr 10, 2025 8:30am
-        '%B %d, %Y %I:%M%p',   # April 10, 2025 8:30am
-    ]
-    for fmt in formats:
+        '%b %d, %Y %I:%M%p',
+        '%B %d, %Y %I:%M%p',
+    ]:
         try:
             return datetime.datetime.strptime(raw, fmt)
         except ValueError:

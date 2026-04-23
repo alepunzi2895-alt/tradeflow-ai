@@ -18,12 +18,12 @@
 
 | Strategia | Trade | WR% | P&L contrib | TF ottimale | Note |
 |---|---|---|---|---|---|
-| S00_MFKK | 1493 | 40.9% | +$1,636 | M30 | Sell thr 72 + DI spread gate |
-| S16_GOLDEN_SQUEEZE | 900 | 31.7% | +$1,136 | M30 | ADX>=20 + session 7-18 + OBV slope |
-| S09_MFKK_SCALPING | 355 | 36.1% | +$887 | **M30** | Invariato — FVG no ADX gate |
-| S05_MFKK_INTRADAY | 382 | 39.3% | +$1,021 | **H1** | StochRSI K>D aggiunto |
-| S10_OB_FVG_SCALP | 113 | 46.9% | +$1,082 | M30 | Invariato — regime routing migliorato |
-| S17_CONVERGENCE_SCALP | 142 | 26.8% | +$32 | **H4** | ADX>=18 + BB%B 0.55/0.45 |
+| S00_MFKK | 1680 | 42.1% | +$2,496 | M30 | TP/SL 2.5:1.0 |
+| S16_GOLDEN_SQUEEZE | 1006 | 29.0% | -$1,144 | M30 | V3 rescaled: ADX>=25 + DI agree|
+| S09_MFKK_SCALPING | 211 | 29.4% | -$31.6 | **M30** | |
+| S05_MFKK_INTRADAY | 485 | 31.3% | -$1,292 | **H1** | |
+| S10_OB_FVG_SCALP | 91 | 33.0% | -$282.6 | M30 | |
+| S17_CONVERGENCE_SCALP | 74 | 23.0% | -$119.2 | **H4** | |
 
 ### Sistema adattivo per TF (senza RM — 2026-04-19)
 
@@ -39,23 +39,23 @@
 
 | Strategia | TF Ottimale | PF sistema | WR | Note |
 |---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | M30 | ~1.27 | 31.7% | ADX>=20 + session filter riduce trade, PF migliore |
-| S00_MFKK | M30 (fallback) | ~1.10 | 40.9% | Sell thr 72 + DI spread: WR migliorata +2.6pp |
-| S09_MFKK_SCALPING | **M30** | **1.637** | 36.1% | FVG invariato — no filtri aggiuntivi |
-| S10_OB_FVG_SCALP | M30 | 1.796 | 46.9% | — |
-| S05_MFKK_INTRADAY | **H1** | ~1.20 | 39.3% | StochRSI K>D aggiunto |
-| S17_CONVERGENCE_SCALP | **H4** | **~1.71** | **41.5%** | ADX>=18 + BB%B 0.55/0.45 → H4 ottimale |
+| S16_GOLDEN_SQUEEZE | M30 | 0.90 | 29.0% | V3 rescaled, downgraded to secondary |
+| S00_MFKK | M30 (fallback) | 1.21 | 42.1% | Best performer in adaptive engine |
+| S09_MFKK_SCALPING | **M30** | 0.98 | 29.4% | FVG invariato — no filtri aggiuntivi |
+| S10_OB_FVG_SCALP | M30 | 0.80 | 33.0% | — |
+| S05_MFKK_INTRADAY | **H1** | 0.80 | 31.3% | — |
+| S17_CONVERGENCE_SCALP | **H4** | 0.77 | 23.0% | — |
 
 ## Strategie Attive nel Bot
 
 | ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema | WR |
 |---|---|---|---|---|---|---|---|
-| `S00_MFKK` | MFKK Score | ATR×2.0 | ATR×1.0 | TREND/WEAK (fallback) | M30 | 1.03 | 38.3% |
-| `S05_MFKK_INTRADAY` | MFKK Intraday V3 | ATR×2.0 | ATR×1.0 | TREND_UP, TREND_DOWN | **H1** | 1.36 | 41.5% |
-| `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 1.64 | 37.8% |
-| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 1.80 | 42.5% |
-| `S16_GOLDEN_SQUEEZE` | Elite Golden Squeeze | ATR×3.0 | ATR×1.2 | TREND/WEAK | M30 | 1.29 | 31.7% |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.5 | ATR×0.8 | VOLATILE/TREND | **H4** | **1.71** | **41.5%** |
+| `S00_MFKK` | MFKK Core V2 | ATR×2.5 | ATR×1.0 | TREND/WEAK/RANGE | M30 | 1.21 | 42.1% |
+| `S05_MFKK_INTRADAY` | MFKK Intraday V3 | ATR×2.5 | ATR×1.0 | TREND_UP, TREND_DOWN | **H1** | 0.80 | 31.3% |
+| `S09_MFKK_SCALPING` | MFKK Scalping V2 | ATR×3.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 0.98 | 29.4% |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp V2 | ATR×2.5 | ATR×1.2 | RANGING, WEAK | M30 | 0.80 | 33.0% |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V3 | ATR×3.5 | ATR×1.5 | TREND | M30 | 0.90 | 29.0% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×2.8 | ATR×1.0 | VOLATILE | **H4** | 0.77 | 23.0% |
 
 ## Strategy Selector Agent (`strategy_selector.py`)
 
@@ -99,12 +99,12 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 
 | Strategia | WR baseline | PF baseline |
 |---|---|---|
-| S16_GOLDEN_SQUEEZE | 31.7% | 1.285 |
-| S05_MFKK_INTRADAY | 41.5% | 1.361 |
-| S09_MFKK_SCALPING | 37.8% | 1.637 |
-| S10_OB_FVG_SCALP | 42.5% | 1.796 |
-| S00_MFKK | 38.3% | 1.033 |
-| S17_CONVERGENCE_SCALP | **41.5%** | **1.710** |  ← H4 ottimale (non più M30)
+| S16_GOLDEN_SQUEEZE | 29.0% | 0.904 |
+| S05_MFKK_INTRADAY | 31.3% | 0.798 |
+| S09_MFKK_SCALPING | 29.4% | 0.978 |
+| S10_OB_FVG_SCALP | 33.0% | 0.800 |
+| S00_MFKK | 42.1% | 1.214 |
+| S17_CONVERGENCE_SCALP | 23.0% | 0.772 |  ← H4 ottimale (non più M30)
 
 > Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.
 > Cache trade: `data/performance_cache.json` (max 500 trade). Overrides: `data/strategy_overrides.json`.

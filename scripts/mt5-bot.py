@@ -93,7 +93,8 @@ MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)
 MAX_OPEN_ORDERS = 3          # max ordini aperti contemporaneamente
-SL_COOLDOWN_H   = 1          # ore di pausa dopo 2 SL consecutivi
+SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
+STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 
 # ── IN-MEMORY ORDER TRACKING (resiliente a race condition MT5) ────────────────
@@ -118,24 +119,24 @@ LOG_FILE     = "mt5-bot.log"
 # tp_usd / sl_usd qui sono distanze in punti prezzo (non dollari assoluti).
 # Es. ATR≈9.5 pt × tp_mult=2.0 → tp_use=19.0 → price ± 19.0 → ~$19 per 0.01 lot.
 STRATEGY_PARAMS = {
-    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.0, 'sl_mult': 1.0},
+    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 2.5, 'sl_mult': 1.0},
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 3.0, 'sl_mult': 1.0},
     'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 2.5, 'sl_mult': 1.2},
-    'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V2', 'tp_mult': 3.0, 'sl_mult': 1.2, 'be_mult': 1.1},
-    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 2.5, 'sl_mult': 0.8},
-    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 2.0, 'sl_mult': 1.0},
+    'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 1.5, 'be_mult': 1.1},
+    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 2.8, 'sl_mult': 1.0},
+    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 2.5, 'sl_mult': 1.0},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
 PLAYBOOK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'regime_playbook.json')
 FALLBACK_PLAYBOOK = {
-    'TREND_UP':   {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
-    'TREND_DOWN': {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
+    'TREND_UP':   {'strategy': 'S05_MFKK_INTRADAY',   'tf': 'H1'},
+    'TREND_DOWN': {'strategy': 'S05_MFKK_INTRADAY',   'tf': 'H1'},
     'WEAK_UP':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
     'WEAK_DOWN':  {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
     'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
     'RANGE':      {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
-    'UNKNOWN':    {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'M30'},
+    'UNKNOWN':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
 }
 PLAYBOOK = FALLBACK_PLAYBOOK  # verrà sovrascritta da load_playbook()
 
@@ -532,13 +533,13 @@ SESSION_FILTER = {
 # Priorities based on adaptive backtest: S10 PF 1.79 > S16 PF 1.29 in WEAK; S10 2nd in TREND
 # S17 only on H4 (PF 1.71); S09 only in RANGE/VOLATILE (PF 1.65 M30)
 REGIME_MULTI_STRATEGIES = {
-    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S05_MFKK_INTRADAY','H1',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_UP':   [('S05_MFKK_INTRADAY','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_DOWN': [('S05_MFKK_INTRADAY','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'UNKNOWN':    [('S10_OB_FVG_SCALP','M30',None), ('S16_GOLDEN_SQUEEZE','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'UNKNOWN':    [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
 }
 
 def get_signal(I, i, hour, regime):
@@ -557,6 +558,29 @@ def get_signal(I, i, hour, regime):
     else:
         direction = fn(I, i)
     return (sname, direction) if direction else (None, None)
+
+def quality_gate(strategy_id, direction, I, i):
+    """Return True if trade passes additional quality checks."""
+    atr_v = I['atr'][i]
+    atr_avg = I['atr_avg'][i]
+    
+    # 1. No trade during ATR spikes (news/chaos)
+    if atr_v and atr_avg and atr_v > 2.0 * atr_avg:
+        return False
+    
+    # 2. Require minimum spread DI for trending strategies
+    if strategy_id in ('S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'):
+        dip, dim = I['dip'][i], I['dim'][i]
+        if dip is not None and dim is not None and abs(dip - dim) < 8:
+            return False
+            
+    # 3. RSI divergence protection
+    rsi_v = I['rsi'][i]
+    if rsi_v:
+        if direction == 'buy' and rsi_v > 75: return False
+        if direction == 'sell' and rsi_v < 25: return False
+        
+    return True
 
 # ── STATO GIORNALIERO ─────────────────────────────────────────────────────────
 class DailyState:
@@ -1021,8 +1045,10 @@ def run():
     cached_candles       = None  # cache candele (aggiornata ogni 60s)
     cached_I_h1          = None  # cache indicatori (ricalcolati solo su nuova barra)
     _tracked_positions   = {}    # {ticket: position_id} per rilevare chiusure istantanee
-    consecutive_sl_count = 0    # SL consecutivi: azzerato a ogni TP/profit
-    sl_cooldown_until    = None  # datetime UTC fino a cui nuovi ordini sono bloccati
+    consecutive_sl_count = 0    # SL consecutivi globali: azzerato a ogni TP/profit
+    sl_cooldown_until    = None  # datetime UTC fino a cui nuovi ordini sono bloccati globale
+    _strategy_sl_count   = {}    # {strategy_name: consecutive_sl_count}
+    sl_cooldowns_until   = {}    # {strategy_name: datetime UTC} pausa specifica per strategia
     weekly_dd_pct        = 0.0   # drawdown settimanale reale (aggiornato ogni sync)
 
     # Inizializza RiskManager (legacy, mantiene compatibilità)
@@ -1182,17 +1208,27 @@ def run():
                                 f"| {strategy_closed} | net_profit={net_profit:+.2f}"
                             )
                             closed_this_cycle.append(ticket)
-                            # Aggiorna contatore SL consecutivi
+                            # Aggiorna contatore SL consecutivi globale e per strategia
                             if net_profit < 0:
                                 consecutive_sl_count += 1
+                                if strategy_closed != 'N/A':
+                                    s_id = strategy_closed
+                                    _strategy_sl_count[s_id] = _strategy_sl_count.get(s_id, 0) + 1
+                                    if _strategy_sl_count[s_id] >= 2:
+                                        sl_cooldowns_until[s_id] = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=STRATEGY_SL_COOLDOWN_H)
+                                        log.warning(f"🛑 COOLDOWN ATTIVO ({s_id}): {_strategy_sl_count[s_id]} SL consecutivi → pausa {STRATEGY_SL_COOLDOWN_H}h (fino a {sl_cooldowns_until[s_id].strftime('%H:%M')} UTC)")
+                                
                                 if consecutive_sl_count >= 2:
                                     sl_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=SL_COOLDOWN_H)
                                     log.warning(
-                                        f"🛑 COOLDOWN ATTIVO: {consecutive_sl_count} SL consecutivi "
+                                        f"🛑 COOLDOWN GLOBALE ATTIVO: {consecutive_sl_count} SL consecutivi "
                                         f"→ pausa fino a {sl_cooldown_until.strftime('%H:%M')} UTC"
                                     )
                             else:
-                                consecutive_sl_count = 0  # profit → reset streak
+                                consecutive_sl_count = 0  # profit → reset streak globale
+                                if strategy_closed != 'N/A':
+                                    _strategy_sl_count[strategy_closed] = 0 # reset streak strategia
+                                    
                             # Rimuovi dalla tracking in-memory
                             if strategy_closed != 'N/A':
                                 _strategy_order_tickets.pop(strategy_closed, None)
@@ -1455,9 +1491,14 @@ def run():
                             log.warning(f"⛔ SEGNALE H1 SOSPESO (News) | {strategy_name} | {current_news_risk['reason']}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
                             log.info(f"⏸ H1 skip {strategy_name} — max ordini aperti ({MAX_OPEN_ORDERS}) raggiunto")
+                        elif sl_cooldowns_until.get(strategy_name) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[strategy_name]:
+                            remaining = int((sl_cooldowns_until[strategy_name] - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                            log.warning(f"🛑 H1 skip {strategy_name} — cooldown SL strategico ({remaining}min rimanenti)")
                         elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
                             remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
-                            log.warning(f"🛑 H1 skip {strategy_name} — cooldown SL attivo ({remaining}min rimanenti)")
+                            log.warning(f"🛑 H1 skip {strategy_name} — cooldown SL globale ({remaining}min rimanenti)")
+                        elif not quality_gate(strategy_name, direction, I_h1, i_h1):
+                            log.info(f"📉 H1 skip {strategy_name} — QUALITY GATE FAILED (no spread/extreme RSI/news)")
                         else:
                             atr_i = I_h1['atr'][i_h1] or 10.0
                             base_tp = round(atr_i * sel_tp_mult, 2)
@@ -1568,6 +1609,7 @@ def run():
                             if sec_tf != 'H1': continue
                             if sec_id == strategy_name: continue   # già provata come primaria
                             if count_open_positions() >= MAX_OPEN_ORDERS: break
+                            if sl_cooldowns_until.get(sec_id) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[sec_id]: continue
                             if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
                             if MAX_TRADES > 0 and state.trades_today >= MAX_TRADES: break
                             fn2 = SIGNAL_FNS.get(sec_id)
@@ -1583,6 +1625,7 @@ def run():
                             else:
                                 sec_dir = fn2(I_h1, i_h1)
                             if not sec_dir: continue
+                            if not quality_gate(sec_id, sec_dir, I_h1, i_h1): continue
                             if sec_dir_filter and sec_dir != sec_dir_filter: continue
                             if has_open_position_for_strategy(sec_id): continue
                             if has_position_in_direction(sec_dir): continue
@@ -1676,9 +1719,12 @@ def run():
                             log.debug(f"[M15] Trade non permesso: {reason}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
                             log.debug(f"[M15] Max posizioni aperte ({MAX_OPEN_ORDERS})")
+                        elif sl_cooldowns_until.get(pb_entry['strategy']) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[pb_entry['strategy']]:
+                            remaining = int((sl_cooldowns_until[pb_entry['strategy']] - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
+                            log.warning(f"🛑 M15 skip — cooldown SL strategico ({remaining}min rimanenti)")
                         elif sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
                             remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
-                            log.warning(f"🛑 M15 skip — cooldown SL attivo ({remaining}min rimanenti)")
+                            log.warning(f"🛑 M15 skip — cooldown SL globale ({remaining}min rimanenti)")
                         else:
                             I_m15 = compute_indicators(candles_m15)
                             idx = len(candles_m15) - 2
@@ -1703,6 +1749,8 @@ def run():
                                 log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
                             elif direction and current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE M15 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
+                            elif direction and not quality_gate(sname, direction, I_m15, idx):
+                                log.info(f"📉 M15 skip {sname} — QUALITY GATE FAILED")
                             elif direction:
                                 # ── CALCOLO TP/SL DI STRATEGIA (M15) ────────────
                                 params = STRATEGY_PARAMS.get(sname, {'tp_usd': 15.0, 'sl_usd': 10.0, 'label': sname})

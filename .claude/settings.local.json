@@ -37,7 +37,18 @@
       "Bash(sed -i \"s|'xauusd_h1_730d.json'|'data/xauusd_h1_730d.json'|g\" scripts/optimize_rm_tp_sl_compound.py)",
       "Bash(find C:\\\\Users\\\\f45038c\\\\Downloads\\\\tradeflow-ai\\\\tradeflow-ai *)",
       "Bash(awk '{print $5, $9}')",
-      "Bash(sort -k2)"
+      "Bash(sort -k2)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(wait)",
+      "Bash(python3 *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git commit *)",
+      "Bash(cmd.exe *)",
+      "Bash(powershell.exe *)",
+      "Bash(del *)",
+      "Bash(ls data/*.json)",
+      "Bash(python -X utf8 -c ' *)"
     ]
   }
 }

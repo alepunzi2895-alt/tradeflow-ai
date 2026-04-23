@@ -1,46 +1,46 @@
 {
-  "generated_at": "2026-04-16T18:44:42Z",
+  "generated_at": "2026-04-23T08:45:00Z",
   "tp_mult": 1.5,
   "sl_mult": 1.0,
   "playbook": {
     "TREND_UP": {
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "tf": "M30",
-      "n": 1467,
-      "wr": 53.0,
-      "pnl": 2355.2,
-      "pf": 1.45,
-      "dd": 165.0,
+      "strategy": "S05_MFKK_INTRADAY",
+      "tf": "H1",
+      "n": 485,
+      "wr": 31.3,
+      "pnl": 0.0,
+      "pf": 0.798,
+      "dd": 2009.3,
       "score": 320.0
     },
     "TREND_DOWN": {
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "tf": "M15",
-      "n": 1467,
-      "wr": 53.0,
-      "pnl": 2355.2,
-      "pf": 1.45,
-      "dd": 165.0,
+      "strategy": "S05_MFKK_INTRADAY",
+      "tf": "H1",
+      "n": 485,
+      "wr": 31.3,
+      "pnl": 0.0,
+      "pf": 0.798,
+      "dd": 2009.3,
       "score": 320.0
     },
     "WEAK_UP": {
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "tf": "M15",
-      "n": 1467,
-      "wr": 53.0,
-      "pnl": 2355.2,
-      "pf": 1.45,
-      "dd": 165.0,
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M30",
+      "n": 1402,
+      "wr": 41.3,
+      "pnl": 3248.0,
+      "pf": 1.43,
+      "dd": 340.0,
       "score": 290.0
     },
     "WEAK_DOWN": {
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "tf": "M15",
-      "n": 1467,
-      "wr": 53.0,
-      "pnl": 2355.2,
-      "pf": 1.45,
-      "dd": 165.0,
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M30",
+      "n": 1402,
+      "wr": 41.3,
+      "pnl": 3248.0,
+      "pf": 1.43,
+      "dd": 340.0,
       "score": 290.0
     },
     "RANGE": {
@@ -54,6 +54,16 @@
       "score": 280.0
     },
     "VOLATILE": {
+      "strategy": "S09_MFKK_SCALPING",
+      "tf": "M30",
+      "n": 267,
+      "wr": 37.8,
+      "pnl": 456.0,
+      "pf": 1.637,
+      "dd": 400.0,
+      "score": 250.0
+    },
+    "UNKNOWN": {
       "strategy": "S10_OB_FVG_SCALP",
       "tf": "M30",
       "n": 1402,
@@ -61,16 +71,6 @@
       "pnl": 3248.0,
       "pf": 1.43,
       "dd": 340.0,
-      "score": 250.0
-    },
-    "UNKNOWN": {
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "tf": "M15",
-      "n": 1467,
-      "wr": 53.0,
-      "pnl": 2355.2,
-      "pf": 1.45,
-      "dd": 165.0,
       "score": 100.0
     }
   },

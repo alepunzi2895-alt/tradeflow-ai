@@ -71,14 +71,13 @@ RISK_TIERS = {
     },
 }
 
-# Strategy base ATR multipliers (fallback if not provided by strategy selector)
 STRATEGY_ATR_PARAMS = {
-    "S05_MFKK_INTRADAY":    {"tp_atr": 2.0, "sl_atr": 1.0},
+    "S05_MFKK_INTRADAY":    {"tp_atr": 2.5, "sl_atr": 1.0},
     "S09_MFKK_SCALPING":    {"tp_atr": 3.0, "sl_atr": 1.0},
     "S10_OB_FVG_SCALP":     {"tp_atr": 2.5, "sl_atr": 1.2},
-    "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.0, "sl_atr": 1.2},
-    "S17_CONVERGENCE_SCALP":{"tp_atr": 2.8, "sl_atr": 1.1},
-    "S00_MFKK":             {"tp_atr": 2.0, "sl_atr": 1.0},
+    "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 1.5},
+    "S17_CONVERGENCE_SCALP":{"tp_atr": 2.8, "sl_atr": 1.0},
+    "S00_MFKK":             {"tp_atr": 2.5, "sl_atr": 1.0},
 }
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection

@@ -8,6 +8,8 @@
 | ⚠ Open | `api/webhook.js` | `X-TV-Secret` check opzionale — attivare `TV_WEBHOOK_SECRET` in env Vercel per protezione completa |
 | ⚠ Open | `public/app.js` | `onclick` button bindings (~lines 160-172) falliscono silenziosamente se elemento assente; usare `wire()` pattern |
 | ⚠ Open | `api/db.js` | `createClient()` Turso senza timeout esplicito — dipende da kill Vercel a 10s. Low risk |
+| ✅ Fixed 2026-04-28 | `scripts/mt5-bot.py` | Race condition `has_position_in_direction()`: MT5 non registrava posizione prima del check successivo → doppio SELL aperto simultaneamente. Fix: `_strategy_order_tickets` ora salva `(ticket, direction)`, check in-memory first. `MAX_OPEN_ORDERS` 3→2. |
+| ✅ Fixed 2026-04-28 | `scripts/news_guardian.py` | **TypeError silenzioso**: `now_utc` tz-aware - `evt_dt` tz-naive → TypeError catturato dall'outer try-except → News Guardian sempre `paused=False` anche con news HIGH USD attive. Fix: `now_utc.replace(tzinfo=None)` in `check_news_risk()`. Polling ridotto 900s→60s. |
 
 ## Performance Bottlenecks (mt5-bot.py) — Risolti
 

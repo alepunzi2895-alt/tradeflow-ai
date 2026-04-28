@@ -41,6 +41,9 @@ composite = strategy_confidence × 0.50
 | Weekly drawdown > 5% | Halt trading |
 | 5 consecutive losses | Halt trading |
 
+> **Limite posizioni**: `MAX_OPEN_ORDERS = 2` (ridotto da 3, 2026-04-28). Max 2 posizioni aperte contemporaneamente, mai più di 1 per direzione (buy o sell).
+> **Race condition fix**: `has_position_in_direction()` controlla `_strategy_order_tickets` in-memory prima di MT5 per essere immune alla latenza post-`place_order()` (~500ms).
+
 ## Compounding
 
 ```python
@@ -168,15 +171,17 @@ Monitora il calendario economico ForexFactory e regola rischio/pausa automaticam
 ### Integrazione nel bot
 
 ```
-ogni 15s nel loop:
+ogni 60s nel loop:  ← (era 15min — bug timezone fix 2026-04-28)
   news_risk = news_guardian.check_news_risk(now_utc)
-  → se news_risk['paused'] → skip place_order su H1/M15/M30
+  → se news_risk['paused'] → skip place_order su H1/M15/M30/H4
   → se news_risk['risk_mult'] < 1.0 → lot_use *= risk_mult
 
 startup:
   news_guardian.refresh(force=True)
   → log eventi HIGH USD/XAU prossime 12h
 ```
+
+> **Bug critico risolto 2026-04-28**: `check_news_risk(now_utc)` riceveva `now_utc` tz-aware (`datetime.now(UTC)`) ma i datetime in cache erano tz-naive → `TypeError` silenzioso nell'outer try-except → guardian sempre `paused=False`. Fix: `now_utc.replace(tzinfo=None)` all'inizio di `check_news_risk()`. Polling ridotto 900s→60s per eliminare blind spot.
 
 ### Uso standalone
 

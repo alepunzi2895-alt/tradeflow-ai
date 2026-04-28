@@ -235,6 +235,9 @@ class NewsGuardian:
         """
         if now_utc is None:
             now_utc = datetime.datetime.utcnow()
+        # Normalizza a naive UTC: il cache salva datetime naive, la sottrazione deve essere omogenea
+        if now_utc.tzinfo is not None:
+            now_utc = now_utc.replace(tzinfo=None)
 
         # Auto-refresh silenzioso
         self.refresh()

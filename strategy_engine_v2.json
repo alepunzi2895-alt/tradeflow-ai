@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-23T20:12:41.252005",
+  "generated_at": "2026-04-28T13:24:38.446035",
   "n_candles": 23569,
   "indicators": [
     "EMA20",
@@ -24,14 +24,14 @@
   "strategies": {
     "S05_MFKK_INTRADAY": {
       "stats": {
-        "n": 2120,
-        "wr": 14.2,
-        "pnl": -7272.0,
-        "pf": 0.442,
-        "dd": 7309.0,
-        "avg_day": -15.51,
-        "tr_day": 4.52,
-        "months": "0/25"
+        "n": 26,
+        "wr": 0.0,
+        "pnl": -362.2,
+        "pf": 0.0,
+        "dd": 362.2,
+        "avg_day": -14.49,
+        "tr_day": 1.04,
+        "months": "0/16"
       },
       "regime_fit": [
         "TREND_UP",
@@ -42,14 +42,14 @@
     },
     "S09_MFKK_SCALPING": {
       "stats": {
-        "n": 704,
-        "wr": 3.0,
-        "pnl": -4190.0,
-        "pf": 0.136,
-        "dd": 4190.0,
-        "avg_day": -15.81,
-        "tr_day": 2.66,
-        "months": "0/25"
+        "n": 17,
+        "wr": 5.9,
+        "pnl": -180.9,
+        "pf": 0.102,
+        "dd": 196.2,
+        "avg_day": -11.31,
+        "tr_day": 1.06,
+        "months": "1/11"
       },
       "regime_fit": [
         "VOLATILE",
@@ -60,14 +60,14 @@
     },
     "S10_OB_FVG_SCALP": {
       "stats": {
-        "n": 142,
-        "wr": 16.2,
-        "pnl": -669.4,
-        "pf": 0.589,
-        "dd": 778.7,
-        "avg_day": -11.95,
-        "tr_day": 2.54,
-        "months": "6/20"
+        "n": 5,
+        "wr": 0.0,
+        "pnl": -101.5,
+        "pf": 0.0,
+        "dd": 101.5,
+        "avg_day": -25.38,
+        "tr_day": 1.25,
+        "months": "0/3"
       },
       "regime_fit": [
         "RANGE",
@@ -78,14 +78,14 @@
     },
     "S16_GOLDEN_SQUEEZE": {
       "stats": {
-        "n": 545,
-        "wr": 22.2,
-        "pnl": -807.7,
-        "pf": 0.862,
-        "dd": 1520.3,
-        "avg_day": -3.45,
-        "tr_day": 2.33,
-        "months": "8/25"
+        "n": 352,
+        "wr": 22.4,
+        "pnl": -965.0,
+        "pf": 0.68,
+        "dd": 1099.4,
+        "avg_day": -5.81,
+        "tr_day": 2.12,
+        "months": "9/25"
       },
       "regime_fit": [
         "TREND_UP",
@@ -97,11 +97,11 @@
     "S17_CONVERGENCE_SCALP": {
       "stats": {
         "n": 1048,
-        "wr": 2.8,
-        "pnl": -5678.9,
-        "pf": 0.09,
-        "dd": 5678.9,
-        "avg_day": -13.49,
+        "wr": 0.7,
+        "pnl": -7925.0,
+        "pf": 0.031,
+        "dd": 7925.0,
+        "avg_day": -18.82,
         "tr_day": 2.49,
         "months": "0/25"
       },
@@ -116,14 +116,14 @@
     },
     "S00_MFKK": {
       "stats": {
-        "n": 2509,
-        "wr": 13.9,
-        "pnl": -9548.9,
-        "pf": 0.433,
-        "dd": 9574.7,
-        "avg_day": -23.93,
-        "tr_day": 6.29,
-        "months": "1/25"
+        "n": 1346,
+        "wr": 0.9,
+        "pnl": -10754.2,
+        "pf": 0.041,
+        "dd": 10754.2,
+        "avg_day": -35.38,
+        "tr_day": 4.43,
+        "months": "0/25"
       },
       "regime_fit": [
         "TREND_UP",
@@ -139,49 +139,49 @@
     {
       "rank": 1,
       "name": "S16_GOLDEN_SQUEEZE",
-      "pf": 0.862,
-      "wr": 22.2,
-      "n": 545,
+      "pf": 0.68,
+      "wr": 22.4,
+      "n": 352,
       "use": false
     },
     {
       "rank": 2,
-      "name": "S10_OB_FVG_SCALP",
-      "pf": 0.589,
-      "wr": 16.2,
-      "n": 142,
+      "name": "S09_MFKK_SCALPING",
+      "pf": 0.102,
+      "wr": 5.9,
+      "n": 17,
       "use": false
     },
     {
       "rank": 3,
-      "name": "S05_MFKK_INTRADAY",
-      "pf": 0.442,
-      "wr": 14.2,
-      "n": 2120,
+      "name": "S00_MFKK",
+      "pf": 0.041,
+      "wr": 0.9,
+      "n": 1346,
       "use": false
     },
     {
       "rank": 4,
-      "name": "S00_MFKK",
-      "pf": 0.433,
-      "wr": 13.9,
-      "n": 2509,
+      "name": "S17_CONVERGENCE_SCALP",
+      "pf": 0.031,
+      "wr": 0.7,
+      "n": 1048,
       "use": false
     },
     {
       "rank": 5,
-      "name": "S09_MFKK_SCALPING",
-      "pf": 0.136,
-      "wr": 3.0,
-      "n": 704,
+      "name": "S05_MFKK_INTRADAY",
+      "pf": 0.0,
+      "wr": 0.0,
+      "n": 26,
       "use": false
     },
     {
       "rank": 6,
-      "name": "S17_CONVERGENCE_SCALP",
-      "pf": 0.09,
-      "wr": 2.8,
-      "n": 1048,
+      "name": "S10_OB_FVG_SCALP",
+      "pf": 0.0,
+      "wr": 0.0,
+      "n": 5,
       "use": false
     }
   ],
@@ -228,153 +228,240 @@
   },
   "adaptive": {
     "stats": {
-      "n": 3215,
-      "wr": 38.8,
-      "pnl": 5102.6,
-      "pf": 1.222,
-      "dd": 676.7,
-      "avg_day": 10.7,
-      "tr_day": 6.74,
-      "months": "17/25"
-    },
-    "by_strategy": {
-      "S17_CONVERGENCE_SCALP": {
-        "n": 145,
-        "wr": 26.2,
-        "pnl": 17.6,
-        "pf": 1.028,
-        "dd": 140.7,
-        "avg_day": 0.14,
-        "tr_day": 1.12,
-        "months": "13/25"
-      },
-      "S09_MFKK_SCALPING": {
-        "n": 364,
-        "wr": 35.7,
-        "pnl": 882.4,
-        "pf": 1.53,
-        "dd": 151.2,
-        "avg_day": 5.35,
-        "tr_day": 2.21,
-        "months": "16/25"
-      },
-      "S16_GOLDEN_SQUEEZE": {
-        "n": 344,
-        "wr": 39.5,
-        "pnl": 748.3,
-        "pf": 1.197,
-        "dd": 417.8,
-        "avg_day": 3.56,
-        "tr_day": 1.64,
-        "months": "14/25"
-      },
-      "S00_MFKK": {
-        "n": 1786,
-        "wr": 40.1,
-        "pnl": 1480.0,
-        "pf": 1.115,
-        "dd": 620.0,
-        "avg_day": 3.79,
-        "tr_day": 4.57,
-        "months": "17/25"
-      },
-      "S05_MFKK_INTRADAY": {
-        "n": 461,
-        "wr": 38.0,
-        "pnl": 950.5,
-        "pf": 1.348,
-        "dd": 152.1,
-        "avg_day": 4.4,
-        "tr_day": 2.13,
-        "months": "14/25"
-      },
-      "S10_OB_FVG_SCALP": {
-        "n": 115,
-        "wr": 47.0,
-        "pnl": 1023.7,
-        "pf": 1.79,
-        "dd": 413.5,
-        "avg_day": 20.47,
-        "tr_day": 2.3,
-        "months": "10/19"
-      }
-    }
-  },
-  "adaptive_rm": {
-    "stats": {
-      "n": 3216,
-      "wr": 35.6,
-      "pnl": 4277.5,
-      "pf": 1.151,
-      "dd": 1173.3,
-      "avg_day": 8.97,
-      "tr_day": 6.74,
+      "n": 1850,
+      "wr": 38.7,
+      "pnl": 4218.8,
+      "pf": 1.317,
+      "dd": 485.8,
+      "avg_day": 10.52,
+      "tr_day": 4.61,
       "months": "18/25"
     },
     "by_strategy": {
       "S17_CONVERGENCE_SCALP": {
-        "n": 145,
-        "wr": 26.2,
-        "pnl": -3.5,
-        "pf": 0.994,
-        "dd": 148.7,
-        "avg_day": -0.03,
-        "tr_day": 1.12,
-        "months": "13/25"
-      },
-      "S09_MFKK_SCALPING": {
-        "n": 364,
-        "wr": 35.7,
-        "pnl": 780.6,
-        "pf": 1.527,
-        "dd": 138.1,
-        "avg_day": 4.73,
-        "tr_day": 2.21,
-        "months": "16/25"
-      },
-      "S16_GOLDEN_SQUEEZE": {
-        "n": 343,
-        "wr": 39.7,
-        "pnl": 1190.2,
-        "pf": 1.251,
-        "dd": 540.3,
-        "avg_day": 5.69,
-        "tr_day": 1.64,
-        "months": "14/25"
-      },
-      "S00_MFKK": {
-        "n": 1787,
-        "wr": 34.2,
-        "pnl": 122.9,
-        "pf": 1.008,
-        "dd": 2027.7,
-        "avg_day": 0.31,
-        "tr_day": 4.57,
-        "months": "16/25"
-      },
-      "S05_MFKK_INTRADAY": {
-        "n": 462,
-        "wr": 37.9,
-        "pnl": 1178.5,
-        "pf": 1.304,
-        "dd": 265.6,
-        "avg_day": 5.46,
-        "tr_day": 2.14,
+        "n": 156,
+        "wr": 24.4,
+        "pnl": 131.2,
+        "pf": 1.143,
+        "dd": 244.4,
+        "avg_day": 0.94,
+        "tr_day": 1.11,
         "months": "15/25"
       },
+      "S09_MFKK_SCALPING": {
+        "n": 202,
+        "wr": 29.2,
+        "pnl": 899.3,
+        "pf": 1.956,
+        "dd": 110.2,
+        "avg_day": 8.82,
+        "tr_day": 1.98,
+        "months": "15/25"
+      },
+      "S16_GOLDEN_SQUEEZE": {
+        "n": 283,
+        "wr": 39.9,
+        "pnl": 141.5,
+        "pf": 1.053,
+        "dd": 680.6,
+        "avg_day": 0.9,
+        "tr_day": 1.79,
+        "months": "13/25"
+      },
+      "S00_MFKK": {
+        "n": 931,
+        "wr": 45.2,
+        "pnl": 2300.0,
+        "pf": 1.376,
+        "dd": 352.0,
+        "avg_day": 8.16,
+        "tr_day": 3.3,
+        "months": "20/25"
+      },
+      "S05_MFKK_INTRADAY": {
+        "n": 229,
+        "wr": 26.2,
+        "pnl": 67.7,
+        "pf": 1.034,
+        "dd": 338.8,
+        "avg_day": 0.56,
+        "tr_day": 1.91,
+        "months": "11/25"
+      },
       "S10_OB_FVG_SCALP": {
-        "n": 115,
-        "wr": 47.0,
-        "pnl": 1008.8,
-        "pf": 1.704,
-        "dd": 533.9,
-        "avg_day": 20.18,
-        "tr_day": 2.3,
-        "months": "12/19"
+        "n": 49,
+        "wr": 51.0,
+        "pnl": 679.0,
+        "pf": 1.969,
+        "dd": 198.6,
+        "avg_day": 28.29,
+        "tr_day": 2.04,
+        "months": "7/12"
       }
     }
   },
+  "adaptive_rm": {},
   "last_signals": [
+    {
+      "date": "2026-03-30",
+      "hour": 15,
+      "dir": "buy",
+      "entry": 4565.89,
+      "outcome": "loss",
+      "pnl": -36.8,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-03-30",
+      "hour": 16,
+      "dir": "buy",
+      "entry": 4567.32,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-03-31",
+      "hour": 17,
+      "dir": "buy",
+      "entry": 4598.95,
+      "outcome": "win",
+      "pnl": 90.09,
+      "strategy": "S09_MFKK_SCALPING",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4686.03,
+      "outcome": "win",
+      "pnl": 67.69,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 4709.07,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 10,
+      "dir": "buy",
+      "entry": 4722.75,
+      "outcome": "win",
+      "pnl": 69.0,
+      "strategy": "S05_MFKK_INTRADAY",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 11,
+      "dir": "buy",
+      "entry": 4730.44,
+      "outcome": "loss",
+      "pnl": -20.17,
+      "strategy": "S05_MFKK_INTRADAY",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 13,
+      "dir": "buy",
+      "entry": 4731.19,
+      "outcome": "loss",
+      "pnl": -19.8,
+      "strategy": "S05_MFKK_INTRADAY",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 14,
+      "dir": "buy",
+      "entry": 4744.95,
+      "outcome": "loss",
+      "pnl": -40.04,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 15,
+      "dir": "buy",
+      "entry": 4724.51,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 16,
+      "dir": "buy",
+      "entry": 4738.3,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 17,
+      "dir": "buy",
+      "entry": 4760.63,
+      "outcome": "loss",
+      "pnl": -43.02,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 18,
+      "dir": "buy",
+      "entry": 4772.76,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-02",
+      "hour": 1,
+      "dir": "buy",
+      "entry": 4776.32,
+      "outcome": "loss",
+      "pnl": -16.2,
+      "strategy": "S17_CONVERGENCE_SCALP",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-02",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4666.09,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-04-02",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4677.15,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_DOWN"
+    },
     {
       "date": "2026-04-02",
       "hour": 9,
@@ -388,18 +475,8 @@
     {
       "date": "2026-04-02",
       "hour": 10,
-      "dir": "buy",
+      "dir": "sell",
       "entry": 4620.57,
-      "outcome": "win",
-      "pnl": 20.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-02",
-      "hour": 11,
-      "dir": "buy",
-      "entry": 4634.17,
       "outcome": "loss",
       "pnl": -12.0,
       "strategy": "S00_MFKK",
@@ -407,8 +484,18 @@
     },
     {
       "date": "2026-04-02",
+      "hour": 11,
+      "dir": "sell",
+      "entry": 4634.17,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-04-02",
       "hour": 12,
-      "dir": "buy",
+      "dir": "sell",
       "entry": 4620.87,
       "outcome": "loss",
       "pnl": -12.0,
@@ -418,7 +505,7 @@
     {
       "date": "2026-04-02",
       "hour": 13,
-      "dir": "buy",
+      "dir": "sell",
       "entry": 4618.45,
       "outcome": "loss",
       "pnl": -12.0,
@@ -428,32 +515,22 @@
     {
       "date": "2026-04-02",
       "hour": 14,
-      "dir": "buy",
+      "dir": "sell",
       "entry": 4614.62,
-      "outcome": "loss",
-      "pnl": -12.0,
+      "outcome": "win",
+      "pnl": 20.0,
       "strategy": "S00_MFKK",
       "regime": "TREND_DOWN"
     },
     {
       "date": "2026-04-02",
       "hour": 15,
-      "dir": "buy",
-      "entry": 4626.18,
+      "dir": "sell",
+      "entry": 4601.73,
       "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-06",
-      "hour": 8,
-      "dir": "buy",
-      "entry": 4652.45,
-      "outcome": "loss",
-      "pnl": -27.77,
+      "pnl": -31.23,
       "strategy": "S10_OB_FVG_SCALP",
-      "regime": "RANGE"
+      "regime": "TREND_DOWN"
     },
     {
       "date": "2026-04-06",
@@ -470,39 +547,9 @@
       "hour": 4,
       "dir": "sell",
       "entry": 4654.85,
-      "outcome": "win",
-      "pnl": 31.16,
+      "outcome": "loss",
+      "pnl": -12.46,
       "strategy": "S17_CONVERGENCE_SCALP",
-      "regime": "RANGE"
-    },
-    {
-      "date": "2026-04-07",
-      "hour": 8,
-      "dir": "sell",
-      "entry": 4642.72,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-07",
-      "hour": 9,
-      "dir": "sell",
-      "entry": 4640.86,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-07",
-      "hour": 13,
-      "dir": "buy",
-      "entry": 4651.92,
-      "outcome": "loss",
-      "pnl": -23.55,
-      "strategy": "S10_OB_FVG_SCALP",
       "regime": "RANGE"
     },
     {
@@ -511,17 +558,17 @@
       "dir": "buy",
       "entry": 4814.47,
       "outcome": "loss",
-      "pnl": -23.82,
+      "pnl": -29.77,
       "strategy": "S17_CONVERGENCE_SCALP",
       "regime": "RANGE"
     },
     {
       "date": "2026-04-08",
       "hour": 7,
-      "dir": "sell",
-      "entry": 4802.22,
-      "outcome": "loss",
-      "pnl": -12.0,
+      "dir": "buy",
+      "entry": 4803.42,
+      "outcome": "win",
+      "pnl": 20.0,
       "strategy": "S00_MFKK",
       "regime": "TREND_UP"
     },
@@ -552,16 +599,6 @@
       "entry": 4818.18,
       "outcome": "loss",
       "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-08",
-      "hour": 11,
-      "dir": "sell",
-      "entry": 4808.38,
-      "outcome": "win",
-      "pnl": 20.0,
       "strategy": "S00_MFKK",
       "regime": "TREND_UP"
     },
@@ -607,61 +644,11 @@
     },
     {
       "date": "2026-04-09",
-      "hour": 7,
-      "dir": "buy",
-      "entry": 4716.84,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 8,
-      "dir": "buy",
-      "entry": 4726.15,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 9,
-      "dir": "buy",
-      "entry": 4718.19,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 10,
-      "dir": "sell",
-      "entry": 4708.36,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
-      "hour": 11,
-      "dir": "sell",
-      "entry": 4721.23,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-09",
       "hour": 14,
       "dir": "buy",
       "entry": 4745.64,
-      "outcome": "win",
-      "pnl": 36.39,
+      "outcome": "loss",
+      "pnl": -14.56,
       "strategy": "S17_CONVERGENCE_SCALP",
       "regime": "RANGE"
     },
@@ -676,46 +663,6 @@
       "regime": "WEAK_UP"
     },
     {
-      "date": "2026-04-13",
-      "hour": 7,
-      "dir": "sell",
-      "entry": 4712.54,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
-    },
-    {
-      "date": "2026-04-13",
-      "hour": 8,
-      "dir": "sell",
-      "entry": 4720.41,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-14",
-      "hour": 3,
-      "dir": "buy",
-      "entry": 4769.81,
-      "outcome": "win",
-      "pnl": 25.31,
-      "strategy": "S05_MFKK_INTRADAY",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-14",
-      "hour": 4,
-      "dir": "buy",
-      "entry": 4770.23,
-      "outcome": "loss",
-      "pnl": -11.93,
-      "strategy": "S05_MFKK_INTRADAY",
-      "regime": "TREND_UP"
-    },
-    {
       "date": "2026-04-14",
       "hour": 7,
       "dir": "buy",
@@ -728,10 +675,10 @@
     {
       "date": "2026-04-14",
       "hour": 8,
-      "dir": "sell",
-      "entry": 4764.61,
-      "outcome": "loss",
-      "pnl": -12.0,
+      "dir": "buy",
+      "entry": 4759.92,
+      "outcome": "win",
+      "pnl": 20.0,
       "strategy": "S00_MFKK",
       "regime": "TREND_UP"
     },
@@ -777,16 +724,6 @@
     },
     {
       "date": "2026-04-14",
-      "hour": 13,
-      "dir": "sell",
-      "entry": 4783.81,
-      "outcome": "win",
-      "pnl": 20.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-04-14",
       "hour": 16,
       "dir": "buy",
       "entry": 4782.79,
@@ -796,22 +733,42 @@
       "regime": "TREND_UP"
     },
     {
-      "date": "2026-04-15",
-      "hour": 4,
+      "date": "2026-04-14",
+      "hour": 17,
       "dir": "buy",
-      "entry": 4850.64,
+      "entry": 4809.21,
+      "outcome": "win",
+      "pnl": 53.2,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "WEAK_UP"
+    },
+    {
+      "date": "2026-04-14",
+      "hour": 19,
+      "dir": "buy",
+      "entry": 4816.3,
       "outcome": "loss",
-      "pnl": -11.9,
-      "strategy": "S05_MFKK_INTRADAY",
-      "regime": "TREND_UP"
+      "pnl": -16.98,
+      "strategy": "S17_CONVERGENCE_SCALP",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-14",
+      "hour": 21,
+      "dir": "buy",
+      "entry": 4837.55,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "WEAK_UP"
     },
     {
       "date": "2026-04-15",
       "hour": 7,
-      "dir": "sell",
-      "entry": 4824.48,
-      "outcome": "win",
-      "pnl": 20.0,
+      "dir": "buy",
+      "entry": 4824.88,
+      "outcome": "loss",
+      "pnl": -12.0,
       "strategy": "S00_MFKK",
       "regime": "TREND_UP"
     },
@@ -831,7 +788,7 @@
       "dir": "buy",
       "entry": 4823.68,
       "outcome": "loss",
-      "pnl": -8.04,
+      "pnl": -10.05,
       "strategy": "S17_CONVERGENCE_SCALP",
       "regime": "RANGE"
     },
@@ -844,36 +801,6 @@
       "pnl": -10.27,
       "strategy": "S09_MFKK_SCALPING",
       "regime": "RANGE"
-    },
-    {
-      "date": "2026-04-16",
-      "hour": 19,
-      "dir": "sell",
-      "entry": 4791.77,
-      "outcome": "win",
-      "pnl": 20.0,
-      "strategy": "S00_MFKK",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-16",
-      "hour": 20,
-      "dir": "sell",
-      "entry": 4785.02,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "WEAK_DOWN"
-    },
-    {
-      "date": "2026-04-16",
-      "hour": 21,
-      "dir": "sell",
-      "entry": 4786.9,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_DOWN"
     }
   ],
   "config": {

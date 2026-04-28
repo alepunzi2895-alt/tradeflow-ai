@@ -87,14 +87,16 @@ LOT_SIZE     = 0.02          # lot size base conto $1000 — CONSERVATIVE→0.01
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)
-MAX_OPEN_ORDERS = 3          # max ordini aperti contemporaneamente
+MAX_OPEN_ORDERS = 2          # max ordini aperti contemporaneamente (ridotto da 3 → 2, 2026-04-28)
 SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
 STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 
 # ── IN-MEMORY ORDER TRACKING (resiliente a race condition MT5) ────────────────
 # Aggiornato immediatamente dopo place_order(), eliminato alla chiusura posizione
-_strategy_order_tickets: dict = {}  # {strategy_name: deal_ticket}
+# Formato: {strategy_name: (order_ticket, direction_str)}  ex: {'S16_GOLDEN_SQUEEZE': (12345, 'sell')}
+# order_ticket = result.order da mt5.order_send() = position ticket in hedging mode
+_strategy_order_tickets: dict = {}  # {strategy_name: (ticket, direction)}
 SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
 CHECK_SEC    = 10            # polling ogni 10 secondi
 
@@ -703,12 +705,19 @@ def get_account_info():
     }
 
 def count_open_positions():
-    """Conta le posizioni aperte del bot. Usa max(MT5, in-memory) per robustezza."""
+    """Conta le posizioni aperte del bot. Source of truth: MT5; in-memory come lower-bound."""
     mt5_count = sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
+    # len(_strategy_order_tickets) è il numero di strategie con ticket — utile solo se MT5 è lento
     return max(mt5_count, len(_strategy_order_tickets))
 
 def has_position_in_direction(direction):
-    """True se esiste già una posizione aperta nella direzione specificata."""
+    """True se esiste già una posizione nella direzione specificata.
+    Controlla in-memory PRIMA di MT5 per essere immune a latenza post-place_order."""
+    # 1. In-memory check: cattura posizioni appena aperte non ancora visibili in MT5
+    for _ticket, _dir in _strategy_order_tickets.values():
+        if _dir == direction:
+            return True
+    # 2. MT5 check: verità assoluta quando in-memory è vuoto o desincronizzato
     for p in mt5.positions_get(symbol=SYMBOL) or []:
         if p.magic != MAGIC: continue
         if direction == 'buy'  and p.type == mt5.ORDER_TYPE_BUY:  return True
@@ -716,21 +725,22 @@ def has_position_in_direction(direction):
     return False
 
 def has_open_position_for_strategy(strategy_name):
-    """True se esiste già un ordine aperto per questa strategia (controllo doppio: memory + MT5)."""
-    # In-memory check first (immune a latenza MT5)
-    if strategy_name in _strategy_order_tickets:
-        ticket = _strategy_order_tickets[strategy_name]
-        positions = mt5.positions_get(symbol=SYMBOL) or []
-        if any(p.ticket == ticket and p.magic == MAGIC for p in positions):
-            return True
-        # Ticket scomparso (posizione chiusa) → rimuovi da memory
-        _strategy_order_tickets.pop(strategy_name, None)
-    # Fallback: scan MT5 per commento
+    """True se esiste già un ordine aperto per questa strategia."""
     target_comment = f"TF-AI {strategy_name}"
-    for p in mt5.positions_get(symbol=SYMBOL) or []:
+    positions = mt5.positions_get(symbol=SYMBOL) or []
+    # Comment scan è il check primario: source of truth indipendente dal ticket
+    for p in positions:
         if p.magic == MAGIC and (p.comment or '') == target_comment:
-            _strategy_order_tickets[strategy_name] = p.ticket
+            _dir_fb = 'buy' if p.type == mt5.ORDER_TYPE_BUY else 'sell'
+            _strategy_order_tickets[strategy_name] = (p.ticket, _dir_fb)
             return True
+    # Ticket fallback: copre la finestra tra place_order() e visibilità in MT5
+    if strategy_name in _strategy_order_tickets:
+        order_ticket, _dir = _strategy_order_tickets[strategy_name]
+        if order_ticket and any(p.ticket == order_ticket and p.magic == MAGIC for p in positions):
+            return True
+        # Né commento né ticket trovato → posizione chiusa, pulisci memory
+        _strategy_order_tickets.pop(strategy_name, None)
     return False
 
 def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
@@ -1066,7 +1076,8 @@ def run():
     for _p in _existing:
         if _p.magic == MAGIC and _p.comment and _p.comment.startswith('TF-AI '):
             _strat = _p.comment.replace('TF-AI ', '').strip()
-            _strategy_order_tickets[_strat] = _p.ticket
+            _pdir = 'buy' if _p.type == mt5.ORDER_TYPE_BUY else 'sell'
+            _strategy_order_tickets[_strat] = (_p.ticket, _pdir)
     if _strategy_order_tickets:
         log.info(f"Posizioni rilevate al riavvio: {list(_strategy_order_tickets.keys())}")
 
@@ -1282,8 +1293,8 @@ def run():
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 last_sync_time = now_ts
 
-            # ── News Guardian: aggiorna rischio ogni 15min ─────────────────
-            if news_guardian and (now_ts - last_news_check_ts) >= 900:
+            # ── News Guardian: aggiorna rischio ogni 60s (era 15min — bug timezone fix 2026-04-28) ──
+            if news_guardian and (now_ts - last_news_check_ts) >= 60:
                 last_news_check_ts = now_ts
                 new_risk = news_guardian.check_news_risk(now_utc)
                 # Log solo se cambia stato
@@ -1566,8 +1577,9 @@ def run():
                             )
                             if result:
                                 # Tracking in-memory immediato (PRIMA di qualsiasi altro codice)
-                                deal_ticket = getattr(result, 'deal', 0)
-                                _strategy_order_tickets[strategy_name] = deal_ticket
+                                # result.order = order ticket = position ticket in hedging
+                                order_ticket = getattr(result, 'order', 0)
+                                _strategy_order_tickets[strategy_name] = (order_ticket, direction)
                                 state.record_trade(0, now_utc)
                                 # Register with Risk Guardian for lifecycle management
                                 if rg and rp:
@@ -1576,7 +1588,7 @@ def run():
                                             "resistance" if direction == "buy" else "support", []
                                         )[:3]
                                         rg.register_position(
-                                            deal_ticket, rp, strategy_name, 'H1',
+                                            order_ticket, rp, strategy_name, 'H1',
                                             current_regime, direction,
                                             partial_targets=_kl_targets,
                                         )
@@ -1678,8 +1690,8 @@ def run():
                                                   key_levels_result=current_levels_result,
                                                   atr=atr_i2)
                             if result2:
-                                deal2 = getattr(result2, 'deal', 0)
-                                _strategy_order_tickets[sec_id] = deal2
+                                order_ticket2 = getattr(result2, 'order', 0)
+                                _strategy_order_tickets[sec_id] = (order_ticket2, sec_dir)
                                 state.record_trade(0, now_utc)
                                 if rg and rp2:
                                     try:
@@ -1687,7 +1699,7 @@ def run():
                                             "resistance" if sec_dir == "buy" else "support", []
                                         )[:3]
                                         rg.register_position(
-                                            deal2, rp2, sec_id, 'H1',
+                                            order_ticket2, rp2, sec_id, 'H1',
                                             current_regime, sec_dir,
                                             partial_targets=_kl_targets2,
                                         )
@@ -1806,8 +1818,8 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
-                                    deal_m15 = getattr(result, 'deal', 0)
-                                    _strategy_order_tickets[sname] = deal_m15
+                                    order_ticket_m15 = getattr(result, 'order', 0)
+                                    _strategy_order_tickets[sname] = (order_ticket_m15, direction)
                                     state.record_trade(0, now_utc)
                                     if rg and rp:
                                         try:
@@ -1815,7 +1827,7 @@ def run():
                                                 "resistance" if direction == "buy" else "support", []
                                             )[:3]
                                             rg.register_position(
-                                                deal_m15, rp, sname, 'M15',
+                                                order_ticket_m15, rp, sname, 'M15',
                                                 current_regime, direction,
                                                 partial_targets=_kl_targets,
                                             )
@@ -1960,8 +1972,8 @@ def run():
                                                     key_levels_result=current_levels_result,
                                                     atr=atr_now)
                                 if result:
-                                    deal_m30 = getattr(result, 'deal', 0)
-                                    _strategy_order_tickets[sname] = deal_m30
+                                    order_ticket_m30 = getattr(result, 'order', 0)
+                                    _strategy_order_tickets[sname] = (order_ticket_m30, direction)
                                     state.record_trade(0, now_utc)
                                     if rg and rp:
                                         try:
@@ -1969,7 +1981,7 @@ def run():
                                                 "resistance" if direction == "buy" else "support", []
                                             )[:3]
                                             rg.register_position(
-                                                deal_m30, rp, sname, 'M30',
+                                                order_ticket_m30, rp, sname, 'M30',
                                                 current_regime, direction,
                                                 partial_targets=_kl_targets,
                                             )
@@ -2084,15 +2096,15 @@ def run():
                             result = place_order(direction, tp_use, sl_use, h4_id, lot_size=lot_use,
                                                 key_levels_result=current_levels_result, atr=atr_now)
                             if result:
-                                deal_h4 = getattr(result, 'deal', 0)
-                                _strategy_order_tickets[h4_id] = deal_h4
+                                order_ticket_h4 = getattr(result, 'order', 0)
+                                _strategy_order_tickets[h4_id] = (order_ticket_h4, direction)
                                 state.record_trade(0, now_utc)
                                 if rg and rp:
                                     try:
                                         _kl_targets = (current_levels_result or {}).get(
                                             "resistance" if direction == "buy" else "support", []
                                         )[:3]
-                                        rg.register_position(deal_h4, rp, h4_id, 'H4',
+                                        rg.register_position(order_ticket_h4, rp, h4_id, 'H4',
                                                              current_regime, direction,
                                                              partial_targets=_kl_targets)
                                     except Exception as _rg_err:

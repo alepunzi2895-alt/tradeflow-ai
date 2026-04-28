@@ -1459,7 +1459,8 @@ def run():
                                 if sel_id == 'S05_MFKK_INTRADAY':
                                     direction = fn_sel(I_h1, i_h1, ai_score=current_ai_score)
                                 elif sel_id == 'S16_GOLDEN_SQUEEZE':
-                                    direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1])
+                                    _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
+                                    direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t)
                                 else:
                                     direction = fn_sel(I_h1, i_h1)
                                 strategy_name = sel_id if direction else None
@@ -1610,7 +1611,8 @@ def run():
                             
                             # Supporto per session hour e h1_trend se richiesto dalla strategia
                             if sec_id == 'S16_GOLDEN_SQUEEZE':
-                                sec_dir = fn2(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], hour=hour)
+                                _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
+                                sec_dir = fn2(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t, hour=hour)
                             elif sec_id == 'S00_MFKK':
                                 sec_dir = fn2(I_h1, i_h1, hour=hour, tf='H1')
                             elif sec_id == 'S05_MFKK_INTRADAY':
@@ -1732,7 +1734,8 @@ def run():
                             curr_h1_trend = I_h1['st'][i_h1] if 'st' in I_h1 else 0
 
                             if sname == 'S16_GOLDEN_SQUEEZE':
-                                direction = fn(I_m15, idx, h1_trend=curr_h1_trend)
+                                _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
+                                direction = fn(I_m15, idx, h1_trend=curr_h1_trend, h4_trend=_h4t)
                             else:
                                 direction = fn(I_m15, idx) if fn else None
 

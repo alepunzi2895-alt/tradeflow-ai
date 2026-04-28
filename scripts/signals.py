@@ -191,9 +191,12 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     return None
 
 
-def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
-    """S16: ELITE CONFLUENCE V3 — OBV Momentum + Trend Alignment (ST/h1_trend) + EMA 233.
-    V3 fixes (2026-04-23): ADX>=25, DI agreement, 3-bar OBV slope, candle>=0.35×ATR.
+def signal_golden_squeeze(ind, i, h1_trend=None, hour=None, h4_trend=None):
+    """S16: ELITE CONFLUENCE V4 — OBV Momentum + Trend Alignment + H4 context filter.
+    V3 (2026-04-23): ADX>=25, DI agreement, 3-bar OBV slope, candle>=0.35×ATR.
+    V4 (2026-04-28): SELL only when H4 is BULLISH (countertrend into uptrend, WR 50%).
+      When H4 bearish (trend-following sell), WR drops to 31% — exhausted move, late entry.
+      Bot: h4_trend=-1 required for SELL. Backtester proxy: EMA200 rising over 4 bars.
     """
     if i < 233: return None
     # Session filter: London + NY only (XAU/USD cleaner directional moves)
@@ -237,6 +240,18 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None):
             return 'buy'
     elif st == 1:  # BEARISH
         if dim_v <= dip_v: return None  # DI- must dominate for SELL
+        # H4 trend filter: on XAU/USD, SELL works best as a countertrend within a medium-term uptrend.
+        # When H4 is bearish (medium-term downtrend), SELL WR drops to ~31% (late-trend chase, exhausted move).
+        # When H4 is bullish (medium-term uptrend), SELL WR rises to ~50% (short pullback, clean reversal).
+        if h4_trend is not None:
+            if h4_trend != -1: return None  # bot: actual H4 ST must be BULLISH (countertrend sell)
+        else:
+            # backtester proxy: EMA200 must be rising over 4 bars (medium-term uptrend = countertrend setup)
+            e200_arr = ind.get('e200')
+            if e200_arr is not None and i >= 4:
+                e200_now = e200_arr[i]; e200_prev = e200_arr[i - 4]
+                if e200_now is not None and e200_prev is not None and e200_now <= e200_prev:
+                    return None
         if c < e233 and obv_val < obv_ema and obv_falling_3 and c < cp and big_enough:
             return 'sell'
     return None

@@ -137,23 +137,32 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     s_score, s_adx_s, s_diff, s_cross_b, s_cross = get_dir_score(False)
 
     # ── SPECIAL PATTERNS ────────────────────────────────────────────────────
-    # Exhaustion check
-    is_exh_sell = s_adx_s >= 75 and b_diff > 1.0 # MACD very bullish but ADX/DI favor sell
-    is_exh_buy  = b_adx_s >= 75 and b_diff < -1.0 # MACD very bearish but ADX/DI favor buy
-
-    # High-WR Sell (exact hard rules)
-    is_london_ny = hour is not None and (7 <= hour < 17)
-    is_high_wr_sell = (not b_cross) and a >= 35 and dm > dp and (dm-dp) >= 20 and b_diff >= 1.0 and c >= 25 and is_london_ny
+    # Exhaustion check (buy only — sell exhaustion not reliable, see V2 analysis)
+    is_exh_buy = b_adx_s >= 75 and b_diff < -1.0  # MACD very bearish but ADX/DI favor buy
 
     # DI spread gate: require at least minimal directional conviction
     if abs(dp - dm) < 5: return None
 
-    # Final Decision
-    if is_high_wr_sell: return 'sell'
-
-    # Thresholds: Buy >= 90 (or 82 for special), Sell >= 72 (raised from 68)
+    # ── BUY: ST alignment + strong DI conviction filter ─────────────────────
+    # Analysis (2026-04-28): BUY ST-aligned + DI≥20 → WR 28.3%, PF 1.38
+    # Without ST filter all buys have WR 24.7%, PF 1.15 (fine but weaker)
+    st_arr = ind.get('st')
+    st_now = st_arr[i] if st_arr else 0
     buy_thr = 82 if (is_exh_buy or b_cross) else 90
-    sell_thr = 72
+    # Tighten BUY: require DI≥20 aligned OR Supertrend bullish when DI<20
+    buy_di_spread = dp - dm
+    buy_di_ok = buy_di_spread >= 20
+    buy_st_ok = (st_now == -1)  # H1 Supertrend bullish
+    if not (buy_di_ok or buy_st_ok): buy_thr = 999  # block low-conviction buys
+
+    # ── SELL: London/NY session + strong DI conviction only ─────────────────
+    # Analysis (2026-04-28): SELL with DI≥20 + sess 7-17h → WR 24.1%, PF 1.11 (M30/H1)
+    # H4 SELL is unreliable (WR 17.5%) — block entirely on H4
+    sell_thr = 999  # block by default
+    is_london_ny = hour is not None and (7 <= hour < 17)
+    sell_di_spread = dm - dp
+    if tf != 'H4' and is_london_ny and sell_di_spread >= 20:
+        sell_thr = 72
 
     if b_score >= buy_thr: return 'buy'
     if s_score >= sell_thr: return 'sell'

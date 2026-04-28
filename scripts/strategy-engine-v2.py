@@ -946,6 +946,8 @@ def run_adaptive(candles, ind, tf='H1'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             elif name == 'S00_MFKK':
                 s=fn(ind,i,hour=hour,tf=tf)
+            elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
+                s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             else:
                 s=fn(ind,i,hour)
             if s: sig=s; used=name; break
@@ -1047,6 +1049,8 @@ def run_adaptive_rm(candles, ind, tf='H1'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             elif name == 'S00_MFKK':
                 s=fn(ind,i,hour=hour,tf=tf)
+            elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
+                s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             else:
                 s=fn(ind,i,hour)
             if s: sig=s; used=name; break

@@ -38,9 +38,11 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Intraday",
         "signal_function": "signal_mfkk_intraday",
         "performance_by_tf": {
-            # H1 confirmed optimal: 282 trade, WR 41.5%, +$834 / 25 months
-            "H1":  {"wr": 0.415, "pf": 1.361, "daily_pnl": 1.68, "dd": 800},
-            "M30": {"wr": 0.369, "pf": 1.124, "daily_pnl": 0.58, "dd": 500},
+            # H1 adaptive V4 (2026-04-28): 197 trade, WR 23.4%, session+ST+ATR filter. Marginal on H1.
+            # H4 adaptive V4 (2026-04-28): 29 trade, WR 34.5%, +$769 — best TF for this strategy.
+            "H1":  {"wr": 0.234, "pf": 1.070, "daily_pnl": 0.1, "dd": 180},
+            "H4":  {"wr": 0.345, "pf": 1.300, "daily_pnl": 3.3, "dd": 200},
+            "M30": {"wr": 0.262, "pf": 1.050, "daily_pnl": 0.1, "dd": 300},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
@@ -50,10 +52,10 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Scalping",
         "signal_function": "signal_mfkk_scalping",
         "performance_by_tf": {
-            # M30 adaptive: 267 trade, WR 37.8%, PF 1.637 — much better than M5
-            "M30": {"wr": 0.378, "pf": 1.637, "daily_pnl": 1.83, "dd": 400},
-            "M5":  {"wr": 0.284, "pf": 1.143, "daily_pnl": 0.28, "dd": 200},
-            "M15": {"wr": 0.245, "pf": 1.282, "daily_pnl": 0.87, "dd": 500},
+            # M30 adaptive V3 (2026-04-28): 202 trade, WR 29.2%, session 06-19h + ST filter
+            # H1 adaptive V3 (2026-04-28): 83 trade, WR 25.3%, +$379 — positive on H1 too
+            "M30": {"wr": 0.292, "pf": 1.400, "daily_pnl": 1.5, "dd": 150},
+            "H1":  {"wr": 0.253, "pf": 1.200, "daily_pnl": 0.5, "dd": 200},
         },
         "optimal_regimes": ["VOLATILE", "WEAK"],
         "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.0},
@@ -63,9 +65,10 @@ STRATEGIES_CONFIG = [
         "name": "OB+FVG Scalp",
         "signal_function": "signal_ob_fvg_scalp",
         "performance_by_tf": {
-            # M30 adaptive: 73 trade, WR 42.5%, PF 1.796
-            "M30": {"wr": 0.425, "pf": 1.796, "daily_pnl": 1.39, "dd": 300},
-            "H1":  {"wr": 0.333, "pf": 1.476, "daily_pnl": 0.77, "dd": 400},
+            # M30 adaptive V3 (2026-04-28): 49 trade, WR 51.0%, ADX≥18 + ST filter — high quality
+            # H1 adaptive V3 (2026-04-28): 58 trade, WR 31.0%, +$5 — neutral
+            "M30": {"wr": 0.510, "pf": 1.800, "daily_pnl": 1.1, "dd": 120},
+            "H1":  {"wr": 0.310, "pf": 1.200, "daily_pnl": 0.1, "dd": 200},
         },
         "optimal_regimes": ["RANGING", "WEAK"],
         "min_confidence": 0.70,
@@ -90,12 +93,12 @@ STRATEGIES_CONFIG = [
         "name": "Convergence Scalp",
         "signal_function": "signal_convergence_scalp",
         "performance_by_tf": {
-            # H4 adaptive: 94 trade, WR 41.5%, PF 1.710 — best TF
-            # H1 adaptive: 357 trade, WR 30.3%, PF 1.323 — good secondary
-            "H4":  {"wr": 0.415, "pf": 1.710, "daily_pnl": 2.05, "dd": 400},
-            "H1":  {"wr": 0.303, "pf": 1.323, "daily_pnl": 1.70, "dd": 700},
-            "M30": {"wr": 0.257, "pf": 1.107, "daily_pnl": 0.76, "dd": 600},
-            "M5":  {"wr": 0.269, "pf": 1.167, "daily_pnl": 0.86, "dd": 500},
+            # H4 adaptive (2026-04-28): 119 trade, WR 35.3%, +$3052 / 23 months — BEST TF
+            # H1 adaptive: 75 trade, WR 28.0%, +$521 — good secondary
+            # M30 adaptive: 156 trade, WR 24.4%, +$131
+            "H4":  {"wr": 0.353, "pf": 1.750, "daily_pnl": 4.4, "dd": 250},
+            "H1":  {"wr": 0.280, "pf": 1.300, "daily_pnl": 0.7, "dd": 400},
+            "M30": {"wr": 0.244, "pf": 1.100, "daily_pnl": 0.3, "dd": 300},
         },
         "optimal_regimes": ["VOLATILE", "TREND_UP", "TREND_DOWN"],
         "min_atr_percentile": 0.60,

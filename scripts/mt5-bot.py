@@ -1456,13 +1456,13 @@ def run():
                             # Only proceed here if selector chose an H1 strategy
                             fn_sel = SIGNAL_FNS.get(sel_id)
                             if sel_tf == 'H1' and fn_sel:
-                                if sel_id == 'S05_MFKK_INTRADAY':
-                                    direction = fn_sel(I_h1, i_h1, ai_score=current_ai_score)
-                                elif sel_id == 'S16_GOLDEN_SQUEEZE':
+                                if sel_id == 'S16_GOLDEN_SQUEEZE':
                                     _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
                                     direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t)
+                                elif sel_id in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
+                                    direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], hour=hour)
                                 else:
-                                    direction = fn_sel(I_h1, i_h1)
+                                    direction = fn_sel(I_h1, i_h1, hour=hour)
                                 strategy_name = sel_id if direction else None
                             else:
                                 strategy_name, direction = get_signal(I_h1, i_h1, hour, current_regime)
@@ -1615,10 +1615,10 @@ def run():
                                 sec_dir = fn2(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t, hour=hour)
                             elif sec_id == 'S00_MFKK':
                                 sec_dir = fn2(I_h1, i_h1, hour=hour, tf='H1')
-                            elif sec_id == 'S05_MFKK_INTRADAY':
-                                sec_dir = fn2(I_h1, i_h1, ai_score=current_ai_score)
+                            elif sec_id in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
+                                sec_dir = fn2(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], hour=hour)
                             else:
-                                sec_dir = fn2(I_h1, i_h1)
+                                sec_dir = fn2(I_h1, i_h1, hour=hour)
                             if not sec_dir: continue
                             if not quality_gate(sec_id, sec_dir, I_h1, i_h1): continue
                             if sec_dir_filter and sec_dir != sec_dir_filter: continue
@@ -1736,6 +1736,8 @@ def run():
                             if sname == 'S16_GOLDEN_SQUEEZE':
                                 _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
                                 direction = fn(I_m15, idx, h1_trend=curr_h1_trend, h4_trend=_h4t)
+                            elif sname in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
+                                direction = fn(I_m15, idx, h1_trend=curr_h1_trend, hour=bar_dt_m15.hour) if fn else None
                             else:
                                 direction = fn(I_m15, idx) if fn else None
 
@@ -1882,10 +1884,10 @@ def run():
                                     direction = fn(I_m30, idx, h1_trend=curr_h1_trend, hour=bar_dt_m30.hour)
                                 elif sname == 'S00_MFKK':
                                     direction = fn(I_m30, idx, hour=bar_dt_m30.hour, tf='M30')
-                                elif sname == 'S05_MFKK_INTRADAY':
-                                    direction = fn(I_m30, idx, ai_score=current_ai_score)
+                                elif sname in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
+                                    direction = fn(I_m30, idx, h1_trend=curr_h1_trend, hour=bar_dt_m30.hour)
                                 else:
-                                    direction = fn(I_m30, idx)
+                                    direction = fn(I_m30, idx, hour=bar_dt_m30.hour)
 
                                 if not direction:
                                     log.info(f"[M30] {sname} — nessun segnale ({bar_dt_m30.strftime('%H:%M')})")

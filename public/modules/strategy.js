@@ -17,11 +17,11 @@ const SE = {
     // ── STRATEGIE ATTIVE [BACKTEST 25 MESI · MT5 GOLD · lot 0.01 · $1/punto] ──
     // Sistema adattivo M30: 3385 trade · WR 37.4% · PF 1.258 · +$12.02/gg · DD $759 · 18/25 mesi+
     // Tutti i P&L sono riferiti a lot=0.01 su conto $1000 baseline
-    'S00_MFKK': { label: 'MFKK Score [M30]', pf: 1.03, wr: '38.3%', tp: 'ATR×2.0', sl: 'ATR×1.0',
+    'S00_MFKK': { label: 'MFKK Core [M30] V2', pf: 1.24, wr: '26.1%', tp: 'ATR×3.5', sl: 'ATR×1.0',
       stats: {
-        pnl_1m: 65, td_1m: 2.72, pnl_6m: 392, td_6m: 2.72,
-        pnl_12m: 785, td_12m: 2.72, pnl_24m: 1570, td_24m: 2.72,
-        maxdd: 300, maxdd_pct: '3.0%', trades_12m: 717, best_regime: 'RANGE/WEAK (fallback M30)'
+        pnl_1m: 55, td_1m: 2.4, pnl_6m: 330, td_6m: 2.4,
+        pnl_12m: 660, td_12m: 2.4, pnl_24m: 1320, td_24m: 2.4,
+        maxdd: 220, maxdd_pct: '2.2%', trades_12m: 637, best_regime: 'TREND/WEAK · fallback M30 (DI≥20 or ST bullish)'
       } },
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H1] V3', pf: 1.36, wr: '41.5%', tp: 'ATR×2.0', sl: 'ATR×1.0',
       stats: {
@@ -41,11 +41,11 @@ const SE = {
         pnl_12m: 520, td_12m: 0.21, pnl_24m: 1040, td_24m: 0.21,
         maxdd: 200, maxdd_pct: '2.0%', trades_12m: 54, best_regime: 'WEAK/RANGE · TF M30'
       } },
-    'S16_GOLDEN_SQUEEZE': { label: 'Elite Golden Squeeze [M30]', pf: 1.29, wr: '31.7%', tp: 'ATR×3.0', sl: 'ATR×1.2',
+    'S16_GOLDEN_SQUEEZE': { label: 'Golden Squeeze [H1] V4', pf: 1.38, wr: '45.0%', tp: 'ATR×3.5', sl: 'ATR×2.0',
       stats: {
-        pnl_1m: 45, td_1m: 1.64, pnl_6m: 272, td_6m: 1.64,
-        pnl_12m: 545, td_12m: 1.64, pnl_24m: 1089, td_24m: 1.64,
-        maxdd: 380, maxdd_pct: '3.8%', trades_12m: 432, best_regime: 'TREND/WEAK · TF M30'
+        pnl_1m: 46, td_1m: 0.44, pnl_6m: 276, td_6m: 0.44,
+        pnl_12m: 552, td_12m: 0.44, pnl_24m: 1104, td_24m: 0.44,
+        maxdd: 300, maxdd_pct: '3.0%', trades_12m: 115, best_regime: 'TREND · TF H1 · SELL countertrend only'
       } },
     'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [H4] V2', pf: 1.71, wr: '41.5%', tp: 'ATR×2.5', sl: 'ATR×0.8',
       stats: {

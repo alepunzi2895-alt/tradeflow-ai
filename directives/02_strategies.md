@@ -40,7 +40,7 @@
 | Strategia | TF Ottimale | PF sistema | WR | Note |
 |---|---|---|---|---|
 | S16_GOLDEN_SQUEEZE | **H1** | 1.36 | 45.0% | V4 (2026-04-28): H4 context filter SELL. BUY WR 44.5%, SELL WR 50% (countertrend only). H1 proxy: EMA200 slope>0 |
-| S00_MFKK | M30 (fallback) | 1.21 | 42.1% | Best performer in adaptive engine |
+| S00_MFKK | M30 (fallback) | 1.24 | 26.1% | V2 (2026-04-28): DI≥20 or ST bullish gate, sell London/NY only. H1: WR 29.8% PF 1.49 |
 | S09_MFKK_SCALPING | **M30** | 0.98 | 29.4% | FVG invariato — no filtri aggiuntivi |
 | S10_OB_FVG_SCALP | M30 | 0.80 | 33.0% | — |
 | S05_MFKK_INTRADAY | **H1** | 0.80 | 31.3% | — |
@@ -99,11 +99,11 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 
 | Strategia | WR baseline | PF baseline |
 |---|---|---|
-| S16_GOLDEN_SQUEEZE | 29.0% | 0.904 |
+| S16_GOLDEN_SQUEEZE | 45.0% | 1.360 |  ← V4 (2026-04-28): H4 context filter SELL
 | S05_MFKK_INTRADAY | 31.3% | 0.798 |
 | S09_MFKK_SCALPING | 29.4% | 0.978 |
 | S10_OB_FVG_SCALP | 33.0% | 0.800 |
-| S00_MFKK | 42.1% | 1.214 |
+| S00_MFKK | 26.1% | 1.240 |  ← V2 (2026-04-28): DI≥20 or ST bullish gate
 | S17_CONVERGENCE_SCALP | 23.0% | 0.772 |  ← H4 ottimale (non più M30)
 
 > Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.

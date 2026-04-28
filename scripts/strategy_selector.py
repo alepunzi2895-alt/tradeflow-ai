@@ -25,9 +25,9 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Score",
         "signal_function": "signal_mfkk_score",
         "performance_by_tf": {
-            # M30 adaptive: 1597 trade, WR 38.3%, +$388 / 25 months (fallback role)
+            # M30 adaptive V2 (2026-04-28): WR 26.1%, PF 1.240 (DI≥20 or ST bullish gate, sell London/NY only)
             # H4 adaptive: 618 trade, WR 44.2%, +$1320 / 25 months (best standalone)
-            "M30": {"wr": 0.383, "pf": 1.033, "daily_pnl": 1.01, "dd": 300},
+            "M30": {"wr": 0.261, "pf": 1.240, "daily_pnl": 2.2, "dd": 220},
             "H4":  {"wr": 0.442, "pf": 1.319, "daily_pnl": 3.43, "dd": 400},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
@@ -76,10 +76,9 @@ STRATEGIES_CONFIG = [
         "name": "Elite Golden Squeeze",
         "signal_function": "signal_golden_squeeze",
         "performance_by_tf": {
-            # Sistema adattivo H1 MT5 (con RM, 2026-04-23): 343 trade, WR 43.7%, PF ~1.36, +$2370
-            # Sistema adattivo M30 MT5 (con RM, 2026-04-23): 343 trade, WR 39.7%, PF ~1.15, +$1190
-            # TF ottimale: H1 (WR +4pp, P&L doppio rispetto M30). Standalone PF < 1 ma adattivo > 1.
-            "H1":  {"wr": 0.437, "pf": 1.360, "daily_pnl": 5.74, "dd": 900},
+            # Sistema adattivo H1 V4 (2026-04-28): WR 45.0%, PF 1.380 (H4 context filter SELL)
+            # BUY WR 44.5%, SELL WR 50% (countertrend only). H4 bearish SELL blocked.
+            "H1":  {"wr": 0.450, "pf": 1.380, "daily_pnl": 1.8, "dd": 300},
             "M30": {"wr": 0.397, "pf": 1.150, "daily_pnl": 2.88, "dd": 1100},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],

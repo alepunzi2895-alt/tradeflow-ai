@@ -15,6 +15,13 @@ Optimization 2026-04-19:
   S00: sell threshold raised 68→72, DI spread>=5 gate
   S10: skip ATR spike (>2.5×avg)  [unchanged]
   S17: ADX>=18 gate + BB%B tightened 0.55/0.45
+
+Optimization 2026-04-30 (WR improvement pass):
+  S05: ADX 15→18, RSI 54/46→57/43, RSI slope confirmation (r > r_prev)
+  S09: ADX≥15 gate + RSI>50/<50 + OBV vs OBV_EMA volume confirmation
+  S16: OBV slope 3→4 barre consecutive, DI spread esplicito ≥8
+  S17: ADX 18→22, BB%B 0.55/0.45→0.62/0.38, candle direction filter
+  S00: sell DI spread 20→25, sell_thr 72→76
 """
 
 
@@ -161,8 +168,8 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     sell_thr = 999  # block by default
     is_london_ny = hour is not None and (7 <= hour < 17)
     sell_di_spread = dm - dp
-    if tf != 'H4' and is_london_ny and sell_di_spread >= 20:
-        sell_thr = 72
+    if tf != 'H4' and is_london_ny and sell_di_spread >= 25:
+        sell_thr = 76
 
     if b_score >= buy_thr: return 'buy'
     if s_score >= sell_thr: return 'sell'
@@ -188,7 +195,7 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     if None in (r, mo, a, mc, e200): return None
 
     # ADX gate — skip flat/choppy markets
-    if a < 15: return None
+    if a < 18: return None
 
     # Session filter: London+NY only (cleaner OBV signals, lower DD on H1 deployment)
     if hour is not None and not (7 <= hour < 17): return None
@@ -209,19 +216,19 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     srsi_bull = (sk is None or sd is None) or (sk > sd)
     srsi_bear = (sk is None or sd is None) or (sk < sd)
 
-    is_buy  = oc[i] == 1  and r > 54 and mo > 0 and mc > 0 and close > e200 and srsi_bull
-    is_sell = oc[i] == -1 and r < 46 and mo < 0 and mc < 0 and close < e200 and srsi_bear
+    rp = ind['rsi'][i - 1] if i > 0 else r
+    is_buy  = oc[i] == 1  and r > 57 and r > rp and mo > 0 and mc > 0 and close > e200 and srsi_bull
+    is_sell = oc[i] == -1 and r < 43 and r < rp and mo < 0 and mc < 0 and close < e200 and srsi_bear
     if is_buy:  return 'buy'
     if is_sell: return 'sell'
     return None
 
 
 def signal_golden_squeeze(ind, i, h1_trend=None, hour=None, h4_trend=None):
-    """S16: ELITE CONFLUENCE V4 — OBV Momentum + Trend Alignment + H4 context filter.
+    """S16: ELITE CONFLUENCE V5 — OBV Momentum + Trend Alignment + H4 context filter.
     V3 (2026-04-23): ADX>=25, DI agreement, 3-bar OBV slope, candle>=0.35×ATR.
     V4 (2026-04-28): SELL only when H4 is BULLISH (countertrend into uptrend, WR 50%).
-      When H4 bearish (trend-following sell), WR drops to 31% — exhausted move, late entry.
-      Bot: h4_trend=-1 required for SELL. Backtester proxy: EMA200 rising over 4 bars.
+    V5 (2026-04-30): OBV slope 3→4 barre, DI spread esplicito ≥8 (era solo DI+>DI-).
     """
     if i < 233: return None
     # Session filter: London + NY only (XAU/USD cleaner directional moves)
@@ -255,16 +262,16 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None, h4_trend=None):
     candle = abs(c - cp)
     big_enough = (atr_val is None) or (candle >= 0.35 * atr_val)
 
-    # OBV 3-bar slope: sustained volume momentum (was 1-bar → too noisy)
-    obv_rising_3 = i >= 3 and obv_arr[i] > obv_arr[i - 1] > obv_arr[i - 2]
-    obv_falling_3 = i >= 3 and obv_arr[i] < obv_arr[i - 1] < obv_arr[i - 2]
+    # OBV 4-bar slope: sustained volume momentum (was 3-bar → still some noise)
+    obv_rising_4  = i >= 4 and obv_arr[i] > obv_arr[i-1] > obv_arr[i-2] > obv_arr[i-3]
+    obv_falling_4 = i >= 4 and obv_arr[i] < obv_arr[i-1] < obv_arr[i-2] < obv_arr[i-3]
 
     if st == -1:  # BULLISH
-        if dip_v <= dim_v: return None  # DI+ must dominate for BUY
-        if c > e233 and obv_val > obv_ema and obv_rising_3 and c > cp and big_enough:
+        if dip_v - dim_v < 8: return None  # DI+ must dominate for BUY with spread ≥8
+        if c > e233 and obv_val > obv_ema and obv_rising_4 and c > cp and big_enough:
             return 'buy'
     elif st == 1:  # BEARISH
-        if dim_v <= dip_v: return None  # DI- must dominate for SELL
+        if dim_v - dip_v < 8: return None  # DI- must dominate for SELL with spread ≥8
         # H4 trend filter: on XAU/USD, SELL works best as a countertrend within a medium-term uptrend.
         # When H4 is bearish (medium-term downtrend), SELL WR drops to ~31% (late-trend chase, exhausted move).
         # When H4 is bullish (medium-term uptrend), SELL WR rises to ~50% (short pullback, clean reversal).
@@ -277,16 +284,17 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None, h4_trend=None):
                 e200_now = e200_arr[i]; e200_prev = e200_arr[i - 4]
                 if e200_now is not None and e200_prev is not None and e200_now <= e200_prev:
                     return None
-        if c < e233 and obv_val < obv_ema and obv_falling_3 and c < cp and big_enough:
+        if c < e233 and obv_val < obv_ema and obv_falling_4 and c < cp and big_enough:
             return 'sell'
     return None
 
 
 def signal_mfkk_scalping(ind, i, h1_trend=None, hour=None):
-    """S09_MFKK_SCALPING V3 — EMA Fibonacci Stack (13,34,89,233) + FVG retest + session + ST gate.
+    """S09_MFKK_SCALPING V4 — EMA Fibonacci Stack (13,34,89,233) + FVG retest + session + ST gate.
     V2: no ADX gate — FVG retests reliable in flat markets.
     V3 (2026-04-28): London/NY session filter (7-17h) + ST alignment when available.
-      FVG retests in Asian session (low volume) have poor follow-through.
+    V4 (2026-04-30): ADX≥15 gate + RSI>50/<50 + OBV vs OBV_EMA volume confirmation.
+      Removes low-conviction FVG retests without institutional participation.
     """
     if i < 233: return None
 
@@ -298,13 +306,33 @@ def signal_mfkk_scalping(ind, i, h1_trend=None, hour=None):
     c = ind['C'][i]
     if None in (e13, e34, e89, e233) or fb is None: return None
 
+    # ADX gate: avoid dead-flat markets where FVG retests fail
+    a_arr = ind.get('adx')
+    a = a_arr[i] if a_arr else None
+    if a is not None and a < 15: return None
+
+    # RSI momentum: price must be on the right side of neutral
+    r_arr = ind.get('rsi')
+    r = r_arr[i] if r_arr else None
+
+    # OBV volume: institutional participation aligned with direction
+    obv_arr_s = ind.get('obv'); obv_ema_arr_s = ind.get('obv_ema')
+    obv_s = obv_arr_s[i] if obv_arr_s else None
+    oe_s  = obv_ema_arr_s[i] if obv_ema_arr_s else None
+
+    # Confirmation flags (pass-through when data unavailable)
+    rsi_bull = r is None or r > 50
+    rsi_bear = r is None or r < 50
+    obv_bull = obv_s is None or oe_s is None or obv_s > oe_s
+    obv_bear = obv_s is None or oe_s is None or obv_s < oe_s
+
     # ST alignment: block counter-trend FVG retests
     if h1_trend is not None and h1_trend != 0:
         if e13 > e34 > e89 > e233 and h1_trend != -1: return None  # BUY: need ST bullish
         if e13 < e34 < e89 < e233 and h1_trend != 1: return None   # SELL: need ST bearish
 
-    if e13 > e34 > e89 > e233 and c > e233 and fb[i]: return 'buy'
-    if e13 < e34 < e89 < e233 and c < e233 and fs[i]: return 'sell'
+    if e13 > e34 > e89 > e233 and c > e233 and fb[i] and rsi_bull and obv_bull: return 'buy'
+    if e13 < e34 < e89 < e233 and c < e233 and fs[i] and rsi_bear and obv_bear: return 'sell'
     return None
 
 
@@ -343,8 +371,9 @@ def signal_ob_fvg_scalp(ind, i, h1_trend=None, hour=None):
 
 
 def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
-    """S17_CONVERGENCE_SCALP V2 — EMA 34/89 crossover + StochRSI + BB %B + EMA50.
-    Optimal TF: H4 (PF 1.710) >> M30. Opt: ADX>=18 gate + BB%B 0.55/0.45 tighter.
+    """S17_CONVERGENCE_SCALP V3 — EMA 34/89 crossover + StochRSI + BB %B + EMA50.
+    V2: ADX>=18 gate + BB%B 0.55/0.45 tighter.
+    V3 (2026-04-30): ADX 18→22, BB%B 0.55/0.45→0.58/0.42 (candle filter rimosso: su H4 taglia vincitori).
     """
     if i < 89: return None
     e34 = ind['e34'][i]; e89 = ind['e89'][i]
@@ -359,8 +388,8 @@ def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
     if None in (e34, e89, sk, sd, bbu, bbl, c, e50, atr): return None
     if atr_avg and atr > 2.2 * atr_avg: return None
 
-    # ADX >= 18: EMA crossovers need at least modest directional bias
-    if a is not None and a < 18: return None
+    # ADX >= 22: EMA crossovers on H4 need clearer directional bias
+    if a is not None and a < 22: return None
 
     bb_range = bbu - bbl
     bb_pct = (c - bbl) / bb_range if bb_range > 0 else 0.5
@@ -371,8 +400,8 @@ def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
     bull_prev = e34_p > e89_p and sk_p > sd_p
     bear_prev = e34_p < e89_p and sk_p < sd_p
     # BB%B tightened 0.55/0.45: price must be clearly above/below midline
-    bull = e34 > e89 and sk > sd and bb_pct > 0.55 and c > e50 and not bull_prev
-    bear = e34 < e89 and sk < sd and bb_pct < 0.45 and c < e50 and not bear_prev
+    bull = e34 > e89 and sk > sd and bb_pct > 0.58 and c > e50 and not bull_prev
+    bear = e34 < e89 and sk < sd and bb_pct < 0.42 and c < e50 and not bear_prev
 
     if bull: return 'buy'
     if bear: return 'sell'

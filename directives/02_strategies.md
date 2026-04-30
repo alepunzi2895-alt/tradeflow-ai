@@ -2,26 +2,25 @@
 
 ## Backtest Canonico (2026-04-30 · MT5 GOLD · lot 0.01 · $1/punto)
 
-### Sistema Adattivo per TF (senza RM — fonte di verità)
+### Sistema Adattivo per TF (senza RM — fonte di verità · segnali V5 · 2026-04-30)
 
 | TF | WR% | P&L | PF | DD | $/gg | Trade/gg | Mesi+ |
 |---|---|---|---|---|---|---|---|
-| M30 | 38.9% | +$4,270 | 1.326 | $486 | +$10.8 | 4.6 | 18/24 |
-| H1 | 44.9% | +$7,332 | 1.610 | $790 | +$22.7 | 4.7 | 18/24 |
-| **H4** | **42.4%** | **+$5,673** | **1.874** | **$469** | **+$29.4** | 2.8 | 16/23 |
+| M30 | **43.0%** | +$4,322 | **1.438** | $545 | +$14.0 | 4.35 | **21/24** |
+| H1 | **47.5%** | +$5,785 | 1.610 | $791 | +$23.6 | 5.02 | **21/24** |
+| **H4** | **43.4%** | **+$4,872** | **1.913** | **$350** | **+$28.8** | 3.0 | 14/23 |
 
-> H4 ha il miglior PF (1.874) e il DD più basso ($469). H1 miglior P&L assoluto. M30 è il dataset più ricco (23 164 candele).
+> H4 ha il miglior PF (1.913) e DD minimo ($350). M30 e H1 entrambi a 21/24 mesi positivi. Segnali V5 (+4pp WR su M30, +2.6pp su H1 vs run precedente).
 
-### Breakdown per strategia (M30 adattivo senza RM — 2026-04-30)
+### Breakdown per strategia (M30 adattivo senza RM — segnali V5)
 
 | Strategia | Trade | WR% | P&L contrib | TF ottimale | Note |
 |---|---|---|---|---|---|
-| S00_MFKK | 915 | 45.6% | +$2,364 | M30 | dominante in TREND/WEAK |
-| S09_MFKK_SCALPING | 199 | 29.6% | +$910 | **M30** | V3: session + ST alignment |
-| S10_OB_FVG_SCALP | 49 | 51.0% | +$679 | M30 | alta qualità, bassa frequenza |
-| S17_CONVERGENCE_SCALP | 154 | 24.7% | +$139 | **H4** | bassa WR ma PF positivo |
-| S16_GOLDEN_SQUEEZE | 280 | 40.4% | +$168 | **H1** | V4: H4 context filter SELL |
-| S05_MFKK_INTRADAY | 219 | 24.7% | +$10 | **H1** | V4: session 7-17h + ST gate |
+| S00_MFKK | 873 | 47.2% | +$2,708 | M30 | sell DI≥25, sell_thr 76 |
+| S05_MFKK_INTRADAY | 209 | 24.9% | +$335 | **H1** | V5: ADX18, RSI57/43, slope |
+| S16_GOLDEN_SQUEEZE | 157 | 44.6% | +$244 | **H1** | V5: OBV 4 barre, DI spread≥8 |
+| S10_OB_FVG_SCALP | 53 | 52.8% | +$815 | M30 | alta qualità, bassa frequenza |
+| S09_MFKK_SCALPING | 52 | 30.8% | +$220 | **M30** | V4: RSI>50+OBV>EMA filtri |
 
 ### TF ottimale per strategia (da backtest 2026-04-23)
 
@@ -83,16 +82,16 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 | ≥ 6 perdite consecutive | 0.50 | streak_penalty |
 | Nella norma | 1.00 | normal |
 
-### Baseline backtest (fonte di verità — WR adattivo per TF ottimale · 2026-04-30)
+### Baseline backtest (fonte di verità — WR adattivo per TF ottimale · segnali V5 · 2026-04-30)
 
 | Strategia | WR baseline | PF baseline | TF ref | Trade |
 |---|---|---|---|---|
-| S00_MFKK | **45.6%** | 1.35 | M30 adattivo | 915 |
-| S05_MFKK_INTRADAY | 24.0% | 1.07 | H1 adattivo | 208 |
-| S09_MFKK_SCALPING | 29.6% | 1.40 | M30 adattivo | 199 |
-| S10_OB_FVG_SCALP | 51.0% | 1.65 | M30 adattivo | 49 |
-| S16_GOLDEN_SQUEEZE | **47.3%** | 1.40 | H1 adattivo | 262 |
-| S17_CONVERGENCE_SCALP | 35.8% | 1.75 | H4 adattivo | 120 |
+| S00_MFKK | **47.2%** | 1.44 | M30 adattivo | 873 |
+| S05_MFKK_INTRADAY | 25.3% | 1.10 | H1 adattivo | 162 |
+| S09_MFKK_SCALPING | 36.0% | 1.40 | H1 adattivo | 25 |
+| S10_OB_FVG_SCALP | 52.8% | 1.65 | M30 adattivo | 53 |
+| S16_GOLDEN_SQUEEZE | **51.4%** | 1.50 | H1 adattivo | 140 |
+| S17_CONVERGENCE_SCALP | 34.0% | 1.75 | H4 adattivo | 103 |
 
 > Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.
 > Cache trade: `data/performance_cache.json` (max 500 trade). Overrides: `data/strategy_overrides.json`.

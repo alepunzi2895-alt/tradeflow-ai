@@ -27,14 +27,14 @@ from collections import defaultdict
 log = logging.getLogger('tf-bot')
 
 # ── Baseline backtest (fonte: directives/02_strategies.md) ───────────────────
-# WR adattivo per TF ottimale — backtest 2026-04-30 (23164 M30 / 11792 H1 / 3085 H4 candele)
+# WR adattivo per TF ottimale — backtest 2026-04-30 V2 (segnali ottimizzati)
 BACKTEST_BASELINES = {
-    "S00_MFKK":              {"wr": 0.456, "pf": 1.35},   # M30 adattivo 45.6% · 915 trade
-    "S05_MFKK_INTRADAY":     {"wr": 0.240, "pf": 1.07},   # H1 adattivo 24.0% · 208 trade
-    "S09_MFKK_SCALPING":     {"wr": 0.296, "pf": 1.40},   # M30 adattivo 29.6% · 199 trade
-    "S10_OB_FVG_SCALP":      {"wr": 0.510, "pf": 1.65},   # M30 adattivo 51.0% · 49 trade
-    "S16_GOLDEN_SQUEEZE":    {"wr": 0.473, "pf": 1.40},   # H1 adattivo 47.3% · 262 trade
-    "S17_CONVERGENCE_SCALP": {"wr": 0.358, "pf": 1.75},   # H4 adattivo 35.8% · 120 trade
+    "S00_MFKK":              {"wr": 0.472, "pf": 1.44},   # M30 adattivo 47.2% · 873 trade
+    "S05_MFKK_INTRADAY":     {"wr": 0.253, "pf": 1.10},   # H1 adattivo 25.3% · 162 trade
+    "S09_MFKK_SCALPING":     {"wr": 0.360, "pf": 1.40},   # H1 adattivo 36.0% · 25 trade
+    "S10_OB_FVG_SCALP":      {"wr": 0.528, "pf": 1.65},   # M30 adattivo 52.8% · 53 trade
+    "S16_GOLDEN_SQUEEZE":    {"wr": 0.514, "pf": 1.50},   # H1 adattivo 51.4% · 140 trade
+    "S17_CONVERGENCE_SCALP": {"wr": 0.340, "pf": 1.75},   # H4 adattivo 34.0% · 103 trade
 }
 
 ROLLING_WINDOW      = 30    # trade recenti per WR/PF rolling

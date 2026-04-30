@@ -87,7 +87,7 @@ LOT_SIZE     = 0.02          # lot size base conto $1000 — CONSERVATIVE→0.01
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)
-MAX_OPEN_ORDERS = 2          # max ordini aperti contemporaneamente (ridotto da 3 → 2, 2026-04-28)
+MAX_OPEN_ORDERS = 1          # max ordini aperti contemporaneamente (ridotto da 2 → 1, 2026-04-30)
 SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
 STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
@@ -728,6 +728,8 @@ def get_account_info():
 
 def count_open_positions():
     """Conta le posizioni aperte del bot. Source of truth: MT5; in-memory come lower-bound."""
+    if DRY_RUN:
+        return sum(1 for t, _ in _strategy_order_tickets.values() if t)
     mt5_count = sum(1 for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC)
     # len(_strategy_order_tickets) è il numero di strategie con ticket — utile solo se MT5 è lento
     return max(mt5_count, len(_strategy_order_tickets))
@@ -737,8 +739,10 @@ def has_position_in_direction(direction):
     Controlla in-memory PRIMA di MT5 per essere immune a latenza post-place_order."""
     # 1. In-memory check: cattura posizioni appena aperte non ancora visibili in MT5
     for _ticket, _dir in _strategy_order_tickets.values():
-        if _dir == direction:
+        if _ticket and _dir == direction:  # _ticket valido (evita entry dry-run corrotte)
             return True
+    if DRY_RUN:
+        return False  # in dry-run non ci sono posizioni MT5 reali, usa solo in-memory
     # 2. MT5 check: verità assoluta quando in-memory è vuoto o desincronizzato
     for p in mt5.positions_get(symbol=SYMBOL) or []:
         if p.magic != MAGIC: continue
@@ -759,7 +763,14 @@ def has_open_position_for_strategy(strategy_name):
     # Ticket fallback: copre la finestra tra place_order() e visibilità in MT5
     if strategy_name in _strategy_order_tickets:
         order_ticket, _dir = _strategy_order_tickets[strategy_name]
-        if order_ticket and any(p.ticket == order_ticket and p.magic == MAGIC for p in positions):
+        if not order_ticket:
+            # ticket invalido (es. dry-run con ticket non assegnato): pulisci
+            _strategy_order_tickets.pop(strategy_name, None)
+            return False
+        # In dry-run non ci sono posizioni MT5 reali: basta che il ticket sia in memoria
+        if DRY_RUN:
+            return True
+        if any(p.ticket == order_ticket and p.magic == MAGIC for p in positions):
             return True
         # Né commento né ticket trovato → posizione chiusa, pulisci memory
         _strategy_order_tickets.pop(strategy_name, None)
@@ -827,9 +838,16 @@ def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
     }
 
     if DRY_RUN:
+        import random
+        _dry_ticket = random.randint(100000, 999999)
         log.info(f"[DRY-RUN] Ordine simulato: {direction.upper()} {lot} {SYMBOL} "
-                 f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}]")
-        return {'retcode': 10009, 'simulated': True}
+                 f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}] ticket={_dry_ticket}")
+        # Restituisce un oggetto-like con .order per compatibilità con getattr(result, 'order', 0)
+        class _DryResult:
+            retcode = 10009
+            order = _dry_ticket
+            simulated = True
+        return _DryResult()
 
     result = mt5.order_send(request)
     if result.retcode != mt5.TRADE_RETCODE_DONE:

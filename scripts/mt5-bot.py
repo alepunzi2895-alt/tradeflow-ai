@@ -772,7 +772,12 @@ def has_open_position_for_strategy(strategy_name):
             return True
         if any(p.ticket == order_ticket and p.magic == MAGIC for p in positions):
             return True
-        # Né commento né ticket trovato → posizione chiusa, pulisci memory
+        # positions_get() vuoto = possibile race condition (posizione appena aperta,
+        # non ancora visibile in MT5). Tieni il ticket in memoria e ritorna True
+        # per evitare doppio ordine. Il cleanup avviene solo dalla position monitoring.
+        if not positions:
+            return True
+        # MT5 ha restituito posizioni ma questa non c'è → chiusa davvero
         _strategy_order_tickets.pop(strategy_name, None)
     return False
 
@@ -1667,6 +1672,8 @@ def run():
                             if sec_tf != 'H1': continue
                             if sec_id == strategy_name: continue   # già provata come primaria
                             if count_open_positions() >= MAX_OPEN_ORDERS: break
+                            if sec_id in _strategy_order_tickets and _strategy_order_tickets[sec_id][0]:
+                                log.debug(f"[H1sec] skip {sec_id} — ticket già in memoria"); break
                             if sl_cooldowns_until.get(sec_id) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[sec_id]: continue
                             if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
                             if MAX_TRADES > 0 and state.trades_today >= MAX_TRADES: break
@@ -1930,6 +1937,11 @@ def run():
 
                             for (sname, m30_dir_filter) in _m30_entries:
                                 if count_open_positions() >= MAX_OPEN_ORDERS: break
+                                # Guard pre-segnale: blocca subito se il ticket è già in memoria
+                                # (difesa contro race-condition MT5 dove positions_get() è lento)
+                                if sname in _strategy_order_tickets and _strategy_order_tickets[sname][0]:
+                                    log.debug(f"[M30] skip {sname} — ticket già in memoria")
+                                    break
                                 if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until: break
                                 if sl_cooldowns_until.get(sname) and datetime.datetime.now(datetime.timezone.utc) < sl_cooldowns_until[sname]:
                                     remaining = int((sl_cooldowns_until[sname] - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
@@ -2073,6 +2085,8 @@ def run():
                             if count_open_positions() >= MAX_OPEN_ORDERS:
                                 log.debug(f"[H4] Max posizioni aperte ({MAX_OPEN_ORDERS})")
                                 break
+                            if h4_id in _strategy_order_tickets and _strategy_order_tickets[h4_id][0]:
+                                log.debug(f"[H4] skip {h4_id} — ticket già in memoria"); break
                             if sl_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < sl_cooldown_until:
                                 remaining = int((sl_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds() / 60)
                                 log.warning(f"🛑 H4 skip {h4_id} — cooldown SL attivo ({remaining}min rimanenti)")

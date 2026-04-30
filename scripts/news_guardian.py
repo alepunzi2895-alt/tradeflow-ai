@@ -43,15 +43,15 @@ MEDIUM_CURRENCIES = {'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD'}
 HIGH_TAGS         = {'High', 'HIGH', 'high', '3', 'red'}
 MEDIUM_TAGS       = {'Medium', 'MEDIUM', 'medium', '2', 'orange'}
 
-# URL ForexFactory (thisweek + nextweek per copertura weekend)
+# URL ForexFactory — ordinati per priorità, tutti tentati in sequenza
 FF_URLS = [
     "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
     "https://nfs.faireconomy.media/ff_calendar_nextweek.json",
-]
-# Fallback alternativo
-BACKUP_URLS = [
     "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json",
+    "https://cdn-nfs.faireconomy.media/ff_calendar_nextweek.json",
+    "https://www.forexfactory.com/ff_calendar_thisweek.json",
 ]
+BACKUP_URLS = []  # tutti già in FF_URLS
 
 # ── SSL context (tolera cert issues su VPS Windows) ───────────────────────────
 try:
@@ -154,8 +154,9 @@ class NewsGuardian:
 
             events = []
             for e in raw:
-                impact   = str(e.get('impact', '')).strip()
-                currency = str(e.get('currency', '')).upper().strip()
+                impact = str(e.get('impact', '')).strip()
+                # FF API 2026: campo rinominato 'currency' → 'country' (o entrambi presenti)
+                currency = str(e.get('currency') or e.get('country') or '').upper().strip()
 
                 is_high   = impact in HIGH_TAGS
                 is_medium = impact in MEDIUM_TAGS
@@ -181,7 +182,7 @@ class NewsGuardian:
             return events
 
         except Exception as ex:
-            log.debug(f"[NewsGuardian] fetch {url} failed: {ex}")
+            log.warning(f"[NewsGuardian] fetch {url} failed: {type(ex).__name__}: {ex}")
             return []
 
     def refresh(self, force: bool = False) -> int:
@@ -215,8 +216,13 @@ class NewsGuardian:
             self._save_cache()
             log.info(f"[NewsGuardian] Calendario aggiornato: {len(self._events)} eventi")
         else:
+            # Anche su fallimento aggiorna _last_fetch con retry delay di 30 min.
+            # Senza questo, la cache vuota fa sì che refresh() venga ritentato ogni 60s
+            # esaurendo il rate limit di ForexFactory (429).
+            RETRY_DELAY_S = 1800  # riprova tra 30 minuti
+            self._last_fetch = now_ts - REFRESH_HOURS * 3600 + RETRY_DELAY_S
             log.warning("[NewsGuardian] Tutti i fetch falliti — uso cache locale "
-                        f"({len(self._events)} eventi)")
+                        f"({len(self._events)} eventi). Prossimo retry fra 30 min.")
 
         return len(self._events)
 

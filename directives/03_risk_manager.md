@@ -120,16 +120,42 @@ In pratica: un swing_high D1 (0.85 × 1.0 = **0.85**) supera un swing_high H1 (0
 
 ## Parametri ATR per Strategia (STRATEGY_ATR_PARAMS)
 
-| Strategia | TP ATR mult | SL ATR mult |
-|---|---|---|
-| S05_MFKK_INTRADAY | 2.5 | 1.0 |
-| S09_MFKK_SCALPING | 3.0 | 1.0 |
-| S10_OB_FVG_SCALP | 2.5 | 1.2 |
-| S16_GOLDEN_SQUEEZE | 3.5 | 2.0 |
-| S17_CONVERGENCE_SCALP | 2.8 | 1.0 |
-| S00_MFKK | 2.5 | 1.0 |
+| Strategia | TP ATR mult | SL ATR mult | Note |
+|---|---|---|---|
+| S05_MFKK_INTRADAY | 3.5 | **1.5** | era 1.0 → +50% (2026-04-30) |
+| S09_MFKK_SCALPING | 4.0 | **1.5** | era 1.0 |
+| S10_OB_FVG_SCALP | 3.5 | **1.5** | era 1.2 |
+| S16_GOLDEN_SQUEEZE | 3.5 | 2.0 | invariato |
+| S17_CONVERGENCE_SCALP | 4.0 | **1.5** | era 1.0; H4 → ATR H4 già più ampio |
+| S00_MFKK | 3.5 | **1.5** | era 1.0 |
 
 > `S17_CONVERGENCE_SCALP` usa H4 (PF 1.710), non più M15/M5. Durata attesa 240min.
+
+### Moltiplicatore dinamico ATR spike
+
+`get_order_params()` amplia automaticamente il SL quando la volatilità corrente supera la media:
+
+| ATR corrente vs ATR_avg | Moltiplicatore aggiuntivo SL |
+|---|---|
+| < 1.3× | nessun cambio |
+| 1.3–1.6× | SL × 1.3 |
+| > 1.6× | SL × 1.5 |
+
+Log: `[ATR×1.4 spike→SL×1.95]` indica che il SL è stato allargato dinamicamente.
+
+### AI Score — Fallback locale
+
+Quando Vercel non è raggiungibile, `current_ai_score` viene calcolato localmente da `_local_ai_score()`:
+
+| SL consecutivi | AI Score locale | Tier risultante |
+|---|---|---|
+| 0 + pnl > -100 | 55 | ⚪ NORMAL |
+| 0 + pnl ≤ -100 | 44 | ⚪ NORMAL borderline |
+| 1 | 44 | ⚪ NORMAL borderline |
+| 2 | 32 | 🔵 CONSERVATIVE |
+| ≥ 3 | 20 | 🔵 CONSERVATIVE profondo |
+
+Log: `🧠 AI Score: 32.0 [locale (SL streak=2)] — tier: 🔵 CONSERVATIVE`
 
 ## Esempio Log
 

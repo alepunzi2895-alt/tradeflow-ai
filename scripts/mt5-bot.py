@@ -109,6 +109,28 @@ SYNC_ENABLED = True          # False per disabilitare il sync cloud
 current_ai_score = 50.0      # Global per rilassamento filtri
 
 
+def _local_ai_score(consecutive_sl: int, today_pnl: float = 0.0) -> float:
+    """
+    Fallback AI Score calcolato localmente quando Vercel non è raggiungibile.
+    Abbassa il tier del RiskGuardian in base a serie di SL consecutivi,
+    garantendo che il sistema riduca il rischio anche offline.
+      0 SL + pnl ok → 55 (NORMAL stabile)
+      1 SL           → 44 (NORMAL borderline)
+      2 SL           → 32 (CONSERVATIVE)
+      3+ SL          → 20 (CONSERVATIVE profondo)
+      pnl < -100     → max 44 anche senza SL
+    """
+    if consecutive_sl >= 3:
+        return 20.0
+    if consecutive_sl == 2:
+        return 32.0
+    if consecutive_sl == 1:
+        return 44.0
+    if today_pnl < -100:
+        return 44.0
+    return 55.0
+
+
 LOG_FILE     = "mt5-bot.log"
 
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
@@ -1316,9 +1338,10 @@ def run():
             # ── Fetch AI Score ogni 60s ────────────────────────────────────
             if (now_ts - last_score_ts) >= 60:
                 global current_ai_score
+                _fetched_score = None
                 # Guard: RiskManager potrebbe non essere importato (BUG#2 fix 2026-04-23)
                 if RiskManager is not None:
-                    current_ai_score = RiskManager.fetch_ai_score(VERCEL_URL)
+                    _fetched_score = RiskManager.fetch_ai_score(VERCEL_URL)  # None se offline
                 else:
                     try:
                         # Fallback: fetch diretto senza RiskManager
@@ -1328,15 +1351,26 @@ def run():
                             headers={'Content-Type':'application/json'}, method='POST')
                         with _ur.urlopen(_req, timeout=8, context=_SSL_CTX) as _r:
                             _d = _json.loads(_r.read())
-                            current_ai_score = float((_d.get('bot_status') or {}).get('ai_score', current_ai_score))
+                            _v = (_d.get('bot_status') or {}).get('ai_score')
+                            if _v is not None:
+                                _fetched_score = float(_v)
                     except Exception:
-                        pass  # mantieni valore precedente
+                        pass
+
+                if _fetched_score is not None:
+                    current_ai_score = _fetched_score
+                    _score_source = "Vercel"
+                else:
+                    # Vercel offline: calcola proxy locale da streak SL + pnl giornaliero
+                    current_ai_score = _local_ai_score(consecutive_sl_count, state.pnl_today)
+                    _score_source = f"locale (SL streak={consecutive_sl_count})"
+
                 last_ai_score = current_ai_score
                 last_score_ts = now_ts
                 if rm:
-                    log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f} — tier: {rm.get_tier(last_ai_score)['label']}")
+                    log.info(f"🧠 AI Score: {last_ai_score:.1f} [{_score_source}] — tier: {rm.get_tier(last_ai_score)['label']}")
                 else:
-                    log.info(f"🧠 AI Score aggiornato: {last_ai_score:.1f}")
+                    log.info(f"🧠 AI Score: {last_ai_score:.1f} [{_score_source}]")
 
             # ── Controlla nuova candela H1 ────────────────────────────────────
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa

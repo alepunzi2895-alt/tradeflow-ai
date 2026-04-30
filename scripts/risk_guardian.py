@@ -72,12 +72,15 @@ RISK_TIERS = {
 }
 
 STRATEGY_ATR_PARAMS = {
-    "S05_MFKK_INTRADAY":    {"tp_atr": 3.5, "sl_atr": 1.0},
-    "S09_MFKK_SCALPING":    {"tp_atr": 4.0, "sl_atr": 1.0},
-    "S10_OB_FVG_SCALP":     {"tp_atr": 3.5, "sl_atr": 1.2},
+    # SL alzato a 1.5×ATR (era 1.0) per S05/S09/S10/S17/S00 (2026-04-30):
+    # Con ATR H1 ≈12pt e range H4 ≈25-50pt, un SL di 1×ATR viene spazzato da normali
+    # fluttuazioni intracandela prima che il trade si stabilisca.
+    "S05_MFKK_INTRADAY":    {"tp_atr": 3.5, "sl_atr": 1.5},
+    "S09_MFKK_SCALPING":    {"tp_atr": 4.0, "sl_atr": 1.5},
+    "S10_OB_FVG_SCALP":     {"tp_atr": 3.5, "sl_atr": 1.5},
     "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 2.0},
-    "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.0},
-    "S00_MFKK":             {"tp_atr": 3.5, "sl_atr": 1.0},
+    "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.5},
+    "S00_MFKK":             {"tp_atr": 3.5, "sl_atr": 1.5},
 }
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection
@@ -331,6 +334,16 @@ class RiskGuardian:
         tp_mult = tp_atr_mult if tp_atr_mult else atr_p["tp_atr"]
         sl_mult = sl_atr_mult if sl_atr_mult else atr_p["sl_atr"]
 
+        # ATR spike: allarga SL dinamicamente quando la volatilità è sopra la media.
+        # Evita che spike di news o candele ad alto range spazzino SL stretti.
+        _atr_ref = atr_avg or atr
+        if _atr_ref and _atr_ref > 0:
+            _ratio = atr / _atr_ref
+            if _ratio > 1.6:
+                sl_mult = round(sl_mult * 1.5, 2)
+            elif _ratio > 1.3:
+                sl_mult = round(sl_mult * 1.3, 2)
+
         base_tp = round(atr * tp_mult * tier["tp_multiplier"], 2)
         base_sl = round(atr * sl_mult * tier["sl_multiplier"], 2)
 
@@ -343,11 +356,14 @@ class RiskGuardian:
         trailing_activation = round(base_tp * (tier["be_trigger"] + 0.05), 2)
         ts_step_usd = round(atr * 0.3, 2) if atr else round(base_sl * 0.25, 2)
 
+        _atr_note = ""
+        if _atr_ref and _atr_ref > 0 and atr / _atr_ref > 1.3:
+            _atr_note = f" [ATR×{atr/_atr_ref:.1f} spike→SL×{sl_mult:.2f}]"
         log.info(
             f"🛡️ RiskGuardian [{tier['label']}] strat={strategy_id} "
             f"comp={comp:.0f} (str={strategy_confidence:.2f}/"
             f"sig={conf['signal_quality']:.2f}/mkt={conf['market_conditions']:.2f}) | "
-            f"lot={lot} | TP=${base_tp:.2f} SL=${base_sl:.2f} | "
+            f"lot={lot} | TP=${base_tp:.2f} SL=${base_sl:.2f}{_atr_note} | "
             f"BE@+${be_dist:.2f} | TS step=${ts_step_usd:.2f}"
         )
 

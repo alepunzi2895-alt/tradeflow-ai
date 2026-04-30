@@ -1,39 +1,27 @@
 # TradeFlow AI — Strategie Attive
 
-## Backtest Canonico (2026-04-19 · MT5 GOLD M30 · lot 0.01 · $1/punto)
+## Backtest Canonico (2026-04-30 · MT5 GOLD · lot 0.01 · $1/punto)
 
-### Sistema Adattivo M30 (senza RM — fonte di verità per confronto TF)
+### Sistema Adattivo per TF (senza RM — fonte di verità)
 
-| Metrica | Prima (2026-04-17) | Dopo (2026-04-19) | Delta |
-|---|---|---|---|
-| Trade totali (25 mesi) | 4599 | 3385 | -26% |
-| Win Rate | 34.1% | **37.4%** | +3.3pp |
-| P&L totale | +$5,556 | **+$5,794** | +4.3% |
-| Profit Factor | 1.185 | **1.258** | +6.1% |
-| Max Drawdown | $803 | **$759** | -5.5% |
-| Media $/giorno | +$10.87 | **+$12.02** | +10.6% |
-| Mesi positivi | 17/25 | **18/25** | +1 |
+| TF | WR% | P&L | PF | DD | $/gg | Trade/gg | Mesi+ |
+|---|---|---|---|---|---|---|---|
+| M30 | 38.9% | +$4,270 | 1.326 | $486 | +$10.8 | 4.6 | 18/24 |
+| H1 | 44.9% | +$7,332 | 1.610 | $790 | +$22.7 | 4.7 | 18/24 |
+| **H4** | **42.4%** | **+$5,673** | **1.874** | **$469** | **+$29.4** | 2.8 | 16/23 |
 
-### Breakdown per strategia (M30 adattivo senza RM — 2026-04-19)
+> H4 ha il miglior PF (1.874) e il DD più basso ($469). H1 miglior P&L assoluto. M30 è il dataset più ricco (23 164 candele).
+
+### Breakdown per strategia (M30 adattivo senza RM — 2026-04-30)
 
 | Strategia | Trade | WR% | P&L contrib | TF ottimale | Note |
 |---|---|---|---|---|---|
-| S00_MFKK | 1680 | 42.1% | +$2,496 | M30 | TP/SL 2.5:1.0 |
-| S16_GOLDEN_SQUEEZE | 1006 | 29.0% | -$1,144 | M30 | V3 rescaled: ADX>=25 + DI agree|
-| S09_MFKK_SCALPING | 211 | 29.4% | -$31.6 | **M30** | |
-| S05_MFKK_INTRADAY | 485 | 31.3% | -$1,292 | **H1** | |
-| S10_OB_FVG_SCALP | 91 | 33.0% | -$282.6 | M30 | |
-| S17_CONVERGENCE_SCALP | 74 | 23.0% | -$119.2 | **H4** | |
-
-### Sistema adattivo per TF (senza RM — 2026-04-19)
-
-| TF | WR% | P&L | PF | DD | $/gg | Trade/gg |
-|---|---|---|---|---|---|---|
-| **M30** | **37.4%** | **+$5,794** | **1.258** | **$759** | **+$12.0** | 7.0 |
-| H1 | 36.0% | +$3,831 | 1.162 | $964 | +$9.1 | 6.6 |
-| H4 | 43.1% | +$7,022 | **1.660** | **$626** | +$25.2 | 3.7 |
-
-> M30 è il TF canonico: miglior equilibrio frequenza/DD. H4 ha PF 1.660 WR 43.1% ma solo 3.7 trade/gg.
+| S00_MFKK | 915 | 45.6% | +$2,364 | M30 | dominante in TREND/WEAK |
+| S09_MFKK_SCALPING | 199 | 29.6% | +$910 | **M30** | V3: session + ST alignment |
+| S10_OB_FVG_SCALP | 49 | 51.0% | +$679 | M30 | alta qualità, bassa frequenza |
+| S17_CONVERGENCE_SCALP | 154 | 24.7% | +$139 | **H4** | bassa WR ma PF positivo |
+| S16_GOLDEN_SQUEEZE | 280 | 40.4% | +$168 | **H1** | V4: H4 context filter SELL |
+| S05_MFKK_INTRADAY | 219 | 24.7% | +$10 | **H1** | V4: session 7-17h + ST gate |
 
 ### TF ottimale per strategia (da backtest 2026-04-23)
 
@@ -48,14 +36,14 @@
 
 ## Strategie Attive nel Bot
 
-| ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema | WR |
+| ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema | WR adattivo |
 |---|---|---|---|---|---|---|---|
-| `S00_MFKK` | MFKK Core V2 | ATR×3.5 | ATR×1.0 | TREND/WEAK/RANGE | M30 | 1.24 | 26.1% (H1: WR 29.8% PF 1.49) |
-| `S05_MFKK_INTRADAY` | MFKK Intraday V4 | ATR×3.5 | ATR×1.0 | TREND_UP, TREND_DOWN | **H1** | 1.07 | 23.4% |
-| `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.0 | VOLATILE, WEAK | **M30** | 1.40 | 29.2% |
-| `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.2 | RANGING, WEAK | M30 | 1.80 | 51.0% |
-| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V4 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.38 | 45.0% |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.0 | VOLATILE | **H4** | 1.75 | 35.3% |
+| `S00_MFKK` | MFKK Core V2 | ATR×3.5 | ATR×1.5 | TREND/WEAK/RANGE | M30 | 1.326 | 45.6% (H1: 53.8%, H4: 46.4%) |
+| `S05_MFKK_INTRADAY` | MFKK Intraday V4 | ATR×3.5 | ATR×1.5 | TREND_UP, TREND_DOWN | **H1** | 1.07 | 24.0% |
+| `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.5 | VOLATILE, WEAK | **M30** | 1.40 | 29.6% |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK | M30 | 1.65 | 51.0% |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V4 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.40 | 47.3% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.5 | VOLATILE | **H4** | 1.75 | 35.8% |
 
 ## Strategy Selector Agent (`strategy_selector.py`)
 
@@ -95,16 +83,16 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 | ≥ 6 perdite consecutive | 0.50 | streak_penalty |
 | Nella norma | 1.00 | normal |
 
-### Baseline backtest (fonte di verità)
+### Baseline backtest (fonte di verità — WR adattivo per TF ottimale · 2026-04-30)
 
-| Strategia | WR baseline | PF baseline |
-|---|---|---|
-| S16_GOLDEN_SQUEEZE | 45.0% | 1.360 |  ← V4 (2026-04-28): H4 context filter SELL
-| S05_MFKK_INTRADAY | 23.4% | 1.070 |  ← V4 (2026-04-28): session 7-17h + ST + ATR gate
-| S09_MFKK_SCALPING | 29.2% | 1.400 |  ← V3 (2026-04-28): session 06-19h + ST alignment
-| S10_OB_FVG_SCALP | 51.0% | 1.800 |  ← V3 (2026-04-28): ADX≥18 + ST alignment
-| S00_MFKK | 26.1% | 1.240 |  ← V2 (2026-04-28): DI≥20 or ST bullish gate
-| S17_CONVERGENCE_SCALP | 35.3% | 1.750 |  ← H4 adaptive: +$3,052/23mo, PF 1.878 sistema
+| Strategia | WR baseline | PF baseline | TF ref | Trade |
+|---|---|---|---|---|
+| S00_MFKK | **45.6%** | 1.35 | M30 adattivo | 915 |
+| S05_MFKK_INTRADAY | 24.0% | 1.07 | H1 adattivo | 208 |
+| S09_MFKK_SCALPING | 29.6% | 1.40 | M30 adattivo | 199 |
+| S10_OB_FVG_SCALP | 51.0% | 1.65 | M30 adattivo | 49 |
+| S16_GOLDEN_SQUEEZE | **47.3%** | 1.40 | H1 adattivo | 262 |
+| S17_CONVERGENCE_SCALP | 35.8% | 1.75 | H4 adattivo | 120 |
 
 > Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.
 > Cache trade: `data/performance_cache.json` (max 500 trade). Overrides: `data/strategy_overrides.json`.

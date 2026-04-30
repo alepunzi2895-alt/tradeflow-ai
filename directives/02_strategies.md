@@ -2,32 +2,32 @@
 
 ## Backtest Canonico (2026-04-30 · MT5 GOLD · lot 0.01 · $1/punto)
 
-### Sistema Adattivo per TF (senza RM — fonte di verità · segnali V5 · 2026-04-30)
+### Sistema Adattivo per TF (senza RM — fonte di verità · segnali V6 · 2026-04-30)
 
 | TF | WR% | P&L | PF | DD | $/gg | Trade/gg | Mesi+ |
 |---|---|---|---|---|---|---|---|
-| M30 | **43.0%** | +$4,322 | **1.438** | $545 | +$14.0 | 4.35 | **21/24** |
-| H1 | **47.5%** | +$5,785 | 1.610 | $791 | +$23.6 | 5.02 | **21/24** |
+| M30 | **42.2%** | +$3,406 | **1.441** | $593 | +$12.5 | 3.69 | **20/24** |
+| H1 | **47.0%** | +$5,105 | 1.593 | $743 | +$21.8 | 4.60 | **21/24** |
 | **H4** | **43.4%** | **+$4,872** | **1.913** | **$350** | **+$28.8** | 3.0 | 14/23 |
 
-> H4 ha il miglior PF (1.913) e DD minimo ($350). M30 e H1 entrambi a 21/24 mesi positivi. Segnali V5 (+4pp WR su M30, +2.6pp su H1 vs run precedente).
+> V6 S00 BUY: DI+>=20 (M30) / DI+>=15 (H1/H4) obbligatorio — ST non sufficiente da solo. Sell: sessione 9-17h. S00 M30 WR: 47.2%→49.4% (+2.2pp). Meno trade, meno stop, PF stabile.
 
-### Breakdown per strategia (M30 adattivo senza RM — segnali V5)
+### Breakdown per strategia (M30 adattivo senza RM — segnali V6)
 
 | Strategia | Trade | WR% | P&L contrib | TF ottimale | Note |
 |---|---|---|---|---|---|
-| S00_MFKK | 873 | 47.2% | +$2,708 | M30 | sell DI≥25, sell_thr 76 |
-| S05_MFKK_INTRADAY | 209 | 24.9% | +$335 | **H1** | V5: ADX18, RSI57/43, slope |
-| S16_GOLDEN_SQUEEZE | 157 | 44.6% | +$244 | **H1** | V5: OBV 4 barre, DI spread≥8 |
-| S10_OB_FVG_SCALP | 53 | 52.8% | +$815 | M30 | alta qualità, bassa frequenza |
-| S09_MFKK_SCALPING | 52 | 30.8% | +$220 | **M30** | V4: RSI>50+OBV>EMA filtri |
+| S00_MFKK | 518 | 49.4% | +$1,976 | M30 | V6: DI+>=20 gate, sell 9-17h |
+| S05_MFKK_INTRADAY | 219 | 24.2% | +$221 | **H1** | V5: ADX18, RSI57/43, slope |
+| S16_GOLDEN_SQUEEZE | 164 | 43.9% | +$204 | **H1** | V5: OBV 4 barre, DI spread≥8 |
+| S10_OB_FVG_SCALP | 54 | 51.9% | +$806 | M30 | alta qualità, bassa frequenza |
+| S09_MFKK_SCALPING | 53 | 30.2% | +$199 | **M30** | V4: RSI>50+OBV>EMA filtri |
 
 ### TF ottimale per strategia (da backtest 2026-04-23)
 
 | Strategia | TF Ottimale | PF sistema | WR | Note |
 |---|---|---|---|---|
 | S16_GOLDEN_SQUEEZE | **H1** | 1.36 | 45.0% | V4 (2026-04-28): H4 context filter SELL. BUY WR 44.5%, SELL WR 50% (countertrend only). H1 proxy: EMA200 slope>0 |
-| S00_MFKK | M30 (fallback) | 1.24 | 26.1% | V2 (2026-04-28): DI≥20 or ST bullish gate, sell London/NY only. H1: WR 29.8% PF 1.49 |
+| S00_MFKK | M30 (fallback) | 1.24 | 26.1% | V6 (2026-04-30): DI+>=20 M30 / >=15 H1 obbligatorio, sell 9-17h. M30 WR 49.4%, H1 WR 53.4% |
 | S09_MFKK_SCALPING | **M30** | 1.40 | 29.2% | V3 (2026-04-28): session 06-19h + ST alignment. H1 +$379 positivo. |
 | S10_OB_FVG_SCALP | M30 | 1.80 | 51.0% | V3 (2026-04-28): ADX≥18 + ST alignment. 49 trade/25mo — alta qualità. |
 | S05_MFKK_INTRADAY | **H1** | 1.07 | 23.4% | V4 (2026-04-28): session 7-17h + ST + ATR≤1.8× gate. H4: WR 34.5% +$769. |

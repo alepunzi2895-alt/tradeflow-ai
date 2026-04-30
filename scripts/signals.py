@@ -16,12 +16,16 @@ Optimization 2026-04-19:
   S10: skip ATR spike (>2.5×avg)  [unchanged]
   S17: ADX>=18 gate + BB%B tightened 0.55/0.45
 
-Optimization 2026-04-30 (WR improvement pass):
+Optimization 2026-04-30 V5 (WR improvement pass):
   S05: ADX 15→18, RSI 54/46→57/43, RSI slope confirmation (r > r_prev)
   S09: ADX≥15 gate + RSI>50/<50 + OBV vs OBV_EMA volume confirmation
   S16: OBV slope 3→4 barre consecutive, DI spread esplicito ≥8
   S17: ADX 18→22, BB%B 0.55/0.45→0.62/0.38, candle direction filter
   S00: sell DI spread 20→25, sell_thr 72→76
+
+Optimization 2026-04-30 V6 (S00 stop reduction):
+  S00 BUY: DI+>=20 sempre obbligatorio (prima OR con ST) → WR 34.5%→36.7%, P&L +$1035 standalone
+  S00 SELL: sessione 7-17h → 9-17h (7-9h in perdita -$371 su 58 trade)
 """
 
 
@@ -156,17 +160,19 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     st_arr = ind.get('st')
     st_now = st_arr[i] if st_arr else 0
     buy_thr = 82 if (is_exh_buy or b_cross) else 90
-    # Tighten BUY: require DI≥20 aligned OR Supertrend bullish when DI<20
+    # BUY V6 (2026-04-30): DI+ conviction gate tf-dipendente.
+    # M30: DI+>=20 obbligatorio (DI+<20 buys standalone WR 30.4% → tagliati)
+    # H1/H4: DI+>=15 (H1 ha DI più compresso, soglia 20 taglia buone entrate +2.6pp WR)
     buy_di_spread = dp - dm
-    buy_di_ok = buy_di_spread >= 20
-    buy_st_ok = (st_now == -1)  # H1 Supertrend bullish
-    if not (buy_di_ok or buy_st_ok): buy_thr = 999  # block low-conviction buys
+    buy_di_min    = 15 if tf in ('H1', 'H4') else 20
+    buy_di_ok     = buy_di_spread >= buy_di_min
+    if not buy_di_ok: buy_thr = 999  # blocca low-conviction buys indipendentemente da ST
 
     # ── SELL: London/NY session + strong DI conviction only ─────────────────
-    # Analysis (2026-04-28): SELL with DI≥20 + sess 7-17h → WR 24.1%, PF 1.11 (M30/H1)
-    # H4 SELL is unreliable (WR 17.5%) — block entirely on H4
+    # V6 (2026-04-30): sessione 7-17h → 9-17h. Finestra 7-9h in perdita ($-371 su 58 trade).
+    # H4 SELL è inaffidabile (WR 17.5%) — bloccato su H4
     sell_thr = 999  # block by default
-    is_london_ny = hour is not None and (7 <= hour < 17)
+    is_london_ny = hour is not None and (9 <= hour < 17)
     sell_di_spread = dm - dp
     if tf != 'H4' and is_london_ny and sell_di_spread >= 25:
         sell_thr = 76

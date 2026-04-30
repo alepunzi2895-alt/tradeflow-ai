@@ -29,7 +29,7 @@ log = logging.getLogger('tf-bot')
 # ── Baseline backtest (fonte: directives/02_strategies.md) ───────────────────
 # WR adattivo per TF ottimale — backtest 2026-04-30 V2 (segnali ottimizzati)
 BACKTEST_BASELINES = {
-    "S00_MFKK":              {"wr": 0.472, "pf": 1.44},   # M30 adattivo 47.2% · 873 trade
+    "S00_MFKK":              {"wr": 0.494, "pf": 1.44},   # M30 adattivo 49.4% · 518 trade (V6)
     "S05_MFKK_INTRADAY":     {"wr": 0.253, "pf": 1.10},   # H1 adattivo 25.3% · 162 trade
     "S09_MFKK_SCALPING":     {"wr": 0.360, "pf": 1.40},   # H1 adattivo 36.0% · 25 trade
     "S10_OB_FVG_SCALP":      {"wr": 0.528, "pf": 1.65},   # M30 adattivo 52.8% · 53 trade

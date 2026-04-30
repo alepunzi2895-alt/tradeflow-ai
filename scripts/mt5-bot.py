@@ -1091,6 +1091,8 @@ def run():
     last_ai_score        = 50.0  # default neutro
     last_score_ts        = 0     # timestamp ultimo fetch score
     last_cmd_ts          = 0     # timestamp ultimo check comandi manuali
+    auto_trade_enabled   = True  # letto da DB Vercel: se False, loop H1/M30/H4 non aprono ordini
+    last_auto_trade_ts   = 0     # timestamp ultimo fetch flag auto_trade
     reconnect_attempts   = 0     # contatore per exponential backoff MT5
     last_candle_fetch_ts = 0     # timestamp ultimo fetch candele H1
     cached_candles       = None  # cache candele (aggiornata ogni 60s)
@@ -1395,6 +1397,24 @@ def run():
                 else:
                     log.info(f"🧠 AI Score: {last_ai_score:.1f} [{_score_source}]")
 
+            # ── Fetch auto_trade flag ogni 30s ────────────────────────────────
+            if (now_ts - last_auto_trade_ts) >= 30:
+                try:
+                    _at_req = urllib.request.Request(
+                        f"{VERCEL_URL}/api/db",
+                        data=json.dumps({'action': 'auto_trade_get'}).encode(),
+                        headers={'Content-Type': 'application/json'}, method='POST')
+                    with urllib.request.urlopen(_at_req, timeout=6, context=_SSL_CTX) as _at_r:
+                        _at_d = json.loads(_at_r.read())
+                        if _at_d.get('ok') and isinstance(_at_d.get('enabled'), bool):
+                            _prev_at = auto_trade_enabled
+                            auto_trade_enabled = _at_d['enabled']
+                            if auto_trade_enabled != _prev_at:
+                                log.info(f"🤖 Auto-trading {'ATTIVATO' if auto_trade_enabled else 'DISATTIVATO'} (da DB Vercel)")
+                except Exception:
+                    pass  # fallback: mantieni valore precedente (True di default)
+                last_auto_trade_ts = now_ts
+
             # ── Controlla nuova candela H1 ────────────────────────────────────
             latest_bar_time = candles[-2]['t']   # -2 = ultima barra chiusa
             new_h1_bar = (latest_bar_time != last_bar_time)
@@ -1504,6 +1524,8 @@ def run():
 
                 if current_is_extreme:
                     log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip H1")
+                elif not auto_trade_enabled:
+                    log.debug("[H1] Auto-trading disattivato dalla UI — skip")
                 else:
                     can, reason = state.can_trade(now_utc)
                     if not can:
@@ -1919,7 +1941,9 @@ def run():
                         bar_dt_m30 = datetime.datetime.fromtimestamp(latest_m30, tz=datetime.timezone.utc)
                         log.info(f"─── Nuova barra M30 chiusa: {bar_dt_m30.strftime('%Y-%m-%d %H:%M')} UTC ───")
                         can, reason = state.can_trade(now_utc)
-                        if not can:
+                        if not auto_trade_enabled:
+                            log.debug("[M30] Auto-trading disattivato dalla UI — skip")
+                        elif not can:
                             log.info(f"[M30] Trade non permesso: {reason}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
                             log.info(f"[M30] Max posizioni aperte ({MAX_OPEN_ORDERS})")
@@ -2078,6 +2102,8 @@ def run():
                         I_h4 = compute_indicators(candles_h4)
                         idx = len(candles_h4) - 2
                         for (h4_id, h4_dir_filter) in _h4_entries:
+                            if not auto_trade_enabled:
+                                log.debug("[H4] Auto-trading disattivato dalla UI — skip"); break
                             can, reason = state.can_trade(now_utc)
                             if not can:
                                 log.debug(f"[H4] Trade non permesso: {reason}")

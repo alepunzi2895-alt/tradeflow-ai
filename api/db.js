@@ -254,6 +254,26 @@ async function mt5CommandGet(db, body) {
   return { ok: true, command };
 }
 
+async function autoTradeSet(db, body) {
+  const { enabled } = body;
+  if (typeof enabled !== 'boolean') throw new Error("enabled must be boolean");
+  const payload = JSON.stringify({ enabled, updated_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('auto-trade', 'bot-config', 'auto_trade', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true, enabled };
+}
+
+async function autoTradeGet(db) {
+  const row = await db.execute({ sql: "SELECT payload FROM user_data WHERE user_id='bot-config' AND doc_type='auto_trade'", args: [] });
+  if (!row.rows.length) return { ok: true, enabled: true };  // default: on
+  const p = JSON.parse(row.rows[0].payload);
+  return { ok: true, enabled: p.enabled ?? true, updated_at: p.updated_at };
+}
+
 async function adminReset(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and pass required");
@@ -274,6 +294,8 @@ const ACTIONS = {
   score_push: (db, body) => scorePush(db, body),
   mt5_command_push: (db, body) => mt5CommandPush(db, body),
   mt5_command_get:  (db, body) => mt5CommandGet(db, body),
+  auto_trade_set:   (db, body) => autoTradeSet(db, body),
+  auto_trade_get:   (db)       => autoTradeGet(db),
 };
 
 export default async function handler(req, res) {

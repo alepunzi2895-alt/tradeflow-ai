@@ -279,12 +279,27 @@ async function seFetchMt5Data() {
 function seToggleAutoTrade() {
   SE.autoTrade = !SE.autoTrade;
   localStorage.setItem('se_auto_trade', SE.autoTrade ? '1' : '0');
-  // Reset dedup set quando si (ri)attiva — evita segnali già visti da bloccare
   if (SE.autoTrade) SE._autoExecuted.clear();
+  // Persiste in DB — il bot Python legge questo flag e trada in autonomo anche senza browser
+  fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'auto_trade_set', enabled: SE.autoTrade }) }).catch(() => {});
   seToast(
-    SE.autoTrade ? '🤖 Auto-trading ATTIVO — segnali eseguiti automaticamente' : '⏸ Auto-trading disattivato',
+    SE.autoTrade ? '🤖 Auto-trading ATTIVO — il bot trada in autonomo anche senza browser' : '⏸ Auto-trading disattivato',
     SE.autoTrade ? '#00e676' : '#ffca28'
   );
 }
 window.seToggleAutoTrade = seToggleAutoTrade;
+
+// Legge lo stato auto_trade dal DB al caricamento (sincronizza tra sessioni/dispositivi)
+(async function seInitAutoTrade() {
+  try {
+    const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'auto_trade_get' }) });
+    const j = await r.json();
+    if (j.ok && typeof j.enabled === 'boolean') {
+      SE.autoTrade = j.enabled;
+      localStorage.setItem('se_auto_trade', j.enabled ? '1' : '0');
+    }
+  } catch (_) {}
+})();
 

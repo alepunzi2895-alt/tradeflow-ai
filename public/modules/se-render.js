@@ -393,9 +393,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           <div style="font-size:8px;color:var(--dim);letter-spacing:.04em">XAU/USD · Sistema Multi-Strategia</div>
         </div>
       </div>
-      <div style="text-align:right">
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
         <div style="font-size:9px;font-weight:700;color:${botOnline?'var(--green)':'#ff4757'}">${botOnline?'● ONLINE':'● OFFLINE'}</div>
-        <div style="font-size:8px;color:var(--dim);margin-top:1px">Sync ${syncLabel}</div>
+        <button onclick="seToggleAutoTrade()" style="font-size:8px;padding:2px 7px;border-radius:4px;border:none;cursor:pointer;font-weight:700;${(typeof SE!=='undefined'&&SE.autoTrade)?'background:#00e67622;border:1px solid #00e676;color:#00e676':'background:var(--bg2);border:1px solid #ff475760;color:#ff4757'}">
+          ${(typeof SE!=='undefined'&&SE.autoTrade)?'🤖 AUTO ON':'⏸ AUTO OFF'}
+        </button>
+        <div style="font-size:8px;color:var(--dim)">Sync ${syncLabel}</div>
       </div>
     </div>
 

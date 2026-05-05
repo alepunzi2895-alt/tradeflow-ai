@@ -1074,6 +1074,21 @@ def run():
         log.error("Connessione MT5 fallita. Assicurati che MT5 sia aperto e configurato.")
         sys.exit(1)
 
+    # ── Imposta auto_trade = True al boot ────────────────────────────────────
+    # Il bot trada autonomamente di default — l'utente può disabilitare dalla UI mentre è in running.
+    if SYNC_ENABLED and VERCEL_URL:
+        try:
+            _at_boot = urllib.request.Request(
+                f"{VERCEL_URL}/api/db",
+                data=json.dumps({'action': 'auto_trade_set', 'enabled': True}).encode(),
+                headers={'Content-Type': 'application/json'}, method='POST')
+            with urllib.request.urlopen(_at_boot, timeout=6, context=_SSL_CTX) as _r:
+                _d = json.loads(_r.read())
+                if _d.get('ok'):
+                    log.info("🤖 Auto-trading ATTIVATO (set al boot su DB Vercel)")
+        except Exception as _e:
+            log.warning(f"Auto-trade boot-set fallito ({_e}) — uso default True locale")
+
     load_playbook()
 
     acc = get_account_info()
@@ -1525,7 +1540,7 @@ def run():
                 if current_is_extreme:
                     log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip H1")
                 elif not auto_trade_enabled:
-                    log.debug("[H1] Auto-trading disattivato dalla UI — skip")
+                    log.warning("[H1] Auto-trading disattivato dalla UI — riabilita il toggle sul sito")
                 else:
                     can, reason = state.can_trade(now_utc)
                     if not can:
@@ -1942,7 +1957,7 @@ def run():
                         log.info(f"─── Nuova barra M30 chiusa: {bar_dt_m30.strftime('%Y-%m-%d %H:%M')} UTC ───")
                         can, reason = state.can_trade(now_utc)
                         if not auto_trade_enabled:
-                            log.debug("[M30] Auto-trading disattivato dalla UI — skip")
+                            log.warning("[M30] Auto-trading disattivato dalla UI — riabilita il toggle sul sito")
                         elif not can:
                             log.info(f"[M30] Trade non permesso: {reason}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
@@ -2103,7 +2118,7 @@ def run():
                         idx = len(candles_h4) - 2
                         for (h4_id, h4_dir_filter) in _h4_entries:
                             if not auto_trade_enabled:
-                                log.debug("[H4] Auto-trading disattivato dalla UI — skip"); break
+                                log.warning("[H4] Auto-trading disattivato dalla UI — riabilita il toggle sul sito"); break
                             can, reason = state.can_trade(now_utc)
                             if not can:
                                 log.debug(f"[H4] Trade non permesso: {reason}")

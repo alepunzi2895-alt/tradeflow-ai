@@ -8,9 +8,9 @@
 |---|---|---|---|---|---|---|---|
 | M30 | **42.2%** | +$3,406 | **1.441** | $593 | +$12.5 | 3.69 | **20/24** |
 | H1 | **47.0%** | +$5,105 | 1.593 | $743 | +$21.8 | 4.60 | **21/24** |
-| **H4** | **43.4%** | **+$4,872** | **1.913** | **$350** | **+$28.8** | 3.0 | 14/23 |
+| **H4** | **43.5%** | **+$4,764** | **1.971** | **$338** | **+$29.8** | 2.7 | 14/23 |
 
-> V6 S00 BUY: DI+>=20 (M30) / DI+>=15 (H1/H4) obbligatorio — ST non sufficiente da solo. Sell: sessione 9-17h. S00 M30 WR: 47.2%→49.4% (+2.2pp). Meno trade, meno stop, PF stabile.
+> V6 S00 BUY: DI+>=20 (M30) / DI+>=15 (H1/H4) obbligatorio — ST non sufficiente da solo. Sell: sessione 9-17h. S00 M30 WR 49.4%, H1 WR 53.4%, H4 WR 49.6%.
 
 ### Breakdown per strategia (M30 adattivo senza RM — segnali V6)
 
@@ -22,6 +22,25 @@
 | S10_OB_FVG_SCALP | 54 | 51.9% | +$806 | M30 | alta qualità, bassa frequenza |
 | S09_MFKK_SCALPING | 53 | 30.2% | +$199 | **M30** | V4: RSI>50+OBV>EMA filtri |
 
+### Breakdown per strategia (H1 adattivo senza RM — segnali V6)
+
+| Strategia | Trade | WR% | P&L contrib | Note |
+|---|---|---|---|---|
+| S00_MFKK | 686 | 53.4% | +$3,480 | V6: DI+>=15 H1 gate, dominante |
+| S05_MFKK_INTRADAY | 162 | 25.3% | +$99 | session 7-17h + ST + ATR gate |
+| S16_GOLDEN_SQUEEZE | 140 | 51.4% | +$1,435 | OBV 4 barre, DI spread≥8 |
+| S10_OB_FVG_SCALP | 64 | 28.1% | -$120 | negativo su H1 → usare M30 |
+| S09_MFKK_SCALPING | 25 | 36.0% | +$211 | pochi trade — fragile |
+
+### Breakdown per strategia (H4 adattivo senza RM — segnali V6)
+
+| Strategia | Trade | WR% | P&L contrib | Note |
+|---|---|---|---|---|
+| S00_MFKK | 252 | 49.6% | +$976 | V6: DI+>=15 H4 gate |
+| S17_CONVERGENCE_SCALP | 103 | 34.0% | +$2,710 | dominante H4, PF elevato |
+| S16_GOLDEN_SQUEEZE | 50 | 42.0% | +$567 | buona qualità su H4 |
+| S05_MFKK_INTRADAY | 32 | 28.1% | +$510 | WR bassa ma PF positivo |
+
 ### TF ottimale per strategia (da backtest 2026-04-23)
 
 | Strategia | TF Ottimale | PF sistema | WR | Note |
@@ -31,13 +50,13 @@
 | S09_MFKK_SCALPING | **M30** | 1.40 | 29.2% | V3 (2026-04-28): session 06-19h + ST alignment. H1 +$379 positivo. |
 | S10_OB_FVG_SCALP | M30 | 1.80 | 51.0% | V3 (2026-04-28): ADX≥18 + ST alignment. 49 trade/25mo — alta qualità. |
 | S05_MFKK_INTRADAY | **H1** | 1.07 | 23.4% | V4 (2026-04-28): session 7-17h + ST + ATR≤1.8× gate. H4: WR 34.5% +$769. |
-| S17_CONVERGENCE_SCALP | **H4** | 1.75 | 35.3% | H4 adaptive: +$3,052/23mo. Sistema H4 PF 1.878. |
+| S17_CONVERGENCE_SCALP | **H4** | 1.971 | 34.0% | H4 adaptive: +$2,710/23mo. Sistema H4 PF 1.971. |
 
 ## Strategie Attive nel Bot
 
 | ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema | WR adattivo |
 |---|---|---|---|---|---|---|---|
-| `S00_MFKK` | MFKK Core V2 | ATR×3.5 | ATR×1.5 | TREND/WEAK/RANGE | M30 | 1.326 | 45.6% (H1: 53.8%, H4: 46.4%) |
+| `S00_MFKK` | MFKK Core V2 | ATR×3.5 | ATR×1.5 | TREND/WEAK/RANGE | M30 | 1.326 | 49.4% (H1: 53.4%, H4: 49.6%) |
 | `S05_MFKK_INTRADAY` | MFKK Intraday V4 | ATR×3.5 | ATR×1.5 | TREND_UP, TREND_DOWN | **H1** | 1.07 | 24.0% |
 | `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.5 | VOLATILE, WEAK | **M30** | 1.40 | 29.6% |
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK | M30 | 1.65 | 51.0% |
@@ -82,14 +101,14 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 | ≥ 6 perdite consecutive | 0.50 | streak_penalty |
 | Nella norma | 1.00 | normal |
 
-### Baseline backtest (fonte di verità — WR adattivo per TF ottimale · segnali V5 · 2026-04-30)
+### Baseline backtest (fonte di verità — WR adattivo per TF ottimale · segnali V6 · 2026-04-30)
 
 | Strategia | WR baseline | PF baseline | TF ref | Trade |
 |---|---|---|---|---|
-| S00_MFKK | **47.2%** | 1.44 | M30 adattivo | 873 |
+| S00_MFKK | **49.4%** | 1.44 | M30 adattivo | 518 |
 | S05_MFKK_INTRADAY | 25.3% | 1.10 | H1 adattivo | 162 |
 | S09_MFKK_SCALPING | 36.0% | 1.40 | H1 adattivo | 25 |
-| S10_OB_FVG_SCALP | 52.8% | 1.65 | M30 adattivo | 53 |
+| S10_OB_FVG_SCALP | 52.8% | 1.65 | M30 adattivo | 54 |
 | S16_GOLDEN_SQUEEZE | **51.4%** | 1.50 | H1 adattivo | 140 |
 | S17_CONVERGENCE_SCALP | 34.0% | 1.75 | H4 adattivo | 103 |
 

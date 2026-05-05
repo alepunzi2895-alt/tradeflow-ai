@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-30T10:08:02.674524",
+  "generated_at": "2026-04-30T14:54:06.250597",
   "n_candles": 3085,
   "indicators": [
     "EMA20",
@@ -116,13 +116,13 @@
     },
     "S00_MFKK": {
       "stats": {
-        "n": 369,
-        "wr": 0.5,
-        "pnl": -8033.1,
-        "pf": 0.018,
-        "dd": 8033.1,
-        "avg_day": -57.38,
-        "tr_day": 2.64,
+        "n": 220,
+        "wr": 0.9,
+        "pnl": -4386.0,
+        "pf": 0.033,
+        "dd": 4386.0,
+        "avg_day": -48.2,
+        "tr_day": 2.42,
         "months": "0/23"
       },
       "regime_fit": [
@@ -155,9 +155,9 @@
     {
       "rank": 3,
       "name": "S00_MFKK",
-      "pf": 0.018,
-      "wr": 0.5,
-      "n": 369,
+      "pf": 0.033,
+      "wr": 0.9,
+      "n": 220,
       "use": false
     },
     {
@@ -223,13 +223,13 @@
   },
   "adaptive": {
     "stats": {
-      "n": 500,
-      "wr": 43.4,
-      "pnl": 4872.1,
-      "pf": 1.913,
-      "dd": 349.5,
-      "avg_day": 28.83,
-      "tr_day": 2.96,
+      "n": 437,
+      "wr": 43.5,
+      "pnl": 4764.1,
+      "pf": 1.971,
+      "dd": 337.8,
+      "avg_day": 29.78,
+      "tr_day": 2.73,
       "months": "14/23"
     },
     "by_strategy": {
@@ -244,14 +244,14 @@
         "months": "15/21"
       },
       "S00_MFKK": {
-        "n": 315,
-        "wr": 48.3,
-        "pnl": 1084.0,
-        "pf": 1.554,
-        "dd": 176.0,
-        "avg_day": 9.11,
-        "tr_day": 2.65,
-        "months": "13/20"
+        "n": 252,
+        "wr": 49.6,
+        "pnl": 976.0,
+        "pf": 1.64,
+        "dd": 132.0,
+        "avg_day": 9.86,
+        "tr_day": 2.55,
+        "months": "10/20"
       },
       "S05_MFKK_INTRADAY": {
         "n": 32,
@@ -275,61 +275,38 @@
       }
     }
   },
-  "adaptive_rm": {
-    "stats": {
-      "n": 500,
-      "wr": 32.4,
-      "pnl": 9340.8,
-      "pf": 1.857,
-      "dd": 950.9,
-      "avg_day": 55.27,
-      "tr_day": 2.96,
-      "months": "13/23"
-    },
-    "by_strategy": {
-      "S17_CONVERGENCE_SCALP": {
-        "n": 103,
-        "wr": 34.0,
-        "pnl": 3448.1,
-        "pf": 2.529,
-        "dd": 272.5,
-        "avg_day": 35.92,
-        "tr_day": 1.07,
-        "months": "14/21"
-      },
-      "S00_MFKK": {
-        "n": 315,
-        "wr": 30.8,
-        "pnl": 4277.3,
-        "pf": 1.659,
-        "dd": 1050.3,
-        "avg_day": 35.94,
-        "tr_day": 2.65,
-        "months": "11/20"
-      },
-      "S05_MFKK_INTRADAY": {
-        "n": 32,
-        "wr": 28.1,
-        "pnl": 788.5,
-        "pf": 1.96,
-        "dd": 224.4,
-        "avg_day": 29.2,
-        "tr_day": 1.19,
-        "months": "5/15"
-      },
-      "S16_GOLDEN_SQUEEZE": {
-        "n": 50,
-        "wr": 42.0,
-        "pnl": 826.9,
-        "pf": 1.619,
-        "dd": 307.4,
-        "avg_day": 23.63,
-        "tr_day": 1.43,
-        "months": "9/17"
-      }
-    }
-  },
+  "adaptive_rm": {},
   "last_signals": [
+    {
+      "date": "2026-01-14",
+      "hour": 4,
+      "dir": "buy",
+      "entry": 4619.41,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "S00_MFKK",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-01-14",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4630.31,
+      "outcome": "loss",
+      "pnl": -32.47,
+      "strategy": "S17_CONVERGENCE_SCALP",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-01-14",
+      "hour": 12,
+      "dir": "buy",
+      "entry": 4635.6,
+      "outcome": "loss",
+      "pnl": -32.05,
+      "strategy": "S05_MFKK_INTRADAY",
+      "regime": "TREND_UP"
+    },
     {
       "date": "2026-01-15",
       "hour": 8,
@@ -401,16 +378,6 @@
       "regime": "TREND_UP"
     },
     {
-      "date": "2026-01-21",
-      "hour": 20,
-      "dir": "buy",
-      "entry": 4831.16,
-      "outcome": "loss",
-      "pnl": -12.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_UP"
-    },
-    {
       "date": "2026-01-22",
       "hour": 12,
       "dir": "buy",
@@ -455,16 +422,6 @@
       "hour": 8,
       "dir": "buy",
       "entry": 4918.58,
-      "outcome": "win",
-      "pnl": 20.0,
-      "strategy": "S00_MFKK",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-01-23",
-      "hour": 12,
-      "dir": "buy",
-      "entry": 4938.91,
       "outcome": "win",
       "pnl": 20.0,
       "strategy": "S00_MFKK",
@@ -538,16 +495,6 @@
       "outcome": "win",
       "pnl": 209.23,
       "strategy": "S17_CONVERGENCE_SCALP",
-      "regime": "TREND_UP"
-    },
-    {
-      "date": "2026-01-27",
-      "hour": 12,
-      "dir": "buy",
-      "entry": 5077.5,
-      "outcome": "win",
-      "pnl": 20.0,
-      "strategy": "S00_MFKK",
       "regime": "TREND_UP"
     },
     {

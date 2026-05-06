@@ -10,11 +10,7 @@ const SE = {
   session: { start: 0, end: 24 },
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
-  // AUTO-TRADING BROWSER: se true, il browser invia segnali al bot via UI.
-  // SEMPRE false al caricamento — il bot trada autonomamente in background.
-  // Abilita manualmente col toggle solo se vuoi doppio invio dal browser.
-  autoTrade: false,
-  _autoExecuted: new Set(),  // dedup: strategy_dir_5minWindow
+  _autoExecuted: new Set(),  // mantenuto per compatibilità (non usato)
   strategies: {
     // ── STRATEGIE ATTIVE [BACKTEST MT5 GOLD · lot 0.01 · $1/punto] ──
     // Sistema adattivo H1 (2026-04-28): 1504 trade · WR 44.3% · PF 1.584 · +$21.58/gg · DD $790 · 17/24 mesi+
@@ -239,24 +235,6 @@ async function seRefresh() {
   window._seLastMt5Data = mt5Data; // cache per seSendTradeToMt5
   seRender(mt5Data, pending, snap, isExtreme, inSession, hour);
 
-  // ── AUTO TRADING: esegui segnali senza click se toggle attivo ──────────
-  if (SE.autoTrade && pending.length > 0 && mt5Data) {
-    const syncAge = mt5Data.synced_at
-      ? Math.round((Date.now() - new Date(mt5Data.synced_at).getTime()) / 1000)
-      : 999;
-    if (syncAge < 180) {
-      const win5m = Math.floor(Date.now() / (5 * 60 * 1000));
-      for (const s of pending) {
-        const key = `${s.name}_${s.dir}_${win5m}`;
-        if (!SE._autoExecuted.has(key)) {
-          SE._autoExecuted.add(key);
-          if (SE._autoExecuted.size > 100) SE._autoExecuted.clear();
-          seSendTradeToMt5(s);
-        }
-      }
-    }
-  }
-
   // Push AI score al DB ogni 60s così il bot Python può leggerlo
   const nowTs = Date.now();
   if (nowTs - _lastScorePush > 60000) {
@@ -278,17 +256,4 @@ async function seFetchMt5Data() {
   } catch(e) { return null; }
 }
 
-function seToggleAutoTrade() {
-  SE.autoTrade = !SE.autoTrade;
-  if (SE.autoTrade) SE._autoExecuted.clear();
-  seToast(
-    SE.autoTrade ? '📡 Browser auto-send ON (doppio invio — bot già trada in autonomo)' : '✅ Browser auto-send OFF — il bot trada in background',
-    SE.autoTrade ? '#ffca28' : '#00e676'
-  );
-}
-window.seToggleAutoTrade = seToggleAutoTrade;
-
-// Nota: SE.autoTrade NON viene più letto dal DB al caricamento.
-// Il bot trada autonomamente tramite live signal scan.
-// Il toggle browser auto-send è per uso manuale opzionale (non necessario).
 

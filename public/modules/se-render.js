@@ -219,16 +219,10 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   if(pending.length>0&&!isExtreme){
     const qualColors={elite:'#c8a96e', high:'#00e676', medium:'#ffd700'};
     const qualLabels={elite:'💎 ELITE', high:'🔥 FORTE', medium:'⚠️ MODERATO'};
-    const autoOn = typeof SE !== 'undefined' && SE.autoTrade;
-    const autoStyle = autoOn
-      ? 'background:#00e67622;border:1px solid #00e676;color:#00e676;cursor:pointer;font-weight:800'
-      : 'background:var(--bg2);border:1px solid var(--border);color:var(--dim);cursor:pointer;font-weight:600';
     pendingHtml=`<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:9px;color:var(--dim);letter-spacing:.08em">🔔 SEGNALI ATTIVI</div>
-        <button onclick="seToggleAutoTrade()" style="font-size:9px;padding:3px 8px;border-radius:4px;${autoStyle}">
-          ${autoOn ? '🤖 AUTO ON' : '⏸ AUTO OFF'}
-        </button>
+        <div style="font-size:8px;color:#00e676;font-weight:700">🤖 BOT ATTIVO</div>
       </div>
       ${pending.map((s)=>{
         const dc=s.dir==='buy'?'#00e676':'#ff4757';
@@ -395,9 +389,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       </div>
       <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
         <div style="font-size:9px;font-weight:700;color:${botOnline?'var(--green)':'#ff4757'}">${botOnline?'● ONLINE':'● OFFLINE'}</div>
-        <button onclick="seToggleAutoTrade()" style="font-size:8px;padding:2px 7px;border-radius:4px;border:none;cursor:pointer;font-weight:700;${(typeof SE!=='undefined'&&SE.autoTrade)?'background:#00e67622;border:1px solid #00e676;color:#00e676':'background:var(--bg2);border:1px solid #ff475760;color:#ff4757'}">
-          ${(typeof SE!=='undefined'&&SE.autoTrade)?'🤖 AUTO ON':'⏸ AUTO OFF'}
-        </button>
+        <div style="font-size:8px;font-weight:700;color:#00e676;background:#00e67618;border:1px solid #00e67640;border-radius:4px;padding:2px 7px">🤖 AUTO</div>
         <div style="font-size:8px;color:var(--dim)">Sync ${syncLabel}</div>
       </div>
     </div>

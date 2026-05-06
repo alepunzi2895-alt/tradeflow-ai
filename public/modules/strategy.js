@@ -10,8 +10,10 @@ const SE = {
   session: { start: 0, end: 24 },
   // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
   minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
-  // AUTO-TRADING: se true, segnali vengono inviati al bot senza click
-  autoTrade: localStorage.getItem('se_auto_trade') === '1',
+  // AUTO-TRADING BROWSER: se true, il browser invia segnali al bot via UI.
+  // SEMPRE false al caricamento — il bot trada autonomamente in background.
+  // Abilita manualmente col toggle solo se vuoi doppio invio dal browser.
+  autoTrade: false,
   _autoExecuted: new Set(),  // dedup: strategy_dir_5minWindow
   strategies: {
     // ── STRATEGIE ATTIVE [BACKTEST MT5 GOLD · lot 0.01 · $1/punto] ──
@@ -278,28 +280,15 @@ async function seFetchMt5Data() {
 
 function seToggleAutoTrade() {
   SE.autoTrade = !SE.autoTrade;
-  localStorage.setItem('se_auto_trade', SE.autoTrade ? '1' : '0');
   if (SE.autoTrade) SE._autoExecuted.clear();
-  // Persiste in DB — il bot Python legge questo flag e trada in autonomo anche senza browser
-  fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'auto_trade_set', enabled: SE.autoTrade }) }).catch(() => {});
   seToast(
-    SE.autoTrade ? '🤖 Auto-trading ATTIVO — il bot trada in autonomo anche senza browser' : '⏸ Auto-trading disattivato',
-    SE.autoTrade ? '#00e676' : '#ffca28'
+    SE.autoTrade ? '📡 Browser auto-send ON (doppio invio — bot già trada in autonomo)' : '✅ Browser auto-send OFF — il bot trada in background',
+    SE.autoTrade ? '#ffca28' : '#00e676'
   );
 }
 window.seToggleAutoTrade = seToggleAutoTrade;
 
-// Legge lo stato auto_trade dal DB al caricamento (sincronizza tra sessioni/dispositivi)
-(async function seInitAutoTrade() {
-  try {
-    const r = await fetch('/api/db', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'auto_trade_get' }) });
-    const j = await r.json();
-    if (j.ok && typeof j.enabled === 'boolean') {
-      SE.autoTrade = j.enabled;
-      localStorage.setItem('se_auto_trade', j.enabled ? '1' : '0');
-    }
-  } catch (_) {}
-})();
+// Nota: SE.autoTrade NON viene più letto dal DB al caricamento.
+// Il bot trada autonomamente tramite live signal scan.
+// Il toggle browser auto-send è per uso manuale opzionale (non necessario).
 

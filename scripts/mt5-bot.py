@@ -1118,6 +1118,10 @@ def run():
     _strategy_sl_count   = {}    # {strategy_name: consecutive_sl_count}
     sl_cooldowns_until   = {}    # {strategy_name: datetime UTC} pausa specifica per strategia
     weekly_dd_pct        = 0.0   # drawdown settimanale reale (aggiornato ogni sync)
+    _live_dedup          = set() # dedup live scan: {(strat, dir, tf, bar_open_t)}
+    _m30_live_cache      = None  # indicatori M30 per live scan (aggiornati ogni 60s)
+    _m30_live_cnds       = None  # candles M30 per live scan
+    _m30_live_ts         = 0.0   # timestamp ultimo refresh M30 live
 
     # Inizializza RiskManager (legacy, mantiene compatibilità)
     rm = get_risk_manager(base_lot=LOT_SIZE, max_lot=LOT_SIZE*5) if get_risk_manager else None
@@ -1193,6 +1197,7 @@ def run():
                 if new_c and len(new_c) >= 100:
                     cached_candles = new_c
                     last_candle_fetch_ts = now_ts
+                    cached_I_h1 = compute_indicators(cached_candles)  # aggiorna indicatori live ogni 60s
             if cached_candles is None or len(cached_candles) < 100:
                 log.warning("Candele H1 non disponibili, riprovo...")
                 time.sleep(30)
@@ -1806,6 +1811,109 @@ def run():
                                 log_trade_to_json(sec_dir, sec_id, price2,
                                                   round(price2+(tp2 if sec_dir=='buy' else -tp2),2),
                                                   round(price2-(sl2 if sec_dir=='buy' else -sl2),2), result2)
+
+            # ── LIVE SIGNAL SCAN: candela corrente H1/M30 (dedup per barra, ogni 60s) ──────
+            # Replica il browser: rileva segnali sulla candle live senza aspettare la chiusura.
+            # Dedup key = (strat, dir, tf, bar_open_time) — non ri-esegue sulla stessa barra.
+            if auto_trade_enabled and not current_is_extreme and cached_I_h1 is not None:
+                _pb_l = PLAYBOOK.get(current_regime, {})
+                _sn_l = _pb_l.get('strategy', 'S00_MFKK')
+                _tf_l = _pb_l.get('tf', 'M30')
+                _fn_l = SIGNAL_FNS.get(_sn_l)
+                _h1_trend_l = cached_I_h1['st'][len(candles)-2] if 'st' in cached_I_h1 else 0
+
+                _I_l, _i_l, _bt_l = None, None, None
+                if _tf_l == 'H1':
+                    _I_l  = cached_I_h1
+                    _i_l  = len(candles) - 1
+                    _bt_l = candles[-1]['t']
+                else:  # M30 o M15 → aggiorna cache M30 ogni 60s
+                    if now_ts - _m30_live_ts >= 60:
+                        _mc = get_candles_tf('M30', 200)
+                        if _mc and len(_mc) >= 50:
+                            _m30_live_cnds  = _mc
+                            _m30_live_cache = compute_indicators(_mc)
+                            _m30_live_ts    = now_ts
+                    if _m30_live_cache is not None and _m30_live_cnds:
+                        _I_l  = _m30_live_cache
+                        _i_l  = len(_m30_live_cnds) - 1
+                        _bt_l = _m30_live_cnds[-1]['t']
+
+                if _fn_l and _I_l is not None and _i_l is not None and _bt_l is not None:
+                    _h_l = now_utc.hour
+                    if _sn_l == 'S05_MFKK_INTRADAY':
+                        _d_l = _fn_l(_I_l, _i_l, h1_trend=_I_l['st'][_i_l], hour=_h_l)
+                    elif _sn_l == 'S00_MFKK':
+                        _d_l = _fn_l(_I_l, _i_l, hour=_h_l, tf=_tf_l)
+                    elif _sn_l in ('S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
+                        _d_l = _fn_l(_I_l, _i_l, h1_trend=_h1_trend_l, hour=_h_l)
+                    else:
+                        _d_l = _fn_l(_I_l, _i_l, hour=_h_l)
+
+                    if _d_l:
+                        _lk = (_sn_l, _d_l, _tf_l, _bt_l)
+                        if _lk not in _live_dedup:
+                            _can_l, _ = state.can_trade(now_utc)
+                            _now_u = datetime.datetime.now(datetime.timezone.utc)
+                            if (_can_l
+                                    and count_open_positions() < MAX_OPEN_ORDERS
+                                    and not has_open_position_for_strategy(_sn_l)
+                                    and not has_position_in_direction(_d_l)
+                                    and not current_news_risk.get('paused')
+                                    and not (sl_cooldowns_until.get(_sn_l) and _now_u < sl_cooldowns_until[_sn_l])
+                                    and not (sl_cooldown_until and _now_u < sl_cooldown_until)
+                                    and quality_gate(_sn_l, _d_l, _I_l, _i_l)):
+                                _live_dedup.add(_lk)
+                                if len(_live_dedup) > 200: _live_dedup.clear()
+                                _atr_l = _I_l['atr'][_i_l] or 10.0
+                                _pm_l  = STRATEGY_PARAMS.get(_sn_l, STRATEGY_PARAMS.get('S00_MFKK', {}))
+                                _tp_l  = round(_atr_l * _pm_l.get('tp_mult', 2.0), 2)
+                                _sl_l  = round(_atr_l * _pm_l.get('sl_mult', 1.0), 2)
+                                _rp_l  = None
+                                if rg:
+                                    _ac_l = get_account_info()
+                                    _cf_l = current_selector_result['confidence'] if current_selector_result else last_ai_score / 100.0
+                                    _rp_l = rg.get_order_params(
+                                        strategy_confidence=_cf_l, atr=_atr_l,
+                                        strategy_id=_sn_l, ai_score=last_ai_score,
+                                        atr_avg=_I_l['atr_avg'][_i_l],
+                                        adx=_I_l['adx'][_i_l], dip=_I_l['dip'][_i_l],
+                                        dim=_I_l['dim'][_i_l], hour_utc=_h_l,
+                                        today_pnl=state.pnl_today,
+                                        current_equity=_ac_l['equity'] if _ac_l else None,
+                                        weekly_dd_pct=weekly_dd_pct,
+                                        tp_atr_mult=_pm_l.get('tp_mult', 2.0),
+                                        sl_atr_mult=_pm_l.get('sl_mult', 1.0),
+                                        direction=_d_l,
+                                    )
+                                    if _rp_l and _rp_l.get('paused'):
+                                        log.info(f"⛔ LIVE {_tf_l} SOSPESO (RiskGuardian) | {_sn_l}")
+                                        _rp_l = None
+                                if _rp_l is not None or not rg:
+                                    _lot_l = _rp_l['lot'] if _rp_l else LOT_SIZE
+                                    _tp_lu = _rp_l['tp_usd'] if _rp_l else _tp_l
+                                    _sl_lu = _rp_l['sl_usd'] if _rp_l else _sl_l
+                                    log.info(f"★ LIVE {_tf_l} [{_sn_l}]: {_d_l.upper()} | lot={_lot_l} | TP=${_tp_lu:.2f} | SL=${_sl_lu:.2f}")
+                                    _res_l = place_order(_d_l, _tp_lu, _sl_lu, _sn_l,
+                                                         lot_size=_lot_l,
+                                                         key_levels_result=current_levels_result,
+                                                         atr=_atr_l)
+                                    if _res_l:
+                                        _strategy_order_tickets[_sn_l] = (getattr(_res_l, 'order', 0), _d_l)
+                                        state.record_trade(0, now_utc)
+                                        if rg and _rp_l:
+                                            try:
+                                                rg.register_position(getattr(_res_l, 'order', 0), _rp_l,
+                                                                      _sn_l, _tf_l, current_regime, _d_l)
+                                            except Exception: pass
+                                        sync_to_vercel(
+                                            get_account_info(), get_open_positions_data(),
+                                            get_recent_trades_data(200),
+                                            {'running': True, 'dry_run': DRY_RUN, 'symbol': SYMBOL, 'lot': LOT_SIZE,
+                                             'trades_today': state.trades_today, 'pnl_today': state.pnl_today,
+                                             'regime': current_regime, 'last_signal': _sn_l}
+                                        )
+                                        last_sync_time = time.time()
 
             # ── Controlla nuova candela M15 (es. S01_EXHAUSTION in TREND_DOWN) ─
             pb_entry = PLAYBOOK.get(current_regime, {})

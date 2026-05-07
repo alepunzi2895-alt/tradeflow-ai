@@ -73,6 +73,9 @@ def _parse_dt(date_str: str, time_str: str = '') -> datetime.datetime | None:
     import re as _re
     clean = date_str.strip()
 
+    # Normalizza formato ForexFactory: MM-DD-YYYYThh:mm:ss → YYYY-MM-DDThh:mm:ss
+    clean = _re.sub(r'^(\d{2})-(\d{2})-(\d{4})(T.+)$', r'\3-\1-\2\4', clean)
+
     # Nuovo formato FF: ISO con offset timezone (+HH:MM / -HH:MM)
     tz_m = _re.match(r'^(.+?)([+-])(\d{2}):(\d{2})$', clean)
     if tz_m:

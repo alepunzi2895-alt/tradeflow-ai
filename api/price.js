@@ -37,33 +37,52 @@ export default async function handler(req, res) {
   if (type === 'candles') {
     const range = req.query.range || '60d';
     const interval = req.query.interval || '1h';
+
+    // Helper: parse Yahoo chart response → candles[]
+    function parseYahooChart(d) {
+      const rs = d?.chart?.result?.[0];
+      if (!rs?.timestamp) return null;
+      const q = rs.indicators?.quote?.[0] || {};
+      const out = [];
+      for (let i = 0; i < rs.timestamp.length; i++) {
+        if (q.close?.[i] != null)
+          out.push({
+            t: rs.timestamp[i],
+            o: q.open?.[i]  ? +q.open[i].toFixed(2)  : +q.close[i].toFixed(2),
+            h: q.high?.[i]  ? +q.high[i].toFixed(2)  : +q.close[i].toFixed(2),
+            l: q.low?.[i]   ? +q.low[i].toFixed(2)   : +q.close[i].toFixed(2),
+            c: +q.close[i].toFixed(2),
+            v: q.volume?.[i] || 0
+          });
+      }
+      return out.length >= 30 ? out : null;
+    }
+
     // GC=F (futures) accettato come fallback SOLO per candles/indicatori tecnici
-    // (non per prezzi live — differenza spot/futures irrilevante per ADX/RSI/MACD)
     const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F'] : ['XAUUSD=X', 'GC=F'];
+    // Try query1 + query2, v8 + v7 for each symbol to maximise availability
+    const yahooHosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
+    const yahooVers  = ['v8', 'v7'];
+    const yahooHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+      'Accept-Language': 'en-US,en;q=0.9',
+    };
+
     for (const sym of symbols) {
-      try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
-        const r = await fetchT(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }, 7000);
-        if (!r.ok) continue;
-        const d = await r.json();
-        const rs = d?.chart?.result?.[0];
-        if (!rs?.timestamp) continue;
-        const q = rs.indicators?.quote?.[0] || {};
-        const candles = [];
-        for (let i = 0; i < rs.timestamp.length; i++) {
-          if (q.close?.[i] != null)
-            candles.push({ 
-              t: rs.timestamp[i], 
-              o: q.open?.[i] ? +q.open[i].toFixed(2) : +q.close[i].toFixed(2),
-              h: q.high?.[i] ? +q.high[i].toFixed(2) : +q.close[i].toFixed(2), 
-              l: q.low?.[i] ? +q.low[i].toFixed(2) : +q.close[i].toFixed(2), 
-              c: +q.close[i].toFixed(2),
-              v: q.volume?.[i] || 0
-            });
+      for (const host of yahooHosts) {
+        for (const ver of yahooVers) {
+          try {
+            const url = `https://${host}/${ver}/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
+            const r = await fetchT(url, { headers: yahooHeaders }, 7000);
+            if (!r.ok) continue;
+            const d = await r.json();
+            const candles = parseYahooChart(d);
+            if (!candles) continue;
+            return res.status(200).json({ ok: true, source: `${host}/${ver}/${sym}`, count: candles.length, candles });
+          } catch (e) { console.log(`Candles ${host}/${ver}/${sym}:`, e.message); }
         }
-        if (candles.length < 30) continue;
-        return res.status(200).json({ ok: true, source: sym, count: candles.length, candles });
-      } catch (e) { console.log(`Price Hub Candles ${sym}:`, e.message); }
+      }
     }
     return res.status(503).json({ ok: false, error: 'No candle source available' });
   }

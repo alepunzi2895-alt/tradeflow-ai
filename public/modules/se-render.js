@@ -610,8 +610,8 @@ function seRenderNoData(){
   if(!el)return;
   el.innerHTML=`<div style="text-align:center;padding:25px;color:var(--dim);font-size:12px">
     <div class="spinner" style="margin:0 auto 10px"></div>
-    Sincronizzazione MT5 in corso...<br>
-    <span style="font-size:10px">Verifica che il bot locale sia attivo</span>
+    Caricamento dati candele...<br>
+    <span style="font-size:10px">Recupero dati di mercato in corso</span>
   </div>`;
   // Proviamo comunque ad aggiornare i dati MT5
   seFetchMt5Data().then(mt5Data => {

@@ -69,6 +69,8 @@ let seTimer = null;
 let seInds = null;
 let seRegime = 'UNKNOWN';
 let _lastScorePush = 0;
+let _seIndsCacheTime = 0;   // timestamp ultimo calcolo indicatori riuscito
+let _seCandlesStale = false; // true quando si usano indicatori cached
 // Trade history filter state (persiste attraverso i rebuild di seRender ogni 1s)
 window._seTradeFilter = window._seTradeFilter || 'week';
 window._seTradeFrom   = window._seTradeFrom   || '';
@@ -83,6 +85,7 @@ async function seRefresh() {
 
   // 1. Candele da Proxy (per evitare CORS)
   let candles = [];
+  let candlesFailed = false;
   try {
     const res = await fetch('/api/price?type=candles&asset=XAU&interval=1h&range=60d');
     const json = await res.json();
@@ -93,20 +96,32 @@ async function seRefresh() {
     }
   } catch(e) {
     console.error("Errore fetch candele SE:", e);
-    seRenderNoData();
-    return;
+    candlesFailed = true;
   }
 
-  if(candles.length < 100) return seRenderNoData();
+  // Se candele non disponibili ma abbiamo indicatori cached (<30min), li usiamo
+  if(candlesFailed || candles.length < 100) {
+    const cacheAge = Date.now() - _seIndsCacheTime;
+    if(seInds && cacheAge < 30 * 60 * 1000) {
+      _seCandlesStale = true;
+      // Salta ricalcolo indicatori — procedi con snap cached
+    } else {
+      seRenderNoData();
+      return;
+    }
+  } else {
+    _seCandlesStale = false;
+  }
 
-  // 2. Calcolo Indicatori
+  // 2. Calcolo Indicatori (saltato se si usano indicatori cached)
+  if(!_seCandlesStale) {
   const O = candles.map(c=>c.o || c.c);
   const C = candles.map(c=>c.c);
   const H = candles.map(c=>c.h);
   const L = candles.map(c=>c.l);
   const V = candles.map(c=>c.v||0);
   const n = C.length;
-  
+
   const tr = [0];
   for(let i=1; i<n; i++) tr.push(Math.max(H[i]-L[i], Math.abs(H[i]-C[i-1]), Math.abs(L[i]-C[i-1])));
   const atr = _sma(tr, 14);
@@ -181,6 +196,8 @@ async function seRefresh() {
     ob:  _ob,
     m15: _m15,
   };
+  _seIndsCacheTime = Date.now();
+  } // end if(!_seCandlesStale)
 
   const I=seInds, i=I.n-1;
   const nowUtc=new Date(), hour=nowUtc.getUTCHours();

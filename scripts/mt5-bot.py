@@ -91,13 +91,14 @@ MAX_OPEN_ORDERS = 6          # max 1 per strategia × 6 strategie attive — ogn
 SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
 STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
+MIN_COMPOSITE_TO_TRADE = 55  # composite score minimo per aprire — filtra setup low-conviction (backtest: taglia rumore senza perdere edge)
 
 # ── IN-MEMORY ORDER TRACKING (resiliente a race condition MT5) ────────────────
 # Aggiornato immediatamente dopo place_order(), eliminato alla chiusura posizione
 # Formato: {strategy_name: (order_ticket, direction_str)}  ex: {'S16_GOLDEN_SQUEEZE': (12345, 'sell')}
 # order_ticket = result.order da mt5.order_send() = position ticket in hedging mode
 _strategy_order_tickets: dict = {}  # {strategy_name: (ticket, direction)}
-SESSION_UTC  = (7, 17)       # finestra operativa London+NY (UTC)
+SESSION_UTC  = (8, 18)       # finestra operativa London+NY (UTC) — 7h rimosso (pre-London chop), +18h NY pomeriggio ancora liquido
 CHECK_SEC    = 10            # polling ogni 10 secondi
 
 # Se sei su VPS Standalone, usa http://localhost:3000
@@ -149,8 +150,8 @@ STRATEGY_PARAMS = {
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
 PLAYBOOK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'regime_playbook.json')
 FALLBACK_PLAYBOOK = {
-    'TREND_UP':   {'strategy': 'S05_MFKK_INTRADAY',   'tf': 'H1'},
-    'TREND_DOWN': {'strategy': 'S05_MFKK_INTRADAY',   'tf': 'H1'},
+    'TREND_UP':   {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'H1'},  # S05 H1 WR 25% → S16 H1 WR 51%
+    'TREND_DOWN': {'strategy': 'S16_GOLDEN_SQUEEZE',   'tf': 'H1'},  # S05 H1 PF 1.046 → S16 H1 PF 2.12
     'WEAK_UP':    {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
     'WEAK_DOWN':  {'strategy': 'S10_OB_FVG_SCALP',     'tf': 'M30'},
     'VOLATILE':   {'strategy': 'S09_MFKK_SCALPING',    'tf': 'M30'},
@@ -552,9 +553,9 @@ SESSION_FILTER = {
 # Priorities based on adaptive backtest: S10 PF 1.79 > S16 PF 1.29 in WEAK; S10 2nd in TREND
 # S17 only on H4 (PF 1.71); S09 only in RANGE/VOLATILE (PF 1.65 M30)
 REGIME_MULTI_STRATEGIES = {
-    # S16 spostato su H1 (WR 43.7% adattivo vs 39.7% M30): secondario H1 dopo S05, entra quando S05 non dà segnale
-    'TREND_UP':   [('S05_MFKK_INTRADAY','H1',None), ('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'TREND_DOWN': [('S05_MFKK_INTRADAY','H1',None), ('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    # S05 rimosso da H1 (backtest H1: PF 1.046 WR 25% — drag sul sistema); S16 H1 diventa primario secondario
+    'TREND_UP':   [('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],

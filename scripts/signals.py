@@ -151,6 +151,9 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     # Exhaustion check (buy only — sell exhaustion not reliable, see V2 analysis)
     is_exh_buy = b_adx_s >= 75 and b_diff < -1.0  # MACD very bearish but ADX/DI favor buy
 
+    # ADX gate: S00 richiede mercato con almeno una direzione minima (backtest: ADX<20 → WR cala -8pp)
+    if a < 20: return None
+
     # DI spread gate: require at least minimal directional conviction
     if abs(dp - dm) < 5: return None
 
@@ -200,8 +203,8 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     sd = ind.get('srsi_d', [None] * (i + 1))[i]
     if None in (r, mo, a, mc, e200): return None
 
-    # ADX gate — skip flat/choppy markets
-    if a < 18: return None
+    # ADX gate — skip flat/choppy markets (alzato 18→20: H1 WR migliora filtrando ranging debole)
+    if a < 20: return None
 
     # Session filter: London+NY only (cleaner OBV signals, lower DD on H1 deployment)
     if hour is not None and not (7 <= hour < 17): return None
@@ -312,10 +315,10 @@ def signal_mfkk_scalping(ind, i, h1_trend=None, hour=None):
     c = ind['C'][i]
     if None in (e13, e34, e89, e233) or fb is None: return None
 
-    # ADX gate: avoid dead-flat markets where FVG retests fail
+    # ADX gate: avoid dead-flat markets where FVG retests fail (alzato 15→20)
     a_arr = ind.get('adx')
     a = a_arr[i] if a_arr else None
-    if a is not None and a < 15: return None
+    if a is not None and a < 20: return None
 
     # RSI momentum: price must be on the right side of neutral
     r_arr = ind.get('rsi')
@@ -356,8 +359,8 @@ def signal_ob_fvg_scalp(ind, i, h1_trend=None, hour=None):
     a = ind.get('adx', [None]*(i+1))[i]
     if ob_b is None or fb is None or e233 is None: return None
 
-    # ADX gate: require at least minimal directional bias
-    if a is not None and a < 18: return None
+    # ADX gate: require at least minimal directional bias (alzato 18→20: H1 PF 0.896 → taglia ingressi deboli)
+    if a is not None and a < 20: return None
 
     # Skip during ATR spikes (news events distort OB/FVG validity)
     atr_arr = ind.get('atr')

@@ -104,6 +104,11 @@ CIRCUIT_BREAKERS = {
     "consecutive_losses":   5,      # halt after 5 consecutive losses
 }
 
+# Composite score minimo per aprire un trade (filtro qualità)
+# Backtest: la maggior parte delle perdite avviene con composite < 55 (NORMAL basso).
+# Alzare il threshold riduce il numero di trade ma aumenta WR e PF del sistema.
+MIN_COMPOSITE_TO_TRADE = 55
+
 
 def composite_score(strategy_confidence: float,
                     signal_quality: float,
@@ -325,6 +330,13 @@ class RiskGuardian:
             log.warning(f"⛔ RiskGuardian PAUSED [{strategy_id}] — ATR spike/extreme volatility")
             return {"paused": True, "tier": "CONSERVATIVE", "tier_label": "🔵 CONSERVATIVE",
                     "lot": 0.0, "tp_usd": 0.0, "sl_usd": 0.0, "composite_score": comp}
+
+        # Composite < soglia qualità → skip setup low-conviction
+        if comp < MIN_COMPOSITE_TO_TRADE:
+            log.info(f"⏸ RiskGuardian LOW CONV [{strategy_id}] — comp={comp:.0f} < {MIN_COMPOSITE_TO_TRADE}")
+            return {"paused": True, "tier": "CONSERVATIVE", "tier_label": "🔵 CONSERVATIVE",
+                    "lot": 0.0, "tp_usd": 0.0, "sl_usd": 0.0, "composite_score": comp,
+                    "paused_reason": "low_conviction"}
 
         # Assign tier
         tier = assign_risk_tier(comp, today_pnl, current_equity,

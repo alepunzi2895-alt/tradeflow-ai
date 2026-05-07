@@ -170,8 +170,9 @@ def assign_risk_tier(comp_score: float,
     """
     adjusted = comp_score
 
-    # Downgrade if account stressed
-    if today_pnl < -200:
+    # Downgrade if account stressed — threshold scales with equity (1.5%, min $30)
+    _daily_loss_threshold = -(max(current_equity * 0.015, 30.0)) if (current_equity and current_equity > 0) else -200.0
+    if today_pnl < _daily_loss_threshold:
         adjusted -= 10
     if weekly_dd_pct > 0.03:
         adjusted -= 15

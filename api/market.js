@@ -105,6 +105,12 @@ export default async function handler(req, res) {
         'https://cdn.forexfactory.com/ffcal_week_this.json'
       ];
       const CountryList = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"];
+      // ForexFactory uses MM-DD-YYYYThh:mm:ss±hhmm — not ISO 8601 → new Date() returns Invalid Date
+      const normalizeFfDate = s => {
+        if (!s) return s;
+        const m = s.match(/^(\d{2})-(\d{2})-(\d{4})(T.+)$/);
+        return m ? `${m[3]}-${m[1]}-${m[2]}${m[4]}` : s;
+      };
       let data = null;
       for (const url of CalendarSources) {
         try {
@@ -126,7 +132,7 @@ export default async function handler(req, res) {
           return CountryList.includes(c) && (i === 'high' || i === 'medium' || i === '3' || i === '2');
         }).slice(0, 60).map(e => ({
           id: e.id || Math.random(),
-          time: e.date || e.time,
+          time: normalizeFfDate(e.date || e.time),
           currency: (e.currency || e.country || 'USD').toUpperCase(),
           event: e.event || e.title || '—',
           impact: normalizeImpact(e.impact),

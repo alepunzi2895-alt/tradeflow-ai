@@ -716,7 +716,7 @@ function updateSentiment(s, source){
 }
 
 // XAU-impacting events keywords
-const XAU_EVENTS=['NFP','Non-Farm','CPI','Inflation','FOMC','Federal Reserve','Fed','Interest Rate','GDP','PCE','PPI','Jobless','Employment','Powell','Yellen','Treasury','ISM','PMI','ECB','Draghi','Lagarde','Gold','DXY','Dollar','Unemployment'];
+const XAU_EVENTS=['NFP','Non-Farm','CPI','Inflation','FOMC','Federal Reserve','Fed','Interest Rate','GDP','PCE','PPI','Jobless','Employment','Powell','Yellen','Treasury','ISM','PMI','ECB','Draghi','Lagarde','Gold','DXY','Dollar','Unemployment','ADP','JOLTS','Job Opening','Retail Sales','Consumer','Trade Balance','Manufacturing','Services PMI'];
 
 function isXauEvent(name){return XAU_EVENTS.some(k=>name&&name.toLowerCase().includes(k.toLowerCase()));}
 
@@ -769,13 +769,16 @@ function updateCountdown(targetDate){
 
 function renderCalEvents(){
   const el=document.getElementById('cal-events');
-  let filtered=allCalEvents;
-  if(calFilter==='xau') filtered=allCalEvents.filter(e=>isXauEvent(e.event));
-  else if(calFilter==='usd') filtered=allCalEvents.filter(e=>e.currency==='USD');
-  else if(calFilter==='eur') filtered=allCalEvents.filter(e=>e.currency==='EUR');
+  const now=new Date();
+  // Show only upcoming events (30-min grace window for in-progress events)
+  const cutoff=new Date(now.getTime()-30*60*1000);
+  let filtered=allCalEvents.filter(e=>new Date(e.time)>=cutoff);
+  if(calFilter==='xau') filtered=filtered.filter(e=>isXauEvent(e.event));
+  else if(calFilter==='usd') filtered=filtered.filter(e=>e.currency==='USD');
+  else if(calFilter==='eur') filtered=filtered.filter(e=>e.currency==='EUR');
 
   if(!filtered.length){
-    el.innerHTML='<div style="font-size:12px;color:var(--dim);padding:8px 0">Nessun evento trovato per questo filtro.</div>';
+    el.innerHTML='<div style="font-size:12px;color:var(--dim);padding:8px 0">Nessun evento imminente per questo filtro.</div>';
     return;
   }
 
@@ -788,11 +791,10 @@ function renderCalEvents(){
     byDay[key].push(e);
   });
 
-  const now=new Date();
   el.innerHTML=Object.entries(byDay).map(([day,evs])=>{
     const dayHtml=evs.map(e=>{
       const d=new Date(e.time);
-      const isPast=d<now;
+      const isInProgress=d<now&&d>=cutoff;
       const isHigh=e.impact==='High';
       const isMed=e.impact==='Medium';
       const impCol=isHigh?'var(--red)':isMed?'var(--yellow)':'var(--dim)';
@@ -803,7 +805,7 @@ function renderCalEvents(){
       const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;
       const timeStr=d.toLocaleTimeString(navigator.language||'it-IT',{hour:'2-digit',minute:'2-digit',timeZone:tz});
 
-      return `<div class="cal-ev" style="${isPast?'opacity:0.5':''}">
+      return `<div class="cal-ev" style="${isInProgress?'opacity:0.6;border-left:2px solid var(--yellow)':''}">
         <div class="cal-ev-imp" style="background:${impCol}"></div>
         <div class="cal-ev-body">
           <div style="display:flex;align-items:center;gap:5px">

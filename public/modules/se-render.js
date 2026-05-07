@@ -232,8 +232,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         const btnStyle=botOnline
           ?`background:${dc};color:${s.dir==='buy'?'#000':'#fff'};cursor:pointer;opacity:1`
           :`background:var(--bg2);color:var(--dim);cursor:not-allowed;opacity:0.5`;
-        const btnLabel=botOnline?(autoOn?`🤖 AUTO — in esecuzione`:`🚀 ESEGUI SU MT5`):`🔴 Bot offline — avvia mt5-bot.py`;
-        const btnDisabled=(botOnline&&!autoOn)?'':'disabled';
+        const btnLabel=botOnline?`🤖 AUTO — in esecuzione`:`🔴 Bot offline — avvia mt5-bot.py`;
+        const btnDisabled='disabled';
         return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:8px;padding:9px 11px;margin-bottom:6px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <div style="display:flex;align-items:center;gap:6px">

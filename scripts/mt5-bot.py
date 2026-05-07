@@ -87,7 +87,7 @@ LOT_SIZE     = 0.02          # lot size base conto $1000 — CONSERVATIVE→0.01
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)
-MAX_OPEN_ORDERS = 1          # max ordini aperti contemporaneamente (ridotto da 2 → 1, 2026-04-30)
+MAX_OPEN_ORDERS = 6          # max 1 per strategia × 6 strategie attive — ogni strategia può avere 1 posizione aperta
 SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
 STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
@@ -1589,8 +1589,6 @@ def run():
                             log.info(f"Regime: {current_regime} | Nessun segnale primario H1 su {bar_dt.strftime('%H:%M')}")
                         elif has_open_position_for_strategy(strategy_name):
                             log.debug(f"[H1] skip {strategy_name} — già 1 ordine aperto per questa strategia")
-                        elif has_position_in_direction(direction):
-                            log.debug(f"[H1] Direzione {direction} già occupata, skip {strategy_name}")
                         elif current_news_risk.get('paused'):
                             log.warning(f"⛔ SEGNALE H1 SOSPESO (News) | {strategy_name} | {current_news_risk['reason']}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
@@ -1736,7 +1734,6 @@ def run():
                             if not quality_gate(sec_id, sec_dir, I_h1, i_h1): continue
                             if sec_dir_filter and sec_dir != sec_dir_filter: continue
                             if has_open_position_for_strategy(sec_id): continue
-                            if has_position_in_direction(sec_dir): continue
                              
                             # ── CALCOLO TP/SL DI STRATEGIA (SEC) ─────────────
                             sec_params = STRATEGY_PARAMS.get(sec_id, {'tp_usd': 20.0, 'sl_usd': 12.0, 'label': sec_id})
@@ -1858,7 +1855,6 @@ def run():
                             if (_can_l
                                     and count_open_positions() < MAX_OPEN_ORDERS
                                     and not has_open_position_for_strategy(_sn_l)
-                                    and not has_position_in_direction(_d_l)
                                     and not current_news_risk.get('paused')
                                     and not (sl_cooldowns_until.get(_sn_l) and _now_u < sl_cooldowns_until[_sn_l])
                                     and not (sl_cooldown_until and _now_u < sl_cooldown_until)
@@ -1959,8 +1955,6 @@ def run():
 
                             if direction and has_open_position_for_strategy(sname):
                                 log.debug(f"[M15] skip {sname} — già 1 ordine aperto per questa strategia")
-                            elif direction and has_position_in_direction(direction):
-                                log.debug(f"[M15] Direzione {direction} già occupata, skip {sname}")
                             elif direction and current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE M15 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
                             elif direction and not quality_gate(sname, direction, I_m15, idx):
@@ -2119,9 +2113,6 @@ def run():
                                 if has_open_position_for_strategy(sname):
                                     log.debug(f"[M30] skip {sname} — già aperto")
                                     continue
-                                if has_position_in_direction(direction):
-                                    log.debug(f"[M30] Direzione {direction} già occupata, skip {sname}")
-                                    continue
                                 if current_news_risk.get('paused'):
                                     log.warning(f"⛔ SEGNALE M30 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
                                     continue
@@ -2253,9 +2244,6 @@ def run():
                                 continue
                             if has_open_position_for_strategy(h4_id):
                                 log.debug(f"[H4] skip {h4_id} — già 1 ordine aperto")
-                                continue
-                            if has_position_in_direction(direction):
-                                log.debug(f"[H4] Direzione {direction} già occupata, skip {h4_id}")
                                 continue
                             if current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE H4 SOSPESO (News) | {h4_id} | {current_news_risk['reason']}")

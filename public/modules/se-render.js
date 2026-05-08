@@ -76,7 +76,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <span style="font-size:7px;color:var(--dim);letter-spacing:.08em">BOT LOG (ultimi ${_logs.length})</span>
     <span style="font-size:7px;color:var(--dim)">● live</span>
   </div>
-  <div style="max-height:140px;overflow-y:auto;font-family:monospace;font-size:8.5px;line-height:1.55">
+  <div id="se-log-scroll" style="max-height:140px;overflow-y:auto;font-family:monospace;font-size:8.5px;line-height:1.55">
     ${_logs.map(r=>`<div style="display:flex;gap:6px;padding:2px 9px;background:${_lvlBg(r.lvl)};border-bottom:1px solid #ffffff05">
       <span style="color:#444;flex-shrink:0">${r.ts}</span>
       <span style="color:${_lvlCol(r.lvl)};flex-shrink:0;width:16px">${r.lvl==='WARNING'?'⚠':r.lvl==='ERROR'||r.lvl==='CRITICAL'?'✖':'·'}</span>
@@ -324,7 +324,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
   <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">${fBtns}</div>
   ${customInputs}
-  <div style="max-height:180px;overflow-y:auto;margin-top:4px">
+  <div id="se-hist-scroll" style="max-height:180px;overflow-y:auto;margin-top:4px">
   ${filtered.length===0
     ? `<div style="text-align:center;padding:8px;font-size:9px;color:var(--dim)">Nessun trade nel periodo selezionato</div>`
     : filtered.map(t=>{
@@ -536,11 +536,20 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
 </div>`;
 
-  // Preserva scroll position del container .mfp per evitare flickering ogni 1s
-  const _mfp = document.querySelector('#tp-strategy .mfp');
-  const _scrollTop = _mfp ? _mfp.scrollTop : 0;
+  // Preserva scroll di tutti i container scrollabili prima del rebuild 1s
+  const _mfp  = document.querySelector('#tp-strategy .mfp');
+  const _log  = document.getElementById('se-log-scroll');
+  const _hist = document.getElementById('se-hist-scroll');
+  const _mfpST  = _mfp  ? _mfp.scrollTop  : 0;
+  const _logST  = _log  ? _log.scrollTop  : 0;
+  const _histST = _hist ? _hist.scrollTop : 0;
   el.innerHTML=statusHtml+regimeHtml+botPanelHtml+pendingHtml+posHtml+histHtml+stratCardsHtml+indSnap+obPanelHtml+m15PanelHtml;
-  if(_mfp) _mfp.scrollTop = _scrollTop;
+  const _mfpN  = document.querySelector('#tp-strategy .mfp');
+  const _logN  = document.getElementById('se-log-scroll');
+  const _histN = document.getElementById('se-hist-scroll');
+  if(_mfpN)  _mfpN.scrollTop  = _mfpST;
+  if(_logN)  _logN.scrollTop  = _logST;
+  if(_histN) _histN.scrollTop = _histST;
 }
 
 async function seSendTradeToMt5(s) {

@@ -1,67 +1,84 @@
 # TradeFlow AI — Strategie Attive
 
-## Backtest Canonico (2026-04-30 · MT5 GOLD · lot 0.01 · $1/punto)
+## Backtest Canonico (2026-05-08 · MT5 GOLD · lot 0.01 · $1/punto · dati freschi 24 mesi)
 
-### Sistema Adattivo per TF (senza RM — fonte di verità · segnali V6 · 2026-04-30)
+### Sistema Adattivo per TF (senza RM — fonte di verità · segnali V6 S05 ultra-select · 2026-05-08)
 
-| TF | WR% | P&L | PF | DD | $/gg | Trade/gg | Mesi+ |
-|---|---|---|---|---|---|---|---|
-| M30 | **42.2%** | +$3,406 | **1.441** | $593 | +$12.5 | 3.69 | **20/24** |
-| H1 | **47.0%** | +$5,105 | 1.593 | $743 | +$21.8 | 4.60 | **21/24** |
-| **H4** | **43.5%** | **+$4,764** | **1.971** | **$338** | **+$29.8** | 2.7 | 14/23 |
+| TF | WR% | PF | $/gg | DD | Trade/gg | Mesi+ |
+|---|---|---|---|---|---|---|
+| M30 | **47.6%** | **1.534** | +$13.74 | $520 | 3.59 | **21/25** |
+| **H1** | **51.6%** | **1.863** | **+$26.27** | **$186** | 4.79 | **24/25** |
+| H4 | 45.1% | 1.993 | +$28.32 | $316 | 2.73 | 16/23 |
 
-> V6 S00 BUY: DI+>=20 (M30) / DI+>=15 (H1/H4) obbligatorio — ST non sufficiente da solo. Sell: sessione 9-17h. S00 M30 WR 49.4%, H1 WR 53.4%, H4 WR 49.6%.
+> **Fix 2026-05-08**: S05 rimosso da TREND/M30 (WR 22.7%), S10 rimosso da H1 TREND/WEAK (WR 27.1%, -$156). Slot riallocati a S00_MFKK. H1 DD: $743→$186 (-75%), WR: 47%→51.6%, Mesi+: 21→24/25.
 
-### Breakdown per strategia (M30 adattivo senza RM — segnali V6)
-
-| Strategia | Trade | WR% | P&L contrib | TF ottimale | Note |
-|---|---|---|---|---|---|
-| S00_MFKK | 518 | 49.4% | +$1,976 | M30 | V6: DI+>=20 gate, sell 9-17h |
-| S05_MFKK_INTRADAY | 219 | 24.2% | +$221 | **H1** | V5: ADX18, RSI57/43, slope |
-| S16_GOLDEN_SQUEEZE | 164 | 43.9% | +$204 | **H1** | V5: OBV 4 barre, DI spread≥8 |
-| S10_OB_FVG_SCALP | 54 | 51.9% | +$806 | M30 | alta qualità, bassa frequenza |
-| S09_MFKK_SCALPING | 53 | 30.2% | +$199 | **M30** | V4: RSI>50+OBV>EMA filtri |
-
-### Breakdown per strategia (H1 adattivo senza RM — segnali V6)
+### Breakdown per strategia (M30 adattivo — segnali V6 S05 ultra-select · 2026-05-08)
 
 | Strategia | Trade | WR% | P&L contrib | Note |
 |---|---|---|---|---|
-| S00_MFKK | 686 | 53.4% | +$3,480 | V6: DI+>=15 H1 gate, dominante |
-| S05_MFKK_INTRADAY | 162 | 25.3% | +$99 | session 7-17h + ST + ATR gate |
-| S16_GOLDEN_SQUEEZE | 140 | 51.4% | +$1,435 | OBV 4 barre, DI spread≥8 |
-| S10_OB_FVG_SCALP | 64 | 28.1% | -$120 | negativo su H1 → usare M30 |
-| S09_MFKK_SCALPING | 25 | 36.0% | +$211 | pochi trade — fragile |
+| S00_MFKK | 661 | 49.0% | +$2,436 | dominante M30, fallback regime |
+| S16_GOLDEN_SQUEEZE | 165 | 43.0% | +$114 | H1 secondario, TREND primario |
+| S10_OB_FVG_SCALP | 49 | 49.0% | +$638 | alta qualità, bassa frequenza |
+| S09_MFKK_SCALPING | 34 | 41.2% | +$287 | RANGE/VOLATILE |
+| ~~S05_MFKK_INTRADAY~~ | — | — | — | **rimosso da TREND M30** (WR 22.7%) |
 
-### Breakdown per strategia (H4 adattivo senza RM — segnali V6)
+### Breakdown per strategia (H1 adattivo — segnali V6 S05 ultra-select · 2026-05-08)
 
 | Strategia | Trade | WR% | P&L contrib | Note |
 |---|---|---|---|---|
-| S00_MFKK | 252 | 49.6% | +$976 | V6: DI+>=15 H4 gate |
-| S17_CONVERGENCE_SCALP | 103 | 34.0% | +$2,710 | dominante H4, PF elevato |
-| S16_GOLDEN_SQUEEZE | 50 | 42.0% | +$567 | buona qualità su H4 |
-| S05_MFKK_INTRADAY | 32 | 28.1% | +$510 | WR bassa ma PF positivo |
+| S00_MFKK | 782 | 52.3% | +$3,704 | dominante H1, copre slot ex-S05/S10 |
+| S16_GOLDEN_SQUEEZE | 145 | 51.0% | +$1,472 | TREND primario H1 |
+| S09_MFKK_SCALPING | 19 | 36.8% | +$51 | VOLATILE/RANGE |
+| ~~S10_OB_FVG_SCALP~~ | — | — | — | **rimosso da TREND/WEAK H1** (WR 27.1%, -$156) |
+| ~~S05_MFKK_INTRADAY~~ | — | — | — | **rimosso da TREND H1** (WR 29.7% < 35%) |
 
-### TF ottimale per strategia (da backtest 2026-04-23)
+### Breakdown per strategia (H4 adattivo — segnali V6 · 2026-05-08)
+
+| Strategia | Trade | WR% | P&L contrib | Note |
+|---|---|---|---|---|
+| S00_MFKK | 262 | 50.4% | +$1,080 | fallback H4 |
+| S17_CONVERGENCE_SCALP | 102 | 34.3% | +$2,719 | dominante H4, PF elevato |
+| S16_GOLDEN_SQUEEZE | 50 | 42.0% | +$567 | TREND H4 |
+| S05_MFKK_INTRADAY | 14 | 35.7% | +$80 | marginale, sopra soglia 35% |
+
+### TF ottimale per strategia (aggiornato 2026-05-08)
 
 | Strategia | TF Ottimale | PF sistema | WR | Note |
 |---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | **H1** | 1.36 | 45.0% | V4 (2026-04-28): H4 context filter SELL. BUY WR 44.5%, SELL WR 50% (countertrend only). H1 proxy: EMA200 slope>0 |
-| S00_MFKK | M30 (fallback) | 1.24 | 26.1% | V6 (2026-04-30): DI+>=20 M30 / >=15 H1 obbligatorio, sell 9-17h. M30 WR 49.4%, H1 WR 53.4% |
-| S09_MFKK_SCALPING | **M30** | 1.40 | 29.2% | V3 (2026-04-28): session 06-19h + ST alignment. H1 +$379 positivo. |
-| S10_OB_FVG_SCALP | M30 | 1.80 | 51.0% | V3 (2026-04-28): ADX≥18 + ST alignment. 49 trade/25mo — alta qualità. |
-| S05_MFKK_INTRADAY | **H1** | 1.07 | 23.4% | V4 (2026-04-28): session 7-17h + ST + ATR≤1.8× gate. H4: WR 34.5% +$769. |
-| S17_CONVERGENCE_SCALP | **H4** | 1.971 | 34.0% | H4 adaptive: +$2,710/23mo. Sistema H4 PF 1.971. |
+| S16_GOLDEN_SQUEEZE | **H1** | 1.863 (sistema) | 51.0% | TREND primario H1; H4 WR 42% |
+| S00_MFKK | **H1** (fallback M30) | 1.863 (sistema) | 52.3% H1 / 49% M30 | Dominante; copre tutti i regimi come fallback |
+| S09_MFKK_SCALPING | **M30** | 1.534 (sistema) | 41.2% | RANGE/VOLATILE M30 |
+| S10_OB_FVG_SCALP | **M30 only** | 1.534 (sistema) | 49.0% | Solo M30 — negativo su H1 (-$156) |
+| S05_MFKK_INTRADAY | **H4 only** | marginale | 35.7% (14 trade) | Solo H4, fragile. Rimosso da M30 e H1 TREND |
+| S17_CONVERGENCE_SCALP | **H4** | 1.993 (sistema H4) | 34.3% | Dominante H4 (+$2,719) |
+
+## Regime Priority per TF (backtester + bot)
+
+### H1 (REGIME_PRIORITY_H1)
+- **TREND**: S16 → S00
+- **WEAK**: S16 → S09 → S00
+- **RANGE/VOLATILE**: S10 → S09
+
+### M30 (REGIME_PRIORITY_M30)
+- **TREND**: S16 → S10 → S00
+- **WEAK**: S10 → S16 → S09 → S00
+- **RANGE/VOLATILE**: S10 → S09
+
+### H4 (REGIME_PRIORITY_H4)
+- **TREND**: S16 → S17 → S00
+- **WEAK**: S16 → S17 → S00
+- **RANGE**: S17 → S00
 
 ## Strategie Attive nel Bot
 
 | ID | Label | TP mult | SL mult | Regimi ottimali | TF primario | PF sistema | WR adattivo |
 |---|---|---|---|---|---|---|---|
-| `S00_MFKK` | MFKK Core V2 | ATR×3.5 | ATR×1.5 | TREND/WEAK/RANGE | M30 | 1.326 | 49.4% (H1: 53.4%, H4: 49.6%) |
-| `S05_MFKK_INTRADAY` | MFKK Intraday V4 | ATR×3.5 | ATR×1.5 | TREND_UP, TREND_DOWN | **H1** | 1.07 | 24.0% |
-| `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.5 | VOLATILE, WEAK | **M30** | 1.40 | 29.6% |
-| `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK | M30 | 1.65 | 51.0% |
-| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V4 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.40 | 47.3% |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.5 | VOLATILE | **H4** | 1.75 | 35.8% |
+| `S00_MFKK` | MFKK Core V2 | ATR×3.5 | ATR×1.5 | tutti (fallback) | H1/M30 | 1.863 H1 | 52.3% H1, 49% M30 |
+| `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.5 | VOLATILE, WEAK, RANGE | **M30** | 1.534 M30 | 41.2% |
+| `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK, TREND | **M30 only** | 1.534 M30 | 49.0% |
+| `S16_GOLDEN_SQUEEZE` | Golden Squeeze V5 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.863 H1 | 51.0% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.5 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
+| `S05_MFKK_INTRADAY` | MFKK Intraday V6 | ATR×3.5 | ATR×1.0 | TREND (H4 only) | H4 (marginale) | — | 35.7% (14 trade, fragile) |
 
 ## Strategy Selector Agent (`strategy_selector.py`)
 

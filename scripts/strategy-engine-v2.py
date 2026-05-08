@@ -789,17 +789,31 @@ REGIME_PRIORITY_H4 = {
     'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
 
-# M30/H1/M15: S10 first in WEAK/TREND (PF 1.79-1.82), S09 in RANGE/VOLATILE (PF 1.65)
-# S17 excluded from TREND/WEAK — only works on H4
-REGIME_PRIORITY = {
-    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
-    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S05_MFKK_INTRADAY', 'S00_MFKK'],
+# M30: S05 rimosso da TREND (backtest 2026-05-08: WR 22.7% → drag). S10 resta (WR 49%, +$638 su M30).
+REGIME_PRIORITY_M30 = {
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
     'WEAK_UP':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
     'WEAK_DOWN':  ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
     'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
     'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
     'UNKNOWN':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
+
+# H1: S10 rimosso da TREND/WEAK (backtest 2026-05-08: WR 27.1%, -$156 su H1).
+#     S05 rimosso da TREND (WR 29.7% < soglia 35%). S16+S00 coprono i loro slot.
+REGIME_PRIORITY_H1 = {
+    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S00_MFKK'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S00_MFKK'],
+    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
+    'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
+}
+
+# Fallback generico (M15 e altri TF) — invariato
+REGIME_PRIORITY = REGIME_PRIORITY_M30
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
 def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
@@ -919,7 +933,12 @@ def stats(trades, tp=TP_USD, sl=SL_USD):
 def run_adaptive(candles, ind, tf='H1'):
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
-    priority = REGIME_PRIORITY_H4 if tf == 'H4' else REGIME_PRIORITY
+    if tf == 'H4':
+        priority = REGIME_PRIORITY_H4
+    elif tf == 'H1':
+        priority = REGIME_PRIORITY_H1
+    else:
+        priority = REGIME_PRIORITY_M30
 
     tf_mult = 1
     if tf == 'M30': tf_mult = 2
@@ -1026,7 +1045,12 @@ def run_adaptive_rm(candles, ind, tf='H1'):
     """
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
-    priority = REGIME_PRIORITY_H4 if tf == 'H4' else REGIME_PRIORITY
+    if tf == 'H4':
+        priority = REGIME_PRIORITY_H4
+    elif tf == 'H1':
+        priority = REGIME_PRIORITY_H1
+    else:
+        priority = REGIME_PRIORITY_M30
     lookahead = 150
 
     for i in range(220, n):

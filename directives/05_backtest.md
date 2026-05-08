@@ -38,21 +38,32 @@ backtests/results/mfkk_bt_H4.json    ← MFKK campaign H4
 backtests/archive/                   ← risultati storici
 ```
 
-## Risultati Canonici (2026-04-16 · MT5 GOLD 730gg · lot 0.01 · $1/punto)
+## Risultati Canonici (2026-05-08 · MT5 GOLD 24 mesi · lot 0.01 · $1/punto)
 
-### M30 Sistema Adattivo (RACCOMANDATO)
+> Fix 2026-05-08: S05 rimosso da M30 TREND (WR 22.7%), S10 rimosso da H1 TREND/WEAK (WR 27.1%). Regime priority TF-specifici (REGIME_PRIORITY_H1 / REGIME_PRIORITY_M30).
 
-| Strategia | Trade | WR% | P&L | PF | $/gg |
-|---|---|---|---|---|---|
-| S16_GOLDEN_SQUEEZE | 2547 | 30.0% | +$3,910 | 1.25 | — |
-| S05_MFKK_INTRADAY | 423 | 38.5% | +$892 | 1.21 | — |
-| S09_MFKK_SCALPING | 336 | 35.1% | +$608 | 1.18 | — |
-| S10_OB_FVG_SCALP | 84 | 44.0% | +$739 | 1.85 | — |
-| **TOTALE M30** | **3390** | **31.9%** | **+$6,150** | **1.202** | **+$12.66** |
+### M30 Sistema Adattivo
 
-### H1 (riferimento)
+| Strategia | Trade | WR% | P&L | Note |
+|---|---|---|---|---|
+| S00_MFKK | 661 | 49.0% | +$2,436 | dominante |
+| S16_GOLDEN_SQUEEZE | 165 | 43.0% | +$114 | |
+| S10_OB_FVG_SCALP | 49 | 49.0% | +$638 | |
+| S09_MFKK_SCALPING | 34 | 41.2% | +$287 | |
+| **TOTALE M30** | **909** | **47.6%** | **+$3,476** | **PF 1.534 · DD $520 · +$13.74/gg · 21/25 mesi+** |
 
-| Totale H1 | 2505 trade | WR 31.3% | +$3,072 | PF 1.089 | DD $3,622 | +$7.70/gg |
+### H1 Sistema Adattivo (RACCOMANDATO)
+
+| Strategia | Trade | WR% | P&L | Note |
+|---|---|---|---|---|
+| S00_MFKK | 782 | 52.3% | +$3,704 | dominante |
+| S16_GOLDEN_SQUEEZE | 145 | 51.0% | +$1,472 | |
+| S09_MFKK_SCALPING | 19 | 36.8% | +$51 | |
+| **TOTALE H1** | **949** | **51.6%** | **+$5,201** | **PF 1.863 · DD $186 · +$26.27/gg · 24/25 mesi+** |
+
+### H4 Sistema Adattivo
+
+| Totale H4 | 428 trade | WR 45.1% | +$4,447 | PF 1.993 | DD $316 | +$28.32/gg | 16/23 mesi+ |
 
 ## Aggiornare STRATEGIES_CONFIG dopo un Backtest
 

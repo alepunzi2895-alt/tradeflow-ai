@@ -26,6 +26,12 @@ Optimization 2026-04-30 V5 (WR improvement pass):
 Optimization 2026-04-30 V6 (S00 stop reduction):
   S00 BUY: DI+>=20 sempre obbligatorio (prima OR con ST) → WR 34.5%→36.7%, P&L +$1035 standalone
   S00 SELL: sessione 7-17h → 9-17h (7-9h in perdita -$371 su 58 trade)
+
+Optimization 2026-05-08 V6 S05 ultra-select (target WR≥35%, trade<80):
+  S05: ADX 20→28, DI spread>=12 gate, RSI 57/43→62/38, session 7-17→9-15 UTC,
+       ATR min gate (skip if ATR<0.8×avg), StochRSI K>60 (bull) / K<40 (bear).
+  Rationale: WR 24-25% su 162+ trade → barely survive on R:R alone, not live-viable.
+  Se post-backtest WR<35% con <50 trade → eliminare S05 dal rotation.
 """
 
 
@@ -187,10 +193,12 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
 
 
 def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
-    """S05_MFKK_INTRADAY V4 — OBV T-Channel + RSI + MACD + Mom + ADX + EMA200 + ST alignment.
-    V3: RSI 55/45, ADX>=15 gate, StochRSI K>D confluence.
-    V4 (2026-04-28): Supertrend alignment filter — buy only when ST bullish, sell only when ST bearish.
-      Removes counter-ST entries that drove H1 losses. h1_trend=-1=bullish, 1=bearish.
+    """S05_MFKK_INTRADAY V6 ultra-select — OBV T-Channel + RSI + MACD + Mom + ADX + EMA200 + ST.
+    V4 (2026-04-28): ST alignment filter.
+    V5 (2026-04-30): ADX 18→20, RSI 54/46→57/43, RSI slope.
+    V6 (2026-05-08): ADX 20→28, DI spread>=12, RSI 57/43→62/38, session 9-15 UTC,
+      ATR min gate (skip if ATR<0.8×avg), StochRSI absolute K>60/K<40 instead of K>D.
+      Target: WR>=35% with <80 trade (from 24% on 162+). If still <35% → remove from rotation.
     """
     if i < 2: return None
     oc = _get(ind, 'obv_oc', 'obv_macd_oc')
@@ -203,31 +211,39 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     sd = ind.get('srsi_d', [None] * (i + 1))[i]
     if None in (r, mo, a, mc, e200): return None
 
-    # ADX gate — skip flat/choppy markets (alzato 18→20: H1 WR migliora filtrando ranging debole)
-    if a < 20: return None
+    # ADX gate — solo trend forti (alzato 20→28: elimina WEAK regime entries)
+    if a < 28: return None
 
-    # Session filter: London+NY only (cleaner OBV signals, lower DD on H1 deployment)
-    if hour is not None and not (7 <= hour < 17): return None
+    # DI spread gate — dominanza direzionale chiara (nuova V6)
+    dip_v = ind.get('dip', [None] * (i + 1))[i]
+    dim_v = ind.get('dim', [None] * (i + 1))[i]
+    if dip_v is not None and dim_v is not None:
+        if abs(dip_v - dim_v) < 12: return None
 
-    # ATR spike filter: skip extreme volatility bars (news events, overextended entries)
+    # Session filter: London/NY overlap peak only (alzato 7-17 → 9-15 UTC)
+    if hour is not None and not (9 <= hour < 15): return None
+
+    # ATR range: skip flat bars (nuova V6) e spike estremi
     atr_arr = ind.get('atr')
     atr_ref = _get(ind, 'atr_avg', 'atr30')
     atr_v = atr_arr[i] if atr_arr else None
     atr_avg_v = atr_ref[i] if atr_ref else None
-    if atr_v and atr_avg_v and atr_v > 1.8 * atr_avg_v: return None
+    if atr_v and atr_avg_v:
+        if atr_v < 0.8 * atr_avg_v: return None   # mercato troppo piatto
+        if atr_v > 1.8 * atr_avg_v: return None   # spike news
 
     # Supertrend alignment: only trade in ST direction (V4)
     if h1_trend is not None and h1_trend != 0:
-        if oc[i] == 1 and h1_trend != -1: return None   # BUY only when ST bullish
-        if oc[i] == -1 and h1_trend != 1: return None   # SELL only when ST bearish
+        if oc[i] == 1 and h1_trend != -1: return None
+        if oc[i] == -1 and h1_trend != 1: return None
 
-    # StochRSI K>D: momentum turning in entry direction
-    srsi_bull = (sk is None or sd is None) or (sk > sd)
-    srsi_bear = (sk is None or sd is None) or (sk < sd)
+    # StochRSI assoluto: K>60 bull, K<40 bear (era K>D — troppo permissivo)
+    srsi_bull = (sk is None) or (sk > 60)
+    srsi_bear = (sk is None) or (sk < 40)
 
     rp = ind['rsi'][i - 1] if i > 0 else r
-    is_buy  = oc[i] == 1  and r > 57 and r > rp and mo > 0 and mc > 0 and close > e200 and srsi_bull
-    is_sell = oc[i] == -1 and r < 43 and r < rp and mo < 0 and mc < 0 and close < e200 and srsi_bear
+    is_buy  = oc[i] == 1  and r > 62 and r > rp and mo > 0 and mc > 0 and close > e200 and srsi_bull
+    is_sell = oc[i] == -1 and r < 38 and r < rp and mo < 0 and mc < 0 and close < e200 and srsi_bear
     if is_buy:  return 'buy'
     if is_sell: return 'sell'
     return None

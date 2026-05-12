@@ -10,6 +10,8 @@
 | ⚠ Open | `api/db.js` | `createClient()` Turso senza timeout esplicito — dipende da kill Vercel a 10s. Low risk |
 | ✅ Fixed 2026-04-28 | `scripts/mt5-bot.py` | Race condition `has_position_in_direction()`: MT5 non registrava posizione prima del check successivo → doppio SELL aperto simultaneamente. Fix: `_strategy_order_tickets` ora salva `(ticket, direction)`, check in-memory first. `MAX_OPEN_ORDERS` 3→2. |
 | ✅ Fixed 2026-04-28 | `scripts/news_guardian.py` | **TypeError silenzioso**: `now_utc` tz-aware - `evt_dt` tz-naive → TypeError catturato dall'outer try-except → News Guardian sempre `paused=False` anche con news HIGH USD attive. Fix: `now_utc.replace(tzinfo=None)` in `check_news_risk()`. Polling ridotto 900s→60s. |
+| ✅ Fixed 2026-05-12 | `scripts/mt5-bot.py` | **`has_position_in_direction()` mai usata**: funzione definita il 2026-04-28 ma mai chiamata nei blocchi segnale → due strategie diverse aprivano nella stessa direzione simultaneamente. Fix: guard aggiunto in tutti i 6 blocchi (H1, H1sec, live scan, M15, M30, H4). |
+| ✅ Fixed 2026-05-12 | `scripts/mt5-bot.py` | **`STRATEGY_PARAMS` sl_mult divergeva da `risk_guardian.py`**: sl_mult=1.0 per S05/S09/S10/S17/S00 mentre STRATEGY_ATR_PARAMS aveva 1.5 → SL troppo stretto se RiskGuardian offline. Fix: allineati a 1.5 per tutte. |
 
 ## Performance Bottlenecks (mt5-bot.py) — Risolti
 

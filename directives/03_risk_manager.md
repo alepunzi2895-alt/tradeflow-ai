@@ -41,7 +41,8 @@ composite = strategy_confidence × 0.50
 | Weekly drawdown > 5% | Halt trading |
 | 5 consecutive losses | Halt trading |
 
-> **Limite posizioni**: `MAX_OPEN_ORDERS = 2` (ridotto da 3, 2026-04-28). Max 2 posizioni aperte contemporaneamente, mai più di 1 per direzione (buy o sell).
+> **Limite posizioni**: `MAX_OPEN_ORDERS = 6` (max 1 per strategia × 6 strategie attive). Il limite è per strategia, non globale.
+> **Correlazione direzionale** (fix 2026-05-12): `has_position_in_direction()` blocca qualsiasi nuovo ordine nella stessa direzione di una posizione già aperta — mai più di 1 BUY o 1 SELL aperto contemporaneamente, indipendentemente dalla strategia.
 > **Race condition fix**: `has_position_in_direction()` controlla `_strategy_order_tickets` in-memory prima di MT5 per essere immune alla latenza post-`place_order()` (~500ms).
 
 ## Compounding

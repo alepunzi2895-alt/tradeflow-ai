@@ -139,12 +139,12 @@ LOG_FILE     = "mt5-bot.log"
 # tp_usd / sl_usd qui sono distanze in punti prezzo (non dollari assoluti).
 # Es. ATR≈9.5 pt × tp_mult=2.0 → tp_use=19.0 → price ± 19.0 → ~$19 per 0.01 lot.
 STRATEGY_PARAMS = {
-    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 3.5, 'sl_mult': 1.0},
-    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 4.0, 'sl_mult': 1.0},
-    'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 3.5, 'sl_mult': 1.2},
+    'S05_MFKK_INTRADAY':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Intraday V3', 'tp_mult': 3.5, 'sl_mult': 1.5},
+    'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 4.0, 'sl_mult': 1.5},
+    'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 3.5, 'sl_mult': 1.5},
     'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 2.0, 'be_mult': 1.3},
-    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.0},
-    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 3.5, 'sl_mult': 1.0},
+    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.5},
+    'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 3.5, 'sl_mult': 1.5},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -1590,6 +1590,8 @@ def run():
                             log.info(f"Regime: {current_regime} | Nessun segnale primario H1 su {bar_dt.strftime('%H:%M')}")
                         elif has_open_position_for_strategy(strategy_name):
                             log.debug(f"[H1] skip {strategy_name} — già 1 ordine aperto per questa strategia")
+                        elif has_position_in_direction(direction):
+                            log.info(f"[H1] skip {strategy_name} — già 1 posizione {direction.upper()} aperta (correlazione direzionale)")
                         elif current_news_risk.get('paused'):
                             log.warning(f"⛔ SEGNALE H1 SOSPESO (News) | {strategy_name} | {current_news_risk['reason']}")
                         elif count_open_positions() >= MAX_OPEN_ORDERS:
@@ -1735,7 +1737,10 @@ def run():
                             if not quality_gate(sec_id, sec_dir, I_h1, i_h1): continue
                             if sec_dir_filter and sec_dir != sec_dir_filter: continue
                             if has_open_position_for_strategy(sec_id): continue
-                             
+                            if has_position_in_direction(sec_dir):
+                                log.info(f"[H1sec] skip {sec_id} — già 1 posizione {sec_dir.upper()} aperta (correlazione direzionale)")
+                                continue
+
                             # ── CALCOLO TP/SL DI STRATEGIA (SEC) ─────────────
                             sec_params = STRATEGY_PARAMS.get(sec_id, {'tp_usd': 20.0, 'sl_usd': 12.0, 'label': sec_id})
                             base_tp2 = 20.0; base_sl2 = 12.0
@@ -1856,6 +1861,7 @@ def run():
                             if (_can_l
                                     and count_open_positions() < MAX_OPEN_ORDERS
                                     and not has_open_position_for_strategy(_sn_l)
+                                    and not has_position_in_direction(_d_l)
                                     and not current_news_risk.get('paused')
                                     and not (sl_cooldowns_until.get(_sn_l) and _now_u < sl_cooldowns_until[_sn_l])
                                     and not (sl_cooldown_until and _now_u < sl_cooldown_until)
@@ -1956,6 +1962,8 @@ def run():
 
                             if direction and has_open_position_for_strategy(sname):
                                 log.debug(f"[M15] skip {sname} — già 1 ordine aperto per questa strategia")
+                            elif direction and has_position_in_direction(direction):
+                                log.info(f"[M15] skip {sname} — già 1 posizione {direction.upper()} aperta (correlazione direzionale)")
                             elif direction and current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE M15 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
                             elif direction and not quality_gate(sname, direction, I_m15, idx):
@@ -2114,6 +2122,9 @@ def run():
                                 if has_open_position_for_strategy(sname):
                                     log.debug(f"[M30] skip {sname} — già aperto")
                                     continue
+                                if has_position_in_direction(direction):
+                                    log.info(f"[M30] skip {sname} — già 1 posizione {direction.upper()} aperta (correlazione direzionale)")
+                                    continue
                                 if current_news_risk.get('paused'):
                                     log.warning(f"⛔ SEGNALE M30 SOSPESO (News) | {sname} | {current_news_risk['reason']}")
                                     continue
@@ -2245,6 +2256,9 @@ def run():
                                 continue
                             if has_open_position_for_strategy(h4_id):
                                 log.debug(f"[H4] skip {h4_id} — già 1 ordine aperto")
+                                continue
+                            if has_position_in_direction(direction):
+                                log.info(f"[H4] skip {h4_id} — già 1 posizione {direction.upper()} aperta (correlazione direzionale)")
                                 continue
                             if current_news_risk.get('paused'):
                                 log.warning(f"⛔ SEGNALE H4 SOSPESO (News) | {h4_id} | {current_news_risk['reason']}")

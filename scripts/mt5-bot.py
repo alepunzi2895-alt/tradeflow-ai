@@ -133,6 +133,37 @@ def _local_ai_score(consecutive_sl: int, today_pnl: float = 0.0) -> float:
 
 
 LOG_FILE     = "mt5-bot.log"
+AI_SCORE_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'ai_score_history.json')
+
+
+def _append_ai_score_history(score: float, source: str, tier: str,
+                              composite: float = None, regime: str = None) -> None:
+    """Appende una entry a data/ai_score_history.json. Mantiene gli ultimi 30 giorni."""
+    entry: dict = {
+        'ts':     datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'score':  round(score, 1),
+        'tier':   tier,
+        'source': source,
+    }
+    if composite is not None:
+        entry['composite'] = round(composite, 1)
+    if regime is not None:
+        entry['regime'] = regime
+    try:
+        path = AI_SCORE_HISTORY_FILE
+        history: list = []
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as _f:
+                history = json.load(_f)
+        history.append(entry)
+        cutoff = (datetime.datetime.now(datetime.timezone.utc) -
+                  datetime.timedelta(days=30)).strftime('%Y-%m-%dT')
+        history = [e for e in history if e.get('ts', '') >= cutoff]
+        with open(path, 'w', encoding='utf-8') as _f:
+            json.dump(history, _f, separators=(',', ':'))
+    except Exception as _e:
+        logging.getLogger('tf-bot').debug(f"[ai_history] {_e}")
+
 
 # ── TP/SL per strategia ───────────────────────────────────────────────────────
 # GOLD su XM: digits=2 → 1 punto prezzo = $1 per 0.01 lot.
@@ -1114,7 +1145,8 @@ def run():
     cached_candles       = None  # cache candele (aggiornata ogni 60s)
     cached_I_h1          = None  # cache indicatori (ricalcolati solo su nuova barra)
     _tracked_positions   = {}    # {ticket: position_id} per rilevare chiusure istantanee
-    consecutive_sl_count = 0    # SL consecutivi globali: azzerato a ogni TP/profit
+    consecutive_sl_count    = 0    # SL consecutivi globali: azzerato a ogni TP/profit
+    _last_logged_ai_score   = None  # dedup entries in ai_score_history.json
     sl_cooldown_until    = None  # datetime UTC fino a cui nuovi ordini sono bloccati globale
     _strategy_sl_count   = {}    # {strategy_name: consecutive_sl_count}
     sl_cooldowns_until   = {}    # {strategy_name: datetime UTC} pausa specifica per strategia
@@ -1417,6 +1449,13 @@ def run():
                     log.info(f"🧠 AI Score: {last_ai_score:.1f} [{_score_source}] — tier: {rm.get_tier(last_ai_score)['label']}")
                 else:
                     log.info(f"🧠 AI Score: {last_ai_score:.1f} [{_score_source}]")
+                # Salva in history solo quando lo score cambia (evita flood di entries identiche)
+                if _last_logged_ai_score is None or abs(current_ai_score - _last_logged_ai_score) >= 0.5:
+                    _hs_tier = rm.get_tier(last_ai_score)['name'] if rm else (
+                        'NORMAL' if last_ai_score >= 40 else 'CONSERVATIVE')
+                    _hs_comp = (rg._last_params or {}).get('composite_score') if rg else None
+                    _append_ai_score_history(current_ai_score, _score_source, _hs_tier, _hs_comp)
+                    _last_logged_ai_score = current_ai_score
 
             # ── Fetch auto_trade flag ogni 30s ────────────────────────────────
             if (now_ts - last_auto_trade_ts) >= 30:
@@ -1542,6 +1581,12 @@ def run():
                         today_pnl=state.pnl_today,
                         current_equity=_acc_prev['equity'] if _acc_prev else None,
                     )
+                    # Snapshot orario: score + composite + regime (una entry per candela H1)
+                    _snap_comp = (rg._last_params or {}).get('composite_score')
+                    _snap_tier = rm.get_tier(last_ai_score)['name'] if rm else 'UNKNOWN'
+                    _append_ai_score_history(last_ai_score, 'H1_snapshot', _snap_tier,
+                                             _snap_comp, current_regime)
+                    _last_logged_ai_score = last_ai_score
 
                 if current_is_extreme:
                     log.info(f"⚠ Giorno estremo (ATR={atr_v:.2f} > {EXTREME_MULT}x avg={atr_avg:.2f}) — skip H1")

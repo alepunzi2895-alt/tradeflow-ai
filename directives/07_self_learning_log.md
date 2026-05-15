@@ -4,9 +4,13 @@
 
 | Data | Bug | Causa radice | Fix applicato |
 |---|---|---|---|
+<<<<<<< HEAD
 | 2026-05-12 | PerfTracker S00_MFKK: score_mult 1.00→0.70 ⬇️ | underperform | WR 13.3% vs baseline 49.4% (27%) |
 | 2026-04-21 | PerfTracker S00_MFKK: score_mult 0.50→0.70 ⬇️ | underperform | WR 3.3% vs baseline 38.3% (9%) |
 | 2026-04-20 | PerfTracker S00_MFKK: score_mult 1.00→0.50 ⬇️ | streak_penalty | 23 perdite consecutive | WR=23.3% |
+=======
+| 2026-05-15 | PerfTracker S00_MFKK: score_mult 1.00→0.70 ⬇️ | underperform | WR 13.3% vs baseline 49.4% (27%) |
+>>>>>>> 4ccb5e7ef6843d7d66e8893494992d4fff1d43a7
 | 2026-03-31 | Prezzi XAU non caricavano | Yahoo Finance bloccato + FPMARKETS ticker fallito | Multi-ticker TV Scanner (9 alternative) |
 | 2026-03-31 | Indicatori MACD errati (+31 vs -12) | GC=F futures ≠ spot OANDA:XAUUSD | MAI usare GC=F per prezzi live; Yahoo XAUUSD=X come fallback |
 | 2026-03-31 | "No candle data" su tutti indicatori | Vercel IP blacklistato da Yahoo Finance | Candele H1 fetched lato browser in mfkk.js |

@@ -1451,7 +1451,7 @@ def run():
                     log.info(f"🧠 AI Score: {last_ai_score:.1f} [{_score_source}]")
                 # Salva in history solo quando lo score cambia (evita flood di entries identiche)
                 if _last_logged_ai_score is None or abs(current_ai_score - _last_logged_ai_score) >= 0.5:
-                    _hs_tier = rm.get_tier(last_ai_score)['name'] if rm else (
+                    _hs_tier = rm.get_tier(last_ai_score)['label'].split(' ', 1)[-1] if rm else (
                         'NORMAL' if last_ai_score >= 40 else 'CONSERVATIVE')
                     _hs_comp = (rg._last_params or {}).get('composite_score') if rg else None
                     _append_ai_score_history(current_ai_score, _score_source, _hs_tier, _hs_comp)
@@ -1583,7 +1583,7 @@ def run():
                     )
                     # Snapshot orario: score + composite + regime (una entry per candela H1)
                     _snap_comp = (rg._last_params or {}).get('composite_score')
-                    _snap_tier = rm.get_tier(last_ai_score)['name'] if rm else 'UNKNOWN'
+                    _snap_tier = rm.get_tier(last_ai_score)['label'].split(' ', 1)[-1] if rm else 'UNKNOWN'
                     _append_ai_score_history(last_ai_score, 'H1_snapshot', _snap_tier,
                                              _snap_comp, current_regime)
                     _last_logged_ai_score = last_ai_score

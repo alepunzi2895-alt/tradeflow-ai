@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-05-08T10:36:51.832357",
-  "n_candles": 23569,
+  "generated_at": "2026-05-15T05:01:15.736388",
+  "n_candles": 11782,
   "indicators": [
     "EMA20",
     "EMA50",
@@ -24,14 +24,14 @@
   "strategies": {
     "S05_MFKK_INTRADAY": {
       "stats": {
-        "n": 11,
+        "n": 6,
         "wr": 0.0,
-        "pnl": -154.0,
+        "pnl": -107.2,
         "pf": 0.0,
-        "dd": 154.0,
-        "avg_day": -15.4,
-        "tr_day": 1.1,
-        "months": "0/7"
+        "dd": 107.2,
+        "avg_day": -21.45,
+        "tr_day": 1.2,
+        "months": "0/3"
       },
       "regime_fit": [
         "TREND_UP",
@@ -42,14 +42,14 @@
     },
     "S09_MFKK_SCALPING": {
       "stats": {
-        "n": 12,
-        "wr": 8.3,
-        "pnl": -137.1,
-        "pf": 0.13,
-        "dd": 157.1,
-        "avg_day": -12.46,
-        "tr_day": 1.09,
-        "months": "1/7"
+        "n": 7,
+        "wr": 0.0,
+        "pnl": -161.1,
+        "pf": 0.0,
+        "dd": 161.1,
+        "avg_day": -26.86,
+        "tr_day": 1.17,
+        "months": "0/3"
       },
       "regime_fit": [
         "VOLATILE",
@@ -78,14 +78,14 @@
     },
     "S16_GOLDEN_SQUEEZE": {
       "stats": {
-        "n": 192,
-        "wr": 25.5,
-        "pnl": -470.3,
-        "pf": 0.728,
+        "n": 82,
+        "wr": 23.2,
+        "pnl": -486.1,
+        "pf": 0.583,
         "dd": 597.4,
-        "avg_day": -3.89,
-        "tr_day": 1.59,
-        "months": "10/25"
+        "avg_day": -9.35,
+        "tr_day": 1.58,
+        "months": "4/13"
       },
       "regime_fit": [
         "TREND_UP",
@@ -96,14 +96,14 @@
     },
     "S17_CONVERGENCE_SCALP": {
       "stats": {
-        "n": 850,
-        "wr": 0.8,
-        "pnl": -6831.4,
-        "pf": 0.036,
-        "dd": 6831.4,
-        "avg_day": -18.36,
-        "tr_day": 2.28,
-        "months": "0/25"
+        "n": 416,
+        "wr": 0.7,
+        "pnl": -4763.5,
+        "pf": 0.039,
+        "dd": 4763.5,
+        "avg_day": -26.03,
+        "tr_day": 2.27,
+        "months": "0/13"
       },
       "regime_fit": [
         "TREND_UP",
@@ -116,14 +116,14 @@
     },
     "S00_MFKK": {
       "stats": {
-        "n": 764,
-        "wr": 1.0,
-        "pnl": -5529.6,
-        "pf": 0.077,
-        "dd": 5529.6,
-        "avg_day": -25.96,
-        "tr_day": 3.59,
-        "months": "0/25"
+        "n": 379,
+        "wr": 1.1,
+        "pnl": -3647.4,
+        "pf": 0.096,
+        "dd": 3647.4,
+        "avg_day": -33.77,
+        "tr_day": 3.51,
+        "months": "0/13"
       },
       "regime_fit": [
         "TREND_UP",
@@ -139,41 +139,41 @@
     {
       "rank": 1,
       "name": "S16_GOLDEN_SQUEEZE",
-      "pf": 0.728,
-      "wr": 25.5,
-      "n": 192,
+      "pf": 0.583,
+      "wr": 23.2,
+      "n": 82,
       "use": false
     },
     {
       "rank": 2,
-      "name": "S09_MFKK_SCALPING",
-      "pf": 0.13,
-      "wr": 8.3,
-      "n": 12,
+      "name": "S00_MFKK",
+      "pf": 0.096,
+      "wr": 1.1,
+      "n": 379,
       "use": false
     },
     {
       "rank": 3,
-      "name": "S00_MFKK",
-      "pf": 0.077,
-      "wr": 1.0,
-      "n": 764,
+      "name": "S17_CONVERGENCE_SCALP",
+      "pf": 0.039,
+      "wr": 0.7,
+      "n": 416,
       "use": false
     },
     {
       "rank": 4,
-      "name": "S17_CONVERGENCE_SCALP",
-      "pf": 0.036,
-      "wr": 0.8,
-      "n": 850,
+      "name": "S05_MFKK_INTRADAY",
+      "pf": 0.0,
+      "wr": 0.0,
+      "n": 6,
       "use": false
     },
     {
       "rank": 5,
-      "name": "S05_MFKK_INTRADAY",
+      "name": "S09_MFKK_SCALPING",
       "pf": 0.0,
       "wr": 0.0,
-      "n": 11,
+      "n": 7,
       "use": false
     },
     {
@@ -226,70 +226,113 @@
   },
   "adaptive": {
     "stats": {
-      "n": 909,
-      "wr": 47.6,
-      "pnl": 3475.6,
-      "pf": 1.534,
+      "n": 456,
+      "wr": 45.2,
+      "pnl": 1390.8,
+      "pf": 1.35,
       "dd": 520.5,
-      "avg_day": 13.74,
+      "avg_day": 10.95,
       "tr_day": 3.59,
-      "months": "21/25"
+      "months": "10/13"
     },
     "by_strategy": {
       "S00_MFKK": {
-        "n": 661,
-        "wr": 49.0,
-        "pnl": 2436.0,
-        "pf": 1.602,
-        "dd": 292.0,
-        "avg_day": 12.0,
-        "tr_day": 3.26,
-        "months": "21/25"
+        "n": 334,
+        "wr": 47.9,
+        "pnl": 1112.0,
+        "pf": 1.533,
+        "dd": 184.0,
+        "avg_day": 11.01,
+        "tr_day": 3.31,
+        "months": "9/13"
       },
       "S16_GOLDEN_SQUEEZE": {
-        "n": 165,
-        "wr": 43.0,
-        "pnl": 114.2,
-        "pf": 1.071,
-        "dd": 432.3,
-        "avg_day": 1.0,
-        "tr_day": 1.45,
-        "months": "14/25"
+        "n": 71,
+        "wr": 38.0,
+        "pnl": -174.4,
+        "pf": 0.845,
+        "dd": 444.2,
+        "avg_day": -3.49,
+        "tr_day": 1.42,
+        "months": "6/13"
       },
       "S09_MFKK_SCALPING": {
-        "n": 34,
-        "wr": 41.2,
-        "pnl": 286.9,
-        "pf": 2.926,
+        "n": 16,
+        "wr": 18.8,
+        "pnl": -11.5,
+        "pf": 0.905,
         "dd": 70.2,
-        "avg_day": 11.48,
-        "tr_day": 1.36,
-        "months": "8/18"
+        "avg_day": -0.96,
+        "tr_day": 1.33,
+        "months": "2/9"
       },
       "S10_OB_FVG_SCALP": {
-        "n": 49,
-        "wr": 49.0,
-        "pnl": 638.5,
-        "pf": 1.897,
-        "dd": 211.6,
-        "avg_day": 23.65,
-        "tr_day": 1.81,
-        "months": "7/13"
+        "n": 35,
+        "wr": 45.7,
+        "pnl": 464.7,
+        "pf": 1.733,
+        "dd": 197.6,
+        "avg_day": 25.82,
+        "tr_day": 1.94,
+        "months": "2/6"
       }
     }
   },
-  "adaptive_rm": {},
-  "last_signals": [
-    {
-      "date": "2026-04-01",
-      "hour": 14,
-      "dir": "buy",
-      "entry": 4744.95,
-      "outcome": "loss",
-      "pnl": -40.04,
-      "strategy": "S16_GOLDEN_SQUEEZE",
-      "regime": "TREND_UP"
+  "adaptive_rm": {
+    "stats": {
+      "n": 456,
+      "wr": 33.3,
+      "pnl": 1881.6,
+      "pf": 1.279,
+      "dd": 877.4,
+      "avg_day": 14.82,
+      "tr_day": 3.59,
+      "months": "9/13"
     },
+    "by_strategy": {
+      "S00_MFKK": {
+        "n": 334,
+        "wr": 31.7,
+        "pnl": 1745.7,
+        "pf": 1.402,
+        "dd": 775.0,
+        "avg_day": 17.28,
+        "tr_day": 3.31,
+        "months": "10/13"
+      },
+      "S16_GOLDEN_SQUEEZE": {
+        "n": 71,
+        "wr": 38.0,
+        "pnl": -356.6,
+        "pf": 0.756,
+        "dd": 678.4,
+        "avg_day": -7.13,
+        "tr_day": 1.42,
+        "months": "6/13"
+      },
+      "S09_MFKK_SCALPING": {
+        "n": 16,
+        "wr": 18.8,
+        "pnl": -19.5,
+        "pf": 0.849,
+        "dd": 78.3,
+        "avg_day": -1.63,
+        "tr_day": 1.33,
+        "months": "2/9"
+      },
+      "S10_OB_FVG_SCALP": {
+        "n": 35,
+        "wr": 45.7,
+        "pnl": 512.1,
+        "pf": 1.621,
+        "dd": 251.8,
+        "avg_day": 28.45,
+        "tr_day": 1.94,
+        "months": "2/6"
+      }
+    }
+  },
+  "last_signals": [
     {
       "date": "2026-04-01",
       "hour": 17,
@@ -777,6 +820,16 @@
       "entry": 4762.61,
       "outcome": "loss",
       "pnl": -29.45,
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-05-11",
+      "hour": 16,
+      "dir": "buy",
+      "entry": 4728.22,
+      "outcome": "loss",
+      "pnl": -28.24,
       "strategy": "S16_GOLDEN_SQUEEZE",
       "regime": "TREND_UP"
     }

@@ -4,6 +4,7 @@
 
 | Data | Bug | Causa radice | Fix applicato |
 |---|---|---|---|
+| 2026-05-12 | PerfTracker S00_MFKK: score_mult 1.00→0.70 ⬇️ | underperform | WR 13.3% vs baseline 49.4% (27%) |
 | 2026-04-21 | PerfTracker S00_MFKK: score_mult 0.50→0.70 ⬇️ | underperform | WR 3.3% vs baseline 38.3% (9%) |
 | 2026-04-20 | PerfTracker S00_MFKK: score_mult 1.00→0.50 ⬇️ | streak_penalty | 23 perdite consecutive | WR=23.3% |
 | 2026-03-31 | Prezzi XAU non caricavano | Yahoo Finance bloccato + FPMARKETS ticker fallito | Multi-ticker TV Scanner (9 alternative) |

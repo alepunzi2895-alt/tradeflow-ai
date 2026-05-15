@@ -124,8 +124,22 @@ def main():
         log.warning('File M30 non trovato — skip backtest M30')
         results['backtest_m30'] = False
 
-    # ── 4. Performance Tracker: aggiorna da storico MT5 + applica overrides ──
-    log.info('\n── FASE 4: Performance Tracker ──')
+    # ── 4. Backtest H4 ───────────────────────────────────────────────────────────
+    log.info('\n── FASE 4: Backtest H4 ──')
+    h4_file = os.path.join(DATA_DIR, 'xauusd_h4_mt5.json')
+    if os.path.exists(h4_file):
+        results['backtest_h4'] = run(
+            'Backtest H4',
+            [PYTHON, '-X', 'utf8', os.path.join(SCRIPT_DIR, 'strategy-engine-v2.py'),
+             '--file', h4_file],
+            timeout=300,
+        )
+    else:
+        log.warning('File H4 non trovato — skip backtest H4')
+        results['backtest_h4'] = False
+
+    # ── 5. Performance Tracker: aggiorna da storico MT5 + applica overrides ──
+    log.info('\n── FASE 5: Performance Tracker ──')
     try:
         sys.path.insert(0, SCRIPT_DIR)
         import MetaTrader5 as mt5

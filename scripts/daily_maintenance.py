@@ -61,13 +61,14 @@ STRATEGY_OPTIMAL_TF = {
 }
 
 # Baseline backtest completo (fonte di verità, aggiornato dopo ogni campagna)
+# Fonte: adaptive.by_strategy bt_*_v6final — 2026-04-30
 BASELINE_STATS = {
-    'S00_MFKK':              {'pf': 1.033, 'wr': 0.383, 'tf': 'M30'},
-    'S05_MFKK_INTRADAY':     {'pf': 1.361, 'wr': 0.415, 'tf': 'H1'},
-    'S09_MFKK_SCALPING':     {'pf': 1.637, 'wr': 0.378, 'tf': 'M30'},
-    'S10_OB_FVG_SCALP':      {'pf': 1.796, 'wr': 0.425, 'tf': 'M30'},
-    'S16_GOLDEN_SQUEEZE':    {'pf': 1.285, 'wr': 0.317, 'tf': 'M30'},
-    'S17_CONVERGENCE_SCALP': {'pf': 1.107, 'wr': 0.257, 'tf': 'M30'},
+    'S00_MFKK':              {'pf': 1.628, 'wr': 0.494, 'tf': 'M30'},
+    'S05_MFKK_INTRADAY':     {'pf': 1.046, 'wr': 0.253, 'tf': 'H1'},
+    'S09_MFKK_SCALPING':     {'pf': 1.761, 'wr': 0.302, 'tf': 'M30'},
+    'S10_OB_FVG_SCALP':      {'pf': 2.130, 'wr': 0.519, 'tf': 'M30'},
+    'S16_GOLDEN_SQUEEZE':    {'pf': 2.120, 'wr': 0.514, 'tf': 'H1'},
+    'S17_CONVERGENCE_SCALP': {'pf': 2.641, 'wr': 0.340, 'tf': 'H4'},
 }
 
 # Soglie per flagging

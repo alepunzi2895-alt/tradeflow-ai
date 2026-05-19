@@ -104,6 +104,18 @@ STRATEGIES_CONFIG = [
         "min_atr_percentile": 0.60,
         "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.1},
     },
+    {
+        "id": "S18_RANGE_REVERSAL",
+        "name": "Range Reversal BB",
+        "signal_function": "signal_range_reversal",
+        "performance_by_tf": {
+            # V1 2026-05-19: stime conservative pending backtest reale su XAU M30.
+            # BB-reversion su RANGE/WEAK: WR atteso 40-50%, R:R 1.67 (TP 2.0×ATR / SL 1.2×ATR).
+            "M30": {"wr": 0.450, "pf": 1.350, "daily_pnl": 1.2, "dd": 120},
+        },
+        "optimal_regimes": ["RANGING", "WEAK"],
+        "base_params": {"tp_atr_mult": 2.0, "sl_atr_mult": 1.2},
+    },
 ]
 
 # Regime aliases: map internal bot regimes to canonical names

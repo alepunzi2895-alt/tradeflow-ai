@@ -81,6 +81,7 @@ STRATEGY_ATR_PARAMS = {
     "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 2.0},
     "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.5},
     "S00_MFKK":             {"tp_atr": 3.5, "sl_atr": 1.5},
+    "S18_RANGE_REVERSAL":   {"tp_atr": 2.0, "sl_atr": 1.2},
 }
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection
@@ -95,6 +96,7 @@ TRADE_DURATIONS = {
     ("S17_CONVERGENCE_SCALP","H4"):  240,
     ("S17_CONVERGENCE_SCALP","M15"): 30,
     ("S17_CONVERGENCE_SCALP","M5"):  15,
+    ("S18_RANGE_REVERSAL",   "M30"): 60,
 }
 
 # Circuit breakers
@@ -107,7 +109,7 @@ CIRCUIT_BREAKERS = {
 # Composite score minimo per aprire un trade (filtro qualità)
 # Backtest: la maggior parte delle perdite avviene con composite < 55 (NORMAL basso).
 # Alzare il threshold riduce il numero di trade ma aumenta WR e PF del sistema.
-MIN_COMPOSITE_TO_TRADE = 55
+MIN_COMPOSITE_TO_TRADE = 50
 
 
 def composite_score(strategy_confidence: float,
@@ -715,6 +717,7 @@ def _get_strategy_optimal_regimes(strategy_id: str) -> list:
         "S16_GOLDEN_SQUEEZE":   ["TREND", "WEAK"],
         "S17_CONVERGENCE_SCALP":["VOLATILE", "TREND"],
         "S00_MFKK":             ["TREND", "WEAK", "RANGE", "VOLATILE"],
+        "S18_RANGE_REVERSAL":   ["RANGE", "WEAK"],
     }
     return mapping.get(strategy_id, ["TREND", "WEAK", "RANGE", "VOLATILE"])
 

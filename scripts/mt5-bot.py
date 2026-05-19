@@ -30,6 +30,7 @@ _sys.path.insert(0, _os.path.dirname(__file__))
 from signals import (
     signal_mfkk_score, signal_mfkk_intraday, signal_golden_squeeze,
     signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp,
+    signal_range_reversal,
 )
 
 # ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
@@ -176,6 +177,7 @@ STRATEGY_PARAMS = {
     'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 2.0, 'be_mult': 1.3},
     'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.5},
     'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 3.5, 'sl_mult': 1.5},
+    'S18_RANGE_REVERSAL':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Range Reversal V1', 'tp_mult': 2.0, 'sl_mult': 1.2},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -572,12 +574,14 @@ SIGNAL_FNS = {
     'S10_OB_FVG_SCALP':     signal_ob_fvg_scalp,
     'S16_GOLDEN_SQUEEZE':   signal_golden_squeeze,
     'S17_CONVERGENCE_SCALP': signal_convergence_scalp,
+    'S18_RANGE_REVERSAL':   signal_range_reversal,
 }
 
 # Session filter: S16 skip 0-7 UTC (Asia low vol); S00 skip 0-6 UTC (noise)
 SESSION_FILTER = {
     'S16_GOLDEN_SQUEEZE': {'block_hours': range(0, 8)},
     'S00_MFKK':           {'block_hours': range(0, 7)},
+    'S18_RANGE_REVERSAL': {'block_hours': range(0, 7)},
 }
 
 # Multi-strategy map: (strategy_id, tf, direction_filter) per regime
@@ -587,11 +591,11 @@ REGIME_MULTI_STRATEGIES = {
     # S05 rimosso da H1 (backtest H1: PF 1.046 WR 25% — drag sul sistema); S16 H1 diventa primario secondario
     'TREND_UP':   [('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'TREND_DOWN': [('S16_GOLDEN_SQUEEZE','H1',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_UP':    [('S10_OB_FVG_SCALP','M30',None), ('S18_RANGE_REVERSAL','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'WEAK_DOWN':  [('S10_OB_FVG_SCALP','M30',None), ('S18_RANGE_REVERSAL','M30',None), ('S00_MFKK','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
     'VOLATILE':   [('S09_MFKK_SCALPING','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'RANGE':      [('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
-    'UNKNOWN':    [('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'RANGE':      [('S18_RANGE_REVERSAL','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S09_MFKK_SCALPING','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
+    'UNKNOWN':    [('S18_RANGE_REVERSAL','M30',None), ('S10_OB_FVG_SCALP','M30',None), ('S00_MFKK','M30',None), ('S17_CONVERGENCE_SCALP','H4',None)],
 }
 
 def get_signal(I, i, hour, regime):

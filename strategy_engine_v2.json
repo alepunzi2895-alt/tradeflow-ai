@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "generated_at": "2026-05-19T05:01:16.666495",
+=======
+  "generated_at": "2026-05-19T07:39:35.496236",
+>>>>>>> 1359fb02c6e033a9e5918f1127280f911dcbcb03
   "n_candles": 3081,
   "indicators": [
     "EMA20",
@@ -133,6 +137,24 @@
         "VOLATILE",
         "RANGE"
       ]
+    },
+    "S18_RANGE_REVERSAL": {
+      "stats": {
+        "n": 20,
+        "wr": 0.0,
+        "pnl": -535.7,
+        "pf": 0.0,
+        "dd": 535.7,
+        "avg_day": -29.76,
+        "tr_day": 1.11,
+        "months": "0/14"
+      },
+      "regime_fit": [
+        "RANGE",
+        "WEAK_UP",
+        "WEAK_DOWN",
+        "UNKNOWN"
+      ]
     }
   },
   "ranking": [
@@ -182,6 +204,14 @@
       "pf": 0.0,
       "wr": 0.0,
       "n": 4,
+      "use": false
+    },
+    {
+      "rank": 7,
+      "name": "S18_RANGE_REVERSAL",
+      "pf": 0.0,
+      "wr": 0.0,
+      "n": 20,
       "use": false
     }
   ],

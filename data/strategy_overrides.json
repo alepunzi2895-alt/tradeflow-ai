@@ -3,10 +3,6 @@
     "score_mult": 0.7,
     "type": "underperform",
     "reason": "WR 13.3% vs baseline 49.4% (27%)",
-<<<<<<< HEAD
-    "updated_at": "2026-05-15T10:01:08.867415"
-=======
-    "updated_at": "2026-05-15T09:26:12.369176"
->>>>>>> 4ccb5e7ef6843d7d66e8893494992d4fff1d43a7
+    "updated_at": "2026-05-19T07:00:24.496579"
   }
 }

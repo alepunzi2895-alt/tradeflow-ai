@@ -1,102 +1,230 @@
 {
-  "fetched_at": 1778840239.171904,
-  "count": 12,
+  "fetched_at": 1779165305.517693,
+  "count": 28,
   "events": [
     {
-      "title": "Core CPI m/m",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-05-12T12:30:00",
-      "forecast": "0.3%",
-      "previous": "0.2%"
-    },
-    {
-      "title": "CPI m/m",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-05-12T12:30:00",
-      "forecast": "0.6%",
-      "previous": "0.9%"
-    },
-    {
-      "title": "CPI y/y",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-05-12T12:30:00",
-      "forecast": "3.7%",
-      "previous": "3.3%"
-    },
-    {
-      "title": "Wage Price Index q/q",
+      "title": "Monetary Policy Meeting Minutes",
       "currency": "AUD",
       "impact": "Medium",
-      "dt": "2026-05-13T01:30:00",
-      "forecast": "0.8%",
-      "previous": "0.8%"
-    },
-    {
-      "title": "Core PPI m/m",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-05-13T12:30:00",
-      "forecast": "0.3%",
-      "previous": "0.1%"
-    },
-    {
-      "title": "PPI m/m",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-05-13T12:30:00",
-      "forecast": "0.5%",
-      "previous": "0.5%"
-    },
-    {
-      "title": "Fed Chair Nomination Vote",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-05-13T18:40:00",
-      "forecast": "Pass",
+      "dt": "2026-05-19T01:30:00",
+      "forecast": "",
       "previous": ""
     },
     {
-      "title": "GDP m/m",
+      "title": "Claimant Count Change",
       "currency": "GBP",
       "impact": "High",
-      "dt": "2026-05-14T06:00:00",
-      "forecast": "-0.1%",
-      "previous": "0.5%"
+      "dt": "2026-05-19T06:00:00",
+      "forecast": "23.1K",
+      "previous": "26.8K"
     },
     {
-      "title": "Prelim GDP q/q",
+      "title": "Average Earnings Index 3m/y",
       "currency": "GBP",
       "impact": "Medium",
-      "dt": "2026-05-14T06:00:00",
-      "forecast": "0.6%",
-      "previous": "0.1%"
+      "dt": "2026-05-19T06:00:00",
+      "forecast": "3.8%",
+      "previous": "3.8%"
     },
     {
-      "title": "Core Retail Sales m/m",
-      "currency": "USD",
+      "title": "CPI m/m",
+      "currency": "CAD",
       "impact": "High",
-      "dt": "2026-05-14T12:30:00",
+      "dt": "2026-05-19T12:30:00",
       "forecast": "0.7%",
-      "previous": "1.9%"
+      "previous": "0.9%"
     },
     {
-      "title": "Retail Sales m/m",
+      "title": "Common CPI y/y",
+      "currency": "CAD",
+      "impact": "Medium",
+      "dt": "2026-05-19T12:30:00",
+      "forecast": "2.6%",
+      "previous": "2.6%"
+    },
+    {
+      "title": "Median CPI y/y",
+      "currency": "CAD",
+      "impact": "Medium",
+      "dt": "2026-05-19T12:30:00",
+      "forecast": "2.3%",
+      "previous": "2.3%"
+    },
+    {
+      "title": "Trimmed CPI y/y",
+      "currency": "CAD",
+      "impact": "Medium",
+      "dt": "2026-05-19T12:30:00",
+      "forecast": "2.2%",
+      "previous": "2.2%"
+    },
+    {
+      "title": "Pending Home Sales m/m",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-05-19T14:00:00",
+      "forecast": "1.0%",
+      "previous": "1.5%"
+    },
+    {
+      "title": "CPI y/y",
+      "currency": "GBP",
+      "impact": "High",
+      "dt": "2026-05-20T06:00:00",
+      "forecast": "3.0%",
+      "previous": "3.3%"
+    },
+    {
+      "title": "Monetary Policy Report Hearings",
+      "currency": "GBP",
+      "impact": "Medium",
+      "dt": "2026-05-20T13:15:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "FOMC Meeting Minutes",
       "currency": "USD",
       "impact": "High",
-      "dt": "2026-05-14T12:30:00",
-      "forecast": "0.5%",
-      "previous": "1.7%"
+      "dt": "2026-05-20T18:00:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "Employment Change",
+      "currency": "AUD",
+      "impact": "High",
+      "dt": "2026-05-21T01:30:00",
+      "forecast": "16.2K",
+      "previous": "17.9K"
+    },
+    {
+      "title": "Unemployment Rate",
+      "currency": "AUD",
+      "impact": "High",
+      "dt": "2026-05-21T01:30:00",
+      "forecast": "4.3%",
+      "previous": "4.3%"
+    },
+    {
+      "title": "French Flash Manufacturing PMI",
+      "currency": "EUR",
+      "impact": "Medium",
+      "dt": "2026-05-21T07:15:00",
+      "forecast": "52.1",
+      "previous": "52.8"
+    },
+    {
+      "title": "French Flash Services PMI",
+      "currency": "EUR",
+      "impact": "Medium",
+      "dt": "2026-05-21T07:15:00",
+      "forecast": "46.6",
+      "previous": "46.5"
+    },
+    {
+      "title": "German Flash Manufacturing PMI",
+      "currency": "EUR",
+      "impact": "Medium",
+      "dt": "2026-05-21T07:30:00",
+      "forecast": "51.0",
+      "previous": "51.2"
+    },
+    {
+      "title": "German Flash Services PMI",
+      "currency": "EUR",
+      "impact": "Medium",
+      "dt": "2026-05-21T07:30:00",
+      "forecast": "47.1",
+      "previous": "46.9"
+    },
+    {
+      "title": "Flash Manufacturing PMI",
+      "currency": "GBP",
+      "impact": "High",
+      "dt": "2026-05-21T08:30:00",
+      "forecast": "52.8",
+      "previous": "53.6"
+    },
+    {
+      "title": "Flash Services PMI",
+      "currency": "GBP",
+      "impact": "High",
+      "dt": "2026-05-21T08:30:00",
+      "forecast": "51.7",
+      "previous": "52.0"
+    },
+    {
+      "title": "Philly Fed Manufacturing Index",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-05-21T12:30:00",
+      "forecast": "17.8",
+      "previous": "26.7"
     },
     {
       "title": "Unemployment Claims",
       "currency": "USD",
       "impact": "Medium",
-      "dt": "2026-05-14T12:30:00",
-      "forecast": "205K",
-      "previous": "200K"
+      "dt": "2026-05-21T12:30:00",
+      "forecast": "210K",
+      "previous": "211K"
+    },
+    {
+      "title": "Flash Manufacturing PMI",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-05-21T13:45:00",
+      "forecast": "53.7",
+      "previous": "54.0"
+    },
+    {
+      "title": "Flash Services PMI",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-05-21T13:45:00",
+      "forecast": "51.1",
+      "previous": "51.3"
+    },
+    {
+      "title": "BOE Gov Bailey Speaks",
+      "currency": "GBP",
+      "impact": "High",
+      "dt": "2026-05-21T15:00:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "Retail Sales m/m",
+      "currency": "GBP",
+      "impact": "Medium",
+      "dt": "2026-05-22T06:00:00",
+      "forecast": "-0.6%",
+      "previous": "0.7%"
+    },
+    {
+      "title": "Core Retail Sales m/m",
+      "currency": "CAD",
+      "impact": "Medium",
+      "dt": "2026-05-22T12:30:00",
+      "forecast": "0.9%",
+      "previous": "0.5%"
+    },
+    {
+      "title": "Retail Sales m/m",
+      "currency": "CAD",
+      "impact": "Medium",
+      "dt": "2026-05-22T12:30:00",
+      "forecast": "0.6%",
+      "previous": "0.7%"
+    },
+    {
+      "title": "Revised UoM Consumer Sentiment",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-05-22T14:00:00",
+      "forecast": "48.3",
+      "previous": "48.2"
     }
   ]
 }

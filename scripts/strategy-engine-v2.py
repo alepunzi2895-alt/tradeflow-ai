@@ -26,6 +26,7 @@ from signals import (
     signal_ob_fvg_scalp as s_ob_fvg_scalp,
     signal_convergence_scalp as s_convergence_scalp,
     signal_mfkk_score as se_signal_mfkk_score,
+    signal_range_reversal as s_range_reversal,
 )
 try:
     import yfinance as yf
@@ -776,6 +777,7 @@ STRATS = {
     'S16_GOLDEN_SQUEEZE':     (s_golden_squeeze,      ['TREND_UP', 'TREND_DOWN', 'WEAK_UP', 'WEAK_DOWN']),
     'S17_CONVERGENCE_SCALP':  (s_convergence_scalp,   ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
     'S00_MFKK':               (se_signal_mfkk_score,  ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
+    'S18_RANGE_REVERSAL':     (s_range_reversal,      ['RANGE','WEAK_UP','WEAK_DOWN','UNKNOWN']),
 }
 
 # H4: S09/S10 hurt performance (PF 0.446/0.658) — use S16+S17+S00 only
@@ -793,11 +795,11 @@ REGIME_PRIORITY_H4 = {
 REGIME_PRIORITY_M30 = {
     'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
     'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
-    'WEAK_UP':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
-    'WEAK_DOWN':  ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
-    'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'WEAK_UP':    ['S10_OB_FVG_SCALP', 'S18_RANGE_REVERSAL', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S10_OB_FVG_SCALP', 'S18_RANGE_REVERSAL', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'RANGE':      ['S18_RANGE_REVERSAL', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
     'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
-    'UNKNOWN':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
+    'UNKNOWN':    ['S18_RANGE_REVERSAL', 'S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
 
 # H1: S10 rimosso da TREND/WEAK (backtest 2026-05-08: WR 27.1%, -$156 su H1).
@@ -859,6 +861,9 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         elif name == 'S00_MFKK':
             curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 1.0, 2)
+        elif name == 'S18_RANGE_REVERSAL':
+            curr_tp = round(av * 2.0, 2)
+            curr_sl = round(av * 1.2, 2)
 
         # Route hour/h1_trend correctly per signal function signature
         if name == 'S00_MFKK':
@@ -866,6 +871,8 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         elif name == 'S16_GOLDEN_SQUEEZE':
             h1t = ind['st'][i] if ind.get('st') else None
             sig = fn(ind, i, h1_trend=h1t, hour=hour)
+        elif name == 'S18_RANGE_REVERSAL':
+            sig = fn(ind, i, hour=hour)
         else:
             sig = fn(ind, i, hour)
         if sig is None: continue
@@ -965,6 +972,8 @@ def run_adaptive(candles, ind, tf='H1'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             elif name == 'S00_MFKK':
                 s=fn(ind,i,hour=hour,tf=tf)
+            elif name == 'S18_RANGE_REVERSAL':
+                s=fn(ind,i,hour=hour)
             elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             else:
@@ -983,6 +992,8 @@ def run_adaptive(candles, ind, tf='H1'):
             tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
             tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S18_RANGE_REVERSAL':
+            tp_d = round(av*2.0, 2); sl_d = round(av*1.2, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
         tp_p=entry+tp_d if sig=='buy' else entry-tp_d
@@ -1073,6 +1084,8 @@ def run_adaptive_rm(candles, ind, tf='H1'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             elif name == 'S00_MFKK':
                 s=fn(ind,i,hour=hour,tf=tf)
+            elif name == 'S18_RANGE_REVERSAL':
+                s=fn(ind,i,hour=hour)
             elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             else:
@@ -1093,6 +1106,8 @@ def run_adaptive_rm(candles, ind, tf='H1'):
             tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
         elif used == 'S00_MFKK':
             tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S18_RANGE_REVERSAL':
+            tp_d = round(av*2.0, 2); sl_d = round(av*1.2, 2)
         else:
             tp_d = TP_USD; sl_d = SL_USD
 

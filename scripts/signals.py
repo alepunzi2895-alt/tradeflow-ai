@@ -27,6 +27,11 @@ Optimization 2026-04-30 V6 (S00 stop reduction):
   S00 BUY: DI+>=20 sempre obbligatorio (prima OR con ST) → WR 34.5%→36.7%, P&L +$1035 standalone
   S00 SELL: sessione 7-17h → 9-17h (7-9h in perdita -$371 su 58 trade)
 
+S18_RANGE_REVERSAL V1 (2026-05-19):
+  Mean-reversion per XAU/USD in RANGE/WEAK (ADX<22).
+  Entry: prezzo all'estremo della BB (bb_pct<0.15 o >0.85) + RSI/WPR/StochRSI esausti + candela di inversione.
+  TP: 2.0×ATR (verso BB middle), SL: 1.2×ATR. Session 7-19 UTC.
+
 Optimization 2026-05-08 V6 S05 ultra-select (target WR≥35%, trade<80):
   S05: ADX 20→28, DI spread>=12 gate, RSI 57/43→62/38, session 7-17→9-15 UTC,
        ATR min gate (skip if ATR<0.8×avg), StochRSI K>60 (bull) / K<40 (bear).
@@ -392,6 +397,71 @@ def signal_ob_fvg_scalp(ind, i, h1_trend=None, hour=None):
 
     if ob_b[i] and fb[i] and c > e233: return 'buy'
     if ob_s[i] and fs[i] and c < e233: return 'sell'
+    return None
+
+
+def signal_range_reversal(ind, i, hour=None, **kwargs):
+    """
+    S18_RANGE_REVERSAL V1 — BB Band Exhaustion + RSI/WPR/StochRSI mean-reversion.
+    Designed for XAU/USD RANGE/WEAK regime (ADX < 22).
+    Entry: prezzo che rimbalza dall'estremo della BB con 3 oscillatori in esaurimento.
+    Avoid: ATR spike (news), trend markets (ADX >= 22), sessione asiatica.
+    M30 ottimale: TP 2.0×ATR verso BB midline, SL 1.2×ATR oltre la banda.
+    """
+    if i < 50: return None
+
+    # Session: London + NY (7-19 UTC) — Asia ha liquidità insufficiente per reversal puliti
+    if hour is not None and not (7 <= hour < 19): return None
+
+    c  = ind['C'][i]
+    cp = ind['C'][i - 1]
+
+    bbu_arr = ind.get('bb_up')
+    bbl_arr = _get(ind, 'bb_dn', 'bb_lo')
+    bbu = bbu_arr[i] if bbu_arr else None
+    bbl = bbl_arr[i] if bbl_arr else None
+    if None in (c, cp, bbu, bbl): return None
+
+    bb_range = bbu - bbl
+    if bb_range <= 0: return None
+    bb_pct = (c - bbl) / bb_range   # 0 = lower band, 1 = upper band
+
+    # Gate 1: mercato laterale (ADX < 22)
+    a_arr = ind.get('adx')
+    a = a_arr[i] if a_arr else None
+    if a is not None and a >= 22: return None
+
+    # Gate 2: no ATR spike (news / evento estremo)
+    atr_arr = ind.get('atr')
+    atr_ref  = _get(ind, 'atr_avg', 'atr30')
+    atr_v    = atr_arr[i] if atr_arr else None
+    atr_avg  = atr_ref[i] if atr_ref else None
+    if atr_v and atr_avg and atr_avg > 0 and atr_v > 1.8 * atr_avg: return None
+
+    r_arr  = ind.get('rsi')
+    wpr_arr = ind.get('wpr')
+    sk_arr  = ind.get('srsi_k')
+    r   = r_arr[i]  if r_arr  else None
+    wpr_v = wpr_arr[i] if wpr_arr else None
+    sk  = sk_arr[i] if sk_arr else None
+
+    # BUY: prezzo all'estremo inferiore della BB + candela che chiude SOPRA il minimo precedente
+    # (conferma inversione, non catching knife)
+    if bb_pct <= 0.15 and c > cp:
+        rsi_os  = r   is None or r   < 40
+        wpr_os  = wpr_v is None or wpr_v < -70
+        srsi_os = sk  is None or sk  < 30
+        if rsi_os and wpr_os and srsi_os:
+            return 'buy'
+
+    # SELL: prezzo all'estremo superiore della BB + candela che chiude SOTTO il massimo precedente
+    if bb_pct >= 0.85 and c < cp:
+        rsi_ob  = r   is None or r   > 60
+        wpr_ob  = wpr_v is None or wpr_v > -30
+        srsi_ob = sk  is None or sk  > 70
+        if rsi_ob and wpr_ob and srsi_ob:
+            return 'sell'
+
     return None
 
 

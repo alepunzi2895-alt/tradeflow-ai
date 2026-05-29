@@ -92,14 +92,14 @@ MAX_OPEN_ORDERS = 6          # max 1 per strategia × 6 strategie attive — ogn
 SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
 STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
-MIN_COMPOSITE_TO_TRADE = 55  # composite score minimo per aprire — filtra setup low-conviction (backtest: taglia rumore senza perdere edge)
+MIN_COMPOSITE_TO_TRADE = 45  # composite score minimo per aprire — soglia abbassata per aumentare frequenza trade
 
 # ── IN-MEMORY ORDER TRACKING (resiliente a race condition MT5) ────────────────
 # Aggiornato immediatamente dopo place_order(), eliminato alla chiusura posizione
 # Formato: {strategy_name: (order_ticket, direction_str)}  ex: {'S16_GOLDEN_SQUEEZE': (12345, 'sell')}
 # order_ticket = result.order da mt5.order_send() = position ticket in hedging mode
 _strategy_order_tickets: dict = {}  # {strategy_name: (ticket, direction)}
-SESSION_UTC  = (8, 18)       # finestra operativa London+NY (UTC) — 7h rimosso (pre-London chop), +18h NY pomeriggio ancora liquido
+SESSION_UTC  = (0, 24)       # operativo 24h — pausa gestita solo da NewsGuardian (-2h/+2h attorno a news HIGH)
 CHECK_SEC    = 10            # polling ogni 10 secondi
 
 # Se sei su VPS Standalone, usa http://localhost:3000

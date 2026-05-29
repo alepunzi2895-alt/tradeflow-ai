@@ -182,14 +182,14 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     buy_di_ok     = buy_di_spread >= buy_di_min
     if not buy_di_ok: buy_thr = 999  # blocca low-conviction buys indipendentemente da ST
 
-    # ── SELL: London/NY session + strong DI conviction only ─────────────────
-    # V6 (2026-04-30): sessione 7-17h → 9-17h. Finestra 7-9h in perdita ($-371 su 58 trade).
+    # ── SELL: sessione London+NY+early Asia (allargata 9-17 → 7-20 UTC) ────────
+    # DI spread abbassato 25→18 e soglia 76→72 per recuperare setup validi
     # H4 SELL è inaffidabile (WR 17.5%) — bloccato su H4
     sell_thr = 999  # block by default
-    is_london_ny = hour is not None and (9 <= hour < 17)
+    is_london_ny = hour is not None and (7 <= hour < 20)
     sell_di_spread = dm - dp
-    if tf != 'H4' and is_london_ny and sell_di_spread >= 25:
-        sell_thr = 76
+    if tf != 'H4' and is_london_ny and sell_di_spread >= 18:
+        sell_thr = 72
 
     if b_score >= buy_thr: return 'buy'
     if s_score >= sell_thr: return 'sell'
@@ -216,19 +216,19 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     sd = ind.get('srsi_d', [None] * (i + 1))[i]
     if None in (r, mo, a, mc, e200): return None
 
-    # ADX gate — solo trend forti (alzato 20→28: elimina WEAK regime entries)
-    if a < 28: return None
+    # ADX gate — trend con direzionalità chiara (28→24: recupera WEAK strong entries)
+    if a < 24: return None
 
-    # DI spread gate — dominanza direzionale chiara (nuova V6)
+    # DI spread gate — dominanza direzionale (12→8: meno restrittivo)
     dip_v = ind.get('dip', [None] * (i + 1))[i]
     dim_v = ind.get('dim', [None] * (i + 1))[i]
     if dip_v is not None and dim_v is not None:
-        if abs(dip_v - dim_v) < 12: return None
+        if abs(dip_v - dim_v) < 8: return None
 
-    # Session filter: London/NY overlap peak only (alzato 7-17 → 9-15 UTC)
-    if hour is not None and not (9 <= hour < 15): return None
+    # Session filter: London+NY+Asia attiva (allargata 9-15 → 7-20 UTC)
+    if hour is not None and not (7 <= hour < 20): return None
 
-    # ATR range: skip flat bars (nuova V6) e spike estremi
+    # ATR range: skip flat bars e spike estremi
     atr_arr = ind.get('atr')
     atr_ref = _get(ind, 'atr_avg', 'atr30')
     atr_v = atr_arr[i] if atr_arr else None
@@ -242,13 +242,13 @@ def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
         if oc[i] == 1 and h1_trend != -1: return None
         if oc[i] == -1 and h1_trend != 1: return None
 
-    # StochRSI assoluto: K>60 bull, K<40 bear (era K>D — troppo permissivo)
-    srsi_bull = (sk is None) or (sk > 60)
-    srsi_bear = (sk is None) or (sk < 40)
+    # StochRSI assoluto: K>55 bull, K<45 bear (rilassato da K>60/K<40 per più trade)
+    srsi_bull = (sk is None) or (sk > 55)
+    srsi_bear = (sk is None) or (sk < 45)
 
     rp = ind['rsi'][i - 1] if i > 0 else r
-    is_buy  = oc[i] == 1  and r > 62 and r > rp and mo > 0 and mc > 0 and close > e200 and srsi_bull
-    is_sell = oc[i] == -1 and r < 38 and r < rp and mo < 0 and mc < 0 and close < e200 and srsi_bear
+    is_buy  = oc[i] == 1  and r > 58 and r > rp and mo > 0 and mc > 0 and close > e200 and srsi_bull
+    is_sell = oc[i] == -1 and r < 42 and r < rp and mo < 0 and mc < 0 and close < e200 and srsi_bear
     if is_buy:  return 'buy'
     if is_sell: return 'sell'
     return None
@@ -292,13 +292,13 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None, h4_trend=None):
     candle = abs(c - cp)
     big_enough = (atr_val is None) or (candle >= 0.35 * atr_val)
 
-    # OBV 4-bar slope: sustained volume momentum (was 3-bar → still some noise)
-    obv_rising_4  = i >= 4 and obv_arr[i] > obv_arr[i-1] > obv_arr[i-2] > obv_arr[i-3]
-    obv_falling_4 = i >= 4 and obv_arr[i] < obv_arr[i-1] < obv_arr[i-2] < obv_arr[i-3]
+    # OBV 3-bar slope: sustained volume momentum (era 4 → troppo restrittivo, mancava inizio trend)
+    obv_rising_3  = i >= 3 and obv_arr[i] > obv_arr[i-1] > obv_arr[i-2]
+    obv_falling_3 = i >= 3 and obv_arr[i] < obv_arr[i-1] < obv_arr[i-2]
 
     if st == -1:  # BULLISH
         if dip_v - dim_v < 8: return None  # DI+ must dominate for BUY with spread ≥8
-        if c > e233 and obv_val > obv_ema and obv_rising_4 and c > cp and big_enough:
+        if c > e233 and obv_val > obv_ema and obv_rising_3 and c > cp and big_enough:
             return 'buy'
     elif st == 1:  # BEARISH
         if dim_v - dip_v < 8: return None  # DI- must dominate for SELL with spread ≥8
@@ -314,7 +314,7 @@ def signal_golden_squeeze(ind, i, h1_trend=None, hour=None, h4_trend=None):
                 e200_now = e200_arr[i]; e200_prev = e200_arr[i - 4]
                 if e200_now is not None and e200_prev is not None and e200_now <= e200_prev:
                     return None
-        if c < e233 and obv_val < obv_ema and obv_falling_4 and c < cp and big_enough:
+        if c < e233 and obv_val < obv_ema and obv_falling_3 and c < cp and big_enough:
             return 'sell'
     return None
 

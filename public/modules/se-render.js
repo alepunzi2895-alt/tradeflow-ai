@@ -345,17 +345,18 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
   // ── MFKK AI GOLD BOT — pannello principale
   // Stats aggregate sistema (backtest M30 · 25 mesi · 6 strategie · lot=0.01 · $1/punto · 2026-04-19)
-  const BOT_STATS = { pnl_1m:232, pnl_6m:1393, pnl_12m:2785, pnl_24m:5570, maxdd:759, maxdd_pct:'7.0%', trades_12m:1623, pf:1.258, wr:'37.4%', n_strat:6 };
+  // Sistema adattivo H1 fresh (2026-06-01): 1331 trade · WR 47.9% · PF 1.629 · +$23.5/gg · DD $390 · 19/24 mesi+
+  const BOT_STATS = { pnl_1m:246, pnl_6m:1475, pnl_12m:2950, pnl_24m:5900, maxdd:390, maxdd_pct:'3.9%', trades_12m:666, pf:1.629, wr:'47.9%', n_strat:7 };
 
-  // Multi-strategy playbook (identico a REGIME_MULTI_STRATEGIES in mt5-bot.py)
+  // Multi-strategy playbook (allineato a REGIME_PRIORITY_M30 del backtester · S18 aggiunto)
   const PLAYBOOK_UI = {
-    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S05_MFKK_INTRADAY','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
-    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S05_MFKK_INTRADAY','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
-    'WEAK_UP':    {strategy:'S10_OB_FVG_SCALP',   others:['S16_GOLDEN_SQUEEZE','S09_MFKK_SCALPING','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
-    'WEAK_DOWN':  {strategy:'S10_OB_FVG_SCALP',   others:['S16_GOLDEN_SQUEEZE','S09_MFKK_SCALPING','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
-    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'], tf:'M5/H4'},
-    'RANGE':      {strategy:'S10_OB_FVG_SCALP',   others:['S09_MFKK_SCALPING','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
-    'UNKNOWN':    {strategy:'S10_OB_FVG_SCALP',   others:['S16_GOLDEN_SQUEEZE','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'TREND_UP':   {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'H1/M30'},
+    'TREND_DOWN': {strategy:'S16_GOLDEN_SQUEEZE', others:['S10_OB_FVG_SCALP','S00_MFKK','S17_CONVERGENCE_SCALP'], tf:'H1/M30'},
+    'WEAK_UP':    {strategy:'S10_OB_FVG_SCALP',   others:['S18_RANGE_REVERSAL','S16_GOLDEN_SQUEEZE','S09_MFKK_SCALPING','S00_MFKK'], tf:'M30/H4'},
+    'WEAK_DOWN':  {strategy:'S10_OB_FVG_SCALP',   others:['S18_RANGE_REVERSAL','S16_GOLDEN_SQUEEZE','S09_MFKK_SCALPING','S00_MFKK'], tf:'M30/H4'},
+    'VOLATILE':   {strategy:'S09_MFKK_SCALPING',  others:['S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'RANGE':      {strategy:'S18_RANGE_REVERSAL',  others:['S10_OB_FVG_SCALP','S09_MFKK_SCALPING','S17_CONVERGENCE_SCALP'], tf:'M30/H4'},
+    'UNKNOWN':    {strategy:'S18_RANGE_REVERSAL',  others:['S10_OB_FVG_SCALP','S16_GOLDEN_SQUEEZE'], tf:'M30/H4'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];
@@ -465,21 +466,27 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const pnl12col  = (st.pnl_12m||0)>0 ?'var(--green)':'var(--red)';
       const pnl24col  = (st.pnl_24m||0)>0 ?'var(--green)':'var(--red)';
       const inds = id==='S00_MFKK'
-        ? 'ADX 80% + MACD 10% + CCI(50) 10% · BUY bull≥65 · SELL bear≥65 · WR 30% · 16 trade/mese · P&L +$321/24m · attiva tutti i regimi'
+        ? 'MFKK Score (ADX 80% + MACD 10% + CCI 10%) · BUY≥90 · SELL≥75 · fallback H1 tutti i regimi · 531 trade/anno'
         : id==='S00_MFKK_HWR'
         ? 'ADX≥35 · DI spread≥20 · MACD diff≥0.5 · CCI non OS · SELL ONLY · 83 trade/anno · MaxDD -$61'
         : id==='S05_MFKK_INTRADAY'
-        ? 'V2 Triple MACD H1 · OBV T-Channel + RSI>52/<48 + MACD + Momentum · ADX≥25 · config A ottimizzata · WR 39% · PF 1.34'
+        ? 'MFKK Score + Supertrend + OBV · H4 TREND only · 45 trade/24m (fragile statisticamente)'
         : id==='S09_MFKK_SCALPING'
-        ? 'EMA stack (20>50>100>200) + FVG retest · H1 su WEAK_UP · M30 su WEAK_DOWN/VOLATILE'
+        ? 'EMA stack (20>50>100>200) + FVG retest · VOLATILE/WEAK H1 · 19 trade/24m (fragile)'
+        : id==='S10_OB_FVG_SCALP'
+        ? 'Order Block + FVG M15 confluenza · WEAK/RANGE M30 · ADX≥18 · ST aligned · 36 trade/anno'
+        : id==='S16_GOLDEN_SQUEEZE'
+        ? 'EMA200 bias + ADX≥20 + DI dominance + MACD histogram + OBV T-Channel · TREND H1 · 124 trade/anno'
+        : id==='S17_CONVERGENCE_SCALP'
+        ? 'EMA 13/34 crossover + StochRSI K>D + BB%B + EMA50 trend bias · VOLATILE/TREND H4 · High PF 2.71'
+        : id==='S18_RANGE_REVERSAL'
+        ? 'BB Band Exhaustion (bb_pct≤0.15/≥0.85) + RSI + WPR + StochRSI mean-reversion · RANGE/WEAK ADX<22 · 7-19h UTC'
         : id==='S05_V3_Sell_Exhaust'
-        ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion su TREND_UP H1 · WR 37% · PF 1.96 · MaxDD $278'
+        ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion TREND_UP H1'
         : id==='S01_EXHAUSTION'
         ? 'ADX/DI spread≥15 + MACD vs signal crossover · TREND_DOWN M15 (bot) / H1 (UI)'
         : id==='S13_STRUC_BREAK'
         ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
-        : id==='S17_CONVERGENCE_SCALP'
-        ? 'EMA 34/89 Crossover + StochRSI alignment + BB %B + EMA 50 trend bias · M30/M15 Elite · High R:R'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       return `
       <div style="background:var(--bg2); border:1px solid ${isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">

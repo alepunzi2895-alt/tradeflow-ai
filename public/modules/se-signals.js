@@ -59,6 +59,29 @@ function _adxSma(H, L, C, p=14) {
 }
 
 // ── INDICATOR HELPERS (extra) ────────────────────────────────────────────────
+function _bollinger(src, p=20, m=2.0) {
+  const mid = _sma(src, p);
+  const std = _stdev(src, p);
+  const up = mid.map((v, i) => v != null && std[i] != null ? v + m * std[i] : null);
+  const lo = mid.map((v, i) => v != null && std[i] != null ? v - m * std[i] : null);
+  return { mid, up, lo };
+}
+
+function _stochRsi(src, rsiP=14, stochP=14, kP=3, dP=3) {
+  const r = _rsi(src, rsiP);
+  const n = r.length;
+  const stoch = new Array(n).fill(null);
+  for (let i = stochP; i < n; i++) {
+    const sl = r.slice(i - stochP + 1, i + 1).filter(x => x != null);
+    if (sl.length < stochP || r[i] == null) continue;
+    const lo = Math.min(...sl), hi = Math.max(...sl);
+    stoch[i] = hi > lo ? (r[i] - lo) / (hi - lo) * 100 : 50;
+  }
+  const k = _sma(stoch.map(x => x ?? 50), kP);
+  const d = _sma(k, dP);
+  return { k, d };
+}
+
 function _stdev(src, p) {
   const out = [];
   for(let i = 0; i < src.length; i++) {
@@ -756,6 +779,46 @@ const SE_STRATEGY_FNS = {
 
     if (bull) return { dir: 'buy', why: `Convergence Scalp ↑ crossover EMA13/34 · StochRSI K>D · BB%B > 0.5 · >EMA50`, quality: 'high', score: 85 };
     if (bear) return { dir: 'sell', why: `Convergence Scalp ↓ crossover EMA13/34 · StochRSI K<D · BB%B < 0.5 · <EMA50`, quality: 'high', score: 85 };
+    return null;
+  },
+
+  // S18_RANGE_REVERSAL: BB Band Exhaustion + RSI/WPR/StochRSI mean-reversion
+  // Regime: RANGE/WEAK (ADX < 22). Session: London+NY (7-19 UTC). TP=ATR×2.0, SL=ATR×1.2
+  S18_RANGE_REVERSAL: (I, i, hour) => {
+    if (i < 2) return null;
+    const adx = I.adx?.[i];
+    if (adx != null && adx >= 22) return null;
+    if (hour != null && !(hour >= 7 && hour < 19)) return null;
+
+    const c  = I.C?.[i], cp = I.C?.[i-1];
+    const bu = I.bb_up?.[i], bl = I.bb_dn?.[i];
+    if (c == null || cp == null || bu == null || bl == null) return null;
+
+    const bbRange = bu - bl;
+    if (bbRange <= 0) return null;
+    const bbPct = (c - bl) / bbRange;
+
+    const atr = I.atr?.[i], a30 = I.atr30?.[i];
+    if (atr && a30 && a30 > 0 && atr > 1.8 * a30) return null;
+
+    const rsi = I.rsi?.[i];
+    const wpr = I.wpr?.[i];
+    const sk  = I.srsi_k?.[i];
+
+    if (bbPct <= 0.15 && c > cp) {
+      const rsi_os  = rsi == null || rsi < 40;
+      const wpr_os  = wpr == null || wpr < -70;
+      const srsi_os = sk  == null || sk  < 30;
+      if (rsi_os && wpr_os && srsi_os)
+        return { dir: 'buy', why: `Range Reversal ↑ · BB Lower tap · RSI ${rsi?.toFixed(0)} · WPR ${wpr?.toFixed(0)} · StochRSI OS · ADX ${adx?.toFixed(0)}`, quality: 'medium', score: 72 };
+    }
+    if (bbPct >= 0.85 && c < cp) {
+      const rsi_ob  = rsi == null || rsi > 60;
+      const wpr_ob  = wpr == null || wpr > -30;
+      const srsi_ob = sk  == null || sk  > 70;
+      if (rsi_ob && wpr_ob && srsi_ob)
+        return { dir: 'sell', why: `Range Reversal ↓ · BB Upper tap · RSI ${rsi?.toFixed(0)} · WPR ${wpr?.toFixed(0)} · StochRSI OB · ADX ${adx?.toFixed(0)}`, quality: 'medium', score: 72 };
+    }
     return null;
   },
 };

@@ -5,7 +5,7 @@ Monitora il calendario economico e regola il rischio attorno a
 news ad alto impatto su USD/XAU.
 
 Comportamento:
-  • HIGH impact USD/XAU → pausa trading -30min / +60min
+  • HIGH impact USD/XAU → pausa trading -120min / +120min
   • HIGH impact altre valute → riduzione rischio (risk_mult 0.5)
   • Nessuna news → risk_mult 1.0, paused False
 
@@ -33,8 +33,8 @@ _DATA_DIR  = os.path.join(_BASE_DIR, '..', 'data')
 CACHE_PATH = os.path.join(_DATA_DIR, 'news_calendar_cache.json')
 
 # ── Config ────────────────────────────────────────────────────────────────────
-PAUSE_BEFORE_MIN  = 30    # pausa N min prima dell'evento
-PAUSE_AFTER_MIN   = 60    # pausa N min dopo l'evento
+PAUSE_BEFORE_MIN  = 120   # pausa 2h prima dell'evento
+PAUSE_AFTER_MIN   = 120   # pausa 2h dopo l'evento
 MEDIUM_RISK_MULT  = 0.50  # riduzione rischio per HIGH impact su altre valute
 REFRESH_HOURS     = 6     # refresh calendario ogni N ore
 

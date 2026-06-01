@@ -374,11 +374,10 @@ class RiskManager:
 
     # ── AI SCORE FETCH ─────────────────────────────────────────────────────────
     @staticmethod
-    def fetch_ai_score(vercel_url: str, timeout: int = 5):
+    def fetch_ai_score(vercel_url: str, timeout: int = 5) -> float:
         """
         Recupera l'AI Score corrente dal tab Dashboard via Vercel DB.
-        Ritorna float 0-100 se disponibile, None se il fetch fallisce.
-        Il chiamante deve gestire None con un fallback locale.
+        Ritorna un float 0-100 (default 50 se non disponibile).
         """
         import urllib.request, ssl
         try:
@@ -405,7 +404,7 @@ class RiskManager:
                     return float(score)
         except Exception as e:
             log.warning(f"[fetch_ai_score] FAIL ({type(e).__name__}): {e}")
-        return None  # segnala al chiamante che Vercel non è disponibile
+        return 50.0  # score neutro di default
 
 
 # ── SINGLETON ─────────────────────────────────────────────────────────────────

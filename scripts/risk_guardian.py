@@ -109,7 +109,7 @@ CIRCUIT_BREAKERS = {
 # Composite score minimo per aprire un trade (filtro qualità)
 # Backtest: la maggior parte delle perdite avviene con composite < 55 (NORMAL basso).
 # Alzare il threshold riduce il numero di trade ma aumenta WR e PF del sistema.
-MIN_COMPOSITE_TO_TRADE = 50
+MIN_COMPOSITE_TO_TRADE = 45
 
 
 def composite_score(strategy_confidence: float,

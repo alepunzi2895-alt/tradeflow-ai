@@ -1,0 +1,22 @@
+{
+  "rewrites": [
+    { "source": "/api/auth",         "destination": "/api/db.js" },
+    { "source": "/api/db",           "destination": "/api/db.js" },
+    { "source": "/api/kb",           "destination": "/api/db.js" },
+    { "source": "/api/myfxbook",     "destination": "/api/db.js" },
+    
+    { "source": "/api/price",        "destination": "/api/price.js" },
+    { "source": "/api/tvprice",      "destination": "/api/price.js" },
+    { "source": "/api/candles",      "destination": "/api/price.js" },
+    
+    { "source": "/api/market",       "destination": "/api/analysis.js" },
+    { "source": "/api/indicators",   "destination": "/api/analysis.js" },
+    { "source": "/api/cot-update",   "destination": "/api/analysis.js" },
+    
+    { "source": "/api/chat",         "destination": "/api/chat.js" },
+    { "source": "/api/report",       "destination": "/api/report.js" },
+    { "source": "/api/webhook",      "destination": "/api/webhook.js" },
+    
+    { "source": "/(.*)",             "destination": "/index.html" }
+  ]
+}

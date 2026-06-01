@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-04-16T18:44:42Z",
+  "tp_mult": 1.5,
+  "sl_mult": 1.0,
+  "playbook": {
+    "TREND_UP": {
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "tf": "M30",
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
+      "pf": 1.45,
+      "dd": 165.0,
+      "score": 320.0
+    },
+    "TREND_DOWN": {
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "tf": "M15",
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
+      "pf": 1.45,
+      "dd": 165.0,
+      "score": 320.0
+    },
+    "WEAK_UP": {
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "tf": "M15",
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
+      "pf": 1.45,
+      "dd": 165.0,
+      "score": 290.0
+    },
+    "WEAK_DOWN": {
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "tf": "M15",
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
+      "pf": 1.45,
+      "dd": 165.0,
+      "score": 290.0
+    },
+    "RANGE": {
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M30",
+      "n": 1402,
+      "wr": 41.3,
+      "pnl": 3248.0,
+      "pf": 1.43,
+      "dd": 340.0,
+      "score": 280.0
+    },
+    "VOLATILE": {
+      "strategy": "S10_OB_FVG_SCALP",
+      "tf": "M30",
+      "n": 1402,
+      "wr": 41.3,
+      "pnl": 3248.0,
+      "pf": 1.43,
+      "dd": 340.0,
+      "score": 250.0
+    },
+    "UNKNOWN": {
+      "strategy": "S16_GOLDEN_SQUEEZE",
+      "tf": "M15",
+      "n": 1467,
+      "wr": 53.0,
+      "pnl": 2355.2,
+      "pf": 1.45,
+      "dd": 165.0,
+      "score": 100.0
+    }
+  },
+  "regime_matrix": {}
+}

@@ -1,0 +1,33 @@
+﻿ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù
+Ôòæ  MFKK Strategy Backtester (Python)       Ôòæ
+Ôòæ  XAU/USD H1  TP=$15 SL=$10  1800d       Ôòæ
+ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ
+
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+ Chunk error: HTTP Error 422: Unprocessable Entity
+­ƒôè Fetched 10649 unique H1 candles
+
+
+BASE                      | 1049 trades | WR:  45.4% | PnL: $1410.0 | PF: 1.25
+STRICT                    | 726  trades | WR:  46.6% | PnL: $1190.0 | PF: 1.31
+RISKY                     | 1965 trades | WR:  43.1% | PnL: $1525.0 | PF: 1.14
+TIGHT (TP=10 SL=7)        | 1226 trades | WR:  40.4% | PnL: $-167.0 | PF: 0.97
+WIDE (TP=25 SL=15)        | 811  trades | WR:  42.9% | PnL: $1755.0 | PF: 1.25
+FORTE ONLY                | 498  trades | WR:  44.0% | PnL: $ 495.0 | PF: 1.18

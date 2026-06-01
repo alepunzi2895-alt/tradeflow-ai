@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TradeFlow AI">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAB4ElEQVR4nO2UPWgTYRjH/897lybHpeFiqhCsphAIlUJCpVYQFT8GK+gu2NXFSRzF3aUI2smtiEMHp+5FsGsVMtWACKamNdWcd7nepbmvx+EUHJKLSHWQ+00vvO/7f/7Px/sCCQkJhwPRX5MWRCJWPW5TEgT6eYIIIIABgBnRihGEDKA4kWnr/TDkw3H9KzOVwvrKucf3y0QQg3KRB14jAjNuLUxMHhNSKqPkNGTKqXRWhknel55lOrZ90Dt4v+1ePT91tjq+vNJghhADpAYHiDhdUapleTxfqM1OqzMX+p+NTqvhmu63Djm2vLOnXp7PfvrqVRY2bMcH8EclIgHg3p15z1u6u3gKwPFibq5WvHZp6uaVUrWixXdxRAYAZAm+D2ksK8uu1TWuXzzxfOlMu9XhwK6/MxYfGkQ/Ws9D3I8IECEQoN9y7L4A8qS/2Gi+2tSbuy4AZsTXZVQAZgCe+bFX97qW5wXB7s7emy1r7bV5sqiqipROkd71o6EYYi5eHwCw3933LUOWaCxFk6V8QVOOHlGePpi7faNUm9YAiOFPeUQGHALA24bz5KXZbAde4C+v6ptbjprGo2d1LSd/2LYBhMP8/wN+65cigiQo+hUkQWHIDBARmGPmJyEh4f/hO+aMuOMsAkhkAAAAAElFTkSuQmCC">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAB4ElEQVR4nO2UPWgTYRjH/897lybHpeFiqhCsphAIlUJCpVYQFT8GK+gu2NXFSRzF3aUI2smtiEMHp+5FsGsVMtWACKamNdWcd7nepbmvx+EUHJKLSHWQ+00vvO/7f/7Px/sCCQkJhwPRX5MWRCJWPW5TEgT6eYIIIIABgBnRihGEDKA4kWnr/TDkw3H9KzOVwvrKucf3y0QQg3KRB14jAjNuLUxMHhNSKqPkNGTKqXRWhknel55lOrZ90Dt4v+1ePT91tjq+vNJghhADpAYHiDhdUapleTxfqM1OqzMX+p+NTqvhmu63Djm2vLOnXp7PfvrqVRY2bMcH8EclIgHg3p15z1u6u3gKwPFibq5WvHZp6uaVUrWixXdxRAYAZAm+D2ksK8uu1TWuXzzxfOlMu9XhwK6/MxYfGkQ/Ws9D3I8IECEQoN9y7L4A8qS/2Gi+2tSbuy4AZsTXZVQAZgCe+bFX97qW5wXB7s7emy1r7bV5sqiqipROkd71o6EYYi5eHwCw3933LUOWaCxFk6V8QVOOHlGePpi7faNUm9YAiOFPeUQGHALA24bz5KXZbAde4C+v6ptbjprGo2d1LSd/2LYBhMP8/wN+65cigiQo+hUkQWHIDBARmGPmJyEh4f/hO+aMuOMsAkhkAAAAAElFTkSuQmCC">
+<title>TradeFlow AI</title>
+
+<!-- TradingView Widget -->
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<!-- AUTHENTICATION OVERLAY -->
+<div id="auth-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#050608;z-index:9999;flex-direction:column;justify-content:center;align-items:center;padding:20px;box-sizing:border-box">
+  <div style="background:var(--card);border:1px solid #c8a96e40;border-radius:15px;width:100%;max-width:360px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+    <div style="text-align:center;margin-bottom:20px">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;margin:0 auto 10px">
+        <path d="M4 20 Q10 8 16 14 Q22 20 28 6" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M24 6 L28 6 L28 10" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="ga1" x1="4" y1="20" x2="28" y2="6" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#8b5e1a"/><stop offset="100%" stop-color="#f0d080"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div style="font-size:20px;font-weight:700;color:#e0e4ec;font-family:'Space Grotesk',sans-serif;letter-spacing:-.5px">TradeFlow <span style="color:#c8a96e">AI</span></div>
+    </div>
+    
+    <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border2)">
+      <button id="tab-login" style="flex:1;background:none;border:none;padding:10px;color:var(--text);font-size:13px;font-weight:700;border-bottom:2px solid #c8a96e;cursor:pointer">Accedi</button>
+      <button id="tab-register" style="flex:1;background:none;border:none;padding:10px;color:var(--dim);font-size:13px;font-weight:700;border-bottom:2px solid transparent;cursor:pointer">Registrati</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="form-login">
+      <div class="ff" style="margin-bottom:12px"><label>EMAIL</label><input id="l-email" type="email" placeholder="tu@email.com"></div>
+      <div class="ff" style="margin-bottom:20px"><label>PASSWORD</label><input id="l-pass" type="password" placeholder="••••••••"></div>
+      <button id="btn-do-login" class="bsave" style="width:100%;font-size:13px;padding:12px">Accedi al Trading Desk</button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="form-register" style="display:none">
+      <div class="ff" style="margin-bottom:12px"><label>NOME UTENTE</label><input id="r-name" type="text" placeholder="Nome o Alias"></div>
+      <div class="ff" style="margin-bottom:12px"><label>EMAIL</label><input id="r-email" type="email" placeholder="tu@email.com"></div>
+      <div class="ff" style="margin-bottom:20px"><label>PASSWORD</label><input id="r-pass" type="password" placeholder="••••••••"></div>
+      <button id="btn-do-register" class="bsave" style="width:100%;font-size:13px;padding:12px">Crea nuovo account</button>
+    </div>
+
+    <div id="auth-err" style="display:none;margin-top:15px;font-size:12px;color:#ff8a80;background:#160c0c;border:1px solid #ff475722;border-radius:6px;padding:8px 10px;text-align:center"></div>
+    <div id="auth-msg" style="display:none;margin-top:15px;font-size:12px;color:var(--green);background:#081408;border:1px solid #00e67622;border-radius:6px;padding:8px 10px;text-align:center"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+<!-- TradingView hidden ticker for price data -->
+<div id="tv-ticker" style="display:none;position:absolute;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden"></div>
+  <!-- HEADER -->
+  <div id="hdr">
+    <div class="hrow">
+      <div class="logo" onclick="switchTab('dash')">
+        <!-- TradeFlow AI Logo SVG -->
+        <svg class="logo-svg" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 20 Q10 8 16 14 Q22 20 28 6" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M24 6 L28 6 L28 10" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="g1" x1="4" y1="20" x2="28" y2="6" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#8b5e1a"/>
+              <stop offset="100%" stop-color="#f0d080"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="logo-text">
+          <div class="logo-title">TradeFlow <span>AI</span></div>
+          <div class="logo-sub">
+            <select id="asset-select" onchange="window.switchAsset(this.value)" style="background:transparent;border:none;color:var(--text);font-size:10px;font-family:inherit;outline:none;font-weight:700;letter-spacing:.05em;padding:0;cursor:pointer;-webkit-appearance:none;appearance:none;text-decoration:underline;text-underline-offset:2px">
+              <option value="XAU" style="background:var(--bg)">XAU/USD</option>
+              <option value="XAG" style="background:var(--bg)">XAG/USD</option>
+            </select>
+            · DXY · FOREX · <span id="lsub-name" style="color:var(--dim)"></span>
+          </div>
+        </div>
+      </div>
+      <div class="hright">
+        <span id="bxau" class="hbadge" style="display:none; cursor:pointer;" onclick="document.getElementById('asset-select').value='XAU';window.switchAsset('XAU')"></span>
+        <span id="bxag" class="hbadge" style="display:none; cursor:pointer;" onclick="document.getElementById('asset-select').value='XAG';window.switchAsset('XAG')"></span>
+        <span id="berr" class="hbadge hw" style="display:none"></span>
+        <button id="btn-set">⚙️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="cont">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="tp on" id="tp-dash">
+      <div class="dp" id="dash-panel">
+        <!-- Price strip -->
+        <div class="price-strip" id="price-strip">
+          <div class="pc main"><div class="pc-sym" id="lbl-asset">XAU/USD</div><div class="pc-val" id="p-xau"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-xau"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
+          <div class="pc"><div class="pc-sym">DXY</div><div class="pc-val" id="p-dxy"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-dxy"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
+          <div class="pc"><div class="pc-sym">EUR/USD</div><div class="pc-val" id="p-eur"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-eur"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
+          <div class="pc"><div class="pc-sym">GBP/USD</div><div class="pc-val" id="p-gbp"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-gbp"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
+          <div class="pc"><div class="pc-sym">OIL</div><div class="pc-val" id="p-oil"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-oil"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
+        </div>
+
+        <!-- DXY Correlation -->
+
+
+
+        <!-- Confidence Score -->
+        <div class="conf-card" id="conf-card">
+          <div class="conf-title">AI CONFIDENCE SCORE</div>
+          <div class="conf-score">
+            <div class="conf-ring">
+              <svg width="56" height="56" viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="22" fill="none" stroke="#1e222a" stroke-width="5"/>
+                <circle id="conf-circle" cx="28" cy="28" r="22" fill="none" stroke="#c8a96e" stroke-width="5" stroke-dasharray="138.2" stroke-dashoffset="138.2" stroke-linecap="round"/>
+              </svg>
+              <div class="conf-num" id="conf-num"><div class="skel" style="width:24px;height:18px"></div></div>
+            </div>
+            <div class="conf-detail">
+              <div class="conf-bias" id="conf-bias">Analisi in corso...</div>
+              <div id="conf-sub" style="font-size:10px;color:var(--dim);margin-bottom:4px"></div>
+              <div id="conf-session" style="font-size:9px;color:var(--dim);margin-bottom:4px"></div>
+              <div class="conf-factors" id="conf-factors">
+                <div class="cf"><div class="cf-dot" style="background:var(--dim)"></div><span>Caricamento dati...</span></div>
+              </div>
+            </div>
+          </div>
+          <div id="conf-quality" style="margin-top:6px;display:none"></div>
+        </div>
+
+        <!-- Sentiment -->
+        <div class="sent-card" id="sent-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="sent-title" id="lbl-sent-title" style="margin-bottom:0">RETAIL SENTIMENT · XAU/USD</div><div id="sent-source" style="font-size:9px;color:var(--dim)"></div></div>
+          <div class="sent-bars">
+            <div class="sent-row">
+              <div class="sent-lbl" style="color:var(--green)">LONG</div>
+              <div class="sent-track"><div class="sent-fill" id="sent-long-bar" style="background:var(--green);width:50%"></div></div>
+              <div class="sent-pct" id="sent-long-pct" style="color:var(--green)">—</div>
+            </div>
+            <div class="sent-row">
+              <div class="sent-lbl" style="color:var(--red)">SHORT</div>
+              <div class="sent-track"><div class="sent-fill" id="sent-short-bar" style="background:var(--red);width:50%"></div></div>
+              <div class="sent-pct" id="sent-short-pct" style="color:var(--red)">—</div>
+            </div>
+          </div>
+          <div class="sent-note" id="sent-note" style="display:none;font-size:11px;color:var(--yellow)"></div>
+          <div style="font-size:10px;color:var(--dim);margin-top:6px" id="sent-contrarian"></div>
+        </div>
+
+        <!-- MFKK Strategy Score -->
+        <div class="mfkk-card" id="mfkk-card">
+          <div class="mfkk-header">
+            <div class="mfkk-title" id="lbl-mfkk-title">MFKK STRATEGY SCORE · XAU/USD H1</div>
+
+            <div id="mfkk-time" style="font-size:9px;color:var(--dim);font-family:monospace"></div>
+          </div>
+
+
+          <!-- Direction selector -->
+          <div class="mfkk-dir-btns">
+            <button class="mfkk-dir on-buy" id="mfkk-buy" tabindex="-1" onclick="setMfkkDir('buy')">▲ BUY</button>
+            <button class="mfkk-dir" id="mfkk-sell" tabindex="-1" onclick="setMfkkDir('sell')">▼ SELL</button>
+          </div>
+
+          <!-- Score ring + signal -->
+          <div class="mfkk-score-wrap">
+            <div class="mfkk-ring">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#1e222a" stroke-width="6"/>
+                <circle id="mfkk-circle" cx="32" cy="32" r="26" fill="none" stroke="#555" stroke-width="6" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-linecap="round"/>
+              </svg>
+              <div class="mfkk-num" id="mfkk-num">0</div>
+            </div>
+            <div class="mfkk-signal">
+              <div class="mfkk-bias" id="mfkk-bias">Inserisci dati</div>
+              <div class="mfkk-desc" id="mfkk-desc">In attesa di dati — configura webhook TradingView</div>
+            </div>
+          </div>
+
+          <!-- Indicator inputs -->
+          <div class="mfkk-inputs">
+
+            <!-- CCI -->
+            <div class="mfkk-row" id="mfkk-cci-row">
+              <div class="mfkk-ico">📈</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div class="mfkk-lbl">CCI_S</div>
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-cci" type="number" placeholder="auto" step="0.01" oninput="calcMfkk()">
+                  <div class="mfkk-bar-wrap">
+                    <div class="mfkk-bar-track"><div class="mfkk-bar-fill" id="mfkk-cci-bar" style="width:0%;background:var(--dim)"></div></div>
+                    <div class="mfkk-pct" id="mfkk-cci-pct" style="color:var(--dim)">—</div>
+                  </div>
+                </div>
+                <div class="mfkk-hint" id="mfkk-cci-hint">CCI_S D-line (OB:75 OS:25, CCI=50 Stoch=50)</div>
+              </div>
+            </div>
+
+            <!-- MACD -->
+            <div class="mfkk-row" id="mfkk-macd-row">
+              <div class="mfkk-ico">📊</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <div class="mfkk-lbl">MACD</div>
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-macd-fast" type="number" placeholder="MACD" step="0.01" style="width:0;flex:.6" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-macd-slow" type="number" placeholder="Signal" step="0.01" style="width:0;flex:.6" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-macd-hist" type="number" placeholder="Hist" step="0.01" style="width:0;flex:.5" oninput="calcMfkk()">
+                  <div class="mfkk-bar-wrap">
+                    <div class="mfkk-bar-track"><div class="mfkk-bar-fill" id="mfkk-macd-bar" style="width:0%;background:var(--dim)"></div></div>
+                    <div class="mfkk-pct" id="mfkk-macd-pct" style="color:var(--dim)">—</div>
+                  </div>
+                </div>
+                <div class="mfkk-hint" id="mfkk-macd-hint">Blu · Rosso (Signal) · Istogramma — es. -13.42, -15.42, -1.99</div>
+              </div>
+            </div>
+
+            <!-- ADX + DI -->
+            <div class="mfkk-row" id="mfkk-adx-row">
+              <div class="mfkk-ico">💪</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:5px">
+                  <div class="mfkk-lbl">ADX</div>
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-adx" type="number" placeholder="ADX" step="0.1" style="width:0;flex:.8" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-diplus" type="number" placeholder="DI+" step="0.1" style="width:0;flex:.7" oninput="calcMfkk()">
+                  <input tabindex="-1" class="mfkk-inp" id="mfkk-diminus" type="number" placeholder="DI-" step="0.1" style="width:0;flex:.7" oninput="calcMfkk()">
+                  <div class="mfkk-bar-wrap">
+                    <div class="mfkk-bar-track"><div class="mfkk-bar-fill" id="mfkk-adx-bar" style="width:0%;background:var(--dim)"></div></div>
+                    <div class="mfkk-pct" id="mfkk-adx-pct" style="color:var(--dim)">—</div>
+                  </div>
+                </div>
+                <div class="mfkk-hint" id="mfkk-adx-hint">ADX · DI+ · DI- — es. 27.84, 16.79, 11.00</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Quality badge -->
+          <div class="mfkk-quality" id="mfkk-quality" style="display:none"></div>
+
+          <!-- Sessione corrente (London/NY vs Asian/Off) -->
+          <div id="mfkk-session" style="margin-top:5px;font-size:9px;color:var(--dim);text-align:right;padding-right:2px"></div>
+
+          <!-- 4° Conferma: EMA50 Trend Filter + CCI Crossover -->
+          <div id="mfkk-confirm" style="display:none;margin-top:6px;padding:7px 9px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:10px;line-height:1.5;color:var(--fg)"></div>
+
+          <!-- Entry Plan: Entry / TP / SL / R:R dinamici su ATR+Swing -->
+          <div id="mfkk-entry-plan" style="display:none;margin-top:8px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:7px"></div>
+        </div>
+
+        <!-- Economic Calendar -->
+        <div class="cal-card" id="cal-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div class="cal-title" style="margin-bottom:0">📅 CALENDARIO EVENTI</div>
+            <div style="display:flex;gap:5px;align-items:center">
+              <span style="font-size:9px;color:var(--dim)">🔴 Alto 🟡 Medio</span>
+            </div>
+          </div>
+          <!-- Next major event countdown -->
+          <div id="cal-next" style="background:linear-gradient(135deg,#1a1208,#0d0f12);border:1px solid #c8a96e33;border-radius:8px;padding:8px 10px;margin-bottom:8px;display:none">
+            <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:2px">PROSSIMO EVENTO AD ALTO IMPATTO</div>
+            <div id="cal-next-name" style="font-size:13px;color:#e0e4ec;font-weight:600"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
+              <div id="cal-next-meta" style="font-size:10px;color:var(--dim)"></div>
+              <div id="cal-countdown" style="font-size:12px;font-family:monospace;color:var(--yellow);font-weight:700"></div>
+            </div>
+          </div>
+          <!-- XAU impact filter -->
+          <div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto">
+            <button onclick="filterCal('all')" id="cal-f-all" class="cal-filter on">Tutti</button>
+            <button onclick="filterCal('xau')" id="cal-f-xau" class="cal-filter">⚡ XAU</button>
+            <button onclick="filterCal('usd')" id="cal-f-usd" class="cal-filter">🇺🇸 USD</button>
+            <button onclick="filterCal('eur')" id="cal-f-eur" class="cal-filter">🇪🇺 EUR</button>
+          </div>
+          <div id="cal-events"><div class="skel"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:85%"></div></div>
+        </div>
+
+        <!-- TradingView Mini Chart Widget -->
+        <div style="margin-bottom:20px; border-radius:12px; overflow:hidden; border:1px solid var(--border)">
+          <div class="tradingview-widget-container" style="height:800px">
+            <div id="tv-chart-widget"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── ANALISI (CHAT) ── -->
+    <div class="tp" id="tp-analysis">
+      <div id="chat-msgs"></div>
+      <div id="qrow"><div class="qi" id="qi"></div></div>
+      <div id="imgprev"><img id="imgthumb" src="" alt=""><span id="imgstat" style="font-size:11px;color:var(--green)">✓ Pronto</span><button id="imgclear" style="margin-left:auto;background:none;border:none;color:var(--border2);font-size:16px;cursor:pointer">✕</button></div>
+      <div id="ibar">
+        <button id="bimg">📷</button>
+        <button id="bnews"><span>📰</span><div class="news-dot"></div></button>
+        <textarea id="minput" rows="1" placeholder="Analisi, screenshot, domande..."></textarea>
+        <button id="bsend">▲</button>
+      </div>
+    </div>
+
+    <!-- ── JOURNAL ── -->
+    <div class="tp" id="tp-journal">
+      <div class="jp" id="jp">
+        <div class="sgrid" id="sgrid"></div>
+        <!-- Growth areas (replaces "errori ricorrenti") -->
+        <div class="ebox" id="ebox" style="display:none">
+          <div class="etitle" style="color:var(--yellow)">🎯 AREE DI SVILUPPO ATTIVE</div>
+          <div class="etag2" id="etags"></div>
+        </div>
+        <!-- Progress badge -->
+        <div id="progress-badge" style="display:none;background:linear-gradient(135deg,#081408,#0d0f12);border:1px solid #00e67625;border-radius:8px;padding:7px 11px;margin-bottom:9px;font-size:11px;color:var(--green)"></div>
+        <!-- Action buttons -->
+        <div class="jbtns">
+          <button class="bp" id="btn-new">+ Trade</button>
+          <button class="bs" id="btn-import" style="color:var(--green)">📥 CSV</button>
+          <button class="bs" id="btn-screen" style="color:var(--yellow)">📷 MT5</button>
+          <button class="bs" id="btn-myfxb-j" style="color:var(--g)">📊 MFX</button>
+          <button class="bs" id="btn-analyze" style="color:var(--g)">🧠 Analisi</button>
+        </div>
+        <!-- Report buttons -->
+        <div style="display:flex;gap:5px;margin-bottom:10px">
+          <button class="bs" id="btn-report-day" style="color:var(--dim);font-size:11px;flex:1">📋 Oggi</button>
+          <button class="bs" id="btn-report-week" style="color:var(--dim);font-size:11px;flex:1">📋 Settimana</button>
+          <button class="bs" id="btn-report-month" style="color:var(--dim);font-size:11px;flex:1">📋 Mese</button>
+          <button class="bs" id="btn-progress" style="color:var(--blue);font-size:11px;flex:1">📈 Progressi</button>
+        </div>
+        <!-- Memory reset -->
+        <div id="memory-info" style="font-size:9px;color:var(--border2);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <span id="memory-date">Memoria attiva</span>
+          <div style="display:flex;gap:5px">
+            <button onclick="resetMemory('week')" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:1px 7px;color:var(--dim);font-size:9px;cursor:pointer">Reset sett.</button>
+            <button onclick="resetMemory('month')" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:1px 7px;color:var(--dim);font-size:9px;cursor:pointer">Reset mese</button>
+          </div>
+        </div>
+        <div class="tform" id="tform">
+          <div class="ftitle">📝 LOG TRADE XAU/USD</div>
+          <div class="fgrid" id="fgrid"></div>
+          <div class="ff" style="margin-top:7px"><label>NOTE</label><textarea id="f-notes" rows="2" placeholder="Contesto, setup, confluenze..."></textarea></div>
+          <div class="fbtns"><button class="bsave" id="btn-save">Salva</button><button class="bcan" id="btn-fcan">Annulla</button></div>
+        </div>
+        <div class="aib" id="aibox" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div class="ait" style="margin-bottom:0">🧠 ANALISI OPERATIVITÀ</div>
+            <button onclick="saveAnalysisMemory()" style="background:none;border:1px solid var(--g);border-radius:5px;padding:2px 8px;color:var(--g);font-size:9px;cursor:pointer">💾 Salva in memoria</button>
+          </div>
+          <div id="aic"></div>
+        </div>
+        <div id="elist"></div>
+      </div>
+    </div>
+
+    <!-- ── KNOWLEDGE ── -->
+    <div class="tp" id="tp-kb">
+      <div class="kp">
+        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Space Grotesk',sans-serif">🧠 KNOWLEDGE BASE</div>
+        <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Carica la tua strategia, articoli, regole. TradeFlow AI li usa come contesto permanente in ogni analisi.</div>
+        <div class="sdrop" id="kb-drop"><div class="sdropico">📂</div><div class="sdrop-t">Carica uno o più documenti</div><div class="sdrop-s">PDF · PNG · JPG · TXT · MD — selezione multipla</div></div>
+        <input type="file" id="kb-file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md" style="display:none" multiple>
+        <div id="kb-status" style="display:none;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;flex-wrap:wrap;gap:4px">
+          <div style="color:var(--border2);font-size:9px;letter-spacing:.1em">DOCUMENTI (<span id="kb-count">0</span>)</div>
+          <div style="display:flex;gap:5px">
+            <span id="kb-sync-badge" style="font-size:9px;border:1px solid var(--border2);border-radius:5px;padding:2px 7px;color:var(--dim)">💾 Locale</span>
+            <button id="btn-kb-export" style="background:none;border:1px solid var(--border2);border-radius:5px;padding:2px 8px;color:var(--dim);font-size:10px;cursor:pointer">📤 Esporta</button>
+          </div>
+        </div>
+        <div id="kb-list"></div>
+      </div>
+    </div>
+
+    <!-- ── MYFXBOOK ── -->
+    <div class="tp" id="tp-myfx">
+      <div class="mfp"><div id="mfx-content"></div></div>
+    </div>
+
+    <!-- STRATEGY ENGINE TAB -->
+    <div class="tp" id="tp-strategy">
+      <div class="mfp">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--g)">⚡ STRATEGY ENGINE</div>
+          <button onclick="seRefresh()" style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;color:var(--dim);font-size:9px;cursor:pointer">⟳ Aggiorna</button>
+        </div>
+        <div id="se-content">
+          <div style="text-align:center;padding:30px;color:var(--dim);font-size:12px">Inizializzazione strategy engine...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM TABS -->
+  <div id="tabs-wrapper">
+    <div id="tabs">
+      <button class="tb" data-tab="dash"><span class="ti">📊</span><span class="tl">Dashboard</span></button>
+      <button class="tb" data-tab="analysis"><span class="ti">🤖</span><span class="tl">Analisi</span></button>
+      <button class="tb" data-tab="journal"><span class="ti">📓</span><span class="tl">Journal</span></button>
+      <button class="tb" data-tab="myfx"><span class="ti">📊</span><span class="tl">MyFxBook</span></button>
+      <button class="tb" data-tab="strategy"><span class="ti">⚡</span><span class="tl">Strategie</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE SHEET -->
+<div class="ovl" id="imgsheet"><div class="sht">
+  <div class="shnd"></div><div class="shtitle">📷 ALLEGA SCREENSHOT</div>
+  <div class="sdrop" id="sdrop"><div class="sdropico">🖼️</div><div class="sdrop-t">Scegli dalla Galleria</div><div class="sdrop-s">TradingView · MT5</div></div>
+  <input type="file" id="file-in" accept="image/*" capture="environment" style="display:none">
+  <div class="srow"><input class="sinp" id="url-in" placeholder="URL immagine..."><button class="sobtn" id="btn-url">OK</button></div>
+  <div class="stip">💡 iOS: Screenshot → tieni premuto nel campo testo → Incolla</div>
+  <button class="scancel" id="btn-sc">Annulla</button>
+</div></div>
+
+<!-- CSV SHEET -->
+<div class="ovl" id="csvsheet"><div class="sht">
+  <div class="shnd"></div><div class="shtitle">📥 IMPORTA TRADE</div>
+  <div class="sdrop" id="csv-drop"><div class="sdropico">📋</div><div class="sdrop-t">Carica CSV storico MT5</div><div class="sdrop-s">Export MT4/MT5 · MyFxBook CSV</div></div>
+  <input type="file" id="csv-file" accept=".csv,.xlsx,.txt" style="display:none">
+  <div style="color:var(--dim);font-size:11px;margin-bottom:8px">Oppure incolla il testo:</div>
+  <textarea id="csv-text" rows="4" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--text);font-size:12px;outline:none;font-family:monospace;resize:none;margin-bottom:10px" placeholder="Incolla righe CSV..."></textarea>
+  <button class="bsave" id="btn-csv-go" style="width:100%;margin-bottom:8px">🧠 Analizza con AI</button>
+  <button class="scancel" id="btn-csvc">Annulla</button>
+</div></div>
+
+<!-- SCREENSHOT MT5 SHEET -->
+<div class="ovl" id="scrsheet"><div class="sht">
+  <div class="shnd"></div><div class="shtitle">📷 STORICO TRADE MT5</div>
+  <div class="sdrop" id="scr-drop"><div class="sdropico">📸</div><div class="sdrop-t">Screenshot "Cronologia" MT5</div><div class="sdrop-s">TradeFlow legge i trade chiusi e analizza gli errori</div></div>
+  <input type="file" id="scr-file" accept="image/*" style="display:none">
+  <div id="scr-prev" style="display:none;margin-bottom:10px"><img id="scr-img" style="width:100%;border-radius:8px;max-height:200px;object-fit:contain;background:#050608"></div>
+  <button class="bsave" id="btn-scr-go" style="width:100%;margin-bottom:8px;display:none">🧠 Analizza Trade Chiusi</button>
+  <button class="scancel" id="btn-scrc">Annulla</button>
+</div></div>
+
+<!-- PROFILE SHEET -->
+<div class="ovl" id="profsheet"><div class="sht">
+  <div class="shnd"></div><div class="shtitle">⚙️ PROFILO TRADER</div>
+  <div class="ff" style="margin-bottom:9px"><label>NOME</label><input id="pname" type="text"></div>
+  <div class="ff" style="margin-bottom:9px">
+    <label>VALUTA DISPLAY</label>
+    <select id="pcurrency">
+      <option value="USD">USD — Dollaro americano</option>
+      <option value="EUR">EUR — Euro</option>
+      <option value="GBP">GBP — Sterlina</option>
+      <option value="CHF">CHF — Franco svizzero</option>
+      <option value="JPY">JPY — Yen giapponese</option>
+    </select>
+  </div>
+  <div class="fgrid" id="psliders"></div>
+  <div id="perrs-wrap" style="display:none;margin-bottom:10px">
+    <div class="rlbl">ERRORI RILEVATI <span style="color:var(--dim)">(tocca per rimuovere)</span></div>
+    <div id="perrs-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px"></div>
+  </div>
+  <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+    <div style="color:var(--dim);font-size:10px;letter-spacing:.08em;margin-bottom:8px">BACKUP & RIPRISTINO</div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <button id="btn-export" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:9px;color:var(--green);font-size:12px;cursor:pointer;font-family:inherit">📤 Esporta</button>
+      <button id="btn-import-data" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:9px;color:var(--yellow);font-size:12px;cursor:pointer;font-family:inherit">📥 Importa</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none">
+  </div>
+  <div class="fbtns" style="margin-top:4px">
+    <button class="bsave" id="btn-psave">Salva</button>
+    <button id="btn-preset" style="background:#160c0c;border:1px solid #ff475722;border-radius:7px;padding:9px 13px;color:#ff8a80;font-size:12px;cursor:pointer;font-family:inherit">Reset</button>
+  </div>
+</div></div>
+
+
+  <!-- INDICATOR INFO MODAL -->
+  <div id="info-overlay" class="info-overlay" onclick="closeIndicatorInfo()">
+    <div class="info-content" onclick="event.stopPropagation()">
+      <div class="info-title" id="info-title"></div>
+      <div class="info-meaning" id="info-meaning"></div>
+      <div class="info-status" id="info-status"></div>
+      <button class="info-close" onclick="closeIndicatorInfo()">Chiudi</button>
+    </div>
+  </div>
+
+  <!-- Core utilities (storage, API, compression) -->
+  <script src="/modules/core.js"></script>
+  <!-- Dashboard: prices, confidence, sentiment, macro -->
+  <script src="/modules/dashboard.js"></script>
+  <!-- Chat: AI analysis, image upload -->
+  <script src="/modules/chat.js"></script>
+  <!-- Journal: trade log, coaching, reports -->
+  <script src="/modules/journal.js"></script>
+  <!-- MyFxBook: account sync, import -->
+  <script src="/modules/myfxbook.js"></script>
+  <!-- Knowledge Base: upload, search -->
+  <script src="/modules/kb.js"></script>
+  <!-- MFKK: strategy score, indicators -->
+  <script src="/modules/mfkk.js"></script>
+  <!-- Strategy Engine: indicator helpers + signal functions -->
+  <script src="/modules/se-signals.js"></script>
+  <!-- Strategy Engine: SE config, seRefresh(), main loop -->
+  <script src="/modules/strategy.js"></script>
+  <!-- Strategy Engine: seRender(), seToast(), initStrategyEngine() -->
+  <script src="/modules/se-render.js"></script>
+  <!-- App: init, tabs, overlays, profile -->
+  <script src="/app.js"></script>
+</body>
+</html>

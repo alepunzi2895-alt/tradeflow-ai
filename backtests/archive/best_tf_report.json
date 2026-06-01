@@ -1,0 +1,210 @@
+{
+  "S01_EXHAUSTION": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 858,
+      "wr": 29.8,
+      "pnl": -130.0,
+      "pf": 0.975,
+      "dd": 583.4,
+      "avg_day": -0.47,
+      "tr_day": 3.11,
+      "months": "13/25"
+    }
+  },
+  "S02_ALLIGATOR_OBV": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 4991,
+      "wr": 26.7,
+      "pnl": -4906.5,
+      "pf": 0.844,
+      "dd": 4913.5,
+      "avg_day": -9.53,
+      "tr_day": 9.69,
+      "months": "7/25"
+    }
+  },
+  "S03_SUPERTREND_EMA": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 4881,
+      "wr": 27.3,
+      "pnl": -4353.4,
+      "pf": 0.859,
+      "dd": 4420.1,
+      "avg_day": -8.45,
+      "tr_day": 9.48,
+      "months": "8/25"
+    }
+  },
+  "S04_BB_SQUEEZE": {
+    "best_tf": "H1",
+    "stats": {
+      "n": 3434,
+      "wr": 26.6,
+      "pnl": -5217.1,
+      "pf": 0.778,
+      "dd": 5467.5,
+      "avg_day": -10.56,
+      "tr_day": 6.95,
+      "months": "5/25"
+    }
+  },
+  "S05_RSI_DIV": {
+    "best_tf": "H1",
+    "stats": {
+      "n": 0,
+      "wr": 0,
+      "pnl": 0,
+      "pf": 0,
+      "dd": 0,
+      "avg_day": 0,
+      "tr_day": 0,
+      "months": "0/0"
+    }
+  },
+  "S06_ORDERBLOCK": {
+    "best_tf": "M30",
+    "stats": {
+      "n": 1047,
+      "wr": 31.3,
+      "pnl": 358.7,
+      "pf": 1.058,
+      "dd": 679.8,
+      "avg_day": 1.48,
+      "tr_day": 4.33,
+      "months": "12/25"
+    }
+  },
+  "S07_STOCHRSI_BB": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 1211,
+      "wr": 22.9,
+      "pnl": -2870.2,
+      "pf": 0.659,
+      "dd": 3013.2,
+      "avg_day": -6.64,
+      "tr_day": 2.8,
+      "months": "4/25"
+    }
+  },
+  "S08_OBV_EMA_MOM": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 3203,
+      "wr": 28.9,
+      "pnl": -955.9,
+      "pf": 0.951,
+      "dd": 2125.9,
+      "avg_day": -1.98,
+      "tr_day": 6.62,
+      "months": "10/25"
+    }
+  },
+  "S09_VWAP_WPER": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 2255,
+      "wr": 26.3,
+      "pnl": -3138.7,
+      "pf": 0.791,
+      "dd": 3215.2,
+      "avg_day": -6.81,
+      "tr_day": 4.89,
+      "months": "5/25"
+    }
+  },
+  "S10_ST_MACD_SESSION": {
+    "best_tf": "M30",
+    "stats": {
+      "n": 1764,
+      "wr": 26.9,
+      "pnl": -2201.1,
+      "pf": 0.812,
+      "dd": 2545.9,
+      "avg_day": -4.87,
+      "tr_day": 3.9,
+      "months": "6/25"
+    }
+  },
+  "S11_ALLIGATOR_AWAKEN": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 809,
+      "wr": 26.8,
+      "pnl": -863.8,
+      "pf": 0.834,
+      "dd": 923.6,
+      "avg_day": -2.0,
+      "tr_day": 1.87,
+      "months": "7/25"
+    }
+  },
+  "S12_WPR_RSI_KELT": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 1937,
+      "wr": 22.6,
+      "pnl": -4372.0,
+      "pf": 0.667,
+      "dd": 4580.5,
+      "avg_day": -8.76,
+      "tr_day": 3.88,
+      "months": "3/25"
+    }
+  },
+  "S13_STRUC_BREAK": {
+    "best_tf": "M30",
+    "stats": {
+      "n": 580,
+      "wr": 14.1,
+      "pnl": -1231.6,
+      "pf": 0.481,
+      "dd": 1265.4,
+      "avg_day": -4.37,
+      "tr_day": 2.06,
+      "months": "2/25"
+    }
+  },
+  "S14_KEY_LEVELS": {
+    "best_tf": "M30",
+    "stats": {
+      "n": 447,
+      "wr": 13.9,
+      "pnl": -1393.7,
+      "pf": 0.324,
+      "dd": 1393.7,
+      "avg_day": -4.72,
+      "tr_day": 1.52,
+      "months": "0/25"
+    }
+  },
+  "S15_OBV_MACD": {
+    "best_tf": "M15",
+    "stats": {
+      "n": 4394,
+      "wr": 24.4,
+      "pnl": -8072.9,
+      "pf": 0.727,
+      "dd": 8080.9,
+      "avg_day": -15.68,
+      "tr_day": 8.53,
+      "months": "1/25"
+    }
+  },
+  "S09_MFKK_SCALPING": {
+    "best_tf": "M30",
+    "stats": {
+      "n": 832,
+      "wr": 31.0,
+      "pnl": -134.3,
+      "pf": 0.964,
+      "dd": 632.8,
+      "avg_day": -0.47,
+      "tr_day": 2.9,
+      "months": "13/25"
+    }
+  }
+}

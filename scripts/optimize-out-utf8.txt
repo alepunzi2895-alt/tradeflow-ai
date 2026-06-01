@@ -1,0 +1,16 @@
+﻿Fetching up to 730 days (Yahoo limit)...
+Fetched 10649 candles
+Testing 120 weight combinations (TP 25, SL 15, Score >=75)...
+Progress: 0/120
+Progress: 50/120
+Progress: 100/120
+
+­ƒÅå TOP 5 COMBINATIONS (Score >= 75 | WIDE TP=25 SL=15):
+CCI: 10% | MACD: 15% | ADX: 75%  => Trades: 1240, WR: 47.3%, PnL: $4840.0
+CCI: 15% | MACD: 15% | ADX: 70%  => Trades: 1174, WR: 47.5%, PnL: $4710.0
+CCI: 15% | MACD: 10% | ADX: 75%  => Trades: 1238, WR: 46.9%, PnL: $4670.0
+CCI: 10% | MACD: 10% | ADX: 80%  => Trades: 1300, WR: 46.5%, PnL: $4660.0
+CCI: 10% | MACD: 20% | ADX: 70%  => Trades: 1186, WR: 47.1%, PnL: $4570.0
+
+­ƒöä CURRENT BASELINE: CCI 35% | MACD 35% | ADX 30%
+Trade: 566, WR: 42.8%, PnL: $1190.0

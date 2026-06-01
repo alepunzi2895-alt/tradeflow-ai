@@ -1,0 +1,32 @@
+{
+  "generated": "2026-04-14T22:03:37Z",
+  "period": "730d H1 XAU/USD",
+  "optimal_config": {
+    "weights": {
+      "cci": 10,
+      "macd": 10,
+      "adx": 80
+    },
+    "buy_threshold": 90,
+    "sell_threshold": 68,
+    "ema50_filter": false,
+    "tp_atr": null,
+    "sl_atr": null,
+    "tp_usd": 20,
+    "sl_usd": 12,
+    "cooldown_bars": 0
+  },
+  "results": {
+    "n": 1435,
+    "wins": 746,
+    "losses": 689,
+    "wr": 52.0,
+    "pnl": 6652,
+    "pf": 1.805,
+    "maxdd": 600,
+    "bwr": 43.7,
+    "swr": 54.3,
+    "bn": 316,
+    "sn": 1119
+  }
+}

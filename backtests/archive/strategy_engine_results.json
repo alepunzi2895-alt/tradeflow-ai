@@ -1,0 +1,1246 @@
+{
+  "generated_at": "2026-04-13T09:15:57.773672",
+  "config": {
+    "symbol": "GC=F",
+    "interval": "1h",
+    "tp_usd": 20.0,
+    "sl_usd": 12.0,
+    "max_trades_day": 3,
+    "cooldown_h": 1,
+    "extreme_day_mult": 3.0,
+    "session_utc": [
+      7,
+      17
+    ]
+  },
+  "strategies": {
+    "EXHAUSTION": {
+      "stats": {
+        "n": 121,
+        "wr": 57.9,
+        "pnl": 788.0,
+        "pf": 2.288,
+        "avg_per_day": 14.07,
+        "trades_per_day": 2.16,
+        "pos_months": "8/21",
+        "max_dd": 120.0
+      },
+      "signal_count": 121
+    },
+    "EMA_TREND": {
+      "stats": {
+        "n": 550,
+        "wr": 37.6,
+        "pnl": 24.0,
+        "pf": 1.006,
+        "avg_per_day": 0.1,
+        "trades_per_day": 2.37,
+        "pos_months": "14/29",
+        "max_dd": 652.0
+      },
+      "signal_count": 550
+    },
+    "RSI_EXTREME": {
+      "stats": {
+        "n": 227,
+        "wr": 45.4,
+        "pnl": 572.0,
+        "pf": 1.384,
+        "avg_per_day": 4.54,
+        "trades_per_day": 1.8,
+        "pos_months": "19/28",
+        "max_dd": 128.0
+      },
+      "signal_count": 227
+    },
+    "BB_REVERSAL": {
+      "stats": {
+        "n": 695,
+        "wr": 37.0,
+        "pnl": -116.0,
+        "pf": 0.978,
+        "avg_per_day": -0.38,
+        "trades_per_day": 2.29,
+        "pos_months": "15/29",
+        "max_dd": 668.0
+      },
+      "signal_count": 695
+    },
+    "STOCH_CROSS": {
+      "stats": {
+        "n": 290,
+        "wr": 38.6,
+        "pnl": 104.0,
+        "pf": 1.049,
+        "avg_per_day": 0.46,
+        "trades_per_day": 1.28,
+        "pos_months": "15/29",
+        "max_dd": 340.0
+      },
+      "signal_count": 290
+    },
+    "MACD_ZERO": {
+      "stats": {
+        "n": 134,
+        "wr": 39.6,
+        "pnl": 88.0,
+        "pf": 1.091,
+        "avg_per_day": 0.72,
+        "trades_per_day": 1.1,
+        "pos_months": "14/28",
+        "max_dd": 236.0
+      },
+      "signal_count": 134
+    },
+    "SESSION_MOM": {
+      "stats": {
+        "n": 789,
+        "wr": 39.9,
+        "pnl": 612.0,
+        "pf": 1.108,
+        "avg_per_day": 1.9,
+        "trades_per_day": 2.45,
+        "pos_months": "16/29",
+        "max_dd": 404.0
+      },
+      "signal_count": 789
+    }
+  },
+  "regime_best_strategy": {
+    "TREND_UP": "EXHAUSTION",
+    "TREND_DOWN": "EXHAUSTION",
+    "WEAK_TREND_UP": "SESSION_MOM",
+    "WEAK_TREND_DOWN": "SESSION_MOM",
+    "RANGE": "RSI_EXTREME",
+    "VOLATILE_RANGE": "RSI_EXTREME"
+  },
+  "regime_candidates": {
+    "TREND_UP": [
+      "EXHAUSTION",
+      "EMA_TREND",
+      "SESSION_MOM",
+      "MACD_ZERO"
+    ],
+    "TREND_DOWN": [
+      "EXHAUSTION",
+      "EMA_TREND",
+      "SESSION_MOM",
+      "MACD_ZERO"
+    ],
+    "WEAK_TREND_UP": [
+      "EMA_TREND",
+      "MACD_ZERO",
+      "STOCH_CROSS",
+      "SESSION_MOM"
+    ],
+    "WEAK_TREND_DOWN": [
+      "EMA_TREND",
+      "MACD_ZERO",
+      "STOCH_CROSS",
+      "SESSION_MOM"
+    ],
+    "VOLATILE_RANGE": [
+      "RSI_EXTREME",
+      "BB_REVERSAL",
+      "STOCH_CROSS",
+      "SESSION_MOM"
+    ],
+    "RANGE": [
+      "RSI_EXTREME",
+      "BB_REVERSAL",
+      "STOCH_CROSS",
+      "MACD_ZERO"
+    ],
+    "UNKNOWN": [
+      "EMA_TREND",
+      "RSI_EXTREME",
+      "MACD_ZERO"
+    ]
+  },
+  "adaptive_system": {
+    "stats": {
+      "n": 1472,
+      "wr": 41.3,
+      "pnl": 1792.0,
+      "pf": 1.173,
+      "avg_per_day": 3.28,
+      "trades_per_day": 2.69,
+      "pos_months": "19/29",
+      "max_dd": 440.0
+    },
+    "by_strategy": {
+      "EMA_TREND": {
+        "n": 314,
+        "wr": 36.3,
+        "pnl": -120.0,
+        "pf": 0.95,
+        "avg_per_day": -0.8,
+        "trades_per_day": 2.09,
+        "pos_months": "19/29",
+        "max_dd": 604.0
+      },
+      "STOCH_CROSS": {
+        "n": 126,
+        "wr": 36.5,
+        "pnl": -40.0,
+        "pf": 0.958,
+        "avg_per_day": -0.36,
+        "trades_per_day": 1.12,
+        "pos_months": "12/27",
+        "max_dd": 292.0
+      },
+      "RSI_EXTREME": {
+        "n": 106,
+        "wr": 54.7,
+        "pnl": 584.0,
+        "pf": 2.014,
+        "avg_per_day": 9.42,
+        "trades_per_day": 1.71,
+        "pos_months": "17/26",
+        "max_dd": 68.0
+      },
+      "BB_REVERSAL": {
+        "n": 289,
+        "wr": 32.9,
+        "pnl": -428.0,
+        "pf": 0.816,
+        "avg_per_day": -2.89,
+        "trades_per_day": 1.95,
+        "pos_months": "13/28",
+        "max_dd": 668.0
+      },
+      "MACD_ZERO": {
+        "n": 62,
+        "wr": 40.3,
+        "pnl": 56.0,
+        "pf": 1.126,
+        "avg_per_day": 0.95,
+        "trades_per_day": 1.05,
+        "pos_months": "13/24",
+        "max_dd": 152.0
+      },
+      "SESSION_MOM": {
+        "n": 481,
+        "wr": 44.7,
+        "pnl": 1108.0,
+        "pf": 1.347,
+        "avg_per_day": 5.2,
+        "trades_per_day": 2.26,
+        "pos_months": "16/29",
+        "max_dd": 220.0
+      },
+      "EXHAUSTION": {
+        "n": 94,
+        "wr": 58.5,
+        "pnl": 632.0,
+        "pf": 2.35,
+        "avg_per_day": 14.7,
+        "trades_per_day": 2.19,
+        "pos_months": "9/20",
+        "max_dd": 96.0
+      }
+    }
+  },
+  "last_100_trades": [
+    {
+      "date": "2026-02-06",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4884.7998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-02-06",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4889.5,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-02-09",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 5027.2001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-02-09",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 5048.10009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-02-11",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 5077.0,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-11",
+      "hour": 10,
+      "dir": "sell",
+      "entry": 5118.60009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-11",
+      "hour": 11,
+      "dir": "sell",
+      "entry": 5136.7998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-12",
+      "hour": 14,
+      "dir": "buy",
+      "entry": 5067.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-12",
+      "hour": 16,
+      "dir": "buy",
+      "entry": 4976.2998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-13",
+      "hour": 11,
+      "dir": "sell",
+      "entry": 4973.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EXHAUSTION",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-02-17",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 4935.7998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-18",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4949.5,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-18",
+      "hour": 14,
+      "dir": "sell",
+      "entry": 5012.2998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-18",
+      "hour": 15,
+      "dir": "sell",
+      "entry": 5018.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-19",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 5014.39990234375,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-20",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 5048.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-20",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 5047.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-20",
+      "hour": 10,
+      "dir": "sell",
+      "entry": 5054.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-23",
+      "hour": 16,
+      "dir": "sell",
+      "entry": 5230.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-24",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 5198.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-02-24",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 5193.0,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-02-24",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 5190.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-02-25",
+      "hour": 16,
+      "dir": "sell",
+      "entry": 5231.7001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-27",
+      "hour": 13,
+      "dir": "sell",
+      "entry": 5240.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-27",
+      "hour": 14,
+      "dir": "sell",
+      "entry": 5240.89990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-02-27",
+      "hour": 15,
+      "dir": "sell",
+      "entry": 5257.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-02",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 5423.0,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-03-02",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 5408.89990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-03-02",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 5406.89990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-03-03",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 5286.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-03",
+      "hour": 10,
+      "dir": "buy",
+      "entry": 5259.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-03",
+      "hour": 11,
+      "dir": "buy",
+      "entry": 5154.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-05",
+      "hour": 12,
+      "dir": "sell",
+      "entry": 5173.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-05",
+      "hour": 13,
+      "dir": "sell",
+      "entry": 5126.5,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "MACD_ZERO",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-06",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 5128.2001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-06",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 5116.7001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-06",
+      "hour": 11,
+      "dir": "sell",
+      "entry": 5086.10009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "MACD_ZERO",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-10",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 5191.7998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-10",
+      "hour": 15,
+      "dir": "sell",
+      "entry": 5238.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-10",
+      "hour": 16,
+      "dir": "sell",
+      "entry": 5236.89990234375,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "RSI_EXTREME",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-11",
+      "hour": 12,
+      "dir": "buy",
+      "entry": 5175.10009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-11",
+      "hour": 13,
+      "dir": "buy",
+      "entry": 5184.2998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-11",
+      "hour": 15,
+      "dir": "buy",
+      "entry": 5173.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-12",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 5188.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-12",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 5184.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-12",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 5194.2001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-13",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 5089.5,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-13",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 5092.2001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-13",
+      "hour": 11,
+      "dir": "sell",
+      "entry": 5112.89990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-16",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4995.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "MACD_ZERO",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-16",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4979.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-16",
+      "hour": 12,
+      "dir": "sell",
+      "entry": 5024.89990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-17",
+      "hour": 15,
+      "dir": "buy",
+      "entry": 5002.60009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-18",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4999.10009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-18",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4990.7001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "MACD_ZERO",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-18",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4996.39990234375,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-19",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4729.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-19",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4710.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-19",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4701.10009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-20",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4707.2001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-20",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4695.10009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-20",
+      "hour": 16,
+      "dir": "buy",
+      "entry": 4585.2998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-23",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4205.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-23",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4251.7001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-23",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4254.5,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-03-24",
+      "hour": 12,
+      "dir": "sell",
+      "entry": 4378.7001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-03-25",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 4539.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-25",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4555.60009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-25",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 4550.39990234375,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-26",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4449.39990234375,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-26",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4424.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-26",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4421.2998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-03-27",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 4475.2001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-27",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4452.10009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-27",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4457.2001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-30",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 4555.2001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-30",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4566.89990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-30",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 4562.0,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-31",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 4594.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-31",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4599.0,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-03-31",
+      "hour": 13,
+      "dir": "buy",
+      "entry": 4637.2998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "MACD_ZERO",
+      "regime": "WEAK_TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4755.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 4750.5,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-01",
+      "hour": 10,
+      "dir": "buy",
+      "entry": 4758.7001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-02",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4668.2001953125,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-04-02",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4646.10009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-04-02",
+      "hour": 9,
+      "dir": "sell",
+      "entry": 4647.2998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_DOWN"
+    },
+    {
+      "date": "2026-04-06",
+      "hour": 10,
+      "dir": "sell",
+      "entry": 4715.2998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-07",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4709.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-07",
+      "hour": 13,
+      "dir": "sell",
+      "entry": 4668.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "MACD_ZERO",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-07",
+      "hour": 14,
+      "dir": "buy",
+      "entry": 4658.10009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-08",
+      "hour": 7,
+      "dir": "buy",
+      "entry": 4839.7001953125,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-08",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4821.7998046875,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-08",
+      "hour": 13,
+      "dir": "buy",
+      "entry": 4804.10009765625,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "EMA_TREND",
+      "regime": "TREND_UP"
+    },
+    {
+      "date": "2026-04-09",
+      "hour": 7,
+      "dir": "sell",
+      "entry": 4748.39990234375,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-04-09",
+      "hour": 8,
+      "dir": "sell",
+      "entry": 4750.5,
+      "outcome": "loss",
+      "pnl": -12.0,
+      "strategy": "SESSION_MOM",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-04-09",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 4753.89990234375,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "EMA_TREND",
+      "regime": "WEAK_TREND_DOWN"
+    },
+    {
+      "date": "2026-04-10",
+      "hour": 8,
+      "dir": "buy",
+      "entry": 4763.10009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "BB_REVERSAL",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-10",
+      "hour": 9,
+      "dir": "buy",
+      "entry": 4774.60009765625,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "STOCH_CROSS",
+      "regime": "RANGE"
+    },
+    {
+      "date": "2026-04-10",
+      "hour": 13,
+      "dir": "buy",
+      "entry": 4799.2998046875,
+      "outcome": "win",
+      "pnl": 20.0,
+      "strategy": "MACD_ZERO",
+      "regime": "RANGE"
+    }
+  ]
+}

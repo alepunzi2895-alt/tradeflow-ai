@@ -1,0 +1,473 @@
+// TradeFlow AI — modules/journal.js
+
+// ── JOURNAL ────────────────────────────────────────────
+const FFIELDS=[
+  {id:'f-date',lbl:'DATA',type:'date'},{id:'f-dir',lbl:'DIR.',type:'select',opts:['BUY','SELL']},
+  {id:'f-entry',lbl:'ENTRY',ph:'3050.00'},{id:'f-sl',lbl:'SL',ph:'3040.00'},
+  {id:'f-tp1',lbl:'TP1',ph:'3065.00'},{id:'f-tp2',lbl:'TP2',ph:'3080.00'},
+  {id:'f-result',lbl:'RISULTATO',type:'select',opts:['','WIN','LOSS','BE']},{id:'f-pnl',lbl:'P&L $',ph:'+150'},
+  {id:'f-emo',lbl:'EMOZIONE',type:'select',opts:['Neutro','Fiducioso','Ansioso','FOMO','Revenge','Paura','Euforia']},
+  {id:'f-err',lbl:'ERRORE',type:'select',opts:['Nessuno','Entry anticipata','SL stretto','TP mancato','Oversize','No confluenze','Revenge','FOMO']},
+];
+function initForm(){
+  const g=document.getElementById('fgrid');g.innerHTML='';
+  FFIELDS.forEach(f=>{
+    const w=document.createElement('div');w.className='ff';
+    const l=document.createElement('label');l.textContent=f.lbl;w.appendChild(l);
+    let el;
+    if(f.type==='select'){el=document.createElement('select');(f.opts||[]).forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o||'--';el.appendChild(op);});}
+    else{el=document.createElement('input');el.type=f.type||'text';if(f.ph)el.placeholder=f.ph;}
+    el.id=f.id;w.appendChild(el);g.appendChild(w);
+  });
+  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('f-notes').value='';
+}
+function saveEntry(){
+  const entry=document.getElementById('f-entry').value;if(!entry)return;
+  const e={
+    id:'tf_'+Date.now(),
+    date:document.getElementById('f-date').value,
+    dir:document.getElementById('f-dir').value,
+    entry,
+    sl:document.getElementById('f-sl').value,
+    tp1:document.getElementById('f-tp1').value,
+    tp2:document.getElementById('f-tp2').value,
+    result:document.getElementById('f-result').value,
+    pnl:document.getElementById('f-pnl').value,
+    emo:document.getElementById('f-emo').value,
+    err:document.getElementById('f-err').value,
+    notes:document.getElementById('f-notes').value,
+    symbol:(window.activeAsset||'XAU')+'USD',
+  };
+  entries.unshift(e);S.set(K.j,entries);
+  const w=entries.filter(x=>x.result==='WIN').length;P.winRate=Math.round(w/entries.length*100);S.set(K.p,P);
+  document.getElementById('tform').classList.remove('on');renderJournal();updateHdr();
+  // Persist to Turso async
+  dbSave('save_trade',{
+    id:e.id,
+    symbol:e.symbol,
+    direction:e.dir,
+    entry_price:parseFloat(e.entry)||null,
+    sl:parseFloat(e.sl)||null,
+    tp1:parseFloat(e.tp1)||null,
+    tp2:parseFloat(e.tp2)||null,
+    result:e.result,
+    pnl:parseFloat(e.pnl)||0,
+    emotion:e.emo,
+    mistake:e.err,
+    notes:e.notes,
+    trade_date:e.date,
+  }).catch(()=>{});
+}
+document.getElementById('btn-new').onclick=()=>{const f=document.getElementById('tform');f.classList.toggle('on');if(f.classList.contains('on'))initForm();};
+document.getElementById('btn-save').onclick=saveEntry;
+document.getElementById('btn-fcan').onclick=()=>document.getElementById('tform').classList.remove('on');
+
+// CSV Import
+document.getElementById('btn-import').onclick=()=>openOvl('csvsheet');
+document.getElementById('btn-csvc').onclick=()=>closeOvl('csvsheet');
+document.getElementById('csv-drop').onclick=()=>document.getElementById('csv-file').click();
+document.getElementById('csv-file').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;document.getElementById('csv-text').value=(await f.text()).slice(0,3000);e.target.value='';};
+document.getElementById('btn-csv-go').onclick=async()=>{
+  const text=document.getElementById('csv-text').value.trim();if(!text)return;
+  const btn=document.getElementById('btn-csv-go');btn.textContent='⏳...';btn.disabled=true;
+  try{
+    const reply=await api([{role:'user',content:`Analizza storico trade:\n\n${text.slice(0,2000)}\n\nIgnora Balance/Credit/Deposit/Withdrawal. Solo trade reali. Statistiche, pattern errori, 3 azioni concrete.`}],
+      `Sei TradeFlow AI Journal Coach. Italiano. Profilo: ${P.name}.`);
+    closeOvl('csvsheet');showAiResult(reply);autoLearn(reply);
+  }catch(e){alert('Errore: '+e.message);}
+  btn.textContent='🧠 Analizza con AI';btn.disabled=false;
+};
+
+// Screenshot MT5
+let scrImgData=null;
+document.getElementById('btn-screen').onclick=()=>openOvl('scrsheet');
+document.getElementById('btn-scrc').onclick=()=>{closeOvl('scrsheet');scrImgData=null;document.getElementById('scr-prev').style.display='none';document.getElementById('btn-scr-go').style.display='none';};
+document.getElementById('scr-drop').onclick=()=>document.getElementById('scr-file').click();
+document.getElementById('scr-file').onchange=async e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  scrImgData=await compress(f);
+  document.getElementById('scr-img').src=scrImgData.dataUrl;
+  document.getElementById('scr-prev').style.display='block';
+  document.getElementById('btn-scr-go').style.display='block';
+  e.target.value='';
+};
+document.getElementById('btn-scr-go').onclick=async()=>{
+  if(!scrImgData?.b64)return;
+  const btn=document.getElementById('btn-scr-go');btn.textContent='⏳...';btn.disabled=true;
+  try{
+    const reply=await api([{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:scrImgData.b64}},{type:'text',text:'Screenshot storico MT5. REGOLA: ignora completamente Balance, Credit, Deposit, Withdrawal, Bonus, EXP, SC-CC. Leggi SOLO trade reali su strumenti finanziari con direzione buy/sell. Per ogni trade reale: strumento, lotti, entry→exit, P&L. Calcola statistiche SOLO sui trade reali: win rate, avg RR, profitto. Pattern errori e 3 azioni concrete.'}]}],
+      `Sei TradeFlow AI Coach. Italiano. Profilo: ${P.name}.`);
+    closeOvl('scrsheet');scrImgData=null;showAiResult(reply);autoLearn(reply);
+  }catch(e){alert('Errore: '+e.message);}
+  btn.textContent='🧠 Analizza Trade Chiusi';btn.disabled=false;
+};
+
+function showAiResult(reply){
+  const box=document.getElementById('aibox');const aic=document.getElementById('aic');
+  aic.innerHTML='';aic.appendChild(md(reply));box.style.display='block';
+  document.getElementById('jp').scrollTop=0;
+}
+
+// ── REPORT & COACHING ────────────────────────────────────
+async function generateReport(period){
+  if(!entries.length){alert('Nessun trade nel journal.');return;}
+  const btn=document.getElementById(`btn-report-${period}`);
+  if(btn){btn.textContent='⏳...';btn.disabled=true;}
+  try{
+    const mem=tradeMemory.summary||'';
+    const r=await fetch('/api/report',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'report',entries,profile:P,period,memory:mem,asset:window.activeAsset||'XAU'})
+    });
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'Errore report');
+    showAiResult(d.report);
+    // Auto-save to memory
+    tradeMemory.summary=d.report.slice(0,500);
+    tradeMemory.lastReport={period,date:new Date().toISOString(),stats:d.stats};
+    S.set(K.mem,tradeMemory);
+    updateMemoryInfo();
+  }catch(e){alert('Errore: '+e.message);}
+  if(btn){btn.textContent={day:'📋 Oggi',week:'📋 Settimana',month:'📋 Mese'}[period];btn.disabled=false;}
+}
+
+async function generateProgress(){
+  if(!entries.length){alert('Nessun trade nel journal.');return;}
+  const btn=document.getElementById('btn-progress');
+  if(btn){btn.textContent='⏳...';btn.disabled=true;}
+  try{
+    const mem=tradeMemory.summary||'';
+    const r=await fetch('/api/report',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'progress',entries:entries.slice(0,30),profile:P,period:'all',memory:mem,asset:window.activeAsset||'XAU'})
+    });
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'Errore');
+    showAiResult(d.report);
+    // Update progress badge
+    const badge=document.getElementById('progress-badge');
+    if(badge){badge.style.display='block';badge.textContent='📈 Progressi aggiornati — '+new Date().toLocaleDateString('it-IT');}
+  }catch(e){alert('Errore: '+e.message);}
+  if(btn){btn.textContent='📈 Progressi';btn.disabled=false;}
+}
+
+async function coachSingleTrade(entry){
+  try{
+    const r=await fetch('/api/report',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'coaching',entries:[entry],profile:P,period:'single',asset:window.activeAsset||'XAU'})
+    });
+    const d=await r.json();
+    if(!d.ok)return null;
+    return d.report;
+  }catch(e){return null;}
+}
+
+function saveAnalysisMemory(){
+  const aic=document.getElementById('aic');
+  if(!aic||!aic.textContent)return;
+  const entry={date:new Date().toISOString(),text:aic.textContent.slice(0,600)};
+  analysisMemory.entries=[entry,...(analysisMemory.entries||[])].slice(0,20);
+  S.set(K.amem,analysisMemory);
+  alert('✅ Analisi salvata nella memoria operatività.');
+}
+
+function resetMemory(type){
+  const label=type==='week'?'settimana':'mese';
+  if(!confirm(`Reset memoria analisi operatività (${label})?`))return;
+  analysisMemory={entries:[],lastReset:new Date().toISOString()};
+  S.set(K.amem,analysisMemory);
+  tradeMemory.summary='';S.set(K.mem,tradeMemory);
+  updateMemoryInfo();
+  alert('✅ Memoria resettata.');
+}
+
+function updateMemoryInfo(){
+  const el=document.getElementById('memory-date');
+  if(!el)return;
+  const count=(analysisMemory.entries||[]).length;
+  const last=tradeMemory.lastReset||tradeMemory.lastReport?.date;
+  el.textContent=`Memoria: ${count} analisi salvate${last?' · ultimo reset '+new Date(last).toLocaleDateString('it-IT'):''}`;
+}
+
+// ── MYFXBOOK IMPORT TO JOURNAL ────────────────────────────
+async function importMfxToJournal(accountId){
+  if(!mfxSession)return;
+  const btn=document.querySelector(`[onclick="importMfxToJournal('${accountId}')"]`);
+  if(btn){btn.textContent='⏳ Importazione...';btn.disabled=true;}
+  try{
+    const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'history',session:mfxSession.session,accountId})});
+    const d=await r.json();
+    if(!d.history?.length)throw new Error('Nessun trade trovato');
+    // Debug: log raw history to understand structure
+    const rawSample=d.history?.[0];
+    console.log('MFX raw trade sample:', JSON.stringify(rawSample));
+    console.log('MFX total history:', d.history?.length);
+
+    // MyFxBook returns 'action' field: "Buy"/"Sell" (not 'type')
+    // Also filter out non-trade entries
+    const SKIP_TYPES=['deposit','withdrawal','credit','balance','bonus','rebate','commission'];
+    const realTrades=(d.history||[]).filter(t=>{
+      // Try both 'action' and 'type' fields
+      const action=String(t.action||t.type||t.actionType||'').toLowerCase();
+      if(!action) return false;
+      if(SKIP_TYPES.some(s=>action.includes(s))) return false;
+      // Accept buy/sell in any form
+      return action.includes('buy')||action.includes('sell')||action==='0'||action==='1';
+    });
+
+    console.log('MFX real trades after filter:', realTrades.length);
+
+    if(!realTrades.length){
+      // Show all available data to debug
+      const types=[...new Set((d.history||[]).map(t=>String(t.action||t.type||'unknown')))];
+      alert('Nessun trade trovato. Tipi trovati: '+types.slice(0,10).join(', ')+'. Controlla la console per dettagli.');
+      if(btn){btn.textContent='📥 Importa Trade al Journal';btn.disabled=false;}
+      return;
+    }
+
+    const existingKeys=new Set(entries.map(e=>`${e.date}_${e.dir}_${parseFloat(e.entry).toFixed(2)}`));
+    let imported=0;
+    const newEntries=[];
+
+    for(const t of realTrades.slice(0,100)){
+      // Handle both date formats: "2024.01.15 10:30" and "2024-01-15 10:30"
+      const rawDate=t.openTime||t.open_time||t.openDate||'';
+      const openDate=rawDate?String(rawDate).replace(/\./g,'-').slice(0,10):new Date().toISOString().slice(0,10);
+
+      // Direction from action or type
+      const action=String(t.action||t.type||'').toLowerCase();
+      const dir=action.includes('sell')||action==='1'?'SELL':'BUY';
+
+      const entryPrice=parseFloat(t.openPrice||t.open_price||t.openRate||0);
+      const closePrice=parseFloat(t.closePrice||t.close_price||t.closeRate||0);
+      const pnl=parseFloat(t.profit||t.pnl||0);
+      const lots=parseFloat(t.size||t.lots||t.volume||0);
+      const sym=t.symbol||t.instrument||((window.activeAsset||'XAU')+'USD');
+
+      // Compute SL/TP if available
+      const sl=parseFloat(t.tp||t.stopLoss||0)||'';
+      const tp1=parseFloat(t.sl||t.takeProfit||0)||'';
+
+      const key=`${openDate}_${dir}_${entryPrice.toFixed(2)}`;
+      if(existingKeys.has(key)) continue;
+      existingKeys.add(key);
+
+      // Map emotion from MFX data if available
+      const rr=entryPrice&&closePrice&&sl?Math.abs(closePrice-entryPrice)/Math.abs(entryPrice-(sl||entryPrice)):0;
+
+      newEntries.push({
+        id:Date.now()+imported+Math.floor(Math.random()*1000),
+        date:openDate,
+        dir,
+        entry:entryPrice,
+        sl:sl||'',
+        tp1:tp1||'',
+        tp2:'',
+        result:pnl>0?'WIN':pnl<0?'LOSS':'BE',
+        pnl:pnl.toFixed(2),
+        emo:'Neutro',
+        err:'Nessuno',
+        notes:`${sym} ${lots}lot | E:${entryPrice} → C:${closePrice} | RR:${rr.toFixed(2)}`,
+        source:'myfxbook'
+      });
+      imported++;
+    }
+
+    if(imported>0){
+      entries=[...newEntries,...entries];
+      S.set(K.j,entries);
+      // Update win rate
+      const wins=entries.filter(x=>x.result==='WIN').length;
+      if(entries.length>0){P.winRate=Math.round(wins/entries.length*100);S.set(K.p,P);}
+      alert('✅ '+imported+' trade importati nel Journal da MyFxBook!');
+      switchTab('journal');
+      renderJournal();
+    }else{
+      alert('Tutti i '+realTrades.length+' trade sono già presenti nel Journal (controllo per data+direzione+prezzo).');
+    }
+  }catch(e){alert('Errore importazione: '+e.message);}
+  if(btn){btn.textContent='📥 Importa Trade al Journal';btn.disabled=false;}
+}
+
+document.getElementById('btn-analyze').onclick=async()=>{
+  if(!entries.length)return;
+  const btn=document.getElementById('btn-analyze');btn.textContent='⏳...';btn.disabled=true;
+  try{
+    const mem=analysisMemory.entries?.slice(0,3).map(e=>`[${e.date?.slice(0,10)}] ${e.text}`).join('\n')||'';
+    const memCtx=mem?`\nMEMORIA ANALISI PRECEDENTE:\n${mem}`:'';
+    const sum=entries.slice(0,25).map(e=>`${e.date}|${e.dir}|E:${e.entry} SL:${e.sl}|${e.result||'?'}|${e.pnl}$|${e.emo}|${e.err}`).join('\n');
+    const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nStatistiche, aree di sviluppo (non errori), 3 azioni concrete, Score Disciplina X/10.`}],
+      `Sei TradeFlow AI Coach. Italiano. Tono costruttivo. Aree noto sviluppo: ${P.errors.join(',')}.`);
+    showAiResult(reply);autoLearn(reply);
+  }catch(e){alert('Errore: '+e.message);}
+  btn.textContent='🧠 Analisi';btn.disabled=false;
+};
+
+// Wire report buttons
+document.getElementById('btn-report-day').onclick=()=>generateReport('day');
+document.getElementById('btn-report-week').onclick=()=>generateReport('week');
+document.getElementById('btn-report-month').onclick=()=>generateReport('month');
+document.getElementById('btn-progress').onclick=generateProgress;
+document.getElementById('btn-myfxb-j').onclick=()=>switchTab('myfx');
+
+function renderJournal(){
+  const wins=entries.filter(e=>e.result==='WIN').length;
+  const wr=entries.length?Math.round(wins/entries.length*100):0;
+  const pnl=entries.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
+  
+  const stats=[
+    {l:'Win Rate',v:`${wr}%`,c:wr>=50?'var(--green)':'var(--red)'},
+    {l:'P&L Totale',v:`${pnl>=0?'+':''}${pnl.toFixed(0)}$`,c:pnl>=0?'var(--green)':'var(--red)'},
+    {l:'Trade Totali',v:entries.length,c:'#fff'},
+    {l:'Sessioni',v:P.sessions||0,c:'var(--dim)'}
+  ];
+  
+  document.getElementById('sgrid').innerHTML=stats.map(s=>`
+    <div class="sc">
+      <div class="sv" style="color:${s.c}">${s.v}</div>
+      <div class="sl">${s.l}</div>
+    </div>
+  `).join('');
+
+  const eb=document.getElementById('ebox');const et=document.getElementById('etags');
+  if(P.errors?.length){
+    eb.style.display='block';
+    et.innerHTML=P.errors.map(e=>`<span class="etag">${e}</span>`).join('');
+  }else{eb.style.display='none';}
+
+  const list=document.getElementById('elist');
+  if(!entries.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim);font-size:12px">Nessun trade loggato.</div>';return;}
+  list.innerHTML='';
+
+  entries.forEach(e=>{
+    const resClass = e.result ? e.result.toLowerCase() : '';
+    const d=document.createElement('div');
+    d.className=`ec ${resClass}`;
+    
+    const pv=parseFloat(e.pnl)||0;
+    const dateStr = new Date(e.date).toLocaleDateString('it-IT', {day:'2-digit', month:'short'});
+    
+    d.innerHTML=`
+      <div class="etop">
+        <div>
+          <div class="edate">${dateStr} · ${e.symbol || 'XAUUSD'}</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <span class="etag" style="background:${e.dir==='BUY'?'rgba(0,230,118,0.1)':'rgba(255,71,87,0.1)'};color:${e.dir==='BUY'?'var(--green)':'var(--red)'}">${e.dir}</span>
+            ${e.result ? `<span class="etag" style="text-transform:uppercase">${e.result}</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="epnl" style="color:${pv>=0?'var(--green)':'var(--red)'}">${pv>=0?'+':''}${e.pnl}$</div>
+          <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end">
+            <button class="bcoach" style="background:none;border:none;color:var(--g);font-size:14px;cursor:pointer" title="Coaching AI">💡</button>
+            <button class="bdel" data-id="${e.id}" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer">✕</button>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text);margin-bottom:8px;opacity:0.8">
+        Entry: ${e.entry} · SL: ${e.sl} · TP: ${e.tp1}
+      </div>
+      </div>
+      ${tradeMemory.entries?.[e.id] ? `
+        <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(200,169,110,0.06);border:1px solid rgba(200,169,110,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
+          <button class="coach-close" data-id="${e.id}" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px">✕</button>
+          💡 ${tradeMemory.entries[e.id]}
+        </div>
+      ` : ''}
+    `;
+
+    // Handle Delete
+    const delBtn = d.querySelector('.bdel');
+    if(delBtn) {
+      delBtn.onclick=(ev)=>{
+        ev.stopPropagation(); 
+        if(!confirm('Eliminare questo trade?'))return;
+        const id=e.id;
+        entries=entries.filter(x=>String(x.id)!==String(id));
+        S.set(K.j,entries);
+        renderJournal();
+        updateHdr();
+        dbSave('delete_trade',{id,user_id:window.userId}).catch(()=>{});
+      };
+    }
+
+    // Handle Coach Close
+    const closeBtn = d.querySelector('.coach-close');
+    if(closeBtn) {
+      closeBtn.onclick=(ev)=>{
+        ev.stopPropagation();
+        if(tradeMemory.entries) {
+          delete tradeMemory.entries[e.id];
+          S.set(K.mem, tradeMemory);
+          renderJournal();
+        }
+      };
+    }
+
+    const cbtn=d.querySelector('.bcoach');
+    if(cbtn)cbtn.onclick=async()=>{
+      cbtn.textContent='⏳';cbtn.disabled=true;
+      const coaching=await coachSingleTrade(e);
+      if(coaching){
+        renderJournal(); // Refresh to show the coaching text
+        tradeMemory.entries=tradeMemory.entries||{};
+        tradeMemory.entries[e.id]=coaching;
+        S.set(K.mem,tradeMemory);
+      }
+      cbtn.textContent='💡';cbtn.disabled=false;
+    };
+    list.appendChild(d);
+  });
+}
+
+// ── TURSO BOOT SYNC ─────────────────────────────────────────
+// On load: fetch trades from Turso and merge with localStorage (union by id)
+async function syncJournalFromDb(){
+  try{
+    const res=await dbLoad('get_trades',{user_id:window.userId},4000);
+    if(!res?.ok||!res.trades?.length) return;
+    const localIds=new Set(entries.map(e=>String(e.id)));
+    let added=0;
+    for(const t of res.trades){
+      const tid=String(t.id||t.ID);
+      if(localIds.has(tid)) continue;
+      // Map Turso cols back to journal format
+      entries.push({
+        id:tid,
+        date:t.trade_date||t.created_at?.slice(0,10)||'',
+        dir:t.direction||'BUY',
+        entry:t.entry_price||'',
+        sl:t.sl||'',
+        tp1:t.tp1||'',
+        tp2:t.tp2||'',
+        result:t.result||'',
+        pnl:t.pnl||0,
+        emo:t.emotion||'Neutro',
+        err:t.mistake||'Nessuno',
+        notes:t.notes||'',
+        symbol:t.symbol||'XAUUSD',
+        source:'turso_sync',
+      });
+      localIds.add(tid);
+      added++;
+    }
+    if(added>0){
+      // Sort by date desc
+      entries.sort((a,b)=>b.date>a.date?1:-1);
+      S.set(K.j,entries);
+      renderJournal();
+      console.log(`[TradeFlow] Synced ${added} trade(s) from Turso`);
+    }
+  }catch(e){console.log('[TradeFlow] Journal sync skipped:',e.message);}
+}
+
+// Run sync when journal tab is first opened
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(syncJournalFromDb, 1500); // small delay to let core init finish
+});

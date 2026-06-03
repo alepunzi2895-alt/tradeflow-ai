@@ -202,6 +202,7 @@ async function mt5Get(db) {
   if (scoreRow.rows.length) {
     const s = JSON.parse(scoreRow.rows[0].payload);
     data.ai_score = s.score;
+    data.ai_score_updated_at = s.updated_at;  // freshness check lato bot
   }
   return { ok: true, data, updated_at: row.updated_at };
 }

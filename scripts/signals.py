@@ -367,13 +367,15 @@ def signal_mfkk_scalping(ind, i, h1_trend=None, hour=None):
 
 
 def signal_ob_fvg_scalp(ind, i, h1_trend=None, hour=None):
-    """S10_OB_FVG_SCALP V3 — ICT Order Block + FVG + EMA 233 + ST alignment + ADX gate.
+    """S10_OB_FVG_SCALP V4 — ICT Order Block + FVG + EMA 233 + ST alignment + ADX gate.
     V2: skip ATR spike (>2.5×avg).
     V3 (2026-04-28): Supertrend alignment + ADX>=18 gate.
-      OB+FVG setups in ST-aligned direction have higher follow-through (WR improvement).
-      ADX>=18 avoids trading dead-flat structure where OBs get immediately re-tested.
+    V4 (2026-06-03): Session filter 8-17 UTC — backtest fresco H1/M15 mostra WR 0% su 4 trade.
+      OB/FVG invalidi fuori London+NY overlap: liquidità insufficiente per follow-through.
     """
     if i < 233: return None
+    # Session filter: solo London+NY (8-17 UTC) — fuori da questa finestra WR cade a 0%
+    if hour is not None and not (8 <= hour < 17): return None
     ob_b = ind.get('ob_bull'); ob_s = ind.get('ob_bear')
     fb = ind.get('fvg_bull'); fs = ind.get('fvg_bear')
     e233 = ind['e233'][i]; c = ind['C'][i]

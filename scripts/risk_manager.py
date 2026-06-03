@@ -374,12 +374,14 @@ class RiskManager:
 
     # ── AI SCORE FETCH ─────────────────────────────────────────────────────────
     @staticmethod
-    def fetch_ai_score(vercel_url: str, timeout: int = 5) -> float:
+    def fetch_ai_score(vercel_url: str, timeout: int = 5):
         """
         Recupera l'AI Score corrente dal tab Dashboard via Vercel DB.
-        Ritorna un float 0-100 (default 50 se non disponibile).
+        Ritorna float 0-100 se fresco (<8h), None se stale/offline.
+        Il chiamante usa None come segnale di fallback al calcolo locale.
         """
-        import urllib.request, ssl
+        import urllib.request, ssl, json as _json
+        from datetime import datetime, timezone, timedelta
         try:
             try:
                 import certifi
@@ -391,20 +393,32 @@ class RiskManager:
             url = f"{vercel_url}/api/db?action=mt5_get"
             req = urllib.request.Request(url, headers={'Content-Type': 'application/json'})
             with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
-                import json
-                data = json.loads(r.read().decode())
-                # La risposta ha struttura {ok, data: {..., ai_score: ...}}
+                data = _json.loads(r.read().decode())
                 inner = data.get('data') or {}
                 score = inner.get('ai_score')
-                if score is not None:
-                    return float(score)
-                # Fallback: cerca a livello radice
-                score = data.get('ai_score') or data.get('confidence')
-                if score is not None:
-                    return float(score)
+                if score is None:
+                    score = data.get('ai_score') or data.get('confidence')
+                if score is None:
+                    return None
+
+                # Freshness check: score aggiornato dal browser nelle ultime 8h?
+                updated_at_str = inner.get('ai_score_updated_at')
+                if updated_at_str:
+                    try:
+                        updated_at = datetime.fromisoformat(
+                            updated_at_str.replace('Z', '+00:00'))
+                        age_h = (datetime.now(timezone.utc) - updated_at).total_seconds() / 3600
+                        if age_h > 8:
+                            log.warning(
+                                f"[fetch_ai_score] Score stale ({age_h:.0f}h) — uso calcolo locale")
+                            return None
+                    except Exception:
+                        pass  # data mal formattata → accettiamo lo score senza freshness check
+
+                return float(score)
         except Exception as e:
             log.warning(f"[fetch_ai_score] FAIL ({type(e).__name__}): {e}")
-        return 50.0  # score neutro di default
+        return None  # None = offline/stale → il bot usa _local_ai_score()
 
 
 # ── SINGLETON ─────────────────────────────────────────────────────────────────

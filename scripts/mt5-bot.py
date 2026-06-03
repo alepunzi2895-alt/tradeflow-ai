@@ -88,9 +88,9 @@ LOT_SIZE     = 0.02          # lot size base conto $1000 — CONSERVATIVE→0.01
 MAGIC        = 20250413      # ID univoco per gli ordini di questo bot
 MAX_TRADES   = 0             # 0 = nessun limite giornaliero
 COOLDOWN_H   = 0             # ore di cooldown tra trade (0 = gestito da max 1 per strategia)
-MAX_OPEN_ORDERS = 6          # max 1 per strategia × 6 strategie attive — ogni strategia può avere 1 posizione aperta
-SL_COOLDOWN_H   = 1          # ore di pausa globale dopo 2 SL consecutivi
-STRATEGY_SL_COOLDOWN_H = 2   # ore di pausa per singola strategia dopo 2 SL
+MAX_OPEN_ORDERS = 2          # max 2 posizioni contemporanee (ridotto da 6 per contenere esposizione)
+SL_COOLDOWN_H   = 3          # ore di pausa globale dopo 2 SL consecutivi (era 1h)
+STRATEGY_SL_COOLDOWN_H = 4   # ore di pausa per singola strategia dopo 2 SL (era 2h)
 EXTREME_MULT = 3.0           # ATR > 3x avg = giorno estremo, skip
 MIN_COMPOSITE_TO_TRADE = 45  # composite score minimo per aprire — soglia abbassata per aumentare frequenza trade
 
@@ -1440,8 +1440,16 @@ def run():
                         pass
 
                 if _fetched_score is not None:
-                    current_ai_score = _fetched_score
-                    _score_source = "Vercel"
+                    # Applica sempre la SL-streak penalty anche quando Vercel è online:
+                    # se abbiamo SL consecutivi, limitiamo lo score al massimo locale
+                    # (Vercel può restare stale a 50.0 per ore senza riflettere le perdite)
+                    _local_penalty = _local_ai_score(consecutive_sl_count, state.pnl_today)
+                    if consecutive_sl_count > 0:
+                        current_ai_score = min(_fetched_score, _local_penalty)
+                        _score_source = f"Vercel+SL({consecutive_sl_count})"
+                    else:
+                        current_ai_score = _fetched_score
+                        _score_source = "Vercel"
                 else:
                     # Vercel offline: calcola proxy locale da streak SL + pnl giornaliero
                     current_ai_score = _local_ai_score(consecutive_sl_count, state.pnl_today)

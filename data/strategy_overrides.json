@@ -1,8 +1,8 @@
 {
   "S00_MFKK": {
-    "score_mult": 0.7,
-    "type": "underperform",
-    "reason": "WR 13.3% vs baseline 49.4% (27%)",
-    "updated_at": "2026-06-03T06:00:17.744857"
+    "score_mult": 0.0,
+    "type": "hard_block",
+    "reason": "WR 13.3% vs baseline 49.4% (27%) — sotto soglia hard block 40% — BLOCCATA",
+    "updated_at": "2026-06-03T00:00:00"
   }
 }

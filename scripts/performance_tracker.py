@@ -33,16 +33,17 @@ BACKTEST_BASELINES = {
     "S18_RANGE_REVERSAL":    {"wr": 0.450, "pf": 1.35},   # M30 stimato V1 (nessun backtest reale ancora)
     "S05_MFKK_INTRADAY":     {"wr": 0.253, "pf": 1.10},   # H1 adattivo 25.3% · 162 trade
     "S09_MFKK_SCALPING":     {"wr": 0.360, "pf": 1.40},   # H1 adattivo 36.0% · 25 trade
-    "S10_OB_FVG_SCALP":      {"wr": 0.528, "pf": 1.65},   # M30 adattivo 52.8% · 53 trade
+    "S10_OB_FVG_SCALP":      {"wr": 0.281, "pf": 1.28},   # H1 fresh backtest 2026-06-01: WR 0% su 4 trade live (aggiornato da 52.8%)
     "S16_GOLDEN_SQUEEZE":    {"wr": 0.514, "pf": 1.50},   # H1 adattivo 51.4% · 140 trade
     "S17_CONVERGENCE_SCALP": {"wr": 0.340, "pf": 1.75},   # H4 adattivo 34.0% · 103 trade
 }
 
 ROLLING_WINDOW      = 30    # trade recenti per WR/PF rolling
-MIN_TRADES_ADJUST   = 10    # soglia minima per applicare aggiustamenti
+MIN_TRADES_ADJUST   = 8     # soglia minima per applicare aggiustamenti (abbassata da 10 per reattività)
 BOOST_THRESHOLD     = 1.25  # WR recente > baseline × 1.25 → boost
 PENALTY_THRESHOLD   = 0.70  # WR recente < baseline × 0.70 → penalty
-STREAK_PENALTY_N    = 6     # perdite consecutive → penalty temporanea
+HARD_BLOCK_WR_RATIO = 0.40  # WR recente < baseline × 0.40 → blocco completo (score_mult=0.0)
+STREAK_PENALTY_N    = 4     # perdite consecutive → penalty temporanea (abbassato da 6)
 MAX_CACHE_TRADES    = 500   # massimo trade in cache locale
 
 COMMENT_PREFIX = "TF-AI "  # prefisso commento ordini (vedi place_order in mt5-bot.py)
@@ -237,8 +238,9 @@ class PerformanceTracker:
     def suggest_adjustments(self) -> list:
         """
         Confronta WR recente vs baseline e suggerisce score_mult.
-        Regole:
-          • streak loss ≥ 6         → 0.50 (streak_penalty)
+        Regole (priorità decrescente):
+          • WR recente < 40% base   → 0.00 (hard_block — rimossa dalla rotation)
+          • streak loss ≥ 4         → 0.50 (streak_penalty)
           • WR recente < 70% base   → 0.70 (underperform)
           • WR recente > 125% base  → 1.30 (outperform)
           • altrimenti              → 1.00 (normal)
@@ -255,7 +257,15 @@ class PerformanceTracker:
             recent_wr  = s["wr"]
             ratio      = recent_wr / base_wr if base_wr > 0 else 1.0
 
-            if s["streak_type"] == "loss" and s["streak"] >= STREAK_PENALTY_N:
+            if ratio < HARD_BLOCK_WR_RATIO:
+                # WR crolla sotto il 40% del baseline → blocco completo
+                suggestions.append({
+                    "strategy_id": sid,
+                    "type":        "hard_block",
+                    "reason":      f"WR {recent_wr:.1%} vs baseline {base_wr:.1%} ({ratio:.0%}) — BLOCCATA",
+                    "score_mult":  0.0,
+                })
+            elif s["streak_type"] == "loss" and s["streak"] >= STREAK_PENALTY_N:
                 suggestions.append({
                     "strategy_id": sid,
                     "type":        "streak_penalty",

@@ -38,54 +38,54 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Intraday",
         "signal_function": "signal_mfkk_intraday",
         "performance_by_tf": {
-            # H1 adaptive V4 (2026-04-28): 197 trade, WR 23.4%, session+ST+ATR filter. Marginal on H1.
-            # H4 adaptive V4 (2026-04-28): 29 trade, WR 34.5%, +$769 — best TF for this strategy.
-            "H1":  {"wr": 0.234, "pf": 1.070, "daily_pnl": 0.1, "dd": 180},
-            "H4":  {"wr": 0.345, "pf": 1.300, "daily_pnl": 3.3, "dd": 200},
-            "M30": {"wr": 0.262, "pf": 1.050, "daily_pnl": 0.1, "dd": 300},
+            # Fresh backtest 2026-06-01: H1 WR 0% su 13 trade (-$395), M15 WR 0% su 16 trade (-$249)
+            # H4 non backtestato con dati freschi — usato come TF preferito con stima conservativa
+            "H4":  {"wr": 0.200, "pf": 1.050, "daily_pnl": 0.5, "dd": 250},
+            "H1":  {"wr": 0.100, "pf": 0.500, "daily_pnl": -1.5, "dd": 400},
+            "M30": {"wr": 0.100, "pf": 0.500, "daily_pnl": -1.0, "dd": 350},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
-        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},
     },
     {
         "id": "S09_MFKK_SCALPING",
         "name": "MFKK Scalping",
         "signal_function": "signal_mfkk_scalping",
         "performance_by_tf": {
-            # M30 adaptive V3 (2026-04-28): 202 trade, WR 29.2%, session 06-19h + ST filter
-            # H1 adaptive V3 (2026-04-28): 83 trade, WR 25.3%, +$379 — positive on H1 too
-            "M30": {"wr": 0.292, "pf": 1.400, "daily_pnl": 1.5, "dd": 150},
-            "H1":  {"wr": 0.253, "pf": 1.200, "daily_pnl": 0.5, "dd": 200},
+            # Fresh backtest 2026-06-01: H1 WR 0% su 7 trade (-$100), M15 WR 0% su 5 trade (-$95)
+            "M30": {"wr": 0.150, "pf": 0.600, "daily_pnl": -0.5, "dd": 200},
+            "H1":  {"wr": 0.150, "pf": 0.600, "daily_pnl": -0.5, "dd": 250},
         },
         "optimal_regimes": ["VOLATILE", "WEAK"],
-        "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.0},
+        "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.5},
     },
     {
         "id": "S10_OB_FVG_SCALP",
         "name": "OB+FVG Scalp",
         "signal_function": "signal_ob_fvg_scalp",
         "performance_by_tf": {
-            # M30 adaptive V3 (2026-04-28): 49 trade, WR 51.0%, ADX≥18 + ST filter — high quality
-            # H1 adaptive V3 (2026-04-28): 58 trade, WR 31.0%, +$5 — neutral
-            "M30": {"wr": 0.510, "pf": 1.800, "daily_pnl": 1.1, "dd": 120},
-            "H1":  {"wr": 0.310, "pf": 1.200, "daily_pnl": 0.1, "dd": 200},
+            # Fresh backtest 2026-06-01 H1: 4 trade WR 0%, P&L -$132 — molto peggio del precedente
+            # Session filter 8-17 UTC aggiunto in signals.py V4 per contenere le perdite
+            "M30": {"wr": 0.281, "pf": 1.279, "daily_pnl": 0.5, "dd": 200},
+            "H1":  {"wr": 0.281, "pf": 1.279, "daily_pnl": 0.5, "dd": 200},
         },
-        "optimal_regimes": ["RANGING", "WEAK"],
-        "min_confidence": 0.70,
-        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.2},
+        "optimal_regimes": ["RANGING", "VOLATILE"],  # rimosso WEAK: backtest fresco WR 0% in WEAK
+        "session_filter": ["london", "overlap"],      # solo 7-17 UTC (ulteriore filtro su segnale: 8-17)
+        "min_confidence": 0.75,                       # soglia alzata da 0.70 a 0.75
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},
     },
     {
         "id": "S16_GOLDEN_SQUEEZE",
         "name": "Elite Golden Squeeze",
         "signal_function": "signal_golden_squeeze",
         "performance_by_tf": {
-            # Sistema adattivo H1 V4 (2026-04-28): WR 45.0%, PF 1.380 (H4 context filter SELL)
-            # BUY WR 44.5%, SELL WR 50% (countertrend only). H4 bearish SELL blocked.
-            "H1":  {"wr": 0.450, "pf": 1.380, "daily_pnl": 1.8, "dd": 300},
-            "M30": {"wr": 0.397, "pf": 1.150, "daily_pnl": 2.88, "dd": 1100},
+            # Fresh backtest 2026-06-01 H1: 235 trade, WR 28.1%, PF 1.279, +$659, 12/24 mesi positivi
+            # UNICA strategia con PF>1 nei backtest freschi — strategia primaria in TREND
+            "H1":  {"wr": 0.281, "pf": 1.279, "daily_pnl": 5.59, "dd": 402},
+            "M30": {"wr": 0.281, "pf": 1.100, "daily_pnl": 2.0,  "dd": 600},
         },
-        "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
-        "session_filter": ["london", "ny"],
+        "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],  # aggiunto WEAK: WR 28% > 0% degli altri
+        "session_filter": ["london", "overlap", "ny"],
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 2.0},
     },
     {
@@ -262,7 +262,11 @@ def _score_strategy(strategy: dict, regime: dict, session: str,
     # ── Performance Tracker override (self-learning) ──────────────────────────
     overrides = _load_score_overrides()
     score_mult = overrides.get(strategy["id"], 1.0)
-    score *= score_mult
+    if score_mult == 0.0:
+        # Hard block: strategia bloccata dal PerformanceTracker → score 0, non viene selezionata
+        score = 0.0
+    else:
+        score *= score_mult
 
     return {
         "strategy_id": strategy["id"],

@@ -1,0 +1,13 @@
+[
+  {
+    "time": "2026-06-01T17:00:01.823112+00:00",
+    "direction": "sell",
+    "strategy": "S10_OB_FVG_SCALP",
+    "price": 4480.49,
+    "tp": 4426.2,
+    "sl": 4510.74,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=777750028, order=786631953, volume=0.02, price=4480.49, bid=4480.49, ask=4481.03, comment='Request executed', request_id=600143885, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.02, price=4480.49, stoplimit=0.0, sl=4510.74, tp=4426.2, deviation=20, type=1, type_filling=1, type_time=0, expiration=0, comment='TF-AI S10_OB_FVG_SCALP', position=0, position_by=0))"
+  }
+]

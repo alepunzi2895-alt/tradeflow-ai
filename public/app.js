@@ -5,8 +5,14 @@ window.activeAsset = 'XAU';
 // ── TRADINGVIEW CHART WIDGET ─────────────────────────────
 function initTVChart(){
   try{
-    if(typeof TradingView === 'undefined') return;
-    document.getElementById('tv-chart-widget').innerHTML = ''; // pulizia prima del render
+    if(typeof TradingView === 'undefined'){
+      // tv.js non ancora caricato — riprova tra 1s
+      setTimeout(initTVChart, 1000);
+      return;
+    }
+    const el = document.getElementById('tv-chart-widget');
+    if(!el) return;
+    el.innerHTML = ''; // pulizia prima del render
     new TradingView.widget({
       container_id: "tv-chart-widget",
       autosize: true,
@@ -19,19 +25,17 @@ function initTVChart(){
       toolbar_bg: "#0d0f12",
       enable_publishing: false,
       hide_top_toolbar: false,
-      hide_legend: true,
+      hide_legend: false,
       save_image: false,
       backgroundColor: "#0d0f12",
       gridColor: "#1e222a",
-      hide_side_toolbar: true,
+      hide_side_toolbar: false,
       allow_symbol_change: false,
       studies: ["RSI@tv-basicstudies","MACD@tv-basicstudies"],
-      withdateranges: false,
+      withdateranges: true,
       details: false,
       hotlist: false,
       calendar: false,
-      width: "100%",
-      height: 800,
     });
   }catch(e){ console.log('TradingView widget:', e.message); }
 }
@@ -312,6 +316,7 @@ try{ renderPlaceholders(); }catch(e){ console.error('renderPlaceholders:', e); }
 document.querySelectorAll('.dp,.jp,.kbp,.mfxp').forEach(el=>{ el.scrollTop=0; });
 
 setTimeout(loadPrices, 100);
+setTimeout(initTVChart, 800);
 setTimeout(()=>{ try{updateConfidence({XAU:{price:'0',change:0}},{});} catch(e){} }, 50);
 setTimeout(loadCotData, 5000);
 setTimeout(loadSlowData, 1500);

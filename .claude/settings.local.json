@@ -48,7 +48,9 @@
       "Bash(powershell.exe *)",
       "Bash(del *)",
       "Bash(ls data/*.json)",
-      "Bash(python -X utf8 -c ' *)"
+      "Bash(python -X utf8 -c ' *)",
+      "Bash(git pull *)",
+      "Bash(git config *)"
     ]
   }
 }

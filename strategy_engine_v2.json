@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-03T05:01:23.823873",
+  "generated_at": "2026-06-04T05:01:24.524989",
   "n_candles": 3085,
   "indicators": [
     "EMA20",
@@ -24,12 +24,12 @@
   "strategies": {
     "S05_MFKK_INTRADAY": {
       "stats": {
-        "n": 43,
+        "n": 42,
         "wr": 0.0,
-        "pnl": -852.6,
+        "pnl": -852.4,
         "pf": 0.0,
-        "dd": 852.6,
-        "avg_day": -19.83,
+        "dd": 852.4,
+        "avg_day": -20.3,
         "tr_day": 1.0,
         "months": "0/18"
       },
@@ -183,7 +183,7 @@
       "name": "S05_MFKK_INTRADAY",
       "pf": 0.0,
       "wr": 0.0,
-      "n": 43,
+      "n": 42,
       "use": false
     },
     {

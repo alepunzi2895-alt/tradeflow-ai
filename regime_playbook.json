@@ -1,26 +1,26 @@
 {
-  "generated_at": "2026-04-23T08:45:00Z",
+  "generated_at": "2026-06-16T08:00:00Z",
   "tp_mult": 1.5,
   "sl_mult": 1.0,
   "playbook": {
     "TREND_UP": {
-      "strategy": "S05_MFKK_INTRADAY",
+      "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "H1",
-      "n": 485,
-      "wr": 31.3,
-      "pnl": 0.0,
-      "pf": 0.798,
-      "dd": 2009.3,
+      "n": 235,
+      "wr": 28.1,
+      "pnl": 659.0,
+      "pf": 1.279,
+      "dd": 402.0,
       "score": 320.0
     },
     "TREND_DOWN": {
-      "strategy": "S05_MFKK_INTRADAY",
+      "strategy": "S16_GOLDEN_SQUEEZE",
       "tf": "H1",
-      "n": 485,
-      "wr": 31.3,
-      "pnl": 0.0,
-      "pf": 0.798,
-      "dd": 2009.3,
+      "n": 235,
+      "wr": 28.1,
+      "pnl": 659.0,
+      "pf": 1.279,
+      "dd": 402.0,
       "score": 320.0
     },
     "WEAK_UP": {

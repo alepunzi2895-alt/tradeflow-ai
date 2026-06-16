@@ -20,5 +20,16 @@
     "lot": 0.02,
     "dry_run": false,
     "result": "OrderSendResult(retcode=10009, deal=779686244, order=788653126, volume=0.03, price=4442.83, bid=4442.83, ask=4443.37, comment='Request executed', request_id=600143887, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4442.83, stoplimit=0.0, sl=4476.12, tp=4427.64, deviation=20, type=1, type_filling=1, type_time=0, expiration=0, comment='TF-AI S16_GOLDEN_SQUEEZE', position=0, position_by=0))"
+  },
+  {
+    "time": "2026-06-04T13:30:09.132785+00:00",
+    "direction": "buy",
+    "strategy": "S00_MFKK",
+    "price": 4504.01,
+    "tp": 4574.97,
+    "sl": 4483.74,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=781694207, order=790689678, volume=0.03, price=4504.01, bid=4503.47, ask=4504.01, comment='Request executed', request_id=600143889, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4504.01, stoplimit=0.0, sl=4491.16, tp=4574.97, deviation=20, type=0, type_filling=1, type_time=0, expiration=0, comment='TF-AI S00_MFKK', position=0, position_by=0))"
   }
 ]

@@ -1825,7 +1825,18 @@
       "time_open": "2026-05-04T18:02:08",
       "time_close": "2026-05-04T18:19:51",
       "win": true
+    },
+    {
+      "pos_id": 790689678,
+      "strategy_id": "S00_MFKK",
+      "direction": "buy",
+      "entry_price": 4504.01,
+      "profit": -33.66,
+      "volume": 0.03,
+      "time_open": "2026-06-04T16:30:09",
+      "time_close": "2026-06-04T17:08:35",
+      "win": false
     }
   ],
-  "last_update": "2026-05-15T10:28:50.313866"
+  "last_update": "2026-06-04T18:00:46.697453"
 }

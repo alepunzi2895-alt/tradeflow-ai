@@ -230,9 +230,13 @@ html, body {
   display: flex; flex-direction: column; gap: 16px;
   overflow-y: auto;
 }
-.bw { display: flex; flex-direction: column; gap: 6px; animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1); }
+.bw { position: relative; display: flex; flex-direction: column; gap: 6px; animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1); }
 .bw.u { align-items: flex-end; }
 .bw.b { align-items: flex-start; }
+.msg-del { position: absolute; top: 0; right: 0; width: 20px; height: 20px; border-radius: 50%; border: none; background: rgba(255,255,255,0.06); color: var(--dim); font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s; padding: 0; }
+.bw:hover .msg-del, .bw:focus-within .msg-del { opacity: 1; }
+.msg-del:hover, .msg-del:active { background: rgba(255,71,87,0.25); color: #ff4757; }
+@media (hover: none) { .msg-del { opacity: .35; } }
 
 .bubble {
   max-width: 86%; padding: 13px 17px;

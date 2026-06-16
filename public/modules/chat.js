@@ -6,7 +6,18 @@ let history=S.get(K.chat,[]);
 
 function addBubble(role,content,dataUrl){
   const w=document.createElement('div');w.className=`bw ${role==='user'?'u':'b'}`;
-  
+  w.dataset.role=role; w.dataset.content=content||'';
+
+  // Delete button
+  const del=document.createElement('button');del.className='msg-del';del.textContent='×';del.title='Elimina';
+  del.onclick=()=>{
+    w.remove();
+    history=Array.from(cm.querySelectorAll('.bw')).map(el=>({role:el.dataset.role,content:el.dataset.content||''}));
+    S.set(K.chat,history.slice(-50));
+    window.dbSaveUserData&&window.dbSaveUserData('chat',history.slice(-50));
+  };
+  w.appendChild(del);
+
   const b=document.createElement('div');b.className=`bubble ${role==='user'?'u':'b'}`;
   if(dataUrl){const i=document.createElement('img');i.src=dataUrl;i.className='chart';b.appendChild(i);}
   
@@ -87,9 +98,13 @@ function clearImg(){pendingImg=null;document.getElementById('imgprev').classList
 document.getElementById('bimg').onclick=()=>openOvl('imgsheet');
 document.getElementById('imgclear').onclick=clearImg;
 
-// "Scegli dalla Galleria" — triggers native file picker (gallery on mobile)
+// Libreria Foto — sistema gallery picker (no capture = scelta libera)
 document.getElementById('sdrop').onclick=()=>document.getElementById('file-in').click();
 document.getElementById('file-in').onchange=async e=>{const f=e.target.files?.[0];if(f)setImg(await compress(f));e.target.value='';};
+
+// Fotocamera — capture diretto
+document.getElementById('sdrop-cam').onclick=()=>document.getElementById('file-in-cam').click();
+document.getElementById('file-in-cam').onchange=async e=>{const f=e.target.files?.[0];if(f)setImg(await compress(f));e.target.value=''};
 
 // URL import
 document.getElementById('btn-url').onclick=async()=>{const u=document.getElementById('url-in').value.trim();if(!u)return;try{const r=await fetch(u);const bl=await r.blob();setImg(await compress(new File([bl],'i.jpg',{type:bl.type||'image/jpeg'})));}catch{setImg({dataUrl:u,b64:null,type:'image/jpeg',urlOnly:true});}};

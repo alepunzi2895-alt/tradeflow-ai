@@ -574,44 +574,48 @@ a:hover { text-decoration: underline; }
    ═══════════════════════════════════════════════ */
 @media (min-width: 1024px) {
   html, body {
-    height: 100%;
-    overflow: hidden;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    height: auto;
   }
 
   /* ── App shell: header + sidebar + content ── */
   #app {
     max-width: none;
-    height: 100vh;
+    min-height: 100vh;
+    height: auto;
     display: grid;
     grid-template-columns: 210px 1fr;
-    grid-template-rows: auto 1fr;
-    overflow: hidden;
+    overflow: visible;
     border-left: none;
     border-right: none;
     box-shadow: none;
   }
 
-  /* Header spans full width */
+  /* Header: sticky in cima, larghezza piena */
   #hdr {
     grid-column: 1 / -1;
     grid-row: 1;
-    position: relative;
-    top: auto;
+    position: sticky;
+    top: 0;
+    z-index: 50;
   }
 
-  /* Content area: scrollable right column */
+  /* Content: scorre con la pagina */
   #cont {
     grid-column: 2;
     grid-row: 2;
-    overflow-y: auto;
-    padding-bottom: 24px;
+    overflow-y: visible;
+    padding-bottom: 40px;
   }
 
-  /* Left sidebar: replaces bottom tabs */
+  /* Sidebar: sticky sotto l'header, altezza viewport */
   #tabs-wrapper {
-    grid-column: 1;
     grid-row: 2;
-    position: relative;
+    position: sticky;
+    top: 58px;
+    align-self: start;
+    height: calc(100vh - 58px);
     bottom: auto;
     left: auto;
     right: auto;

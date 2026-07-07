@@ -619,23 +619,25 @@ def quality_gate(strategy_id, direction, I, i):
     """Return True if trade passes additional quality checks."""
     atr_v = I['atr'][i]
     atr_avg = I['atr_avg'][i]
-    
+
     # 1. No trade during ATR spikes (news/chaos)
     if atr_v and atr_avg and atr_v > 2.0 * atr_avg:
         return False
-    
+
     # 2. Require minimum spread DI for trending strategies
     if strategy_id in ('S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY'):
         dip, dim = I['dip'][i], I['dim'][i]
         if dip is not None and dim is not None and abs(dip - dim) < 8:
             return False
-            
-    # 3. RSI divergence protection
+
+    # 3. RSI extremes only block TRUE exhaustion (85/15 not 75/25).
+    # XAU/USD RSI > 75 è normale in un mercato bull forte — soglia 75 bloccava
+    # tutti i buy durante trend rialzisti prolungati. Signal functions gestiscono RSI internamente.
     rsi_v = I['rsi'][i]
     if rsi_v:
-        if direction == 'buy' and rsi_v > 75: return False
-        if direction == 'sell' and rsi_v < 25: return False
-        
+        if direction == 'buy'  and rsi_v > 85: return False
+        if direction == 'sell' and rsi_v < 15: return False
+
     return True
 
 # ── STATO GIORNALIERO ─────────────────────────────────────────────────────────
@@ -2176,6 +2178,9 @@ def run():
                                     log.info(f"[M30] {sname} — nessun segnale ({bar_dt_m30.strftime('%H:%M')})")
                                     continue
                                 if m30_dir_filter and direction != m30_dir_filter: continue
+                                if not quality_gate(sname, direction, I_m30, idx):
+                                    log.info(f"📉 M30 skip {sname} — QUALITY GATE FAILED")
+                                    continue
                                 if has_open_position_for_strategy(sname):
                                     log.debug(f"[M30] skip {sname} — già aperto")
                                     continue
@@ -2305,11 +2310,21 @@ def run():
                                 log.warning(f"🛑 H4 skip {h4_id} — cooldown SL strategico ({remaining}min rimanenti)")
                                 continue
                             fn_h4 = SIGNAL_FNS.get(h4_id)
-                            direction = fn_h4(I_h4, idx) if fn_h4 else None
+                            if fn_h4 is None:
+                                direction = None
+                            elif h4_id == 'S17_CONVERGENCE_SCALP':
+                                direction = fn_h4(I_h4, idx, h1_trend=I_h1['st'][i_h1], hour=bar_dt_h4.hour)
+                            elif h4_id == 'S00_MFKK':
+                                direction = fn_h4(I_h4, idx, hour=bar_dt_h4.hour, tf='H4')
+                            else:
+                                direction = fn_h4(I_h4, idx, hour=bar_dt_h4.hour)
                             if not direction:
                                 log.info(f"[H4] {h4_id} — nessun segnale su {bar_dt_h4.strftime('%H:%M')}")
                                 continue
                             if h4_dir_filter and direction != h4_dir_filter:
+                                continue
+                            if not quality_gate(h4_id, direction, I_h4, idx):
+                                log.info(f"📉 H4 skip {h4_id} — QUALITY GATE FAILED")
                                 continue
                             if has_open_position_for_strategy(h4_id):
                                 log.debug(f"[H4] skip {h4_id} — già 1 ordine aperto")

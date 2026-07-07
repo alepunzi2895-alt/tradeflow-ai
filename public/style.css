@@ -543,3 +543,149 @@ a:hover { text-decoration: underline; }
 .info-status { font-size: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; line-height: 1.5; color: var(--dim); }
 .info-status b { color: #fff; }
 .info-close { margin-top: 20px; width: 100%; padding: 12px; background: rgba(200,169,110,0.1); border: 1px solid rgba(200,169,110,0.2); border-radius: 12px; color: var(--g); font-size: 13px; font-weight: 700; cursor: pointer; }
+
+/* ═══════════════════════════════════════════════
+   ── RESPONSIVE: TABLET (768px – 1023px) ──
+   ═══════════════════════════════════════════════ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #app {
+    max-width: 100%;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
+
+  .dp {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+    row-gap: 14px;
+    align-items: start;
+  }
+
+  .price-strip,
+  #tv-chart-wrapper { grid-column: 1 / -1; }
+
+  .conf-card, .sent-card, .mfkk-card, .cal-card { margin-bottom: 0; }
+}
+
+/* ═══════════════════════════════════════════════
+   ── RESPONSIVE: DESKTOP (≥ 1024px) ──
+   ═══════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ── App shell: header + sidebar + content ── */
+  #app {
+    max-width: none;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
+
+  /* Header spans full width */
+  #hdr {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    position: relative;
+    top: auto;
+  }
+
+  /* Content area: scrollable right column */
+  #cont {
+    grid-column: 2;
+    grid-row: 2;
+    overflow-y: auto;
+    padding-bottom: 24px;
+  }
+
+  /* Left sidebar: replaces bottom tabs */
+  #tabs-wrapper {
+    grid-column: 1;
+    grid-row: 2;
+    position: relative;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    padding: 14px 10px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    pointer-events: auto;
+    background: var(--bg2);
+  }
+
+  /* Vertical tab list */
+  #tabs {
+    display: flex;
+    flex-direction: column;
+    background: rgba(13, 16, 21, 0.5);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px;
+    gap: 3px;
+    box-shadow: none;
+  }
+
+  /* Tab buttons: row layout with icon + label */
+  .tb {
+    flex-direction: row;
+    gap: 10px;
+    padding: 11px 14px;
+    justify-content: flex-start;
+    border-radius: 10px;
+  }
+
+  .tb .ti { font-size: 16px; transform: none !important; filter: grayscale(1) opacity(0.5); }
+  .tb.on .ti { transform: none !important; filter: grayscale(0) opacity(1); }
+  .tb .tl { font-size: 12px; transform: none !important; }
+  .tb.on .tl { transform: none !important; }
+  .tb.on { background: rgba(200, 169, 110, 0.08); }
+
+  /* Active indicator: left vertical stripe */
+  .tb::after {
+    top: 15%; bottom: 15%;
+    right: auto; left: 0;
+    width: 3px; height: auto;
+    border-radius: 0 3px 3px 0;
+    transform: translateX(-3px);
+  }
+  .tb.on::after { transform: translateX(0); }
+
+  /* ── Dashboard: 2-column grid ── */
+  .dp {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+    row-gap: 14px;
+    padding: 20px;
+    align-items: start;
+  }
+
+  .price-strip,
+  #tv-chart-wrapper { grid-column: 1 / -1; }
+
+  .conf-card, .sent-card, .mfkk-card, .cal-card { margin-bottom: 0; }
+
+  /* ── Chat wider padding ── */
+  #chat-msgs { padding: 20px 28px 10px; }
+  #qrow { padding: 8px 28px; }
+  #imgprev { margin: 0 28px; }
+  #ibar { margin: 6px 28px 20px; }
+
+  /* ── Other tabs wider padding ── */
+  .jp { padding: 24px 28px; }
+  .kp { padding: 24px 28px; }
+  .mfp { padding: 24px 28px; }
+
+  /* ── Overlays centered on desktop ── */
+  .ovl { align-items: center; }
+  .sht { max-width: 560px; margin: 0 auto; border-radius: 24px; }
+}

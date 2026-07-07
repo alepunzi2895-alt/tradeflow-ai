@@ -50,7 +50,15 @@
       "Bash(ls data/*.json)",
       "Bash(python -X utf8 -c ' *)",
       "Bash(git pull *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(git stash *)",
+      "Bash(curl *)",
+      "Bash(findstr /N '\"adaptive\"')",
+      "Bash(findstr /C:\"FASE 3\" /C:\"Trade totali\" /C:\"Win Rate\" /C:\"P&L totale\" /C:\"Profit Factor\" /C:\"$/giorno\" /C:\"Drawdown\" /C:\"Mesi positivi\" /C:\"S00_MFKK\" /C:\"S05_\" /C:\"S09_\" /C:\"S10_\" /C:\"S16_\" /C:\"S17_\" /C:\"SISTEMA ADATTIVO\")",
+      "Bash(Select-String \"FASE 3|Trade totali|Win Rate|P&L totale|Profit Factor|giorno|Drawdown|Mesi positivi|S00_MFKK|S05_|S09_|S10_|S16_|S17_|SISTEMA ADATTIVO\")",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Skill(claude-in-chrome)"
     ]
   }
 }

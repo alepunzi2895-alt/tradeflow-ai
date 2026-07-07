@@ -215,7 +215,7 @@ function showAuth() {
   document.getElementById('auth-overlay').style.display='flex';
 }
 function hideAuth() {
-  document.getElementById('app').style.display='block';
+  document.getElementById('app').style.display='';
   document.getElementById('auth-overlay').style.display='none';
 }
 

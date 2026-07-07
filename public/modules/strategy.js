@@ -77,6 +77,8 @@ let seRegime = 'UNKNOWN';
 let _lastScorePush = 0;
 let _seIndsCacheTime = 0;   // timestamp ultimo calcolo indicatori riuscito
 let _seCandlesStale = false; // true quando si usano indicatori cached
+let _seRefreshRunning = false; // guard contro chiamate concorrenti
+let _mt5LastFetchTime = 0;     // TTL cache MT5 (15s — bot synca ogni 20s)
 // Trade history filter state (persiste attraverso i rebuild di seRender ogni 1s)
 window._seTradeFilter = window._seTradeFilter || 'week';
 window._seTradeFrom   = window._seTradeFrom   || '';
@@ -86,6 +88,9 @@ window._seTradeTo     = window._seTradeTo     || '';
 async function seRefresh() {
   // Non eseguire se il tab Strategy non è attivo — evita API calls e DOM churn inutili
   if(!document.getElementById('tp-strategy')?.classList.contains('on')) return;
+  // Guard: evita istanze concorrenti che causano flickering online/offline
+  if(_seRefreshRunning) return;
+  _seRefreshRunning = true;
   const el = document.getElementById('se-content');
   if(!el) return;
 
@@ -112,6 +117,7 @@ async function seRefresh() {
       _seCandlesStale = true;
       // Salta ricalcolo indicatori — procedi con snap cached
     } else {
+      _seRefreshRunning = false;
       seRenderNoData();
       return;
     }
@@ -259,9 +265,17 @@ async function seRefresh() {
     }
   }
 
-  // Fetch real MT5 data and render
-  const mt5Data = await seFetchMt5Data();
-  window._seLastMt5Data = mt5Data; // cache per seSendTradeToMt5
+  // MT5 data: ri-fetcha solo ogni 15s (bot synca ogni 20s).
+  // Se fetch fallisce usa l'ultimo dato valido → evita flickering online/offline.
+  if (!window._seLastMt5Data || Date.now() - _mt5LastFetchTime > 15000) {
+    const fresh = await seFetchMt5Data();
+    if (fresh) {
+      window._seLastMt5Data = fresh;
+      _mt5LastFetchTime = Date.now();
+    }
+  }
+  const mt5Data = window._seLastMt5Data || null;
+
   seRender(mt5Data, pending, snap, isExtreme, inSession, hour);
 
   // Push AI score al DB ogni 60s così il bot Python può leggerlo
@@ -274,6 +288,8 @@ async function seRefresh() {
         body: JSON.stringify({ action:'score_push', score }) }).catch(()=>{});
     }
   }
+
+  _seRefreshRunning = false;
 }
 
 async function seFetchMt5Data() {

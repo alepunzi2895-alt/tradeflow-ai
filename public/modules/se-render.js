@@ -465,6 +465,10 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const pnl6col   = (st.pnl_6m||0)>0  ?'var(--green)':'var(--red)';
       const pnl12col  = (st.pnl_12m||0)>0 ?'var(--green)':'var(--red)';
       const pnl24col  = (st.pnl_24m||0)>0 ?'var(--green)':'var(--red)';
+      const _tfMatch  = s.label.match(/\[([^\]]+)\]/);
+      const _tf       = _tfMatch ? _tfMatch[1] : null;
+      const _tfPalette= { H1:'#00bcd4', H4:'#9c27b0', M30:'#ff9800', M15:'#8bc34a', M5:'#4caf50', D1:'#e91e63' };
+      const _tfCol    = _tfPalette[_tf] || 'var(--dim)';
       const inds = id==='S00_MFKK'
         ? 'MFKK Score (ADX 80% + MACD 10% + CCI 10%) · BUY≥90 · SELL≥75 · fallback H1 tutti i regimi · 531 trade/anno'
         : id==='S00_MFKK_HWR'
@@ -493,7 +497,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
-          <div style="display:flex;gap:7px;font-size:10px">
+          <div style="display:flex;gap:5px;align-items:center;font-size:10px">
+            ${_tf ? `<span style="background:${_tfCol}22;border:1px solid ${_tfCol}55;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:${_tfCol};letter-spacing:.04em">${_tf}</span>` : ''}
             ${s.pf!=null ? `<span style="color:var(--green)">PF <b>${s.pf}</b></span>` : ''}
             ${s.wr!=='N/A' ? `<span style="color:var(--blue)">WR <b>${s.wr}</b></span>` : ''}
           </div>

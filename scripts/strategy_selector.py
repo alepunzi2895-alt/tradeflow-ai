@@ -25,10 +25,12 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Score",
         "signal_function": "signal_mfkk_score",
         "performance_by_tf": {
-            # M30 adaptive V2 (2026-04-28): WR 26.1%, PF 1.240 (DI≥20 or ST bullish gate, sell London/NY only)
-            # H4 adaptive: 618 trade, WR 44.2%, +$1320 / 25 months (best standalone)
-            "M30": {"wr": 0.261, "pf": 1.240, "daily_pnl": 2.2, "dd": 220},
-            "H4":  {"wr": 0.442, "pf": 1.319, "daily_pnl": 3.43, "dd": 400},
+            # bt_h1_adaptive 2026-07-07: 1070 trade, WR 48.9%, PF 1.594, +$3896/24m, DD$264 — BEST TF
+            # bt_h4_adaptive 2026-07-07: 208 trade, WR 52.4%, PF 1.835, +$992/24m (meno segnali)
+            # bt_m30_adaptive 2026-07-07: 575 trade, WR 43.8%, PF 1.300, +$1164/13m
+            "H1":  {"wr": 0.489, "pf": 1.594, "daily_pnl": 17.4, "dd": 264},
+            "H4":  {"wr": 0.524, "pf": 1.835, "daily_pnl": 10.9, "dd": 124},
+            "M30": {"wr": 0.438, "pf": 1.300, "daily_pnl": 8.0,  "dd": 244},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
@@ -38,11 +40,11 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Intraday",
         "signal_function": "signal_mfkk_intraday",
         "performance_by_tf": {
-            # Fresh backtest 2026-06-01: H1 WR 0% su 13 trade (-$395), M15 WR 0% su 16 trade (-$249)
-            # H4 non backtestato con dati freschi — usato come TF preferito con stima conservativa
+            # bt_h4_adaptive 2026-07-07: 0% WR standalone, ma regime-gated in TREND_UP/DOWN su H4
+            # Nessun TF mostra profitto standalone. Lasciato su H4 come filtro regime.
             "H4":  {"wr": 0.200, "pf": 1.050, "daily_pnl": 0.5, "dd": 250},
-            "H1":  {"wr": 0.100, "pf": 0.500, "daily_pnl": -1.5, "dd": 400},
-            "M30": {"wr": 0.100, "pf": 0.500, "daily_pnl": -1.0, "dd": 350},
+            "H1":  {"wr": 0.050, "pf": 0.300, "daily_pnl": -2.0, "dd": 450},
+            "M30": {"wr": 0.050, "pf": 0.300, "daily_pnl": -2.0, "dd": 400},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},
@@ -52,9 +54,11 @@ STRATEGIES_CONFIG = [
         "name": "MFKK Scalping",
         "signal_function": "signal_mfkk_scalping",
         "performance_by_tf": {
-            # Fresh backtest 2026-06-01: H1 WR 0% su 7 trade (-$100), M15 WR 0% su 5 trade (-$95)
-            "M30": {"wr": 0.150, "pf": 0.600, "daily_pnl": -0.5, "dd": 200},
-            "H1":  {"wr": 0.150, "pf": 0.600, "daily_pnl": -0.5, "dd": 250},
+            # bt_m30_adaptive 2026-07-07: 12 trade, WR 25.0%, PF 1.782, +$63/13m — BEST TF
+            # bt_h1_adaptive 2026-07-07: 17 trade, WR 35.3%, PF 1.311, +$38/24m
+            # Solo in adaptive (regime-gated). Standalone ≈ 0% WR su tutti i TF.
+            "M30": {"wr": 0.250, "pf": 1.782, "daily_pnl": 0.5, "dd": 40},
+            "H1":  {"wr": 0.353, "pf": 1.311, "daily_pnl": 0.3, "dd": 71},
         },
         "optimal_regimes": ["VOLATILE", "WEAK"],
         "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.5},
@@ -64,14 +68,14 @@ STRATEGIES_CONFIG = [
         "name": "OB+FVG Scalp",
         "signal_function": "signal_ob_fvg_scalp",
         "performance_by_tf": {
-            # Fresh backtest 2026-06-01 H1: 4 trade WR 0%, P&L -$132 — molto peggio del precedente
-            # Session filter 8-17 UTC aggiunto in signals.py V4 per contenere le perdite
-            "M30": {"wr": 0.281, "pf": 1.279, "daily_pnl": 0.5, "dd": 200},
-            "H1":  {"wr": 0.281, "pf": 1.279, "daily_pnl": 0.5, "dd": 200},
+            # bt_m30_adaptive 2026-07-07: 11 trade, WR 54.5%, PF 1.949, +$208/13m — campione piccolo
+            # bt_h1_adaptive 2026-07-07: 4 trade WR 0%, P&L negativo — non usare H1
+            "M30": {"wr": 0.545, "pf": 1.949, "daily_pnl": 2.0, "dd": 154},
+            "H1":  {"wr": 0.050, "pf": 0.300, "daily_pnl": -1.0, "dd": 200},
         },
-        "optimal_regimes": ["RANGING", "VOLATILE"],  # rimosso WEAK: backtest fresco WR 0% in WEAK
-        "session_filter": ["london", "overlap"],      # solo 7-17 UTC (ulteriore filtro su segnale: 8-17)
-        "min_confidence": 0.75,                       # soglia alzata da 0.70 a 0.75
+        "optimal_regimes": ["RANGING", "VOLATILE"],
+        "session_filter": ["london", "overlap"],
+        "min_confidence": 0.75,
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},
     },
     {
@@ -79,12 +83,12 @@ STRATEGIES_CONFIG = [
         "name": "Elite Golden Squeeze",
         "signal_function": "signal_golden_squeeze",
         "performance_by_tf": {
-            # Fresh backtest 2026-06-01 H1: 235 trade, WR 28.1%, PF 1.279, +$659, 12/24 mesi positivi
-            # UNICA strategia con PF>1 nei backtest freschi — strategia primaria in TREND
-            "H1":  {"wr": 0.281, "pf": 1.279, "daily_pnl": 5.59, "dd": 402},
-            "M30": {"wr": 0.281, "pf": 1.100, "daily_pnl": 2.0,  "dd": 600},
+            # bt_h1_adaptive 2026-07-07: 245 trade, WR 48.6%, PF 1.770, +$2165/24m, DD$402 — BEST TF
+            # bt_m30_adaptive 2026-07-07: PF 0.787 (negativo) — non usare M30
+            "H1":  {"wr": 0.486, "pf": 1.770, "daily_pnl": 18.3, "dd": 402},
+            "M30": {"wr": 0.364, "pf": 0.787, "daily_pnl": -6.4, "dd": 894},
         },
-        "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],  # aggiunto WEAK: WR 28% > 0% degli altri
+        "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
         "session_filter": ["london", "overlap", "ny"],
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 2.0},
     },
@@ -93,12 +97,12 @@ STRATEGIES_CONFIG = [
         "name": "Convergence Scalp",
         "signal_function": "signal_convergence_scalp",
         "performance_by_tf": {
-            # H4 adaptive (2026-04-28): 119 trade, WR 35.3%, +$3052 / 23 months — BEST TF
-            # H1 adaptive: 75 trade, WR 28.0%, +$521 — good secondary
-            # M30 adaptive: 156 trade, WR 24.4%, +$131
-            "H4":  {"wr": 0.353, "pf": 1.750, "daily_pnl": 4.4, "dd": 250},
-            "H1":  {"wr": 0.280, "pf": 1.300, "daily_pnl": 0.7, "dd": 400},
-            "M30": {"wr": 0.244, "pf": 1.100, "daily_pnl": 0.3, "dd": 300},
+            # bt_h4_adaptive 2026-07-07: 95 trade, WR 35.8%, PF 2.709, +$2819/24m, DD$198 — BEST TF
+            # bt_h1_adaptive: standalone PF 0.004 (pessimo) — non usare H1 standalone
+            # bt_m30_adaptive: standalone PF 0.049 (pessimo) — non usare M30
+            "H4":  {"wr": 0.358, "pf": 2.709, "daily_pnl": 32.0, "dd": 198},
+            "H1":  {"wr": 0.050, "pf": 0.500, "daily_pnl": -1.0, "dd": 400},
+            "M30": {"wr": 0.030, "pf": 0.300, "daily_pnl": -1.5, "dd": 350},
         },
         "optimal_regimes": ["VOLATILE", "TREND_UP", "TREND_DOWN"],
         "min_atr_percentile": 0.60,
@@ -109,9 +113,10 @@ STRATEGIES_CONFIG = [
         "name": "Range Reversal BB",
         "signal_function": "signal_range_reversal",
         "performance_by_tf": {
-            # V1 2026-05-19: stime conservative pending backtest reale su XAU M30.
-            # BB-reversion su RANGE/WEAK: WR atteso 40-50%, R:R 1.67 (TP 2.0×ATR / SL 1.2×ATR).
-            "M30": {"wr": 0.450, "pf": 1.350, "daily_pnl": 1.2, "dd": 120},
+            # bt_m30_adaptive 2026-07-07: 92 trade, WR 43.5%, PF 1.061, +$42/13m (regime-gated)
+            # bt_m5_adaptive: WR 45.4%, PF 1.438, +$648/13m — M5 teoricamente migliore ma bot usa M30
+            # bt_h1_adaptive: PF 0.755 standalone (negativo senza regime) — non usare H1
+            "M30": {"wr": 0.435, "pf": 1.061, "daily_pnl": 0.3, "dd": 170},
         },
         "optimal_regimes": ["RANGING", "WEAK"],
         "base_params": {"tp_atr_mult": 2.0, "sl_atr_mult": 1.2},

@@ -16,6 +16,7 @@
 | ✅ Fixed 2026-07-07 | `scripts/mt5-bot.py` | **`quality_gate()` assente nel blocco M30**: il blocco M30 non chiamava quality_gate → segnali con ATR spike e DI spread insufficiente passavano filtro. Fix: quality_gate aggiunto dopo check direction. |
 | ✅ Fixed 2026-07-07 | `scripts/mt5-bot.py` | **`quality_gate()` assente nel blocco H4**: identico a M30. Fix: quality_gate aggiunto nel blocco H4. |
 | ✅ Fixed 2026-07-07 | `scripts/mt5-bot.py` | **Blocco H4 segnali senza parametri `hour`/`h1_trend`**: segnali H4 chiamati come `fn_h4(I_h4, idx)` senza contesto sessione/trend. Fix: routing specifico per S17 (h1_trend) e S00 (hour, tf='H4'). |
+| ✅ Fixed 2026-07-09 | `public/modules/core.js`, `api/report.js` | **Model ID `claude-sonnet-4-20250514` scaduto (deprecato dal 2026-06-15)**: causava warning/errore nell'analisi screenshot (tab Analisi) e nei report AI giornalieri/settimanali/mensili. Fix: aggiornato a `claude-sonnet-5` in entrambi i punti (chiamata `/api/chat` in core.js e chiamata diretta Anthropic in report.js). |
 
 ## Performance Bottlenecks (mt5-bot.py) — Risolti
 

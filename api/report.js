@@ -138,7 +138,8 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 1500,
+        max_tokens: 2000,
+        thinking: { type: "disabled" },
         system: "Sei TradeFlow AI, coach di trading professionale. Rispondi sempre in italiano. Usa linguaggio costruttivo, orientato alla crescita. Mai 'errori' — usa 'opportunità di miglioramento', 'da ottimizzare', 'area di sviluppo'.",
         messages: [{ role: "user", content: prompt }]
       })

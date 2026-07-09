@@ -3,6 +3,9 @@ TradeFlow AI — Daily Maintenance Script
 ═══════════════════════════════════════════════════════════════════
 Da eseguire ogni giorno sulla VPS (es. 06:00 UTC via Task Scheduler).
 
+Pre-step — Config consistency check (statico, no AI, vedi scripts/check_config_consistency.py):
+          confronta tabelle parallele che devono restare sincronizzate (TF canonico,
+          sl_mult/tp_mult). Solo report — non scrive su known_issues.md.
 Step 1 — Fetch dati storici MT5 per ogni TF (richiede MT5 aperto)
 Step 2 — Backtest adattivo su ogni TF (strategy-engine-v2.py)
 Step 3 — Parse risultati + drift analysis (confronta PF/WR recenti vs baseline)
@@ -27,6 +30,8 @@ import sys, io, os, json, subprocess, datetime, logging, argparse, math, inspect
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import check_config_consistency  # pura stdlib (ast/io/os/sys), safe import a livello di modulo
 
 logging.basicConfig(
     level=logging.INFO,
@@ -647,15 +652,25 @@ def append_ai_findings_to_known_issues(diagnoses: list, dry_run: bool):
 
 def generate_report(fetch_res: dict, bt_res: dict, findings: list,
                     hints: list, silence_findings: list, diagnoses: list,
-                    news_summary: str, dry_run: bool) -> str:
+                    cfg_result: dict, news_summary: str, dry_run: bool) -> str:
     """Genera testo del report giornaliero."""
     today = datetime.date.today().isoformat()
     lines = [
         f"# Daily Maintenance Report — {today}",
         f"Generated: {datetime.datetime.utcnow().isoformat()} UTC",
         "",
-        "## Step 1 — Fetch dati",
+        "## Config Consistency Check",
     ]
+    for err in (cfg_result or {}).get('errors', []):
+        lines.append(f"  ⚠️ {check_config_consistency.format_error(err)}")
+    if (cfg_result or {}).get('mismatches'):
+        for m in cfg_result['mismatches']:
+            lines.append(f"  🔴 {check_config_consistency.format_mismatch(m)}")
+    elif not (cfg_result or {}).get('errors'):
+        lines.append("  ✅ Nessun mismatch di configurazione.")
+
+    lines.append("")
+    lines.append("## Step 1 — Fetch dati")
     for tf, status in (fetch_res or {}).items():
         icon = '✅' if status == 'ok' else ('⚠️' if status == 'skip' else '❌')
         lines.append(f"  {icon} {tf}: {status}")
@@ -780,6 +795,22 @@ def main():
     if dry_run:
         log.info("DRY-RUN MODE — nessuna scrittura")
 
+    # Pre-step — Config Consistency Check (statico, no AI, no --dry-run gating: è solo lettura)
+    log.info("[cfg] Config consistency check...")
+    try:
+        cfg_result = check_config_consistency.check_all()
+    except Exception as e:
+        log.warning(f"[cfg] eccezione imprevista: {e} (fail-open, report senza questa sezione)")
+        cfg_result = {'mismatches': [], 'errors': []}
+    for err in cfg_result['errors']:
+        log.warning(f"[cfg] WARNING: {check_config_consistency.format_error(err)}")
+    if cfg_result['mismatches']:
+        log.warning(f"  {len(cfg_result['mismatches'])} mismatch di configurazione:")
+        for m in cfg_result['mismatches']:
+            log.warning(f"    - {check_config_consistency.format_mismatch(m)}")
+    else:
+        log.info("  Nessun mismatch di configurazione.")
+
     # Step 1 — Fetch
     fetch_res = {}
     if args.skip_fetch:
@@ -852,7 +883,7 @@ def main():
     # Step 6 — Report
     log.info("[6/6] Generazione report...")
     report = generate_report(fetch_res, bt_res, findings, hints,
-                              silence_findings, diagnoses, news_summary, dry_run)
+                              silence_findings, diagnoses, cfg_result, news_summary, dry_run)
 
     report_path = os.path.join(_ROOT_DIR, f'daily_report_{datetime.date.today().isoformat()}.txt')
     if not dry_run:

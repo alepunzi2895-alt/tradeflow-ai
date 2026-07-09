@@ -6,6 +6,11 @@ manualmente. Rivede il diff staged sui file più a rischio regressione del
 progetto (scripts/signals.py, scripts/mt5-bot.py, scripts/risk_guardian.py)
 cercando pattern di bug già visti in passato (vedi 07_self_learning_log.md).
 
+Prima della chiamata AI, esegue anche un pre-check deterministico (no AI, no
+costo) via scripts/check_config_consistency.py: se le tabelle di config tra
+mt5-bot.py/risk_guardian.py sono già disallineate nello stato attuale, blocca
+subito senza nemmeno chiamare l'API (è un fatto certo, non un'ipotesi).
+
 Nessuna modifica automatica al codice — solo findings stampati a terminale.
 Blocca il commit (exit 1) SOLO su finding di severità 'blocker'. Bypass
 standard git sempre disponibile: `git commit --no-verify`.
@@ -165,6 +170,25 @@ def main():
     if not diff_text.strip():
         print("[review_diff] Nessuna modifica ai file monitorati — skip.")
         sys.exit(0)
+
+    # Pre-check deterministico (no AI, no costo): tabelle di config disallineate
+    # sono un fatto certo, non un'ipotesi — se già presenti nello stato attuale
+    # dei file monitorati, blocca subito senza nemmeno chiamare l'AI.
+    try:
+        import check_config_consistency
+        cfg_result = check_config_consistency.check_all(files_filter=set(MONITORED_FILES))
+    except Exception as e:
+        print(f"[review_diff] WARNING: config consistency check fallito ({e}) — fail-open, si procede.")
+        cfg_result = {'mismatches': [], 'errors': []}
+    for err in cfg_result['errors']:
+        print(f"[review_diff] WARNING (fail-open): {check_config_consistency.format_error(err)}")
+    if cfg_result['mismatches']:
+        print(f"[review_diff] {len(cfg_result['mismatches'])} mismatch di configurazione GIÀ PRESENTE "
+              f"nello stato attuale dei file monitorati (fatto certo, non serve l'AI per confermarlo):")
+        for m in cfg_result['mismatches']:
+            print(f"  - {check_config_consistency.format_mismatch(m)}")
+        print("[review_diff] Commit bloccato — API non chiamata (risparmio). Bypass: git commit --no-verify")
+        sys.exit(1)
 
     try:
         import ai_review

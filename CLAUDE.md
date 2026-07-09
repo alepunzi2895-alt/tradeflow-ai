@@ -21,6 +21,9 @@ python scripts/strategy-engine-v2.py --file data/xauusd_m30_mt5.json --rm
 
 # Fetch dati freschi
 python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
+
+# Setup one-time (dopo ogni git clone) — pre-commit AI review hook
+python scripts/install_git_hooks.py
 ```
 
 ## Dove Trovare Cosa
@@ -36,6 +39,7 @@ python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
 | Bug aperti, backlog | `directives/06_known_issues.md` |
 | Self-learning log (bug storici e fix) | `directives/07_self_learning_log.md` |
 | DOM rules, Vercel constraints, JS gotcha | `directives/08_dev_rules.md` |
+| AI review agents (diagnosi anomalie, pre-commit review) | `directives/09_ai_review_agents.md` |
 
 ## Regole Critiche (leggere prima di ogni modifica)
 
@@ -53,6 +57,8 @@ python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
 
 **signals.py**: funzioni segnale unificate in `scripts/signals.py`. MAI duplicare logica in mt5-bot.py o strategy-engine-v2.py — importare sempre da lì.
 
+**ai_review pattern**: ogni chiamata Python a Claude DEVE passare da `scripts/ai_review.py` (`call_claude()`/`call_claude_json()`) — mai `requests.post` diretto duplicato nei singoli script.
+
 ## Architettura Rapida
 
 ```
@@ -68,6 +74,10 @@ scripts/
   risk_guardian.py   — Risk Guardian Agent: composite score → tier → lot/TP/SL + position lifecycle
   risk_manager.py    — Legacy (backward compat, non usato direttamente)
   strategy-engine-v2.py — backtester, importa da signals.py
+  daily_maintenance.py  — job giornaliero: fetch + backtest + drift + trade silence + AI review
+  ai_review.py       — client condiviso per chiamate Claude (Python)
+  review_diff.py      — pre-commit AI code review (signals.py/mt5-bot.py/risk_guardian.py)
+  install_git_hooks.py — setup one-time hook pre-commit
 
 data/             — xauusd_*.json (price history)
 backtests/        — results/ + archive/

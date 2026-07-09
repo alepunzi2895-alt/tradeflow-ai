@@ -4,6 +4,7 @@
 
 | Data | Bug | Causa radice | Fix applicato |
 |---|---|---|---|
+| 2026-07-09 | `STRATEGY_OPTIMAL_TF` in daily_maintenance.py disallineata da `BASELINE_STATS` per S16/S17 | Dict mai consumato da nessuna funzione nel file originale (dead code) — la migrazione S16 M30→H1 (2026-04-23) e S17 M30→H4 (2026-04-17) era stata applicata a BASELINE_STATS ma non a STRATEGY_OPTIMAL_TF, rimasta indietro senza effetto visibile finché è rimasta inutilizzata. Scoperta dalla AI Root-Cause Review (nuova Feature A) durante il suo primo run reale, diagnosticando un TRADE_SILENCE su S17 | Corretti i due valori (S16→H1, S17→H4) in `STRATEGY_OPTIMAL_TF`, verificati contro directives/02_strategies.md |
 | 2026-06-16 | PerfTracker S00_MFKK hard_block (0 trade per 12 giorni) | Cache performance conteneva 20+ perdite anomale Apr-17 (bug pre-MAX_OPEN_ORDERS) che abbassavano WR a 13.3% | Reset performance_cache.json + strategy_overrides.json; regime_playbook.json aggiornato da S05→S16 per TREND |
 | 2026-05-15 | PerfTracker S00_MFKK: score_mult 1.00→0.70 ⬇️ | underperform | WR 13.3% vs baseline 49.4% (27%) |
 | 2026-04-21 | PerfTracker S00_MFKK: score_mult 0.50→0.70 ⬆️ | recupero parziale | WR 3.3% vs baseline 38.3% (9%) |

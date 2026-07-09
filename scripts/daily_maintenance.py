@@ -91,7 +91,9 @@ WR_DRIFT_THRESHOLD  = 0.05   # WR cambia di ±5pp → flag
 RECENT_DAYS_WINDOW  = 90     # giorni per analisi recente
 
 # ── Trade Silence Check (Step 4) ──────────────────────────────────────────────
-TRADES_FILE = os.path.join(_ROOT_DIR, 'mt5-trades.json')
+# Stesso default di mt5-bot.py — history reale letta via Vercel/Turso (action mt5_get),
+# non dal file locale mt5-trades.json (dimostratosi inaffidabile, vedi _fetch_recent_trades_from_vercel).
+VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
 
 # Mapping strategy_id → nome funzione segnale in signals.py (per raccolta contesto AI)
 STRATEGY_SIGNAL_FN = {
@@ -338,36 +340,87 @@ def param_drift_hints(findings: list) -> list:
 # STEP 4 — Trade Silence Check
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _fetch_recent_trades_from_vercel(timeout: int = 15) -> list:
+    """
+    Fonte di verità per lo storico trade: MT5 history reale, sincronizzata dal
+    bot live ogni ciclo su Vercel/Turso (action 'mt5_get', lettura pubblica non
+    autenticata — vedi api/db.js::mt5Get). Ritorna [] fail-open su qualunque
+    errore (rete, timeout, risposta inattesa) — MAI solleva eccezioni.
+
+    NOTA (2026-07-09): mt5-trades.json locale (TRADES_FILE) è stato scartato
+    come fonte per questo check — è scritto solo da log_trade_to_json() lungo
+    un sottoinsieme dei path di esecuzione ordini e si è dimostrato inaffidabile
+    (conteneva 3 trade con ultimo il 2026-06-04, mentre la history MT5 reale
+    mostrava 200 trade con ultimo il 2026-07-07 — falso positivo di silenzio
+    su tutte le strategie). get_recent_trades_data() in mt5-bot.py, che
+    alimenta questo endpoint, legge invece da mt5.history_deals_get() ed è la
+    fonte usata anche dalla UI/dashboard.
+    """
+    try:
+        import requests
+    except ImportError as e:
+        log.warning(f"[silence] modulo requests non disponibile ({e}) — salto trade silence check")
+        return []
+
+    try:
+        r = requests.post(
+            f"{VERCEL_URL}/api/db",
+            json={'action': 'mt5_get'},
+            timeout=timeout,
+        )
+        if r.status_code != 200:
+            log.warning(f"[silence] {VERCEL_URL}/api/db HTTP {r.status_code} — salto trade silence check")
+            return []
+        data = r.json()
+        if not data.get('ok') or not data.get('data'):
+            log.warning("[silence] mt5_get: nessun dato bot ancora sincronizzato — salto trade silence check")
+            return []
+        return data['data'].get('trades') or []
+    except Exception as e:
+        log.warning(f"[silence] fetch mt5_get fallito: {e} — salto trade silence check")
+        return []
+
+
+def _resolve_strategy_id(raw_sid: str, known_ids) -> str:
+    """
+    Il broker tronca lato server il campo comment degli ordini MT5 (osservato:
+    'S16_GOLDEN' invece di 'S16_GOLDEN_SQUEEZE' — vedi 07_self_learning_log.md
+    2026-07-09, stesso bug corretto in performance_tracker.py). Risolve per
+    prefisso univoco contro gli strategy_id noti quando il match esatto fallisce.
+    Ritorna None se ambiguo — mai un'attribuzione incerta.
+    """
+    if raw_sid in known_ids:
+        return raw_sid
+    matches = [sid for sid in known_ids if sid.startswith(raw_sid)]
+    return matches[0] if len(matches) == 1 else None
+
+
 def check_trade_silence(threshold_map: dict = None) -> list:
     """
-    Legge mt5-trades.json (root, schema {time, direction, strategy, ...} — NON
-    ha un campo 'profit': è un check di presenza/assenza, non di performance).
     Per ogni strategia attiva (STRATEGY_OPTIMAL_TF), calcola giorni dall'ultimo
-    trade e confronta con la soglia per-strategia.
+    trade (fonte: MT5 history reale via Vercel, vedi _fetch_recent_trades_from_vercel)
+    e confronta con la soglia per-strategia.
 
     Ritorna SOLO le strategie in silenzio:
       [{strategy_id, tf, last_trade: iso|None, days_since: int|None,
         threshold_days: int, flag: 'TRADE_SILENCE'}]
-    Fail-open: file mancante/malformato → log warning, ritorna [].
+    Fail-open: bot mai sincronizzato/rete non disponibile → log warning, ritorna [].
     """
     threshold_map = threshold_map or STRATEGY_SILENCE_THRESHOLD_DAYS
 
-    if not os.path.exists(TRADES_FILE):
-        log.warning(f"[silence] {TRADES_FILE} non trovato — salto trade silence check")
+    trades = _fetch_recent_trades_from_vercel()
+    if not trades:
         return []
 
-    try:
-        with open(TRADES_FILE, 'r', encoding='utf-8') as f:
-            trades = json.load(f)
-    except Exception as e:
-        log.warning(f"[silence] errore lettura {TRADES_FILE}: {e}")
-        return []
-
+    known_ids = set(STRATEGY_OPTIMAL_TF)
     last_trade_by_strategy = {}
     for t in trades:
-        sid = t.get('strategy')
+        raw_sid = t.get('strategy')
         ts = t.get('time')
-        if not sid or not ts:
+        if not raw_sid or not ts:
+            continue
+        sid = _resolve_strategy_id(raw_sid, known_ids)
+        if not sid:
             continue
         try:
             dt = datetime.datetime.fromisoformat(ts.replace('Z', '+00:00'))

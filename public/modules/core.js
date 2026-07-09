@@ -83,6 +83,7 @@ async function syncStateFromCloud() {
         if (row.doc_type === 'kb') { kb = payload; S.set(K.kb, kb); }
         if (row.doc_type === 'mfx') { mfxSession = payload; S.set(K.mfx, mfxSession); }
         if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
+        if (row.doc_type === 'mem') { tradeMemory = payload; S.set(K.mem, tradeMemory); }
       } catch(e) { console.error('Sync error parsing', row.doc_type, e); }
     });
     // rebuild knowledge

@@ -36,7 +36,7 @@ Zero chiamate API se non ci sono anomalie da diagnosticare in quel giorno.
 
 ## Feature B — Pre-Commit Code Review (`scripts/review_diff.py` + hook)
 
-Alla `git commit`, se lo staged include `scripts/signals.py`, `scripts/mt5-bot.py` o `scripts/risk_guardian.py`:
+Alla `git commit`, se lo staged include `scripts/signals.py`, `scripts/mt5-bot.py`, `scripts/risk_guardian.py` o `scripts/performance_tracker.py` (aggiunto 2026-07-09 dopo il bug del comment troncato):
 
 1. Legge `git diff --cached` limitato a quei 3 file. Se vuoto (nessuno dei 3 staged), exit 0 immediato — zero chiamate API, nessun check nemmeno sulla key.
 2. Invia il diff a Claude con un system prompt che include `KNOWN_BUG_PATTERNS` (distillato da `07_self_learning_log.md`):

@@ -39,6 +39,7 @@ MONITORED_FILES = [
     'scripts/signals.py',
     'scripts/mt5-bot.py',
     'scripts/risk_guardian.py',
+    'scripts/performance_tracker.py',
 ]
 
 KNOWN_BUG_PATTERNS = [
@@ -70,6 +71,15 @@ KNOWN_BUG_PATTERNS = [
     "permanentemente un intero lato (buy o sell) in condizioni di mercato "
     "plausibili e prolungate (es. RSI>75 come gate in bull market strutturale, "
     "2026-07-07).",
+    "Match ESATTO di stringa (es. `sid in KNOWN_DICT`, `x == known_value`) su "
+    "un valore che può arrivare troncato/modificato da una fonte esterna non "
+    "controllata (es. il broker MT5 tronca il campo comment degli ordini a "
+    "~16 caratteri lato server — un match esatto scartava in silenzio ogni "
+    "trade di strategie con nome >10 char, PerformanceTracker cieco per 6 "
+    "strategie su 7, 2026-07-09). Segnala qualunque confronto esatto contro "
+    "un identificatore/nome che passa per un canale esterno (broker, API "
+    "terze parti, input utente troncabile) senza un fallback per prefisso o "
+    "normalizzazione.",
 ]
 
 DIFF_MAX_CHARS = 12000

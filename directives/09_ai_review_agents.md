@@ -2,6 +2,10 @@
 
 Due automazioni **advisory-only**: nessuna modifica automatica a codice o parametri, nessun agente nel path di esecuzione ordini reali. Entrambe usano `claude-sonnet-5` tramite un unico client condiviso, `scripts/ai_review.py`, e sono **fail-open** su qualunque problema (key mancante, timeout, errore rete/parsing) — non bloccano mai lo script di manutenzione né un commit per un problema di infrastruttura.
 
+## `scripts/check_config_consistency.py` — pre-check deterministico (no AI, no costo)
+
+Aggiunto 2026-07-09, gira **prima** sia in `daily_maintenance.py` che in `review_diff.py`. Confronta staticamente (via `ast`, mai import/exec — `mt5-bot.py` ha side-effect a import-time) tabelle parallele che devono restare sincronizzate: `STRATEGY_OPTIMAL_TF` vs `BASELINE_STATS[tf]`, `STRATEGY_PARAMS.sl_mult/tp_mult` vs `STRATEGY_ATR_PARAMS.sl_atr/tp_atr`. Se un mismatch è già presente nello stato attuale dei file monitorati, `review_diff.py` blocca il commit **senza chiamare l'AI** (fatto certo, non un'ipotesi — risparmio di tempo/costo). Esclude deliberatamente `BACKTEST_BASELINES`/`STRATEGY_BASE`, che divergono legittimamente da `BASELINE_STATS`. Uso standalone: `python scripts/check_config_consistency.py`.
+
 ## Setup one-time
 
 1. **`ANTHROPIC_API_KEY` nel `.env` locale** — la chiave è già nota a Vercel (vedi `CLAUDE.md` → Environment Variables) ma finora era consumata solo lato JS (`api/chat.js`, `api/report.js`). Va replicata nel `.env` locale della VPS/macchina di sviluppo (stesso valore, chiave `ANTHROPIC_API_KEY=...`), altrimenti entrambe le feature restano in fail-open silenzioso (nessun errore bloccante, ma nessuna diagnosi/review).

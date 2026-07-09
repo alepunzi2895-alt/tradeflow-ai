@@ -624,6 +624,11 @@ a:hover { text-decoration: underline; }
     overflow-y: auto;
     pointer-events: auto;
     background: var(--bg2);
+    /* Nav centrata verticalmente: distribuisce lo spazio vuoto sopra/sotto
+       invece di lasciarlo tutto in fondo come un blocco tagliato */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   /* Vertical tab list */
@@ -678,16 +683,28 @@ a:hover { text-decoration: underline; }
 
   .conf-card, .sent-card, .mfkk-card, .cal-card { margin-bottom: 0; }
 
-  /* ── Chat wider padding ── */
-  #chat-msgs { padding: 20px 28px 10px; }
-  #qrow { padding: 8px 28px; }
-  #imgprev { margin: 0 28px; }
-  #ibar { margin: 6px 28px 20px; }
+  /* ── AI Confidence Score: driver su 2 colonne invece di lista stretta ── */
+  .conf-factors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+    row-gap: 2px;
+  }
+  .cf-score-bar { width: auto; flex: 1; max-width: 90px; }
+
+  /* ── Chat: colonna di lettura centrata, non full-bleed ── */
+  #chat-msgs { max-width: 760px; margin: 0 auto; width: 100%; padding: 20px 28px 10px; }
+  #qrow { max-width: 760px; margin: 0 auto; padding: 8px 28px; }
+  #imgprev { max-width: 760px; margin: 0 auto; }
+  #ibar { max-width: 760px; margin: 6px auto 20px; }
 
   /* ── Other tabs wider padding ── */
   .jp { padding: 24px 28px; }
   .kp { padding: 24px 28px; }
   .mfp { padding: 24px 28px; }
+
+  /* ── Journal: 4 stat card in riga invece di griglia 2x2 ── */
+  .sgrid { grid-template-columns: repeat(4, 1fr); }
 
   /* ── Overlays centered on desktop ── */
   .ovl { align-items: center; }

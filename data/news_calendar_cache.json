@@ -1,222 +1,182 @@
 {
-  "fetched_at": 1781584432.6913676,
-  "count": 27,
+  "fetched_at": 1784174296.005614,
+  "count": 22,
   "events": [
     {
-      "title": "ECB President Lagarde Speaks",
-      "currency": "EUR",
+      "title": "BOE Gov Bailey Speaks",
+      "currency": "GBP",
       "impact": "Medium",
-      "dt": "2026-06-15T07:30:00",
+      "dt": "2026-07-14T08:45:00",
       "forecast": "",
       "previous": ""
     },
     {
-      "title": "BOJ Policy Rate",
-      "currency": "JPY",
+      "title": "Core CPI m/m",
+      "currency": "USD",
       "impact": "High",
-      "dt": "2026-06-16T03:19:00",
-      "forecast": "<1.00%",
-      "previous": "<0.75%"
+      "dt": "2026-07-14T12:30:00",
+      "forecast": "0.2%",
+      "previous": "0.2%"
     },
     {
-      "title": "Monetary Policy Statement",
-      "currency": "JPY",
+      "title": "Core CPI y/y",
+      "currency": "USD",
       "impact": "High",
-      "dt": "2026-06-16T03:19:00",
-      "forecast": "",
-      "previous": ""
+      "dt": "2026-07-14T12:30:00",
+      "forecast": "2.8%",
+      "previous": "2.9%"
     },
     {
-      "title": "Cash Rate",
-      "currency": "AUD",
+      "title": "CPI m/m",
+      "currency": "USD",
       "impact": "High",
-      "dt": "2026-06-16T04:30:00",
-      "forecast": "4.35%",
-      "previous": "4.35%"
-    },
-    {
-      "title": "RBA Rate Statement",
-      "currency": "AUD",
-      "impact": "High",
-      "dt": "2026-06-16T04:30:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "RBA Press Conference",
-      "currency": "AUD",
-      "impact": "High",
-      "dt": "2026-06-16T05:30:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "BOJ Press Conference",
-      "currency": "JPY",
-      "impact": "High",
-      "dt": "2026-06-16T05:30:00",
-      "forecast": "",
-      "previous": ""
+      "dt": "2026-07-14T12:30:00",
+      "forecast": "-0.1%",
+      "previous": "0.5%"
     },
     {
       "title": "CPI y/y",
-      "currency": "GBP",
+      "currency": "USD",
       "impact": "High",
-      "dt": "2026-06-17T06:00:00",
-      "forecast": "3.0%",
-      "previous": "2.8%"
+      "dt": "2026-07-14T12:30:00",
+      "forecast": "3.8%",
+      "previous": "4.2%"
     },
     {
-      "title": "ECB President Lagarde Speaks",
-      "currency": "EUR",
-      "impact": "Medium",
-      "dt": "2026-06-17T10:50:00",
+      "title": "Fed Chairman Warsh Testifies",
+      "currency": "USD",
+      "impact": "High",
+      "dt": "2026-07-14T14:00:00",
       "forecast": "",
       "previous": ""
+    },
+    {
+      "title": "BOE Gov Bailey Speaks",
+      "currency": "GBP",
+      "impact": "High",
+      "dt": "2026-07-14T20:00:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "Core PPI m/m",
+      "currency": "USD",
+      "impact": "High",
+      "dt": "2026-07-15T12:30:00",
+      "forecast": "0.3%",
+      "previous": "0.4%"
+    },
+    {
+      "title": "PPI m/m",
+      "currency": "USD",
+      "impact": "High",
+      "dt": "2026-07-15T12:30:00",
+      "forecast": "0.0%",
+      "previous": "1.1%"
+    },
+    {
+      "title": "BOC Monetary Policy Report",
+      "currency": "CAD",
+      "impact": "High",
+      "dt": "2026-07-15T13:45:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "BOC Rate Statement",
+      "currency": "CAD",
+      "impact": "High",
+      "dt": "2026-07-15T13:45:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "Overnight Rate",
+      "currency": "CAD",
+      "impact": "High",
+      "dt": "2026-07-15T13:45:00",
+      "forecast": "2.25%",
+      "previous": "2.25%"
+    },
+    {
+      "title": "Fed Chairman Warsh Testifies",
+      "currency": "USD",
+      "impact": "High",
+      "dt": "2026-07-15T14:00:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "BOC Press Conference",
+      "currency": "CAD",
+      "impact": "High",
+      "dt": "2026-07-15T14:45:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "GDP m/m",
+      "currency": "GBP",
+      "impact": "High",
+      "dt": "2026-07-16T06:00:00",
+      "forecast": "0.0%",
+      "previous": "-0.1%"
     },
     {
       "title": "Core Retail Sales m/m",
       "currency": "USD",
       "impact": "Medium",
-      "dt": "2026-06-17T12:30:00",
-      "forecast": "0.6%",
-      "previous": "0.7%"
-    },
-    {
-      "title": "Retail Sales m/m",
-      "currency": "USD",
-      "impact": "Medium",
-      "dt": "2026-06-17T12:30:00",
-      "forecast": "0.5%",
-      "previous": "0.5%"
-    },
-    {
-      "title": "President Trump Speaks",
-      "currency": "USD",
-      "impact": "Medium",
-      "dt": "2026-06-17T13:30:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "Federal Funds Rate",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-06-17T18:00:00",
-      "forecast": "3.75%",
-      "previous": "3.75%"
-    },
-    {
-      "title": "FOMC Economic Projections",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-06-17T18:00:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "FOMC Statement",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-06-17T18:00:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "FOMC Press Conference",
-      "currency": "USD",
-      "impact": "High",
-      "dt": "2026-06-17T18:30:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "Claimant Count Change",
-      "currency": "GBP",
-      "impact": "High",
-      "dt": "2026-06-18T06:00:00",
-      "forecast": "25.8K",
-      "previous": "26.5K"
-    },
-    {
-      "title": "Average Earnings Index 3m/y",
-      "currency": "GBP",
-      "impact": "Medium",
-      "dt": "2026-06-18T06:00:00",
-      "forecast": "4.0%",
-      "previous": "4.1%"
-    },
-    {
-      "title": "SNB Monetary Policy Assessment",
-      "currency": "CHF",
-      "impact": "High",
-      "dt": "2026-06-18T07:30:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "SNB Policy Rate",
-      "currency": "CHF",
-      "impact": "High",
-      "dt": "2026-06-18T07:30:00",
-      "forecast": "0.00%",
-      "previous": "0.00%"
-    },
-    {
-      "title": "SNB Press Conference",
-      "currency": "CHF",
-      "impact": "High",
-      "dt": "2026-06-18T08:00:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "Monetary Policy Summary",
-      "currency": "GBP",
-      "impact": "High",
-      "dt": "2026-06-18T11:00:00",
-      "forecast": "",
-      "previous": ""
-    },
-    {
-      "title": "MPC Official Bank Rate Votes",
-      "currency": "GBP",
-      "impact": "High",
-      "dt": "2026-06-18T11:00:00",
-      "forecast": "1-0-8",
-      "previous": "1-0-8"
-    },
-    {
-      "title": "Official Bank Rate",
-      "currency": "GBP",
-      "impact": "High",
-      "dt": "2026-06-18T11:00:00",
-      "forecast": "3.75%",
-      "previous": "3.75%"
+      "dt": "2026-07-16T12:30:00",
+      "forecast": "0.0%",
+      "previous": "0.8%"
     },
     {
       "title": "Philly Fed Manufacturing Index",
       "currency": "USD",
       "impact": "Medium",
-      "dt": "2026-06-18T12:30:00",
-      "forecast": "9.8",
-      "previous": "-0.4"
+      "dt": "2026-07-16T12:30:00",
+      "forecast": "12.7",
+      "previous": "10.3"
+    },
+    {
+      "title": "Retail Sales m/m",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-07-16T12:30:00",
+      "forecast": "0.2%",
+      "previous": "0.9%"
     },
     {
       "title": "Unemployment Claims",
       "currency": "USD",
       "impact": "Medium",
-      "dt": "2026-06-18T12:30:00",
-      "forecast": "225K",
-      "previous": "229K"
+      "dt": "2026-07-16T12:30:00",
+      "forecast": "216K",
+      "previous": "215K"
     },
     {
-      "title": "Retail Sales m/m",
-      "currency": "GBP",
+      "title": "President Trump Speaks",
+      "currency": "USD",
       "impact": "Medium",
-      "dt": "2026-06-19T06:00:00",
-      "forecast": "0.5%",
-      "previous": "-1.3%"
+      "dt": "2026-07-17T01:00:00",
+      "forecast": "",
+      "previous": ""
+    },
+    {
+      "title": "Prelim UoM Consumer Sentiment",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-07-17T14:00:00",
+      "forecast": "51.0",
+      "previous": "48.9"
+    },
+    {
+      "title": "Prelim UoM Inflation Expectations",
+      "currency": "USD",
+      "impact": "Medium",
+      "dt": "2026-07-17T14:00:00",
+      "forecast": "",
+      "previous": "4.6%"
     }
   ]
 }

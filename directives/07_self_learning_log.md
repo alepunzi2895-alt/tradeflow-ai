@@ -4,6 +4,7 @@
 
 | Data | Bug | Causa radice | Fix applicato |
 |---|---|---|---|
+| 2026-06-16 | PerfTracker S00_MFKK: score_mult 1.00→0.00 ⬇️ | hard_block | WR 13.3% vs baseline 49.4% (27%) — BLOCCATA |
 | 2026-06-16 | PerfTracker S00_MFKK hard_block (0 trade per 12 giorni) | Cache performance conteneva 20+ perdite anomale Apr-17 (bug pre-MAX_OPEN_ORDERS) che abbassavano WR a 13.3% | Reset performance_cache.json + strategy_overrides.json; regime_playbook.json aggiornato da S05→S16 per TREND |
 | 2026-05-15 | PerfTracker S00_MFKK: score_mult 1.00→0.70 ⬇️ | underperform | WR 13.3% vs baseline 49.4% (27%) |
 | 2026-04-21 | PerfTracker S00_MFKK: score_mult 0.50→0.70 ⬆️ | recupero parziale | WR 3.3% vs baseline 38.3% (9%) |

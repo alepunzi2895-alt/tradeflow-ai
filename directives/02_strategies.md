@@ -15,9 +15,9 @@ Rilanciando oggi `--rm` (il percorso più vicino al bot live) con codice corrett
 | M15 | ~1900 | 29.9% | 1.259 | +$11.84 | — |
 | M30 | 808  | 31.9% | 1.236 | +$15.58 | $1378 |
 | **H1**  | **1333** | **33.6%** | **1.412** | **+$37.95** | **$2323** |
-| **H4**  | **430**  | **32.1%** | **1.64**  | **+$42.97** | **$1249** |
+| **H4**  | **408**  | **32.4%** | **1.69**  | **+$44.51** | **$1249** |
 
-File salvati: `backtests/results/bt_{m5,m15,m30,h1,h4}_2026-07-16.json`. **Solo il livello aggregato per-TF è stato riverificato** — le sotto-tabelle "Breakdown per strategia" e "TF ottimale per strategia" più sotto derivano ancora dal run 2026-07-07 pre-bugfix: trattale con cautela finché non vengono ricalcolate.
+H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi tabella "Strategie Attive" sotto e `07_self_learning_log.md`) — con S05 ancora nel roster il PF era 1.64/+$42.97/gg (`bt_h4_2026-07-16.json`); senza (`bt_h4_2026-07-16_no-s05.json`) sale a 1.69/+$44.51/gg su 22 trade in meno. M5/M15/M30/H1 sopra sono invece ancora col roster pre-refresh (nessuna delle altre rimozioni validate riguardava quei TF). File salvati: `backtests/results/bt_{m5,m15,m30,h1,h4}_2026-07-16*.json`. **Solo il livello aggregato per-TF è stato riverificato** — le sotto-tabelle "Breakdown per strategia" e "TF ottimale per strategia" più sotto derivano ancora dal run 2026-07-07 pre-bugfix: trattale con cautela finché non vengono ricalcolate.
 
 ## Backtest Canonico (2026-07-07 · bt_*_adaptive · lot 0.01 · ~24 mesi · regime-filtered) — ⚠️ superato, vedi sopra
 
@@ -66,7 +66,7 @@ File salvati: `backtests/results/bt_{m5,m15,m30,h1,h4}_2026-07-16.json`. **Solo 
 | S17_CONVERGENCE_SCALP | **H4** | 2.709 (H4) | 35.8% | Dominante H4 (+$2819). H1/M30 standalone pessimi |
 | S09_MFKK_SCALPING | **M30** | 1.782 (M30) | 25.0% | Cambiato da [H1]: M30 meglio in adaptive |
 | S10_OB_FVG_SCALP | **M30** | 1.949 (M30) | 54.5% | H1 negativo. Campione piccolo (n=11) |
-| S05_MFKK_INTRADAY | **H4** | marginale | 0% standalone | Solo TREND H4. 0% WR in tutti i TF standalone |
+| ~~S05_MFKK_INTRADAY~~ | ⛔ ritirata 2026-07-16 | — | — | Era solo TREND H4, unico drag del roster H4 in adaptive — vedi tabella "Strategie Attive" sopra |
 | S18_RANGE_REVERSAL | **M30** (bot) | 1.061 (M30) | 43.5% | M5 migliore in backtest puro (PF 1.438) ma bot non ha M5 |
 
 ## Regime Priority per TF (backtester + bot)
@@ -95,7 +95,7 @@ File salvati: `backtests/results/bt_{m5,m15,m30,h1,h4}_2026-07-16.json`. **Solo 
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK, TREND | **M30 only** | 1.534 M30 | 49.0% |
 | `S16_GOLDEN_SQUEEZE` | Golden Squeeze V5 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.863 H1 | 51.0% |
 | `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.5 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
-| `S05_MFKK_INTRADAY` | MFKK Intraday V6 | ATR×3.5 | ATR×1.0 | TREND (H4 only) | H4 (marginale) | — | 35.7% (14 trade, fragile) |
+| ~~`S05_MFKK_INTRADAY`~~ | ⛔ **Ritirata 2026-07-16** | — | — | era TREND (H4 only) | era H4 (marginale) | — | rimossa da `STRATEGIES_CONFIG` (strategy_selector.py) e da `REGIME_PRIORITY_H4` (strategy-engine-v2.py) — portfolio concentration study: droppando solo S05 dal roster H4, PF OOS 2.19→2.66 e DD -32% a parità di P&L. H4 era il suo unico slot vivo (H1/M30 già negativi). Codice/funzione segnale lasciati intatti in `signals.py` per eventuale re-instaurazione futura, semplicemente non più selezionabile in live. Vedi `07_self_learning_log.md` 2026-07-16. |
 
 ## Strategy Selector Agent (`strategy_selector.py`)
 

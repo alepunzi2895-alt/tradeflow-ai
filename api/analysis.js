@@ -1,6 +1,15 @@
 // api/analysis.js — Super-Consolidated Analysis Engine (Restored & Robust)
 // Handles: Market Data (Prices, Correlation, G/S Ratio), Sentiment, Economic Calendar, COT, Indicators (MACD, ADX, CCI)
 
+// Cache in-memory (best-effort, sopravvive solo tra invocazioni Vercel "warm" —
+// stesso pattern di api/webhook.js::memCache). Riduce le chiamate ripetute verso
+// nfs.faireconomy.media, l'unica fonte calendario ancora viva e rate-limited
+// (429 verificato 2026-07-09) — senza cache, refresh frequenti della dashboard
+// da più utenti/tab possono da soli far scattare il rate limit.
+let calCache = null;
+let calCacheTs = 0;
+const CAL_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-cache");
@@ -127,35 +136,51 @@ export default async function handler(req, res) {
 
     // ── CALENDAR ──
     if (type === "calendar") {
-      let events = [];
-      const urls = ["https://nfs.faireconomy.media/ff_calendar_thisweek.json", "https://nfs.faireconomy.media/ff_calendar_nextweek.json"];
-      for (const url of urls) {
+      // Cache-hit: risparmia la fetch esterna (vedi CAL_CACHE_TTL_MS in cima al file).
+      if (calCache && (Date.now() - calCacheTs) < CAL_CACHE_TTL_MS) {
+        return res.status(200).json({ ok:true, events: calCache, cached: true, timestamp: new Date().toISOString() });
+      }
+
+      // Verificato in diretta 2026-07-09: cdn-nfs.faireconomy.media non risolve più (DNS
+      // morto), forexfactory.com/ff_calendar_thisweek.json blocca con 403 (bot detection),
+      // nfs.faireconomy.media/ff_calendar_nextweek.json risponde 404 (endpoint ritirato).
+      // L'UNICA fonte ancora viva è nfs.faireconomy.media/ff_calendar_thisweek.json — ma va
+      // rispettata: bombardarla con richieste concorrenti (incluso il suo stesso "nextweek")
+      // fa scattare un 429 anche su questa. Niente raffica parallela: un solo URL, con un
+      // retry breve per assorbire i 429/blip transitori (motivo originale per cui la card
+      // restava vuota — vedi directives/07_self_learning_log.md 2026-07-09).
+      const CAL_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+      let raw = null;
+      for (let attempt = 0; attempt < 2 && !raw; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 900));
         try {
-          const r = await fetchT(url, { headers:{"User-Agent":"Mozilla/5.0"} });
-          if (r.ok) {
-            const data = await r.json();
-            const important = data.filter(e => {
-              const country = (e.currency || e.country || "").toUpperCase();
-              return ["USD","EUR","GBP","JPY","AUD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
-            });
-            if (important.length) {
-              events = important.slice(0, 15).map(e => ({
-                id: e.id || Math.random().toString(36).substr(2, 9),
-                time: e.date || e.time || new Date().toISOString(),
-                currency: e.currency || e.country || "USD",
-                event: e.event || e.title || "Economic Event",
-                impact: e.impact || "High"
-              }));
-              break;
-            }
-          }
+          const r = await fetchT(CAL_URL, { headers:{"User-Agent":"Mozilla/5.0"} }, 5000);
+          if (r.ok) raw = await r.json();
         } catch(e) {}
       }
 
-      // If fetch fails, do not provide fake mock events, just an empty list.
-      if (!events.length) {
-        events = [];
+      let events = [];
+      if (Array.isArray(raw)) {
+        const important = raw.filter(e => {
+          const country = (e.currency || e.country || "").toUpperCase();
+          return ["USD","EUR","GBP","JPY","AUD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
+        });
+        events = important.slice(0, 15).map(e => ({
+          id: e.id || Math.random().toString(36).substr(2, 9),
+          time: e.date || e.time || new Date().toISOString(),
+          currency: e.currency || e.country || "USD",
+          event: e.event || e.title || "Economic Event",
+          impact: e.impact || "High"
+        }));
       }
+
+      // Cache sempre il risultato — anche vuoto, ma solo per pochi secondi (non i 5 min
+      // pieni) così un blip transitorio non "congela" la card vuota a lungo, mentre un
+      // fetch riuscito viene servito dalla cache per la TTL intera.
+      calCache = events;
+      calCacheTs = events.length ? Date.now() : (Date.now() - CAL_CACHE_TTL_MS + 20000);
+
+      // If fetch fails, do not provide fake mock events, just an empty list.
       return res.status(200).json({ ok:true, events, timestamp: new Date().toISOString() });
     }
 

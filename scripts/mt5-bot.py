@@ -1312,6 +1312,15 @@ def run():
                                     net_profit += (d.profit or 0) + (d.commission or 0) + (d.swap or 0)
                                     if d.comment and d.comment.startswith('TF-AI '):
                                         strategy_closed = d.comment.replace('TF-AI ', '')
+                            # Il broker tronca il comment MT5 a ~16 char (es. 'S18_RANGE_' invece
+                            # di 'S18_RANGE_REVERSAL') → risolvi il nome pieno per ticket match
+                            # contro _strategy_order_tickets invece di fidarsi del comment troncato,
+                            # altrimenti il pop sotto fallisce silenziosamente e la entry resta
+                            # bloccata per sempre in count_open_positions() (vedi 06_known_issues.md)
+                            for _sname, (_tkt, _dir) in _strategy_order_tickets.items():
+                                if _tkt == ticket:
+                                    strategy_closed = _sname
+                                    break
                         if extra:
                             log.info(
                                 f"🎯 Chiusura rilevata: ticket#{ticket} pos_id={pos_id} "

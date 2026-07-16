@@ -58,14 +58,32 @@ LOG_PATH       = os.path.join(_BASE_DIR, '..', 'directives', '07_self_learning_l
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _parse_strategy_from_comment(comment: str):
-    """Estrae strategy_id dal commento ordine: 'TF-AI S16_GOLDEN_SQUEEZE' → 'S16_GOLDEN_SQUEEZE'."""
+    """
+    Estrae strategy_id dal commento ordine: 'TF-AI S16_GOLDEN_SQUEEZE' → 'S16_GOLDEN_SQUEEZE'.
+
+    Il broker tronca il campo comment lato server (osservato 2026-07-09 sui dati
+    live: 'TF-AI S16_GOLDEN' invece di 'TF-AI S16_GOLDEN_SQUEEZE', 'TF-AI S18_RANGE_'
+    invece di 'TF-AI S18_RANGE_REVERSAL', ecc. — mt5-bot.py invia il comment completo,
+    la troncatura avviene sul lato server/broker). Un match esatto contro
+    BACKTEST_BASELINES scartava quindi in silenzio ogni trade di ogni strategia con
+    nome >~10 caratteri — S00_MFKK (8 char) era l'unica a sopravvivere, l'unica
+    tracciata dal self-learning. Fix: risolvi per prefisso contro gli strategy_id
+    noti quando il match esatto fallisce; None (scarta) se ambiguo, mai un
+    'quasi-match' che rischi di attribuire un trade alla strategia sbagliata.
+    """
     if not comment:
         return None
     comment = comment.strip()
-    if comment.startswith(COMMENT_PREFIX):
-        sid = comment[len(COMMENT_PREFIX):].strip()
-        if sid in BACKTEST_BASELINES:
-            return sid
+    if not comment.startswith(COMMENT_PREFIX):
+        return None
+    raw_sid = comment[len(COMMENT_PREFIX):].strip()
+    if not raw_sid:
+        return None
+    if raw_sid in BACKTEST_BASELINES:
+        return raw_sid
+    matches = [sid for sid in BACKTEST_BASELINES if sid.startswith(raw_sid)]
+    if len(matches) == 1:
+        return matches[0]
     return None
 
 

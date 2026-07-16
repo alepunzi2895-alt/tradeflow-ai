@@ -128,6 +128,7 @@ async function generateReport(period){
     tradeMemory.summary=d.report.slice(0,500);
     tradeMemory.lastReport={period,date:new Date().toISOString(),stats:d.stats};
     S.set(K.mem,tradeMemory);
+    window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
     updateMemoryInfo();
   }catch(e){alert('Errore: '+e.message);}
   if(btn){btn.textContent={day:'📋 Oggi',week:'📋 Settimana',month:'📋 Mese'}[period];btn.disabled=false;}
@@ -173,6 +174,7 @@ function saveAnalysisMemory(){
   const entry={date:new Date().toISOString(),text:aic.textContent.slice(0,600)};
   analysisMemory.entries=[entry,...(analysisMemory.entries||[])].slice(0,20);
   S.set(K.amem,analysisMemory);
+  window.dbSaveUserData&&window.dbSaveUserData('amem',analysisMemory);
   alert('✅ Analisi salvata nella memoria operatività.');
 }
 
@@ -181,7 +183,9 @@ function resetMemory(type){
   if(!confirm(`Reset memoria analisi operatività (${label})?`))return;
   analysisMemory={entries:[],lastReset:new Date().toISOString()};
   S.set(K.amem,analysisMemory);
+  window.dbSaveUserData&&window.dbSaveUserData('amem',analysisMemory);
   tradeMemory.summary='';S.set(K.mem,tradeMemory);
+  window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
   updateMemoryInfo();
   alert('✅ Memoria resettata.');
 }
@@ -405,6 +409,7 @@ function renderJournal(){
         if(tradeMemory.entries) {
           delete tradeMemory.entries[e.id];
           S.set(K.mem, tradeMemory);
+          window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
           renderJournal();
         }
       };
@@ -419,6 +424,7 @@ function renderJournal(){
         tradeMemory.entries=tradeMemory.entries||{};
         tradeMemory.entries[e.id]=coaching;
         S.set(K.mem,tradeMemory);
+        window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
       }
       cbtn.textContent='💡';cbtn.disabled=false;
     };

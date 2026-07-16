@@ -53,6 +53,10 @@ async function fetchT(url, opts={}, ms=8000) {
 
 Ogni `fetch` in `api/*.js` DEVE usare questo pattern. Senza timeout, una richiesta bloccata causa `504 Gateway Timeout` su Vercel.
 
+## CSS: mobile-first, desktop è un layer separato
+
+`public/style.css` è mobile-first — le regole base assumono `#app` largo ~500px. Il breakpoint desktop (`@media (min-width: 1024px)`, fondo del file) **non basta aggiungere padding**: i componenti pensati per una card stretta (liste con `flex:1` + elemento a larghezza fissa, griglie `repeat(2,1fr)` hardcoded) vanno **riflowati esplicitamente** dentro quel blocco, altrimenti restano stretti dentro un contenitore largo e lasciano spazio vuoto (visto 2026-07-09: chat a metà schermo, righe driver AI Confidence con buco tra etichetta e barra, stat grid Journal bloccata a 2 colonne). Quando si aggiunge un componente nuovo, chiedersi esplicitamente "come si comporta su una card larga 700px+" prima di lasciarlo solo mobile-style.
+
 ## Aggiornamento Live — Frequenze
 
 | Componente | Intervallo | Cosa fa |

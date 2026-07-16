@@ -83,6 +83,7 @@ async function syncStateFromCloud() {
         if (row.doc_type === 'kb') { kb = payload; S.set(K.kb, kb); }
         if (row.doc_type === 'mfx') { mfxSession = payload; S.set(K.mfx, mfxSession); }
         if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
+        if (row.doc_type === 'mem') { tradeMemory = payload; S.set(K.mem, tradeMemory); }
       } catch(e) { console.error('Sync error parsing', row.doc_type, e); }
     });
     // rebuild knowledge
@@ -165,7 +166,7 @@ function compress(file){
 
 // ── API ────────────────────────────────────────────────
 async function api(messages,system){
-  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:system||buildSys(),messages})});
+  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,thinking:{type:'disabled'},system:system||buildSys(),messages})});
   const d=await r.json();
   if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
   const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();

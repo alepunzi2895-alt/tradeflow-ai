@@ -1,5 +1,7 @@
 # TradeFlow AI — Procedure Backtest
 
+> ⚠️ **2026-07-16**: i "Risultati Canonici" sotto (2026-05-08) e il baseline 2026-07-07 in `02_strategies.md` sono superati — 2 bug in `strategy-engine-v2.py` (`run_adaptive()` senza ramo S00_MFKK, `run_one()` etichettava vincite trailing-stop come sconfitte) sono stati corretti su `main` il 2026-07-16, e i numeri non tornano identici nemmeno dopo il fix. Numeri freschi riproducibili in `02_strategies.md` § "Refresh 2026-07-16". Dettagli in `07_self_learning_log.md`.
+
 ## Comandi
 
 ```bash

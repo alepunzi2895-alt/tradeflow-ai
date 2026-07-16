@@ -1,6 +1,25 @@
 # TradeFlow AI — Strategie Attive
 
-## Backtest Canonico (2026-07-07 · bt_*_adaptive · lot 0.01 · ~24 mesi · regime-filtered)
+## ⚠️ Refresh 2026-07-16 — il baseline 2026-07-07 sotto non è riproducibile
+
+Uno sprint di ricerca (5 esperimenti paralleli in worktree isolati, vedi `07_self_learning_log.md` 2026-07-16) ha trovato **2 bug nel backtester** (`scripts/strategy-engine-v2.py`), ora corretti su `main`:
+
+1. `run_adaptive()` non aveva un ramo TP/SL per `S00_MFKK` (~82% del volume H1) → fallback fisso $20/$12 invece di ATR×3.5/1.0. `run_adaptive_rm()` aveva già il ramo corretto.
+2. `run_one()` (classifiche standalone Fase 1) etichettava **qualsiasi** uscita non-TP come sconfitta, anche quando il trailing stop aveva già spostato lo stop in profondo profitto prima dell'inversione — falsava WR/PF standalone di ogni strategia storicamente riportata in questo file.
+
+Rilanciando oggi `--rm` (il percorso più vicino al bot live) con codice corretto e stessi dati, i numeri **non tornano** a quelli documentati sotto come "fonte di verità 2026-07-07" — il gap non è spiegato per intero solo da questi 2 bug (nessuna modifica a `signals.py` o ai dati risulta tra le due date), quindi tratta la tabella 2026-07-07 sotto come **superata/non affidabile**, non solo "leggermente disallineata". Numeri freschi, riproducibili oggi (`--rm`, 0.01 lot):
+
+| TF | N trade | WR% | PF | $/gg | DD |
+|---|---|---|---|---|---|
+| M5  | 1844 | 31.6% | 1.093 | +$3.57 | — |
+| M15 | ~1900 | 29.9% | 1.259 | +$11.84 | — |
+| M30 | 808  | 31.9% | 1.236 | +$15.58 | $1378 |
+| **H1**  | **1333** | **33.6%** | **1.412** | **+$37.95** | **$2323** |
+| **H4**  | **430**  | **32.1%** | **1.64**  | **+$42.97** | **$1249** |
+
+File salvati: `backtests/results/bt_{m5,m15,m30,h1,h4}_2026-07-16.json`. **Solo il livello aggregato per-TF è stato riverificato** — le sotto-tabelle "Breakdown per strategia" e "TF ottimale per strategia" più sotto derivano ancora dal run 2026-07-07 pre-bugfix: trattale con cautela finché non vengono ricalcolate.
+
+## Backtest Canonico (2026-07-07 · bt_*_adaptive · lot 0.01 · ~24 mesi · regime-filtered) — ⚠️ superato, vedi sopra
 
 ### Sistema Adattivo per TF — Confronto TF (fonte di verità · 2026-07-07)
 

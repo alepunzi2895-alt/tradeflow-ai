@@ -905,10 +905,17 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
                 if jh>=curr_sl_dyn: outcome='loss'; close_price=curr_sl_dyn; break
         
         if outcome=='open': continue
-        p_val = abs(close_price - entry)
-        pnl = p_val if win else -abs(entry - close_price)
+        # BUGFIX (2026-07-16): pnl/outcome derivato dal movimento di prezzo firmato reale, non
+        # dal ramo (tp_p vs curr_sl_dyn) che ha chiuso il trade. curr_sl_dyn può essere trailato
+        # in profondo profitto (BE/trailing sopra); un'uscita lì è comunque una VINCITA se
+        # close_price è oltre entry nella direzione del trade. Il vecchio codice etichettava
+        # OGNI uscita non-TP come outcome='loss' con pnl=-abs(...) incondizionatamente — un trade
+        # trailato a +$40 e chiuso a +$38 veniva registrato come una perdita di $38. Falsava ogni
+        # classifica standalone Fase 1 (vedi research/mtf-confluence, 07_self_learning_log.md).
+        pnl = (close_price - entry) if sig=='buy' else (entry - close_price)
+        outcome = 'win' if pnl > 0 else 'loss'
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
-                        'outcome':outcome,'pnl':pnl,'strategy':name})
+                        'outcome':outcome,'pnl':round(pnl,2),'strategy':name})
         day_n[day]+=1; day_h[day]=hour
     return trades
 
@@ -992,6 +999,8 @@ def run_adaptive(candles, ind, tf='H1'):
             tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
             tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
+        elif used == 'S00_MFKK':
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
         elif used == 'S18_RANGE_REVERSAL':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.2, 2)
         else:

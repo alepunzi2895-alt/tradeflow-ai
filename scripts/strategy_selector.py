@@ -36,20 +36,6 @@ STRATEGIES_CONFIG = [
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
     },
     {
-        "id": "S05_MFKK_INTRADAY",
-        "name": "MFKK Intraday",
-        "signal_function": "signal_mfkk_intraday",
-        "performance_by_tf": {
-            # bt_h4_adaptive 2026-07-07: 0% WR standalone, ma regime-gated in TREND_UP/DOWN su H4
-            # Nessun TF mostra profitto standalone. Lasciato su H4 come filtro regime.
-            "H4":  {"wr": 0.200, "pf": 1.050, "daily_pnl": 0.5, "dd": 250},
-            "H1":  {"wr": 0.050, "pf": 0.300, "daily_pnl": -2.0, "dd": 450},
-            "M30": {"wr": 0.050, "pf": 0.300, "daily_pnl": -2.0, "dd": 400},
-        },
-        "optimal_regimes": ["TREND_UP", "TREND_DOWN"],
-        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},
-    },
-    {
         "id": "S09_MFKK_SCALPING",
         "name": "MFKK Scalping",
         "signal_function": "signal_mfkk_scalping",

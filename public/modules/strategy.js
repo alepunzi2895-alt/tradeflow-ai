@@ -24,11 +24,12 @@ const SE = {
         maxdd: 4251.1, maxdd_pct: '52.3%', trades_12m: 590, best_regime: 'ALL REGIMES · H1 best · 17/24 mesi+',
         eq: [128.9,296.1,450.6,232.0,552.9,657.0,696.6,1303.8,1570.1,2451.0,2920.4,2718.9,2842.0,2829.1,4121.1,5242.3,5093.0,5035.5,8133.6,5031.1,5577.9,4567.3,4960.5,5330.3]
       } },
-    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H4] V6', pf: 1.05, wr: '20.0%', tp: 'ATR×3.5', sl: 'ATR×1.5',
+    'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H4] V6 ⛔ RITIRATA', pf: 0.80, wr: '52.9%', tp: 'ATR×3.5', sl: 'ATR×1.5',
       stats: {
-        pnl_1m: 10, td_1m: 1.0, pnl_6m: 60, td_6m: 1.0,
-        pnl_12m: 120, td_12m: 1.0, pnl_24m: 240, td_24m: 1.0,
-        maxdd: 244, maxdd_pct: '2.4%', trades_12m: 20, best_regime: 'TREND · H4 only · regime-gated · 40 trade/24m (fragile)'
+        pnl_1m: 58.1, td_1m: 0.23, pnl_6m: -523.4, td_6m: 0.19,
+        pnl_12m: -927.4, td_12m: 0.2, pnl_24m: -519.5, td_24m: 1.73,
+        maxdd: 1066.8, maxdd_pct: 'n/d', trades_12m: 73, best_regime: 'Ritirata dal roster live 2026-07-16 (PF standalone <1, unico slot vivo era H4) · dati standalone, non più selezionabile dal bot',
+        eq: [-21.8,-9.8,-13.3,-162.8,-159.4,-211.1,-181.2,-101.0,488.9,446.5,382.0,427.9,379.4,363.0,210.1,83.8,47.8,-75.9,-143.2,-411.0,-458.5,-431.4,-519.5]
       } },
     'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30] V3', pf: 1.957, wr: '41.7%', tp: 'ATR×4.0', sl: 'ATR×1.5',
       stats: {
@@ -58,11 +59,12 @@ const SE = {
         maxdd: 408.7, maxdd_pct: '10.9%', trades_12m: 51, best_regime: 'VOLATILE/TREND · H4 best · EMA13/34+StochRSI+BB · 14/21 mesi+',
         eq: [-0.3,-101.0,-91.0,-31.5,-11.2,-9.3,133.0,67.5,632.3,455.8,368.3,396.0,940.2,1569.7,1513.9,2687.1,2774.1,3345.0,3321.1,3446.4,3739.7]
       } },
-    'S18_RANGE_REVERSAL': { label: 'Range Reversal [M30] V1', pf: 1.06, wr: '43.5%', tp: 'ATR×2.0', sl: 'ATR×1.2',
+    'S18_RANGE_REVERSAL': { label: 'Range Reversal [M30] V1', pf: 1.078, wr: '43.5%', tp: 'ATR×2.0', sl: 'ATR×1.2',
       stats: {
-        pnl_1m: 3, td_1m: 1.2, pnl_6m: 21, td_6m: 1.2,
-        pnl_12m: 42, td_12m: 1.2, pnl_24m: 84, td_24m: 1.2,
-        maxdd: 170, maxdd_pct: '1.7%', trades_12m: 46, best_regime: 'RANGE/WEAK · M30 (bot) · BB exhaustion+RSI/WPR · ADX<22 · M5 migliore in backtest puro'
+        pnl_1m: -44.3, td_1m: 0.27, pnl_6m: -72.7, td_6m: 0.23,
+        pnl_12m: 51.5, td_12m: 0.26, pnl_24m: 51.5, td_24m: 1.23,
+        maxdd: 159.7, maxdd_pct: '89.6%', trades_12m: 92, best_regime: 'RANGE/WEAK · M30 (bot) · BB exhaustion+RSI/WPR · ADX<22 · DD alto relativo al P&L — fragile',
+        eq: [28.4,50.3,72.3,113.6,110.4,124.2,178.2,95.9,35.2,108.5,107.7,67.1,51.5]
       } },
   },
   // ── REGIME PRIORITY (allineata a REGIME_PRIORITY_H1 del backtester) ──

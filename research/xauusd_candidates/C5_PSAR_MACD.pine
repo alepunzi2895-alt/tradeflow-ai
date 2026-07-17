@@ -1,0 +1,36 @@
+//@version=6
+strategy("C5_PSAR_MACD", overlay=true, initial_capital=10000,
+     default_qty_type=strategy.fixed, default_qty_value=1,
+     currency=currency.USD, pyramiding=0,
+     commission_type=strategy.commission.cash_per_contract, commission_value=0,
+     slippage=0, calc_on_every_tick=false)
+
+// ── C5: Parabolic SAR(0.02,0.02,0.2) flip + MACD(12,26,9) histogram confirm ──
+// SCARTATA: IS PF 0.982 (perdente su 80% dello storico), profittabilita' interamente
+// concentrata nella finestra OOS (trend oro recente) — vedi RESULTS.md
+psar = ta.sar(0.02, 0.02, 0.2)
+[macdLine, macdSignal, macdHist] = ta.macd(close, 12, 26, 9)
+atr = ta.atr(14)
+
+flipUp = psar[1] > close[1] and psar <= close
+flipDn = psar[1] < close[1] and psar >= close
+
+buyTrigger  = flipUp and macdHist > 0
+sellTrigger = flipDn and macdHist < 0
+
+barOk = bar_index >= 30
+
+var float entryAtr = na
+if buyTrigger and barOk and strategy.position_size == 0
+    entryAtr := atr
+    strategy.entry("Long", strategy.long)
+if sellTrigger and barOk and strategy.position_size == 0
+    entryAtr := atr
+    strategy.entry("Short", strategy.short)
+
+if strategy.position_size > 0
+    strategy.exit("XL", "Long", limit=strategy.position_avg_price + entryAtr*2.5, stop=strategy.position_avg_price - entryAtr*1.2)
+if strategy.position_size < 0
+    strategy.exit("XS", "Short", limit=strategy.position_avg_price - entryAtr*2.5, stop=strategy.position_avg_price + entryAtr*1.2)
+
+plot(psar, style=plot.style_circles, color=color.orange)

@@ -1,0 +1,42 @@
+//@version=6
+strategy("C2_Ichimoku_TenkanKijun", overlay=true, initial_capital=10000,
+     default_qty_type=strategy.fixed, default_qty_value=1,
+     currency=currency.USD, pyramiding=0,
+     commission_type=strategy.commission.cash_per_contract, commission_value=0,
+     slippage=0, calc_on_every_tick=false)
+
+// ── C2: Ichimoku Kumo filter + Tenkan/Kijun cross ────────────────────────────
+// Filtro trend: prezzo sopra/sotto la nuvola Ichimoku (Kumo, 9/26/52, displacement 26)
+// Trigger: Tenkan-sen incrocia Kijun-sen nella direzione del trend
+tenkan = (ta.highest(high,9) + ta.lowest(low,9)) / 2
+kijun  = (ta.highest(high,26) + ta.lowest(low,26)) / 2
+spanA_raw = (tenkan + kijun) / 2
+spanB_raw = (ta.highest(high,52) + ta.lowest(low,52)) / 2
+atr = ta.atr(14)
+
+cloudTop = math.max(spanA_raw[26], spanB_raw[26])
+cloudBot = math.min(spanA_raw[26], spanB_raw[26])
+
+aboveCloud = close > cloudTop
+belowCloud = close < cloudBot
+
+crossUp = ta.crossover(tenkan, kijun)
+crossDn = ta.crossunder(tenkan, kijun)
+
+buyTrigger  = crossUp and aboveCloud
+sellTrigger = crossDn and belowCloud
+
+barOk = bar_index >= 60
+
+var float entryAtr = na
+if buyTrigger and barOk and strategy.position_size == 0
+    entryAtr := atr
+    strategy.entry("Long", strategy.long)
+if sellTrigger and barOk and strategy.position_size == 0
+    entryAtr := atr
+    strategy.entry("Short", strategy.short)
+
+if strategy.position_size > 0
+    strategy.exit("XL", "Long", limit=strategy.position_avg_price + entryAtr*2.5, stop=strategy.position_avg_price - entryAtr*1.2)
+if strategy.position_size < 0
+    strategy.exit("XS", "Short", limit=strategy.position_avg_price - entryAtr*2.5, stop=strategy.position_avg_price + entryAtr*1.2)

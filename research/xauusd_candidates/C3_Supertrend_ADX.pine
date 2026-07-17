@@ -1,0 +1,33 @@
+//@version=6
+strategy("C3_Supertrend_ADX", overlay=true, initial_capital=10000,
+     default_qty_type=strategy.fixed, default_qty_value=1,
+     currency=currency.USD, pyramiding=0,
+     commission_type=strategy.commission.cash_per_contract, commission_value=0,
+     slippage=0, calc_on_every_tick=false)
+
+// ── C3: native Supertrend(10,3) flip + ADX(14)>25 filter ─────────────────────
+[supertrend, dir] = ta.supertrend(3.0, 10)
+[diplus, diminus, adx] = ta.dmi(14, 14)
+atr = ta.atr(14)
+
+adxOk = adx > 25
+
+buyTrigger  = ta.change(dir) < 0 and adxOk
+sellTrigger = ta.change(dir) > 0 and adxOk
+
+barOk = bar_index >= 30
+
+var float entryAtr = na
+if buyTrigger and barOk and strategy.position_size == 0
+    entryAtr := atr
+    strategy.entry("Long", strategy.long)
+if sellTrigger and barOk and strategy.position_size == 0
+    entryAtr := atr
+    strategy.entry("Short", strategy.short)
+
+if strategy.position_size > 0
+    strategy.exit("XL", "Long", limit=strategy.position_avg_price + entryAtr*2.5, stop=strategy.position_avg_price - entryAtr*1.2)
+if strategy.position_size < 0
+    strategy.exit("XS", "Short", limit=strategy.position_avg_price - entryAtr*2.5, stop=strategy.position_avg_price + entryAtr*1.2)
+
+plot(supertrend, color = dir < 0 ? color.green : color.red)

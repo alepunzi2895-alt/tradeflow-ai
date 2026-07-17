@@ -1,1 +1,26 @@
-{}
+{
+  "S00_MFKK": {
+    "score_mult": 0.0,
+    "type": "hard_block",
+    "reason": "WR 13.3% vs baseline 49.4% (27%) \u2014 BLOCCATA",
+    "updated_at": "2026-07-16T13:23:18.304552"
+  },
+  "S16_GOLDEN_SQUEEZE": {
+    "score_mult": 1.0,
+    "type": "normal",
+    "reason": "WR 40.0% in range (78% vs baseline)",
+    "updated_at": "2026-07-16T13:23:18.304552"
+  },
+  "S05_MFKK_INTRADAY": {
+    "score_mult": 1.3,
+    "type": "outperform",
+    "reason": "WR 36.7% vs baseline 25.3% (145%)",
+    "updated_at": "2026-07-16T13:23:18.304552"
+  },
+  "S09_MFKK_SCALPING": {
+    "score_mult": 0.0,
+    "type": "hard_block",
+    "reason": "WR 11.8% vs baseline 36.0% (33%) \u2014 BLOCCATA",
+    "updated_at": "2026-07-16T13:23:18.304552"
+  }
+}

@@ -31,5 +31,60 @@
     "lot": 0.02,
     "dry_run": false,
     "result": "OrderSendResult(retcode=10009, deal=781694207, order=790689678, volume=0.03, price=4504.01, bid=4503.47, ask=4504.01, comment='Request executed', request_id=600143889, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4504.01, stoplimit=0.0, sl=4491.16, tp=4574.97, deviation=20, type=0, type_filling=1, type_time=0, expiration=0, comment='TF-AI S00_MFKK', position=0, position_by=0))"
+  },
+  {
+    "time": "2026-06-16T14:00:10.372542+00:00",
+    "direction": "buy",
+    "strategy": "S10_OB_FVG_SCALP",
+    "price": 4334.11,
+    "tp": 4384.77,
+    "sl": 4319.64,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=796858942, order=906439461, volume=0.03, price=4334.11, bid=4333.56, ask=4334.11, comment='Request executed', request_id=600143893, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4334.11, stoplimit=0.0, sl=4326.16, tp=4361.23, deviation=20, type=0, type_filling=1, type_time=0, expiration=0, comment='TF-AI S10_OB_FVG_SCALP', position=0, position_by=0))"
+  },
+  {
+    "time": "2026-06-23T05:00:02.351853+00:00",
+    "direction": "sell",
+    "strategy": "S17_CONVERGENCE_SCALP",
+    "price": 4115.57,
+    "tp": 3947.21,
+    "sl": 4178.7,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=904666903, order=914432770, volume=0.02, price=4115.57, bid=4115.57, ask=4116.16, comment='Request executed', request_id=600143894, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.02, price=4115.57, stoplimit=0.0, sl=4167.15, tp=3947.21, deviation=20, type=1, type_filling=1, type_time=0, expiration=0, comment='TF-AI S17_CONVERGENCE_SCALP', position=0, position_by=0))"
+  },
+  {
+    "time": "2026-07-07T05:00:07.343254+00:00",
+    "direction": "sell",
+    "strategy": "S00_MFKK",
+    "price": 4126.16,
+    "tp": 4073.05,
+    "sl": 4141.33,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=921692013, order=931787684, volume=0.03, price=4126.16, bid=4126.16, ask=4126.72, comment='Request executed', request_id=600143897, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4126.16, stoplimit=0.0, sl=4141.33, tp=4073.05, deviation=20, type=1, type_filling=1, type_time=0, expiration=0, comment='TF-AI S00_MFKK', position=0, position_by=0))"
+  },
+  {
+    "time": "2026-07-09T08:00:03.717486+00:00",
+    "direction": "sell",
+    "strategy": "S18_RANGE_REVERSAL",
+    "price": 4107.86,
+    "tp": 4070.72,
+    "sl": 4122.72,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=925296892, order=935470725, volume=0.03, price=4107.86, bid=4107.86, ask=4108.39, comment='Request executed', request_id=600143899, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4107.86, stoplimit=0.0, sl=4123.95, tp=4070.72, deviation=20, type=1, type_filling=1, type_time=0, expiration=0, comment='TF-AI S18_RANGE_REVERSAL', position=0, position_by=0))"
+  },
+  {
+    "time": "2026-07-10T09:30:10.486956+00:00",
+    "direction": "buy",
+    "strategy": "S18_RANGE_REVERSAL",
+    "price": 4102.24,
+    "tp": 4125.83,
+    "sl": 4092.8,
+    "lot": 0.02,
+    "dry_run": false,
+    "result": "OrderSendResult(retcode=10009, deal=926698601, order=936904009, volume=0.03, price=4102.24, bid=4101.71, ask=4102.24, comment='Request executed', request_id=600143900, retcode_external=0, request=TradeRequest(action=1, magic=20250413, order=0, symbol='GOLD', volume=0.03, price=4102.24, stoplimit=0.0, sl=4092.8, tp=4125.83, deviation=20, type=0, type_filling=1, type_time=0, expiration=0, comment='TF-AI S18_RANGE_REVERSAL', position=0, position_by=0))"
   }
 ]

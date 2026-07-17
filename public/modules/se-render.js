@@ -1,3 +1,30 @@
+// ── EQUITY SPARKLINE ─────────────────────────────────────────────────────────
+// Mini-chart SVG inline (no JS state, sopravvive al rebuild di seRender() ogni 1s).
+// points: array di P&L cumulativo (es. mensile) dal backtest della strategia.
+function seEquitySpark(points, label){
+  if(!points || points.length<2) return '';
+  const W=280, H=36, PAD=3;
+  const lo=Math.min(0,...points), hi=Math.max(0,...points);
+  const range=(hi-lo)||1;
+  const x=i=>PAD+(i/(points.length-1))*(W-PAD*2);
+  const y=v=>H-PAD-((v-lo)/range)*(H-PAD*2);
+  const last=points[points.length-1];
+  const col = last>=0 ? 'var(--green)' : 'var(--red)';
+  const pathPts = points.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const areaPts = `${x(0).toFixed(1)},${y(0).toFixed(1)} ${pathPts} ${x(points.length-1).toFixed(1)},${y(0).toFixed(1)}`;
+  const zeroLine = (lo<0 && hi>0)
+    ? `<line x1="${PAD}" y1="${y(0).toFixed(1)}" x2="${W-PAD}" y2="${y(0).toFixed(1)}" stroke="var(--border2)" stroke-width="1" stroke-dasharray="2,2"/>`
+    : '';
+  const lx=x(points.length-1).toFixed(1), ly=y(last).toFixed(1);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:36px;display:block" preserveAspectRatio="none">
+    <title>${label||''} — P&amp;L cumulativo: ${last>=0?'+':''}\$${last.toFixed(0)}</title>
+    ${zeroLine}
+    <polygon points="${areaPts}" fill="${col}" opacity="0.12" stroke="none"/>
+    <polyline points="${pathPts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lx}" cy="${ly}" r="2.5" fill="${col}"/>
+  </svg>`;
+}
+
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const el=document.getElementById('se-content');
@@ -345,8 +372,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 
   // ── MFKK AI GOLD BOT — pannello principale
   // Stats aggregate sistema (backtest M30 · 25 mesi · 6 strategie · lot=0.01 · $1/punto · 2026-04-19)
-  // Sistema adattivo H1 fresh (2026-06-01): 1331 trade · WR 47.9% · PF 1.629 · +$23.5/gg · DD $390 · 19/24 mesi+
-  const BOT_STATS = { pnl_1m:246, pnl_6m:1475, pnl_12m:2950, pnl_24m:5900, maxdd:390, maxdd_pct:'3.9%', trades_12m:666, pf:1.629, wr:'47.9%', n_strat:7 };
+  // Sistema adattivo H1 refresh 2026-07-17 (SL allineato al live + re-tuning confermato, nessun cambio adottato): 1332 trade · WR 40.2% · PF 1.277 · +$33.28/gg · DD $4417.5 · 18/24 mesi+
+  const BOT_STATS = { pnl_1m:1107.5, pnl_6m:1522.1, pnl_12m:4456.3, pnl_24m:8087.0, maxdd:4417.5, maxdd_pct:'38.9%', trades_12m:707, pf:1.277, wr:'40.2%', n_strat:7 };
 
   // Multi-strategy playbook (allineato a REGIME_PRIORITY_M30 del backtester · S18 aggiunto)
   const PLAYBOOK_UI = {
@@ -504,6 +531,15 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
+        ${st.eq && st.eq.length>1 ? `
+        <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:4px 6px 2px;margin-bottom:5px">
+          ${seEquitySpark(st.eq, s.label)}
+          <div style="display:flex;justify-content:space-between;font-size:7px;color:var(--dim);margin-top:1px">
+            <span>Curva equità (backtest, mensile)</span>
+            <span>${st.eq.length} mesi</span>
+          </div>
+        </div>
+        ` : ''}
         ${st.pnl_24m==null ? `
         <div style="background:#1a1600;border:1px solid #c8a96e40;border-radius:5px;padding:6px 8px;margin-bottom:4px">
           <div style="font-size:8px;color:#c8a96e;font-weight:700;margin-bottom:2px">⏳ BACKTEST PENDENTE</div>

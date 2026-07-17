@@ -1,5 +1,27 @@
 # TradeFlow AI — Strategie Attive
 
+## ✅ 2026-07-17 — Re-tuning parametri: nessun cambiamento adottato
+
+Sweep IS(80%)/OOS(20%) su parametri di segnale e mult TP/SL delle 5 strategie attive (S00/S16/S09/S10/S17): **nessuna variante ha battuto il baseline in modo robusto** — 2 candidati TP/SL promettenti in isolamento (S00 e S16 con TP 3.5→3.0×ATR) non hanno retto la verifica sul backtest di portafoglio adattivo reale (migliorano un TF, peggiorano gli altri). I parametri attuali restano la configurazione migliore trovata. Dettagli e numeri completi in `07_self_learning_log.md` 2026-07-17. Trovato e corretto anche un bug secondario di routing argomenti in `run_one()` (strategy-engine-v2.py) che azzerava quasi tutti i segnali standalone S09/S10 nelle classifiche Fase 1 (non affettava i numeri canonici adattivi).
+
+**Novità**: `strategy-engine-v2.py` ora salva `equity_curve` (serie `{t, cum_pnl}` per-trade) per ogni strategia nel JSON di output — vedi `strategies[id].equity_curve` (standalone) e `adaptive_rm.by_strategy[id].equity_curve` (portafoglio). Usata dal grafico curva di equità nella sezione Strategie del frontend.
+
+## ⚠️ Refresh 2026-07-17 — SL nel backtester era disallineato dal live (S00/S09/S10/S17)
+
+Cross-check indipendente su TradingView Strategy Tester (port manuale Pine di S00/S16/S17) ha fatto emergere che `strategy-engine-v2.py` testava con SL 1.0×ATR (S00/S09/S17) e 1.2×ATR (S10) invece di **1.5×ATR**, il valore realmente in produzione da 2026-04-30 in `risk_guardian.py::STRATEGY_ATR_PARAMS` e `mt5-bot.py::STRATEGY_PARAMS` (S16 e S18 erano già allineati, nessuna modifica). Il refresh 2026-07-16 sotto era quindi anch'esso calcolato con SL troppo stretti su 4 strategie su 6. Vedi `07_self_learning_log.md` 2026-07-17 per i dettagli.
+
+Numeri freschi post-fix (`--rm`, stessi dati, 0.01 lot):
+
+| TF | N trade | WR% | PF | $/gg | DD | Mesi+ |
+|---|---|---|---|---|---|---|
+| M30 | 808 | 38.2% | 1.294 | +$23.81 | $1,759 | 9/13 |
+| **H1** | **1332** | **40.2%** | **1.277** | **+$33.28** | **$4,418** | **18/24** |
+| **H4** | **408** | **40.4%** | **1.725** | **+$56.77** | **$1,299** | **12/23** |
+
+Effetto dello SL corretto rispetto al refresh 2026-07-16 (SL bacato): **WR sale ovunque (+6/+8pp)**, coerente con stop più larghi che tagliano meno trade per rumore intracandela. Ma il **DD H1 quasi raddoppia** ($2,323→$4,418) — il rischio reale del sistema H1 era sottostimato in tutti i numeri documentati finora. Tutte e 3 le TF restano nette positive; H4 resta il miglior profilo rischio/rendimento (PF 1.725, DD più basso in assoluto). File: `backtests/results/bt_{h1,m30,h4}_2026-07-17.json`.
+
+**Le sotto-tabelle "Breakdown per strategia" e "TF ottimale per strategia" più sotto sono ancora sul refresh 2026-07-07/16 (pre-fix SL) — trattale con cautela, non ancora ricalcolate a livello di singola strategia.**
+
 ## ⚠️ Refresh 2026-07-16 — il baseline 2026-07-07 sotto non è riproducibile
 
 Uno sprint di ricerca (5 esperimenti paralleli in worktree isolati, vedi `07_self_learning_log.md` 2026-07-16) ha trovato **2 bug nel backtester** (`scripts/strategy-engine-v2.py`), ora corretti su `main`:

@@ -1,6 +1,8 @@
 # TradeFlow AI — Procedure Backtest
 
-> ⚠️ **2026-07-16**: i "Risultati Canonici" sotto (2026-05-08) e il baseline 2026-07-07 in `02_strategies.md` sono superati — 2 bug in `strategy-engine-v2.py` (`run_adaptive()` senza ramo S00_MFKK, `run_one()` etichettava vincite trailing-stop come sconfitte) sono stati corretti su `main` il 2026-07-16, e i numeri non tornano identici nemmeno dopo il fix. Numeri freschi riproducibili in `02_strategies.md` § "Refresh 2026-07-16". Dettagli in `07_self_learning_log.md`.
+> ⚠️ **2026-07-17**: la tabella "Refresh 2026-07-16" sotto è a sua volta superata — SL nel backtester disallineato dal live su S00/S09/S10/S17 (1.0-1.2×ATR invece di 1.5×ATR dal 2026-04-30), corretto lo stesso giorno. Numeri freschi riproducibili in `02_strategies.md` § "Refresh 2026-07-17". Dettagli in `07_self_learning_log.md`.
+>
+> ⚠️ **2026-07-16**: i "Risultati Canonici" sotto (2026-05-08) e il baseline 2026-07-07 in `02_strategies.md` sono superati — 2 bug in `strategy-engine-v2.py` (`run_adaptive()` senza ramo S00_MFKK, `run_one()` etichettava vincite trailing-stop come sconfitte) sono stati corretti su `main` il 2026-07-16, e i numeri non tornano identici nemmeno dopo il fix. Dettagli in `07_self_learning_log.md`.
 
 ## Comandi
 

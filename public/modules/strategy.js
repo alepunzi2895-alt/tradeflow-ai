@@ -13,15 +13,16 @@ const SE = {
   _autoExecuted: new Set(),  // mantenuto per compatibilità (non usato)
   strategies: {
     // ── STRATEGIE ATTIVE [BACKTEST MT5 GOLD · lot 0.01 · $1/punto] ──
-    // Sistema adattivo H1 (2026-06-01 fresh): 1331 trade · WR 47.9% · PF 1.629 · +$23.5/gg · DD $390 · 19/24 mesi+
-    // P&L riferiti a lot=0.01 su conto $1000 baseline · adaptive.by_strategy (bt_fresh_h1/h4/m30)
-    // ── Backtest adattativi 2026-07-07 (bt_h1_adaptive / bt_h4_adaptive / bt_m30_adaptive) ──
-    // Adaptive portfolio (regime-filtered): H1 PF 1.64 +$6087/24m DD$390 · H4 PF 1.86 +$4941/24m DD$535
-    'S00_MFKK': { label: 'MFKK Core [H1] V2', pf: 1.59, wr: '48.9%', tp: 'ATR×3.5', sl: 'ATR×1.0',
+    // Refresh 2026-07-17: SL allineato al live (1.5×ATR, era 1.0-1.2× nel backtester — vedi 07_self_learning_log.md)
+    // + re-tuning parametri (nessun cambiamento adottato, config attuale confermata già ottima su IS/OOS).
+    // Sistema adattivo H1: 1332 trade · WR 40.2% · PF 1.277 · +$33.28/gg · DD $4417.5 · 18/24 mesi+
+    // P&L da adaptive_rm.by_strategy (bt_{h1,m30,h4}_2026-07-17.json) · eq = curva equità mensile cumulata
+    'S00_MFKK': { label: 'MFKK Core [H1] V2', pf: 1.211, wr: '38.3%', tp: 'ATR×3.5', sl: 'ATR×1.5',
       stats: {
-        pnl_1m: 162, td_1m: 4.8, pnl_6m: 972, td_6m: 4.8,
-        pnl_12m: 1944, td_12m: 4.8, pnl_24m: 3896, td_24m: 4.8,
-        maxdd: 264, maxdd_pct: '2.6%', trades_12m: 535, best_regime: 'ALL REGIMES · H1 best · 21/24 mesi+'
+        pnl_1m: 1034.7, td_1m: 1.87, pnl_6m: 419.1, td_6m: 1.69,
+        pnl_12m: 2588.7, td_12m: 1.62, pnl_24m: 5330.3, td_24m: 4.77,
+        maxdd: 4251.1, maxdd_pct: '52.3%', trades_12m: 590, best_regime: 'ALL REGIMES · H1 best · 17/24 mesi+',
+        eq: [128.9,296.1,450.6,232.0,552.9,657.0,696.6,1303.8,1570.1,2451.0,2920.4,2718.9,2842.0,2829.1,4121.1,5242.3,5093.0,5035.5,8133.6,5031.1,5577.9,4567.3,4960.5,5330.3]
       } },
     'S05_MFKK_INTRADAY': { label: 'MFKK Intraday [H4] V6', pf: 1.05, wr: '20.0%', tp: 'ATR×3.5', sl: 'ATR×1.5',
       stats: {
@@ -29,29 +30,33 @@ const SE = {
         pnl_12m: 120, td_12m: 1.0, pnl_24m: 240, td_24m: 1.0,
         maxdd: 244, maxdd_pct: '2.4%', trades_12m: 20, best_regime: 'TREND · H4 only · regime-gated · 40 trade/24m (fragile)'
       } },
-    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30] V3', pf: 1.78, wr: '25.0%', tp: 'ATR×4.0', sl: 'ATR×1.0',
+    'S09_MFKK_SCALPING': { label: 'MFKK Scalping [M30] V3', pf: 1.957, wr: '41.7%', tp: 'ATR×4.0', sl: 'ATR×1.5',
       stats: {
-        pnl_1m: 5, td_1m: 1.3, pnl_6m: 32, td_6m: 1.3,
-        pnl_12m: 63, td_12m: 1.3, pnl_24m: 126, td_24m: 1.3,
-        maxdd: 40, maxdd_pct: '0.4%', trades_12m: 12, best_regime: 'VOLATILE/WEAK · M30 · regime-gated · 24 trade/24m (fragile)'
+        pnl_1m: 64.3, td_1m: 0.03, pnl_6m: 71.9, td_6m: 0.03,
+        pnl_12m: 98.6, td_12m: 0.03, pnl_24m: 98.6, td_24m: 1.33,
+        maxdd: 48.8, maxdd_pct: '49.5%', trades_12m: 12, best_regime: 'VOLATILE/WEAK · M30 · regime-gated · 12 trade/24m (fragile)',
+        eq: [-8.2,16.1,65.3,26.7,83.1,60.6,34.3,98.6]
       } },
-    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V3', pf: 1.95, wr: '54.5%', tp: 'ATR×3.5', sl: 'ATR×1.2',
+    'S10_OB_FVG_SCALP': { label: 'OB+FVG Scalp [M30] V3', pf: 1.56, wr: '54.5%', tp: 'ATR×3.5', sl: 'ATR×1.5',
       stats: {
-        pnl_1m: 16, td_1m: 1.1, pnl_6m: 96, td_6m: 1.1,
-        pnl_12m: 207, td_12m: 1.1, pnl_24m: 414, td_24m: 1.1,
-        maxdd: 154, maxdd_pct: '1.5%', trades_12m: 11, best_regime: 'WEAK/RANGE · M30 · ADX≥18 · OB+FVG confluenza (n piccolo)'
+        pnl_1m: 31.1, td_1m: 0.07, pnl_6m: 217.4, td_6m: 0.06,
+        pnl_12m: 197.0, td_12m: 0.03, pnl_24m: 197.0, td_24m: 1.1,
+        maxdd: 261.9, maxdd_pct: 'n/d', trades_12m: 11, best_regime: 'WEAK/RANGE · M30 · ADX≥18 · OB+FVG confluenza (n piccolo, DD>picco storico — fragile)',
+        eq: [-20.4,-63.9,-89.4,165.9,197.0]
       } },
-    'S16_GOLDEN_SQUEEZE': { label: 'Golden Squeeze [H1] V5', pf: 1.77, wr: '48.6%', tp: 'ATR×3.5', sl: 'ATR×2.0',
+    'S16_GOLDEN_SQUEEZE': { label: 'Golden Squeeze [H1] V5', pf: 1.728, wr: '48.6%', tp: 'ATR×3.5', sl: 'ATR×2.0',
       stats: {
-        pnl_1m: 90, td_1m: 2.1, pnl_6m: 541, td_6m: 2.1,
-        pnl_12m: 1082, td_12m: 2.1, pnl_24m: 2165, td_24m: 2.1,
-        maxdd: 402, maxdd_pct: '4.0%', trades_12m: 122, best_regime: 'TREND · H1 best · EMA200+ADX+MACD+OBV · 16/24 mesi+'
+        pnl_1m: -92.8, td_1m: 0.37, pnl_6m: 1113.0, td_6m: 0.31,
+        pnl_12m: 1931.9, td_12m: 0.32, pnl_24m: 2729.1, td_24m: 2.08,
+        maxdd: 663.4, maxdd_pct: '20.0%', trades_12m: 117, best_regime: 'TREND · H1 best · EMA200+ADX+MACD+OBV · 15/23 mesi+',
+        eq: [164.4,246.3,262.0,184.8,155.2,270.3,197.1,185.2,327.4,588.2,763.9,770.5,789.6,811.3,1030.3,1463.2,1616.0,1507.8,3122.7,3319.7,3293.1,2821.8,2729.1]
       } },
-    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [H4] V2', pf: 2.71, wr: '35.8%', tp: 'ATR×4.0', sl: 'ATR×1.0',
+    'S17_CONVERGENCE_SCALP': { label: 'Convergence Scalp [H4] V2', pf: 2.235, wr: '43.2%', tp: 'ATR×4.0', sl: 'ATR×1.5',
       stats: {
-        pnl_1m: 122, td_1m: 1.1, pnl_6m: 735, td_6m: 1.1,
-        pnl_12m: 1470, td_12m: 1.1, pnl_24m: 2819, td_24m: 1.1,
-        maxdd: 198, maxdd_pct: '2.0%', trades_12m: 47, best_regime: 'VOLATILE/TREND · H4 best · EMA13/34+StochRSI+BB · 15/23 mesi+'
+        pnl_1m: 418.5, td_1m: 0.13, pnl_6m: 2169.9, td_6m: 0.16,
+        pnl_12m: 3283.8, td_12m: 0.14, pnl_24m: 3739.7, td_24m: 1.08,
+        maxdd: 408.7, maxdd_pct: '10.9%', trades_12m: 51, best_regime: 'VOLATILE/TREND · H4 best · EMA13/34+StochRSI+BB · 14/21 mesi+',
+        eq: [-0.3,-101.0,-91.0,-31.5,-11.2,-9.3,133.0,67.5,632.3,455.8,368.3,396.0,940.2,1569.7,1513.9,2687.1,2774.1,3345.0,3321.1,3446.4,3739.7]
       } },
     'S18_RANGE_REVERSAL': { label: 'Range Reversal [M30] V1', pf: 1.06, wr: '43.5%', tp: 'ATR×2.0', sl: 'ATR×1.2',
       stats: {

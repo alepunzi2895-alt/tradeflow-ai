@@ -1,0 +1,187 @@
+{
+  "S00_MFKK": {
+    "baseline_oos": {
+      "n": 219,
+      "wr": 56.2,
+      "pnl": -1148.5,
+      "pf": 0.806,
+      "dd": 3144.7,
+      "avg_day": -31.04,
+      "tr_day": 5.92,
+      "months": "1/6"
+    },
+    "baseline_is": {
+      "n": 840,
+      "wr": 53.6,
+      "pnl": -1888.3,
+      "pf": 0.751,
+      "dd": 2487.8,
+      "avg_day": -10.91,
+      "tr_day": 4.86,
+      "months": "6/19"
+    },
+    "best_signal_param": {
+      "params": {},
+      "oos_pf": 0.806,
+      "oos_pnl": -1148.5,
+      "label": "BASELINE"
+    },
+    "robust": false,
+    "best_tpsl": {
+      "tp": 3.0,
+      "sl": 1.5,
+      "oos_pf": 0.976,
+      "oos_pnl": -144.8
+    },
+    "current_tp": 3.5,
+    "current_sl": 1.5
+  },
+  "S16_GOLDEN_SQUEEZE": {
+    "baseline_oos": {
+      "n": 48,
+      "wr": 50.0,
+      "pnl": 393.0,
+      "pf": 1.375,
+      "dd": 542.4,
+      "avg_day": 15.72,
+      "tr_day": 1.92,
+      "months": "4/6"
+    },
+    "baseline_is": {
+      "n": 186,
+      "wr": 58.6,
+      "pnl": 725.2,
+      "pf": 1.596,
+      "dd": 198.4,
+      "avg_day": 8.06,
+      "tr_day": 2.07,
+      "months": "11/18"
+    },
+    "best_signal_param": {
+      "params": {},
+      "oos_pf": 1.375,
+      "oos_pnl": 393.0,
+      "label": "BASELINE"
+    },
+    "robust": false,
+    "best_tpsl": {
+      "tp": 3.0,
+      "sl": 2.0,
+      "oos_pf": 1.566,
+      "oos_pnl": 592.9
+    },
+    "current_tp": 3.5,
+    "current_sl": 2.0
+  },
+  "S09_MFKK_SCALPING": {
+    "baseline_oos": {
+      "n": 10,
+      "wr": 60.0,
+      "pnl": -82.8,
+      "pf": 0.605,
+      "dd": 182.3,
+      "avg_day": -10.35,
+      "tr_day": 1.25,
+      "months": "1/3"
+    },
+    "baseline_is": {
+      "n": 38,
+      "wr": 44.7,
+      "pnl": -232.3,
+      "pf": 0.349,
+      "dd": 232.5,
+      "avg_day": -9.68,
+      "tr_day": 1.58,
+      "months": "2/8"
+    },
+    "best_signal_param": {
+      "params": {},
+      "oos_pf": 0.605,
+      "oos_pnl": -82.8,
+      "label": "BASELINE"
+    },
+    "robust": false,
+    "best_tpsl": {
+      "tp": 4.0,
+      "sl": 1.5,
+      "oos_pf": 0.605,
+      "oos_pnl": -82.8
+    },
+    "current_tp": 4.0,
+    "current_sl": 1.5
+  },
+  "S10_OB_FVG_SCALP": {
+    "baseline_oos": {
+      "n": 3,
+      "wr": 33.3,
+      "pnl": -41.6,
+      "pf": 0.272,
+      "dd": 57.2,
+      "avg_day": -13.87,
+      "tr_day": 1.0,
+      "months": "0/2"
+    },
+    "baseline_is": {
+      "n": 11,
+      "wr": 72.7,
+      "pnl": -31.4,
+      "pf": 0.886,
+      "dd": 144.5,
+      "avg_day": -3.49,
+      "tr_day": 1.22,
+      "months": "2/4"
+    },
+    "best_signal_param": {
+      "params": {},
+      "oos_pf": 0.272,
+      "oos_pnl": -41.6,
+      "label": "BASELINE"
+    },
+    "robust": false,
+    "best_tpsl": {
+      "tp": 3.5,
+      "sl": 1.5,
+      "oos_pf": 0.272,
+      "oos_pnl": -41.6
+    },
+    "current_tp": 3.5,
+    "current_sl": 1.5
+  },
+  "S17_CONVERGENCE_SCALP": {
+    "baseline_oos": {
+      "n": 21,
+      "wr": 57.1,
+      "pnl": -142.4,
+      "pf": 0.837,
+      "dd": 337.3,
+      "avg_day": -7.12,
+      "tr_day": 1.05,
+      "months": "3/6"
+    },
+    "baseline_is": {
+      "n": 84,
+      "wr": 57.1,
+      "pnl": 36.7,
+      "pf": 1.032,
+      "dd": 418.4,
+      "avg_day": 0.47,
+      "tr_day": 1.08,
+      "months": "6/17"
+    },
+    "best_signal_param": {
+      "params": {},
+      "oos_pf": 0.837,
+      "oos_pnl": -142.4,
+      "label": "BASELINE"
+    },
+    "robust": false,
+    "best_tpsl": {
+      "tp": 4.0,
+      "sl": 1.25,
+      "oos_pf": 1.039,
+      "oos_pnl": 28.0
+    },
+    "current_tp": 4.0,
+    "current_sl": 1.5
+  }
+}

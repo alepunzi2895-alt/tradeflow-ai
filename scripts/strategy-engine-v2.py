@@ -842,41 +842,47 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         if day_n[day]>=MAX_TRADES: continue
         if hour-day_h[day]<COOLDOWN_H: continue
         
-        # Dynamic TP/SL mapping
+        # Dynamic TP/SL mapping — mult allineati a STRATEGY_ATR_PARAMS (risk_guardian.py) / STRATEGY_PARAMS (mt5-bot.py)
+        # Fix 2026-07-17: SL era rimasto a 1.0/1.2 (valori pre-2026-04-30), mentre live è 1.5 dal 2026-04-30
         curr_tp = tp
         curr_sl = sl
         if name == 'S09_MFKK_SCALPING':
             curr_tp = round(av * 4.0, 2)
-            curr_sl = round(av * 1.0, 2)
+            curr_sl = round(av * 1.5, 2)
         elif name == 'S10_OB_FVG_SCALP':
             curr_tp = round(av * 3.5, 2)
-            curr_sl = round(av * 1.2, 2)
+            curr_sl = round(av * 1.5, 2)
         elif name == 'S16_GOLDEN_SQUEEZE':
             curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 2.0, 2)
         elif name == 'S05_MFKK_INTRADAY':
             curr_tp = round(av * 3.5, 2)
-            curr_sl = round(av * 1.0, 2)
+            curr_sl = round(av * 1.5, 2)
         elif name == 'S17_CONVERGENCE_SCALP':
             curr_tp = round(av * 4.0, 2)
-            curr_sl = round(av * 1.0, 2)
+            curr_sl = round(av * 1.5, 2)
         elif name == 'S00_MFKK':
             curr_tp = round(av * 3.5, 2)
-            curr_sl = round(av * 1.0, 2)
+            curr_sl = round(av * 1.5, 2)
         elif name == 'S18_RANGE_REVERSAL':
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.2, 2)
 
         # Route hour/h1_trend correctly per signal function signature
+        # Fix 2026-07-17: il branch 'else' passava `hour` per posizione, che finiva nel
+        # parametro h1_trend di signal_mfkk_scalping/signal_ob_fvg_scalp (S09/S10/S05) —
+        # il loro filtro ST-alignment interno (`if h1_trend is not None and h1_trend != 0`)
+        # scattava quasi sempre (hour è quasi sempre != 0/-1/1), bloccando la maggior parte
+        # dei segnali standalone. S17 non usa h1_trend quindi era innocuo per lei.
         if name == 'S00_MFKK':
             sig = fn(ind, i, hour=hour)
-        elif name == 'S16_GOLDEN_SQUEEZE':
-            h1t = ind['st'][i] if ind.get('st') else None
-            sig = fn(ind, i, h1_trend=h1t, hour=hour)
         elif name == 'S18_RANGE_REVERSAL':
             sig = fn(ind, i, hour=hour)
+        elif name in ('S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'):
+            h1t = ind['st'][i] if ind.get('st') else None
+            sig = fn(ind, i, h1_trend=h1t, hour=hour)
         else:
-            sig = fn(ind, i, hour)
+            sig = fn(ind, i, hour=hour)
         if sig is None: continue
         
         entry=c['c']
@@ -945,6 +951,16 @@ def stats(trades, tp=TP_USD, sl=SL_USD):
             'dd':round(dd,1),'avg_day':round(avg,2),'tr_day':round(tpd,2),
             'months':f"{pos}/{len(mo)}"}
 
+def equity_curve(trades):
+    """Serie compatta {t, cum_pnl} trade-per-trade, per il grafico curva di equità frontend."""
+    pts = []
+    cum = 0.0
+    for t in sorted(trades, key=lambda x: x['date'] + f"{x['hour']:02d}"):
+        cum += t['pnl']
+        dt = datetime.datetime.strptime(t['date'], '%Y-%m-%d').replace(hour=t['hour'], tzinfo=datetime.timezone.utc)
+        pts.append({'t': int(dt.timestamp()), 'cum_pnl': round(cum, 2)})
+    return pts
+
 # ── ADAPTIVE BACKTEST ─────────────────────────────────────────────────────────
 def run_adaptive(candles, ind, tf='H1'):
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
@@ -990,19 +1006,20 @@ def run_adaptive(candles, ind, tf='H1'):
             if s: sig=s; used=name; break
         if not sig: continue
         entry=c['c']
-        # Strategia con ATR-based TP/SL d'élite
+        # Strategia con ATR-based TP/SL d'élite — mult allineati a STRATEGY_ATR_PARAMS (risk_guardian.py) / STRATEGY_PARAMS (mt5-bot.py)
+        # Fix 2026-07-17: SL era rimasto a 1.0/1.2 (valori pre-2026-04-30), mentre live è 1.5 dal 2026-04-30 — vedi 07_self_learning_log.md
         if used == 'S09_MFKK_SCALPING':
-            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.5, 2)
         elif used == 'S10_OB_FVG_SCALP':
-            tp_d = round(av*3.5, 2); sl_d = round(av*1.2, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
             tp_d = round(av*3.5, 2); sl_d = round(av*2.0, 2)
         elif used == 'S05_MFKK_INTRADAY':
-            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.5, 2)
         elif used == 'S00_MFKK':
-            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S18_RANGE_REVERSAL':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.2, 2)
         else:
@@ -1105,18 +1122,19 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         if not sig: continue
 
         # ATR-based TP/SL identici a run_adaptive (coerenza confronto)
+        # Fix 2026-07-17: SL era rimasto a 1.0/1.2 (valori pre-2026-04-30), mentre live è 1.5 dal 2026-04-30
         if used == 'S09_MFKK_SCALPING':
-            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.5, 2)
         elif used == 'S10_OB_FVG_SCALP':
-            tp_d = round(av*3.5, 2); sl_d = round(av*1.2, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S16_GOLDEN_SQUEEZE':
             tp_d = round(av*3.5, 2); sl_d = round(av*2.0, 2)
         elif used == 'S05_MFKK_INTRADAY':
-            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*4.0, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.5, 2)
         elif used == 'S00_MFKK':
-            tp_d = round(av*3.5, 2); sl_d = round(av*1.0, 2)
+            tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S18_RANGE_REVERSAL':
             tp_d = round(av*2.0, 2); sl_d = round(av*1.2, 2)
         else:
@@ -1307,14 +1325,16 @@ def main():
         'indicators':['EMA20','EMA50','EMA100','EMA200','MACD','ADX+DI','RSI','StochRSI',
                        'BollingerBands','KeltnerChannels','Supertrend','Alligator',
                        'OBV','Momentum/ROC','Williams%R','VWAP','OrderBlocks','ATR'],
-        'strategies':{n:{'stats':r['stats'],'regime_fit':STRATS[n][1]}
+        'strategies':{n:{'stats':r['stats'],'regime_fit':STRATS[n][1],
+                          'equity_curve':equity_curve(r['trades'])}
                       for n,r in all_results.items()},
         'ranking':[{'rank':i+1,'name':n,'pf':r['stats']['pf'],'wr':r['stats']['wr'],
                     'n':r['stats']['n'],'use':r['stats']['pf']>=1.10 and r['stats']['n']>=30}
                    for i,(n,r) in enumerate(ranked)],
         'regime_priority':REGIME_PRIORITY_H4 if tf == 'H4' else REGIME_PRIORITY,
         'adaptive':{'stats':sa,'by_strategy':{n:stats(tl) for n,tl in by_s.items()}},
-        'adaptive_rm':{'stats':srm,'by_strategy':{n:stats(tl) for n,tl in by_rm.items()}} if rm_trades else {},
+        'adaptive_rm':{'stats':srm,'by_strategy':{n:{**stats(tl),'equity_curve':equity_curve(tl)}
+                                                   for n,tl in by_rm.items()}} if rm_trades else {},
         'last_signals':adap[-50:],
         'config':{'tp':TP_USD,'sl':SL_USD,'max_trades':MAX_TRADES,'cooldown_h':COOLDOWN_H,
                   'session_utc':[SESSION_S,SESSION_E],'extreme_mult':EXTREME_K}

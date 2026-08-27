@@ -20,7 +20,14 @@ Uso:
   python -X utf8 scripts/paper_trade_s20.py            # un ciclo: rileva + aggiorna + stampa
   python -X utf8 scripts/paper_trade_s20.py --summary  # solo riepilogo, nessuna nuova rilevazione
 """
-import sys, os, json, argparse, datetime
+import sys, os, json, argparse, datetime, urllib.request, ssl
+
+# Parse args PRIMA dell'import: research_s20_fib_v2 → se2 fa `sys.argv = [sys.argv[0]]`
+# all'import per proteggere il proprio argparse, il che azzererebbe i nostri flag.
+_ap = argparse.ArgumentParser()
+_ap.add_argument('--summary', action='store_true', help='solo riepilogo, nessuna nuova rilevazione')
+_ap.add_argument('--no-sync', action='store_true', help='non inviare il riepilogo a Vercel')
+ARGS = _ap.parse_args()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -36,6 +43,10 @@ MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
 MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
 MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 SYMBOL_CANDIDATES = ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"]
+
+VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
+MT5_SECRET = os.getenv("MT5_BOT_SECRET", "tradeflow-mt5-secret")
+_SSL_CTX = ssl.create_default_context()
 
 
 def _connect():
@@ -105,21 +116,63 @@ def _resolve(ind, idx, setup):
     return (None, 'open') if not filled else (None, 'tp1_partial_open')
 
 
-def _stats(sigs):
-    closed = [s for s in sigs if s['status'] == 'closed']
+def _dir_stats(closed):
     if not closed:
-        return "  nessun trade chiuso ancora"
+        return None
     n = len(closed); wins = [s for s in closed if s['pnl'] > 0]
     gw = sum(s['pnl'] for s in wins); gl = abs(sum(s['pnl'] for s in closed if s['pnl'] <= 0)) or 1e-9
-    r_tot = sum(s['pnl'] / s['risk'] for s in closed)
-    return (f"  chiusi={n}  WR={100*len(wins)/n:.0f}%  PF={gw/gl:.2f}  "
-            f"P&L=${sum(s['pnl'] for s in closed):+.1f}  R_tot={r_tot:+.1f}")
+    return {'n': n, 'wr': round(100 * len(wins) / n, 1), 'pf': round(gw / gl, 3),
+            'pnl': round(sum(s['pnl'] for s in closed), 2),
+            'r_tot': round(sum(s['pnl'] / s['risk'] for s in closed), 2)}
+
+
+def _stats(sigs):
+    d = _dir_stats([s for s in sigs if s['status'] == 'closed'])
+    if not d:
+        return "  nessun trade chiuso ancora"
+    return f"  chiusi={d['n']}  WR={d['wr']:.0f}%  PF={d['pf']:.2f}  P&L=${d['pnl']:+.1f}  R_tot={d['r_tot']:+.1f}"
+
+
+def build_summary(st):
+    sigs = st['signals']
+    closed = [s for s in sigs if s['status'] == 'closed']
+    cum, eq = 0.0, []
+    for s in sorted(closed, key=lambda x: x['bar_time']):
+        cum += s['pnl']
+        eq.append({'t': s['bar_time'], 'cum': round(cum, 2)})
+    return {
+        'config': 'v2 combined · ingresso confermato · SL strut. ≥1.5×ATR · TP1 1R / TP2 2R · London+NY · no-lunedì',
+        'started': st.get('started'),
+        'updated': st.get('updated'),
+        'n_total': len(sigs), 'n_open': sum(1 for s in sigs if s['status'] == 'open'),
+        'overall': _dir_stats(closed),
+        'buy':  _dir_stats([s for s in closed if s['dir'] == 'buy']),
+        'sell': _dir_stats([s for s in closed if s['dir'] == 'sell']),
+        'equity': eq,
+        'open': [{'bar_utc': s['bar_utc'], 'dir': s['dir'], 'entry': s['entry'],
+                  'sl': s['sl'], 'tp1': s['tp1'], 'tp2': s['tp2']}
+                 for s in sigs if s['status'] == 'open'],
+        'recent': [{'bar_utc': s['bar_utc'], 'dir': s['dir'], 'resolution': s['resolution'],
+                    'pnl': s['pnl'], 'r': round(s['pnl'] / s['risk'], 2)}
+                   for s in sorted(closed, key=lambda x: x['bar_time'])[-8:]],
+    }
+
+
+def sync_vercel(summary):
+    if not VERCEL_URL:
+        return
+    try:
+        data = json.dumps({'action': 's20_paper_push', 'secret': MT5_SECRET, 'summary': summary}).encode('utf-8')
+        req = urllib.request.Request(f"{VERCEL_URL}/api/db", data=data,
+                                     headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=10, context=_SSL_CTX) as r:
+            print(f"  sync Vercel: HTTP {r.status}")
+    except Exception as e:
+        print(f"  sync Vercel fallito: {e}")
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--summary', action='store_true', help='solo riepilogo')
-    a = ap.parse_args()
+    a = ARGS
 
     st = _load_state()
     mt5, symbol = _connect()
@@ -183,6 +236,9 @@ def main():
 
     if not a.summary:
         _save_state(st)
+
+    if not a.no_sync:
+        sync_vercel(build_summary(st))
 
     opens = [s for s in st['signals'] if s['status'] == 'open']
     print(f"S20 paper — {symbol} M5 · {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M')}Z")

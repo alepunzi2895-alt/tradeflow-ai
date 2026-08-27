@@ -512,6 +512,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'EMA 13/34 crossover + StochRSI K>D + BB%B + EMA50 trend bias · VOLATILE/TREND H4 · High PF 2.71'
         : id==='S18_RANGE_REVERSAL'
         ? 'BB Band Exhaustion (bb_pct≤0.15/≥0.85) + RSI + WPR + StochRSI mean-reversion · RANGE/WEAK ADX<22 · 7-19h UTC'
+        : id==='S20_FIB_CONFLUENCE'
+        ? 'Estremo 20b + ribbon EMA20/50 + Auto-Fib · ingresso confermato (2 candele) + higher-low/lower-high + EMA200 M5 · SL strutturale ≥1.5×ATR · TP1 1R (parz.) / TP2 2R · London+NY, no-lunedì · IN OSSERVAZIONE (paper), il bot non la esegue'
         : id==='S05_V3_Sell_Exhaust'
         ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion TREND_UP H1'
         : id==='S01_EXHAUSTION'
@@ -519,11 +521,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         : id==='S13_STRUC_BREAK'
         ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
+      const pl = s.paperLive || null;
+      const plClosed = pl && pl.overall ? pl.overall : null;
       return `
-      <div style="background:var(--bg2); border:1px solid ${isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
+      <div style="background:var(--bg2); border:1px solid ${s.paper?'#c8a96e55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
+        ${s.paper ? `<div style="position:absolute;top:0;right:0;background:#c8a96e;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">📝 PAPER</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
+          <span style="font-size:11px;font-weight:700;color:${s.paper?'#c8a96e':isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:5px;align-items:center;font-size:10px">
             ${_tf ? `<span style="background:${_tfCol}22;border:1px solid ${_tfCol}55;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:${_tfCol};letter-spacing:.04em">${_tf}</span>` : ''}
             ${s.pf!=null ? `<span style="color:var(--green)">PF <b>${s.pf}</b></span>` : ''}
@@ -531,6 +536,22 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
+        ${s.paper ? `
+        <div style="background:#1a1600;border:1px solid #c8a96e40;border-radius:5px;padding:6px 8px;margin-bottom:5px">
+          <div style="font-size:8px;color:#c8a96e;font-weight:700;margin-bottom:3px">📝 PAPER TRADING — nessun ordine reale · il bot non esegue S20${pl&&pl.updated?` · agg. ${new Date(pl.synced_at||pl.updated).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:''}</div>
+          ${plClosed ? `
+          <div style="display:flex;gap:10px;font-size:9px;flex-wrap:wrap">
+            <span style="color:var(--dim)">chiusi <b style="color:var(--fg)">${plClosed.n}</b></span>
+            <span style="color:var(--dim)">WR <b style="color:var(--blue)">${plClosed.wr}%</b></span>
+            <span style="color:var(--dim)">PF <b style="color:${plClosed.pf>=1?'var(--green)':'var(--red)'}">${plClosed.pf}</b></span>
+            <span style="color:var(--dim)">R <b style="color:${plClosed.r_tot>=0?'var(--green)':'var(--red)'}">${plClosed.r_tot>=0?'+':''}${plClosed.r_tot}</b></span>
+            <span style="color:var(--dim)">P&L <b style="color:${plClosed.pnl>=0?'var(--green)':'var(--red)'}">${plClosed.pnl>=0?'+':''}$${plClosed.pnl}</b></span>
+            ${pl.n_open?`<span style="color:#c8a96e">${pl.n_open} aperto/i</span>`:''}
+          </div>
+          ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
+          ` : `<div style="font-size:8px;color:var(--dim)">📡 in raccolta dati — lancia <code style="color:#c8a96e">python scripts/paper_trade_s20.py</code> periodicamente</div>`}
+        </div>
+        ` : ''}
         ${st.eq && st.eq.length>1 ? `
         <div style="background:#0d0f12;border:1px solid var(--border2);border-radius:4px;padding:4px 6px 2px;margin-bottom:5px">
           ${seEquitySpark(st.eq, s.label)}

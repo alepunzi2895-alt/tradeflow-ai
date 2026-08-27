@@ -275,6 +275,29 @@ async function autoTradeGet(db) {
   return { ok: true, enabled: p.enabled ?? true, updated_at: p.updated_at };
 }
 
+// ── S20_FIB_CONFLUENCE PAPER TRADING ─────────────────────────────────────────
+// scripts/paper_trade_s20.py invia il riepilogo paper (nessun ordine reale).
+// La UI lo legge senza auth per mostrarlo nel tab Strategie (marcato PAPER).
+async function s20PaperPush(db, body) {
+  const { secret, summary } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  const payload = JSON.stringify({ ...(summary || {}), synced_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('s20-paper', 's20-paper', 's20_paper', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true };
+}
+
+async function s20PaperGet(db) {
+  const r = await db.execute({ sql: "SELECT payload, updated_at FROM user_data WHERE user_id='s20-paper' AND doc_type='s20_paper'", args: [] });
+  if (!r.rows.length) return { ok: true, data: null };
+  return { ok: true, data: JSON.parse(r.rows[0].payload), updated_at: r.rows[0].updated_at };
+}
+
 async function adminReset(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and pass required");
@@ -297,6 +320,8 @@ const ACTIONS = {
   mt5_command_get:  (db, body) => mt5CommandGet(db, body),
   auto_trade_set:   (db, body) => autoTradeSet(db, body),
   auto_trade_get:   (db)       => autoTradeGet(db),
+  s20_paper_push:   (db, body) => s20PaperPush(db, body),
+  s20_paper_get:    (db)       => s20PaperGet(db),
 };
 
 export default async function handler(req, res) {

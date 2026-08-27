@@ -66,6 +66,15 @@ const SE = {
         maxdd: 159.7, maxdd_pct: '89.6%', trades_12m: 92, best_regime: 'RANGE/WEAK · M30 (bot) · BB exhaustion+RSI/WPR · ADX<22 · DD alto relativo al P&L — fragile',
         eq: [28.4,50.3,72.3,113.6,110.4,124.2,178.2,95.9,35.2,108.5,107.7,67.1,51.5]
       } },
+    // ── IN OSSERVAZIONE — non eseguita dal bot (no loop M5). Tracker: scripts/paper_trade_s20.py ──
+    'S20_FIB_CONFLUENCE': { label: 'Fib Confluence [M5] · PAPER', pf: 1.54, wr: '52.3%', tp: '1R (parz. 50%)', sl: 'strut. ≥1.5×ATR', paper: true,
+      stats: {
+        pnl_1m: 19.3, td_1m: 0.15, pnl_6m: 145.4, td_6m: 0.25,
+        pnl_12m: 166.4, td_12m: 0.28, pnl_24m: 176.9, td_24m: 0.29,
+        maxdd: 46.3, maxdd_pct: '4.6%', trades_12m: 83,
+        best_regime: 'London+NY M5 · no-lunedì · backtest 20 mesi · OOS ultimi 8m PF 1.72 · PAPER da 2026-08-28',
+        eq: [1.0,-3.2,-3.5,-13.6,10.4,6.1,-5.6,10.1,21.0,14.0,18.5,28.2,23.0,69.9,122.3,104.9,173.4,176.9]
+      } },
   },
   // ── REGIME PRIORITY (allineata a REGIME_PRIORITY_H1 del backtester) ──
   regimePriority: {
@@ -296,6 +305,16 @@ async function seRefresh() {
       fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'score_push', score }) }).catch(()=>{});
     }
+  }
+
+  // S20 paper trading: leggi il riepilogo dal tracker ogni 60s → card nel tab Strategie
+  if (nowTs - (window._s20PaperFetch||0) > 60000) {
+    window._s20PaperFetch = nowTs;
+    fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'s20_paper_get' }) })
+      .then(r=>r.json())
+      .then(j=>{ if (j && j.ok && SE.strategies.S20_FIB_CONFLUENCE) SE.strategies.S20_FIB_CONFLUENCE.paperLive = j.data || null; })
+      .catch(()=>{});
   }
 
   _seRefreshRunning = false;

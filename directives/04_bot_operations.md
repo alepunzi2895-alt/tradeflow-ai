@@ -120,6 +120,13 @@ python -X utf8 scripts/paper_trade_s20.py --summary
 - **Non** aggiungere S20 a `SIGNAL_FNS` / `REGIME_MULTI_STRATEGIES` / `strategy_selector` finché il
   paper trading non conferma.
 
+**Sync → UI**: ogni ciclo il tracker POSTa il riepilogo a `{VERCEL_URL}/api/db` action
+`s20_paper_push` (secret-gated) → riga singleton `user_data` (`user_id='s20-paper'`). Il tab
+Strategie legge `s20_paper_get` ogni 60s e mostra la card **S20 · PAPER** (badge 📝, niente ✓ ATTIVA)
+con i numeri paper reali (chiusi/WR/PF/R/P&L + split BUY/SELL) sotto le stat di backtest. `--no-sync`
+per un ciclo locale senza POST. Se `VERCEL_URL` non è raggiungibile il tracker continua comunque
+(lo stato locale in `data/s20_paper_trades.json` resta la fonte di verità).
+
 ## Checklist Pre-Deploy
 
 - [ ] Variabili usate = variabili definite nel file (scope check)

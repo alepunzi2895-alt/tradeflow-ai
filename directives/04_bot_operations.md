@@ -98,6 +98,28 @@ Il `bot_status` pushato ogni 20s include ora:
 | 10019 | No money | Margine insufficiente — ridurre LOT_SIZE |
 | 10021 | No prices | Mercato chiuso o connessione assente |
 
+## Paper Trading S20_FIB_CONFLUENCE (2026-08-28 →)
+
+S20 (config di principio, OOS PF 1.72) è in **osservazione su carta** prima di qualsiasi capitale —
+il bot non ha un loop M5 e non la esegue. Tracker separato, non tocca `mt5-bot.py` né il roster:
+
+```bash
+# Un ciclo: rileva nuovi segnali M5 + aggiorna gli aperti + stampa riepilogo
+python -X utf8 scripts/paper_trade_s20.py
+
+# Solo riepilogo (nessuna nuova rilevazione)
+python -X utf8 scripts/paper_trade_s20.py --summary
+```
+
+- Va lanciato periodicamente (ogni ~15-60 min; lo scan copre ~25h quindi anche 1×/giorno non perde nulla).
+- Stato in `data/s20_paper_trades.json` (config, segnali, entry/SL/TP/esito, WR/PF/R correnti).
+- Config: ingresso confermato + struttura higher-low/lower-high + EMA200 M5 + SL strutturale (floor
+  1.5×ATR) + TP1 1R (parziale 50% → BE) + TP2 2R, sessione 7-19 UTC, **no lunedì**, cooldown 2h.
+- Logica segnale = `scripts/research_s20_fib_v2.py::sig_at` (già validata). Dopo 2-3 mesi: confrontare
+  WR/PF paper con l'OOS backtest (WR ~55%, PF ~1.7). Se regge → valutare loop M5 nel bot.
+- **Non** aggiungere S20 a `SIGNAL_FNS` / `REGIME_MULTI_STRATEGIES` / `strategy_selector` finché il
+  paper trading non conferma.
+
 ## Checklist Pre-Deploy
 
 - [ ] Variabili usate = variabili definite nel file (scope check)

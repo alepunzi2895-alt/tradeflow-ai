@@ -27,6 +27,8 @@ from signals import (
     signal_convergence_scalp as s_convergence_scalp,
     signal_mfkk_score as se_signal_mfkk_score,
     signal_range_reversal as s_range_reversal,
+    signal_fib_confluence as s_fib_confluence,
+    fib_confluence_trade_levels,
 )
 try:
     import yfinance as yf
@@ -778,6 +780,7 @@ STRATS = {
     'S17_CONVERGENCE_SCALP':  (s_convergence_scalp,   ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
     'S00_MFKK':               (se_signal_mfkk_score,  ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN','VOLATILE','RANGE']),
     'S18_RANGE_REVERSAL':     (s_range_reversal,      ['RANGE','WEAK_UP','WEAK_DOWN','UNKNOWN']),
+    'S20_FIB_CONFLUENCE':     (s_fib_confluence,      ['TREND_UP','TREND_DOWN','WEAK_UP','WEAK_DOWN']),
 }
 
 # H4: S09/S10 hurt performance (PF 0.446/0.658) — use S16+S17+S00 only
@@ -818,6 +821,54 @@ REGIME_PRIORITY_H1 = {
 
 # Fallback generico (M15 e altri TF) — invariato
 REGIME_PRIORITY = REGIME_PRIORITY_M30
+
+
+# ── S20_FIB_CONFLUENCE: simulazione dedicata con SL/TP sui livelli Fib ─────────
+# Il resto del backtester usa TP/SL come distanza singola da entry. S20 invece
+# ancora SL/TP1/TP2 ai livelli Fibonacci e chiude a parziali: 50% a TP1, poi
+# stop del residuo a break-even, 50% a TP2. Convenzione ordine-intrabar = TP
+# prima di SL (identica al resto dell'engine).
+def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
+    lvl = fib_confluence_trade_levels(ind, i, sig)
+    if lvl is None:
+        return None
+    entry = candles[i]['c']
+    sl, tp1, tp2 = lvl['sl'], lvl['tp1'], lvl['tp2']
+    sl_d = abs(entry - sl)
+    if sl_d <= 0:
+        return None
+
+    def _mk(pnl):
+        pnl = round(pnl * lot_mult, 2)
+        base = round(pnl / lot_mult, 2) if lot_mult else pnl
+        return {'dir': sig, 'entry': entry,
+                'outcome': 'win' if pnl > 0 else 'loss',
+                'pnl': pnl, 'base_pnl': base, 'lot_mult': lot_mult}
+
+    filled_tp1 = False
+    booked = 0.0
+    stop = sl
+    for j in range(i + 1, min(i + lookahead, n)):
+        jh = candles[j]['h']; jl = candles[j]['l']
+        if sig == 'buy':
+            if not filled_tp1 and jh >= tp1:
+                booked = 0.5 * (tp1 - entry); filled_tp1 = True; stop = entry
+            if filled_tp1 and jh >= tp2:
+                return _mk(booked + 0.5 * (tp2 - entry))
+            if jl <= stop:
+                return _mk(-(entry - stop) if not filled_tp1 else booked + 0.5 * (stop - entry))
+        else:
+            if not filled_tp1 and jl <= tp1:
+                booked = 0.5 * (entry - tp1); filled_tp1 = True; stop = entry
+            if filled_tp1 and jl <= tp2:
+                return _mk(booked + 0.5 * (entry - tp2))
+            if jh >= stop:
+                return _mk(-(stop - entry) if not filled_tp1 else booked + 0.5 * (entry - stop))
+    # Fine lookahead: se TP1 era già stato fillato, la prima metà è profitto reale e il residuo
+    # aveva stop a BE (non toccato) → assume wash sul residuo, pnl = booked. Se TP1 non fillato,
+    # trade non risolto → scartato come le altre strategie single-exit.
+    return _mk(booked) if filled_tp1 else None
+
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
 def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
@@ -884,7 +935,16 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         else:
             sig = fn(ind, i, hour=hour)
         if sig is None: continue
-        
+
+        # S20: SL/TP ancorati ai livelli Fib + parziali — simulazione dedicata
+        if name == 'S20_FIB_CONFLUENCE':
+            tr = sim_fib_confluence(candles, ind, i, sig, lookahead, n)
+            if tr is None: continue
+            tr.update({'date': day, 'hour': hour, 'strategy': name})
+            trades.append(tr)
+            day_n[day] += 1; day_h[day] = hour
+            continue
+
         entry=c['c']
         tp_p=entry+curr_tp if sig=='buy' else entry-curr_tp
         sl_p=entry-curr_sl if sig=='buy' else entry+curr_sl
@@ -1002,10 +1062,23 @@ def run_adaptive(candles, ind, tf='H1'):
             elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             else:
-                s=fn(ind,i,hour)
+                # by-keyword: evita che `hour` finisca nel 3° param posizionale (h1_trend) delle
+                # signal fn con firma (ind, i, h1_trend=None, hour=None) — es. S20_FIB_CONFLUENCE
+                # (stesso bug corretto in run_one il 2026-07-17)
+                s=fn(ind,i,hour=hour)
             if s: sig=s; used=name; break
         if not sig: continue
         entry=c['c']
+
+        # S20: SL/TP sui livelli Fib + parziali — simulazione dedicata
+        if used == 'S20_FIB_CONFLUENCE':
+            tr = sim_fib_confluence(candles, ind, i, sig, lookahead, n)
+            if tr is None: continue
+            tr.update({'date': day, 'hour': hour, 'strategy': used, 'regime': r})
+            trades.append(tr)
+            day_n[day] += 1; day_h[day] = hour
+            continue
+
         # Strategia con ATR-based TP/SL d'élite — mult allineati a STRATEGY_ATR_PARAMS (risk_guardian.py) / STRATEGY_PARAMS (mt5-bot.py)
         # Fix 2026-07-17: SL era rimasto a 1.0/1.2 (valori pre-2026-04-30), mentre live è 1.5 dal 2026-04-30 — vedi 07_self_learning_log.md
         if used == 'S09_MFKK_SCALPING':
@@ -1117,9 +1190,24 @@ def run_adaptive_rm(candles, ind, tf='H1'):
             elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
             else:
-                s=fn(ind,i,hour)
+                # by-keyword: evita che `hour` finisca nel 3° param posizionale (h1_trend) delle
+                # signal fn con firma (ind, i, h1_trend=None, hour=None) — es. S20_FIB_CONFLUENCE
+                # (stesso bug corretto in run_one il 2026-07-17)
+                s=fn(ind,i,hour=hour)
             if s: sig=s; used=name; break
         if not sig: continue
+
+        # S20: SL/TP sui livelli Fib + parziali — simulazione dedicata (lot_mult da AI Score)
+        if used == 'S20_FIB_CONFLUENCE':
+            ai_score = estimate_ai_score(ind, i)
+            tier = get_rm_tier(ai_score)
+            tr = sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=tier['lot'])
+            if tr is None: continue
+            tr.update({'date': day, 'hour': hour, 'strategy': used, 'regime': r,
+                       'ai_score': round(ai_score, 1), 'tier': tier['label']})
+            trades.append(tr)
+            day_n[day] += 1; day_h[day] = hour
+            continue
 
         # ATR-based TP/SL identici a run_adaptive (coerenza confronto)
         # Fix 2026-07-17: SL era rimasto a 1.0/1.2 (valori pre-2026-04-30), mentre live è 1.5 dal 2026-04-30

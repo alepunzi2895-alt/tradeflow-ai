@@ -26,7 +26,9 @@ import sys, os, json, argparse, datetime, urllib.request, ssl
 # all'import per proteggere il proprio argparse, il che azzererebbe i nostri flag.
 _ap = argparse.ArgumentParser()
 _ap.add_argument('--summary', action='store_true', help='solo riepilogo, nessuna nuova rilevazione')
-_ap.add_argument('--no-sync', action='store_true', help='non inviare il riepilogo a Vercel')
+_ap.add_argument('--sync', action='store_true',
+                 help='invia il riepilogo a Vercel (di default NO: da 2026-08-28 S20 è LIVE e '
+                      'il bot pubblica le stat reali; questo script resta per check offline "cosa farebbe")')
 ARGS = _ap.parse_args()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -237,7 +239,7 @@ def main():
     if not a.summary:
         _save_state(st)
 
-    if not a.no_sync:
+    if a.sync:
         sync_vercel(build_summary(st))
 
     opens = [s for s in st['signals'] if s['status'] == 'open']

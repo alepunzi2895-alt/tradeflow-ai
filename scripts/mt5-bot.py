@@ -31,6 +31,7 @@ from signals import (
     signal_mfkk_score, signal_mfkk_intraday, signal_golden_squeeze,
     signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp,
     signal_range_reversal,
+    signal_fib_confluence, fib_confluence_trade_levels,
 )
 
 # ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
@@ -101,6 +102,21 @@ MIN_COMPOSITE_TO_TRADE = 45  # composite score minimo per aprire — soglia abba
 _strategy_order_tickets: dict = {}  # {strategy_name: (ticket, direction)}
 SESSION_UTC  = (0, 24)       # operativo 24h — pausa gestita solo da NewsGuardian (-2h/+2h attorno a news HIGH)
 CHECK_SEC    = 10            # polling ogni 10 secondi
+
+# ── S20_FIB_CONFLUENCE — strategia ISOLATA su M5 (2026-08-28) ────────────────
+# NON passa da StrategySelector / RiskGuardian / compounding. Lotto fisso, bucket
+# posizioni separato (non conta in MAX_OPEN_ORDERS), rispetta solo news pause +
+# toggle auto-trade UI. Gestione: entry + SL strutturale + TP hard 2R; a TP1 (1R)
+# chiude S20_PARTIAL_LOT e sposta lo SL del residuo a break-even.
+S20_ENABLED     = True
+S20_LOT         = 0.03
+S20_PARTIAL_LOT = 0.02      # chiuso a TP1 (residuo 0.01 runner → TP2 / BE)
+S20_TAG         = 'S20_FIB_CONFLUENCE'
+S20_COOLDOWN_MIN = 120      # min tra due ingressi S20 (allineato al backtest)
+S20_STATE_FILE  = os.path.join(os.path.dirname(__file__), '..', 'data', 's20_live_state.json')
+_s20_state: dict = {}       # {ticket(str): {dir, entry, risk, tp1, tp2, be_done}}
+_s20_last_bar = None
+_s20_last_entry_ts = 0.0
 
 # Se sei su VPS Standalone, usa http://localhost:3000
 VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
@@ -923,6 +939,120 @@ def log_trade_to_json(direction, strategy, price, tp, sl, result):
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump(trades, f, indent=2, ensure_ascii=False)
 
+# ── S20_FIB_CONFLUENCE — strategia isolata M5 (entry + gestione parziale) ─────
+def _s20_load_state():
+    global _s20_state
+    try:
+        if os.path.exists(S20_STATE_FILE):
+            with open(S20_STATE_FILE, encoding='utf-8') as f:
+                _s20_state = {int(k): v for k, v in json.load(f).items()}
+    except Exception as e:
+        log.warning(f"[S20] load state: {e}")
+
+def _s20_save_state():
+    try:
+        with open(S20_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump({str(k): v for k, v in _s20_state.items()}, f, indent=2)
+    except Exception as e:
+        log.warning(f"[S20] save state: {e}")
+
+def s20_rebuild_from_open():
+    """Al riavvio: riadotta eventuali posizioni S20 aperte non ancora tracciate (be_done ignoto)."""
+    if not S20_ENABLED:
+        return
+    for p in (mt5.positions_get(symbol=SYMBOL) or []):
+        if p.magic != MAGIC or not (p.comment and 'S20' in p.comment) or p.ticket in _s20_state:
+            continue
+        d = 'buy' if p.type == 0 else 'sell'
+        risk = abs(p.price_open - p.sl) if p.sl else None
+        _s20_state[p.ticket] = {'dir': d, 'entry': p.price_open, 'risk': risk,
+                                'tp1': None, 'tp2': p.tp or None, 'be_done': None}
+        log.info(f"[S20] posizione riadottata al riavvio: #{p.ticket} {d} @ {p.price_open}")
+    if _s20_state:
+        _s20_save_state()
+
+def s20_manage():
+    """Posizioni S20 aperte: al raggiungimento di TP1 (1R) chiude S20_PARTIAL_LOT e sposta lo SL a BE."""
+    if not S20_ENABLED or not _s20_state:
+        return
+    open_pos = {p.ticket: p for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC}
+    tick = mt5.symbol_info_tick(SYMBOL)
+    for ticket in list(_s20_state.keys()):
+        st = _s20_state[ticket]
+        p = open_pos.get(ticket)
+        if p is None:                                   # chiusa (TP2 / SL / BE)
+            _s20_state.pop(ticket, None); _s20_save_state()
+            log.info(f"[S20] posizione #{ticket} chiusa")
+            continue
+        if st.get('be_done') in (True, None) or not st.get('risk') or st.get('tp1') is None or tick is None:
+            continue
+        px = tick.bid if st['dir'] == 'buy' else tick.ask
+        if not ((st['dir'] == 'buy' and px >= st['tp1']) or (st['dir'] == 'sell' and px <= st['tp1'])):
+            continue
+        vol = round(min(S20_PARTIAL_LOT, max(p.volume - 0.01, 0.0)), 2)
+        if vol < 0.01:
+            st['be_done'] = True; _s20_save_state(); continue
+        if DRY_RUN:
+            log.info(f"[S20][DRY] TP1 raggiunto → parziale {vol} + SL→BE  #{ticket}")
+            st['be_done'] = True; _s20_save_state(); continue
+        close_type = mt5.ORDER_TYPE_SELL if p.type == 0 else mt5.ORDER_TYPE_BUY
+        cprice = tick.bid if p.type == 0 else tick.ask
+        r1 = mt5.order_send({"action": mt5.TRADE_ACTION_DEAL, "symbol": SYMBOL, "volume": vol,
+                             "type": close_type, "position": ticket, "price": cprice, "deviation": 20,
+                             "magic": MAGIC, "comment": "TF-AI S20 partial",
+                             "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC})
+        if not r1 or r1.retcode != mt5.TRADE_RETCODE_DONE:
+            log.warning(f"[S20] parziale fallito #{ticket}: {r1.comment if r1 else 'err'}")
+            continue
+        mt5.order_send({"action": mt5.TRADE_ACTION_SLTP, "symbol": SYMBOL, "position": ticket,
+                        "sl": round(st['entry'], 2), "tp": p.tp})
+        st['be_done'] = True
+        _s20_save_state()
+        log.info(f"[S20] ✓ parziale {vol} lot @ TP1 (1R) + SL→BE  #{ticket}")
+
+def s20_check_entry(news_paused, auto_ok):
+    """Ogni barra M5 chiusa: se il segnale S20 è valido e non c'è già una posizione S20 aperta → apre."""
+    global _s20_last_bar, _s20_last_entry_ts
+    if not S20_ENABLED or not auto_ok:
+        return
+    candles_m5 = get_candles_tf('M5', 600)
+    if not candles_m5 or len(candles_m5) < 260:
+        return
+    bar_t = candles_m5[-2]['t']
+    if bar_t == _s20_last_bar:
+        return
+    _s20_last_bar = bar_t
+    if _s20_state or news_paused:                        # max 1 posizione S20 / news pause
+        return
+    if time.time() - _s20_last_entry_ts < S20_COOLDOWN_MIN * 60:   # cooldown tra ingressi
+        return
+    bar_dt = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc)
+    I_m5 = compute_indicators(candles_m5)
+    idx = len(candles_m5) - 2
+    direction = signal_fib_confluence(I_m5, idx, hour=bar_dt.hour, weekday=bar_dt.weekday())
+    if not direction:
+        return
+    lvl = fib_confluence_trade_levels(I_m5, idx, direction)
+    if lvl is None:
+        return
+    risk = lvl['risk']
+    tp_usd = round(risk * 2.0, 2)
+    sl_usd = round(risk, 2)
+    log.info(f"★ SEGNALE S20 (M5): {direction.upper()} | Fib Confluence | 1R=${risk:.2f} | "
+             f"TP2=${tp_usd:.2f} SL=${sl_usd:.2f} | lot={S20_LOT}")
+    result = place_order(direction, tp_usd, sl_usd, S20_TAG, lot_size=S20_LOT)
+    if not result:
+        return
+    ticket = getattr(result, 'order', 0)
+    tick = mt5.symbol_info_tick(SYMBOL)
+    entry = (tick.ask if direction == 'buy' else tick.bid) if tick else I_m5['C'][idx]
+    tp1 = entry + risk if direction == 'buy' else entry - risk
+    tp2 = entry + 2 * risk if direction == 'buy' else entry - 2 * risk
+    _s20_state[ticket] = {'dir': direction, 'entry': round(entry, 2), 'risk': round(risk, 2),
+                          'tp1': round(tp1, 2), 'tp2': round(tp2, 2), 'be_done': False}
+    _s20_last_entry_ts = time.time()
+    _s20_save_state()
+
 # ── VERCEL SYNC ───────────────────────────────────────────────────────────────
 def get_open_positions_data():
     """Legge le posizioni aperte da MT5 e le serializza"""
@@ -1048,6 +1178,43 @@ def get_recent_trades_data(n=200, retries=3, retry_delay=2.0):
         except Exception:
             return []
     return trades[-n:]
+
+def s20_push_stats(trades):
+    """Aggrega i trade S20 reali (da get_recent_trades_data) e li POSTa per la card nel tab Strategie."""
+    if not SYNC_ENABLED or not VERCEL_URL:
+        return
+    s20 = [t for t in (trades or []) if str(t.get('strategy', '')).startswith('S20')]
+    def agg(rows):
+        if not rows:
+            return None
+        n = len(rows); wins = [r for r in rows if r['profit'] > 0]
+        gw = sum(r['profit'] for r in wins)
+        gl = abs(sum(r['profit'] for r in rows if r['profit'] <= 0)) or 1e-9
+        return {'n': n, 'wr': round(100 * len(wins) / n, 1), 'pf': round(gw / gl, 3),
+                'pnl': round(sum(r['profit'] for r in rows), 2)}
+    cum = 0.0; eq = []
+    for r in sorted(s20, key=lambda x: x['time']):
+        cum += r['profit']; eq.append({'t': r['time'][:10], 'cum': round(cum, 2)})
+    summary = {
+        'mode': 'live', 'lot': S20_LOT,
+        'config': 'v2 · M5 · SL strutturale · TP1 1R (parz.) / TP2 2R · London+NY · no-lunedì · ISOLATA',
+        'n_total': len(s20), 'n_open': len(_s20_state),
+        'overall': agg(s20),
+        'buy':  agg([r for r in s20 if r['direction'] == 'buy']),
+        'sell': agg([r for r in s20 if r['direction'] == 'sell']),
+        'equity': eq[-60:],
+        'recent': [{'bar_utc': r['time'], 'dir': r['direction'],
+                    'resolution': r.get('close_reason', ''), 'pnl': r['profit']}
+                   for r in sorted(s20, key=lambda x: x['time'])[-8:]],
+    }
+    try:
+        req = urllib.request.Request(
+            f"{VERCEL_URL}/api/db",
+            data=json.dumps({'action': 's20_paper_push', 'secret': MT5_SECRET, 'summary': summary}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
+    except Exception as e:
+        log.debug(f"[S20] push stats: {e}")
 
 def sync_to_vercel(acc, positions, trades, bot_status):
     """Invia lo stato corrente alla UI su Vercel"""
@@ -1185,6 +1352,13 @@ def run():
             _strategy_order_tickets[_strat] = (_p.ticket, _pdir)
     if _strategy_order_tickets:
         log.info(f"Posizioni rilevate al riavvio: {list(_strategy_order_tickets.keys())}")
+
+    # S20_FIB_CONFLUENCE (strategia isolata M5): ripristina stato + riadotta posizioni aperte
+    if S20_ENABLED:
+        _s20_load_state()
+        s20_rebuild_from_open()
+        log.info(f"S20_FIB_CONFLUENCE attiva — M5 · lot fisso {S20_LOT} · isolata (no selector/compounding) · "
+                 f"{len(_s20_state)} posizioni in gestione")
 
     # Inizializza Strategy Selector Agent
     strategy_selector = StrategySelector() if StrategySelector else None
@@ -1327,8 +1501,11 @@ def run():
                                 f"| {strategy_closed} | net_profit={net_profit:+.2f}"
                             )
                             closed_this_cycle.append(ticket)
+                            # S20_FIB_CONFLUENCE è isolata: le sue chiusure non toccano i cooldown SL
+                            # condivisi (globale + per-strategia) che mettono in pausa H1/M30.
+                            _is_s20_close = bool(strategy_closed and 'S20' in strategy_closed)
                             # Aggiorna contatore SL consecutivi globale e per strategia
-                            if net_profit < 0:
+                            if net_profit < 0 and not _is_s20_close:
                                 consecutive_sl_count += 1
                                 if strategy_closed != 'N/A':
                                     s_id = strategy_closed
@@ -1343,7 +1520,7 @@ def run():
                                         f"🛑 COOLDOWN GLOBALE ATTIVO: {consecutive_sl_count} SL consecutivi "
                                         f"→ pausa fino a {sl_cooldown_until.strftime('%H:%M')} UTC"
                                     )
-                            else:
+                            elif not _is_s20_close:
                                 consecutive_sl_count = 0  # profit → reset streak globale
                                 if strategy_closed != 'N/A':
                                     _strategy_sl_count[strategy_closed] = 0 # reset streak strategia
@@ -1406,6 +1583,8 @@ def run():
                     'last_logs':      _ring_handler.get_lines(),
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
+                if S20_ENABLED:
+                    s20_push_stats(trades_data)
                 last_sync_time = now_ts
 
             # ── News Guardian: aggiorna rischio ogni 60s (era 15min — bug timezone fix 2026-04-28) ──
@@ -2420,6 +2599,14 @@ def run():
                                                 'trades_today':state.trades_today,'pnl_today':state.pnl_today,
                                                 'regime':current_regime,'last_signal':h4_id})
                                 last_sync_time = time.time()
+
+            # ── S20_FIB_CONFLUENCE — strategia isolata M5 (indipendente da regime/selector) ──
+            if S20_ENABLED:
+                try:
+                    s20_manage()
+                    s20_check_entry(current_news_risk.get('paused', False), auto_trade_enabled)
+                except Exception as _s20_err:
+                    log.warning(f"[S20] errore ciclo: {_s20_err}")
 
             time.sleep(CHECK_SEC)
 

@@ -929,6 +929,8 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             sig = fn(ind, i, hour=hour)
         elif name == 'S18_RANGE_REVERSAL':
             sig = fn(ind, i, hour=hour)
+        elif name == 'S20_FIB_CONFLUENCE':
+            sig = fn(ind, i, hour=hour, weekday=dt.weekday())
         elif name in ('S16_GOLDEN_SQUEEZE', 'S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP'):
             h1t = ind['st'][i] if ind.get('st') else None
             sig = fn(ind, i, h1_trend=h1t, hour=hour)
@@ -1061,6 +1063,8 @@ def run_adaptive(candles, ind, tf='H1'):
                 s=fn(ind,i,hour=hour)
             elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
+            elif name == 'S20_FIB_CONFLUENCE':
+                s=fn(ind,i,hour=hour,weekday=dt.weekday())
             else:
                 # by-keyword: evita che `hour` finisca nel 3° param posizionale (h1_trend) delle
                 # signal fn con firma (ind, i, h1_trend=None, hour=None) — es. S20_FIB_CONFLUENCE
@@ -1189,6 +1193,8 @@ def run_adaptive_rm(candles, ind, tf='H1'):
                 s=fn(ind,i,hour=hour)
             elif name in ('S05_MFKK_INTRADAY','S09_MFKK_SCALPING','S10_OB_FVG_SCALP','S17_CONVERGENCE_SCALP'):
                 s=fn(ind,i,h1_trend=h1t_st,hour=hour)
+            elif name == 'S20_FIB_CONFLUENCE':
+                s=fn(ind,i,hour=hour,weekday=dt.weekday())
             else:
                 # by-keyword: evita che `hour` finisca nel 3° param posizionale (h1_trend) delle
                 # signal fn con firma (ind, i, h1_trend=None, hour=None) — es. S20_FIB_CONFLUENCE

@@ -506,30 +506,36 @@ def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# S20_FIB_CONFLUENCE V1 (2026-08-28)
-# Port della strategia scalping "Repro Overlay — M5": rilevatore di estremi a
-# 20 barre filtrato da confluenza (Auto-Fib swing 50 barre + ribbon EMA20/50),
-# con SL/TP ancorati ai livelli Fibonacci e gate rischio/rendimento >= 1.5.
+# S20_FIB_CONFLUENCE V2 "config di principio" (2026-08-28)
 #
-#   BUY  = candela rialzista che tocca il minimo di 20 barre
-#          + close < Fib 0.382 + ribbon bullish (EMA20 >= EMA50)
-#   SELL = candela ribassista che tocca il massimo di 20 barre
-#          + close > Fib 0.618 + ribbon bearish (EMA20 < EMA50)
-#   Trigger sulla TRANSIZIONE della confluenza (come `cond and not cond[1]` del Pine).
+# Port + tuning della strategia scalping "Repro Overlay — M5". 4 iterazioni di
+# ricerca (research/s20_fib_confluence/RESULTS.md): il port fedele perde; questa
+# è l'unica config con edge OOS reale — full-period PF 1.54, OOS ultimi 8 mesi
+# PF 1.72 (n=54), walk-forward per terzi 1.16/1.23/1.79, BUY e SELL entrambi
+# positivi. LIVE da 2026-08-28 a lotto fisso 0.03 (isolata, fuori da Strategy
+# Selector / compounding). Vedi 04_bot_operations.md § S20.
 #
-#   BUY : SL = Fib 0.236   TP1 = Fib 0.618   TP2 = Fib 0.786
-#   SELL: SL = Fib 0.786   TP1 = Fib 0.382   TP2 = Fib 0.236
-#   Skip se reward(entry→TP1) / risk(entry→SL) < 1.5.
-#
-# I livelli sono prezzi ASSOLUTI: backtester e bot li convertono in distanze al
-# bar di segnale (fib_confluence_trade_levels). Gestione a parziali attesa:
-# 50% a TP1 → stop a BE → 50% a TP2.
+#   Setup (bar j, poi conferma al bar j+1):
+#     zona estremo 20b (entro il 25% del range) + candela di inversione
+#     + prezzo oltre Fib 0.382/0.618 (swing 50) + ribbon EMA20/50 allineato
+#   Ingresso al bar j+1 SOLO se conferma la direzione (close j+1 vs close j)
+#   Struttura: higher-low (buy) / lower-high (sell) — finestra 10 vs 35 barre
+#   Trend HTF: close vs EMA200 (sul TF stesso, M5 ≈ ~16h di contesto)
+#   SL strutturale: min(low_candela − 0.15·ATR, entry − 1.5·ATR)   [simm. per SELL]
+#   TP1 = 1R  ·  TP2 = 2R    (gestione a parziali: chiudi a TP1, resto a BE→TP2)
+#   Sessione London+NY 7–19 UTC · NIENTE lunedì (rumore da gap weekend)
 # ─────────────────────────────────────────────────────────────────────────────
 
-FIB_SWING_LB = 50        # lookback swing per i livelli Fibonacci
-FIB_SIG_LB   = 20        # lookback estremi per il trigger
-FIB_RR_MIN   = 1.5       # rapporto reward/risk minimo (entry→TP1 vs entry→SL)
-FIB_SESSION  = (7, 19)   # London + NY (UTC)
+FIB_SWING_LB     = 50        # lookback swing per i livelli Fibonacci
+FIB_SIG_LB       = 20        # lookback estremi per il trigger
+FIB_SESSION      = (7, 19)   # London + NY (UTC)
+FIB_BAND         = 0.25      # "zona estremo" = entro il 25% del range 20-barre
+FIB_STRUCT_NEAR  = 10        # finestra swing recente (higher-low / lower-high)
+FIB_STRUCT_FAR   = 35        # finestra swing precedente
+FIB_SL_ATR_K     = 1.5       # SL non più stretto di k·ATR
+FIB_SL_BUF       = 0.15      # buffer oltre il minimo/massimo della candela-segnale (·ATR)
+FIB_TP1_R        = 1.0       # TP1 in multipli di R
+FIB_TP2_R        = 2.0       # TP2 (runner) in multipli di R
 
 
 def fib_confluence_levels(ind, i, swing=FIB_SWING_LB):
@@ -553,77 +559,101 @@ def fib_confluence_levels(ind, i, swing=FIB_SWING_LB):
     }
 
 
-def fib_confluence_trade_levels(ind, i, direction):
-    """SL / TP1 / TP2 assoluti per un trade S20 al bar i. None se non calcolabili."""
-    lv = fib_confluence_levels(ind, i)
-    if lv is None:
-        return None
-    if direction == 'buy':
-        return {'sl': lv['l236'], 'tp1': lv['l618'], 'tp2': lv['l786']}
-    return {'sl': lv['l786'], 'tp1': lv['l382'], 'tp2': lv['l236']}
-
-
-def _fib_conf_state(ind, j):
-    """(buy_conf, sell_conf) grezzi al bar j — senza gate R:R. None se dati mancanti."""
-    _min_bars = max(FIB_SWING_LB, FIB_SIG_LB)
-    if j < _min_bars:
-        return None
+def _fib_raw_conf(ind, j):
+    """(buy_conf, sell_conf) grezzi al bar j: zona estremo + candela inversione + Fib + ribbon.
+    Nessun edge-trigger, nessuna struttura. (False, False) se dati mancanti."""
+    if j < max(FIB_SWING_LB, FIB_SIG_LB):
+        return (False, False)
     H = ind['H']; L = ind['L']; C = ind['C']; O = ind['O']
     c = C[j]; o = O[j]
     e20 = ind['e20'][j]; e50 = ind['e50'][j]
     if None in (c, o, e20, e50):
-        return None
+        return (False, False)
     lv = fib_confluence_levels(ind, j)
     if lv is None:
-        return None
+        return (False, False)
     rib_bull = e20 >= e50
-    seg_hi_20 = max(H[j - FIB_SIG_LB + 1:j + 1])
-    seg_lo_20 = min(L[j - FIB_SIG_LB + 1:j + 1])
-    is_top = H[j] >= seg_hi_20 and c < o
-    is_bot = L[j] <= seg_lo_20 and c > o
+    hi20 = max(H[j - FIB_SIG_LB + 1:j + 1])
+    lo20 = min(L[j - FIB_SIG_LB + 1:j + 1])
+    band = (hi20 - lo20) * FIB_BAND
+    is_bot = L[j] <= lo20 + band and c > o
+    is_top = H[j] >= hi20 - band and c < o
     buy_conf  = is_bot and c < lv['l382'] and rib_bull
     sell_conf = is_top and c > lv['l618'] and not rib_bull
     return (buy_conf, sell_conf)
 
 
-def signal_fib_confluence(ind, i, h1_trend=None, hour=None):
-    """S20_FIB_CONFLUENCE V1 — confluenza estremi 20b + Auto-Fib 50 + ribbon EMA20/50.
-    Ritorna 'buy' | 'sell' | None. TP/SL sui livelli Fib (vedi fib_confluence_trade_levels)."""
-    if i < max(FIB_SWING_LB, FIB_SIG_LB) + 2:
+def _fib_struct_ok(ind, i, direction):
+    """higher-low (buy) / lower-high (sell): il pullback deve tenere sopra/sotto lo swing precedente."""
+    H = ind['H']; L = ind['L']
+    if i < FIB_STRUCT_FAR + 1:
+        return False
+    if direction == 'buy':
+        recent_low = min(L[i - FIB_STRUCT_NEAR + 1:i + 1])
+        prior_low  = min(L[i - FIB_STRUCT_FAR:i - FIB_STRUCT_NEAR])
+        return recent_low > prior_low
+    recent_high = max(H[i - FIB_STRUCT_NEAR + 1:i + 1])
+    prior_high  = max(H[i - FIB_STRUCT_FAR:i - FIB_STRUCT_NEAR])
+    return recent_high < prior_high
+
+
+def fib_confluence_trade_levels(ind, i, direction):
+    """SL / TP1 / TP2 assoluti per un trade S20 al bar i (SL strutturale + floor ATR, TP 1R/2R).
+    Ritorna None se non calcolabile (ATR mancante / geometria invalida)."""
+    entry = ind['C'][i]
+    atr = ind['atr'][i]
+    if entry is None or not atr or atr <= 0:
+        return None
+    L = ind['L']; H = ind['H']
+    buf = FIB_SL_BUF * atr
+    if direction == 'buy':
+        sl = min(L[i] - buf, entry - FIB_SL_ATR_K * atr)
+        risk = entry - sl
+        if risk <= 0:
+            return None
+        return {'sl': sl, 'tp1': entry + risk * FIB_TP1_R, 'tp2': entry + risk * FIB_TP2_R, 'risk': risk}
+    sl = max(H[i] + buf, entry + FIB_SL_ATR_K * atr)
+    risk = sl - entry
+    if risk <= 0:
+        return None
+    return {'sl': sl, 'tp1': entry - risk * FIB_TP1_R, 'tp2': entry - risk * FIB_TP2_R, 'risk': risk}
+
+
+def signal_fib_confluence(ind, i, h1_trend=None, hour=None, weekday=None):
+    """S20_FIB_CONFLUENCE V2 — vedi blocco commento sopra.
+    Ritorna 'buy' | 'sell' | None. Livelli SL/TP via fib_confluence_trade_levels(ind, i, dir)."""
+    if i < max(FIB_SWING_LB, FIB_SIG_LB) + 3:
         return None
     if hour is not None and not (FIB_SESSION[0] <= hour < FIB_SESSION[1]):
         return None
-
-    cur = _fib_conf_state(ind, i)
-    prev = _fib_conf_state(ind, i - 1)
-    if cur is None or prev is None:
+    if weekday is not None and weekday == 0:          # niente lunedì
         return None
-    buy_now, sell_now = cur
-    buy_prev, sell_prev = prev
 
-    if buy_now and not buy_prev:
+    buy_setup, sell_setup = _fib_raw_conf(ind, i - 1)  # setup alla barra precedente
+    C = ind['C']
+    if C[i] is None or C[i - 1] is None:
+        return None
+    if buy_setup and C[i] > C[i - 1]:                  # bar i conferma verso l'alto
         direction = 'buy'
-    elif sell_now and not sell_prev:
+    elif sell_setup and C[i] < C[i - 1]:               # bar i conferma verso il basso
         direction = 'sell'
     else:
         return None
 
-    lvl = fib_confluence_trade_levels(ind, i, direction)
-    if lvl is None:
+    if not _fib_struct_ok(ind, i, direction):
         return None
-    entry = ind['C'][i]
 
-    # Sanity geometrica: SL dal lato sbagliato / TP già superato → setup invalido
-    if direction == 'buy':
-        if not (lvl['sl'] < entry < lvl['tp1']):
-            return None
-    else:
-        if not (lvl['tp1'] < entry < lvl['sl']):
-            return None
+    # filtro trend HTF: solo pullback in trend
+    c = C[i]; e200 = ind['e200'][i]
+    if e200 is None:
+        return None
+    if direction == 'buy' and not c > e200:
+        return None
+    if direction == 'sell' and not c < e200:
+        return None
 
-    risk = abs(entry - lvl['sl'])
-    reward = abs(lvl['tp1'] - entry)
-    if risk <= 0 or reward / risk < FIB_RR_MIN:
+    # i livelli devono essere calcolabili (ATR presente, geometria valida)
+    if fib_confluence_trade_levels(ind, i, direction) is None:
         return None
 
     return direction

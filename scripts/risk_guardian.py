@@ -446,6 +446,10 @@ class RiskGuardian:
         for pos in positions:
             if pos.magic != magic:
                 continue
+            # S20_FIB_CONFLUENCE è gestita interamente dal proprio blocco in mt5-bot.py
+            # (SL strutturale + parziale a 1R + BE). Il RiskGuardian non deve toccarla.
+            if pos.comment and 'S20' in pos.comment:
+                continue
             open_tickets.add(pos.ticket)
 
             ticket  = pos.ticket

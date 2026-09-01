@@ -150,6 +150,8 @@ def fetch_data(tfs: list, dry_run: bool = False) -> dict:
                 cwd=_ROOT_DIR,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 timeout=120,
             )
             if proc.returncode == 0:
@@ -202,6 +204,8 @@ def run_backtests(tfs: list, dry_run: bool = False) -> dict:
                 cwd=_ROOT_DIR,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 timeout=600,
             )
             if proc.returncode == 0 and os.path.exists(out_file):
@@ -236,7 +240,14 @@ def parse_backtest_results(bt_files: dict) -> dict:
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            # Struttura attesa: data['adaptive']['by_strategy'] o simile
+            # Struttura reale (strategy-engine-v2.py --rm, verificato 2026-09-01):
+            # data['adaptive']['by_strategy'][sid] = {'n','wr','pnl','pf','dd',...} — chiavi
+            # corte, 'wr' in punti percentuali (0-100). BASELINE_STATS usa invece 'wr' 0-1.
+            # Prima di questo fix il codice leggeva 'profit_factor'/'win_rate'/'total_profit'
+            # (mai esistite in questo schema) → pf/wr/pnl SEMPRE 0.0, drift_analysis flaggava
+            # PF_DRIFT_DOWN al 100% su ogni strategia ad ogni run reale (mai emerso: l'unico
+            # run storico, 2026-07-09, era --dry-run con fetch+backtest skippati — vedi
+            # 07_self_learning_log.md 2026-09-01).
             by_strategy = (
                 data.get('adaptive', {}).get('by_strategy') or
                 data.get('by_strategy') or
@@ -247,10 +258,10 @@ def parse_backtest_results(bt_files: dict) -> dict:
                 if stats.get('n', 0) < 10:
                     continue
                 tf_stats[sid] = {
-                    'pf':  round(stats.get('profit_factor', 0.0), 3),
-                    'wr':  round(stats.get('win_rate', 0.0), 4),
+                    'pf':  round(stats.get('pf', 0.0), 3),
+                    'wr':  round(stats.get('wr', 0.0) / 100.0, 4),
                     'n':   stats.get('n', 0),
-                    'pnl': round(stats.get('total_profit', 0.0), 2),
+                    'pnl': round(stats.get('pnl', 0.0), 2),
                 }
             parsed[tf] = tf_stats
             log.info(f"[parse] {tf}: {len(tf_stats)} strategie con ≥10 trade")

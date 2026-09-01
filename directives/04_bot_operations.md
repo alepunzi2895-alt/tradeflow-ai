@@ -130,6 +130,25 @@ frontend legge `s20_paper_get` ogni 60s (naming legacy "paper" nel plumbing, dat
 su S20 può ridurre la frequenza di trading anche di H1/M30. Se questo si rivela un problema,
 valutare di reintrodurre un cooldown per-strategia dedicato invece del globale condiviso.
 
+## Reactivation Check — ri-test mensile strategie bloccate (2026-09-01 →)
+
+`scripts/reactivation_check.py` ri-testa a backtest (non a trade live — vedi motivazione in
+`07_self_learning_log.md` 2026-09-01) le strategie con `score_mult=0.0` in
+`data/strategy_overrides.json` (attualmente S00_MFKK, S09_MFKK_SCALPING, S18_RANGE_REVERSAL) e
+segnala se WR/PF sono tornati sopra soglia (WR ratio≥70% baseline **e** PF≥1.2). **Advisory-only**
+— non riattiva mai nulla da solo, appende una riga a `07_self_learning_log.md`.
+
+```bash
+python scripts/reactivation_check.py                # fetch + backtest + check
+python scripts/reactivation_check.py --skip-fetch    # usa dati MT5 già scaricati
+python scripts/reactivation_check.py --dry-run       # nessuna scrittura
+```
+
+**Setup Task Scheduler (1° di ogni mese, non ancora registrato)**:
+```
+schtasks /create /tn "TradeFlowAI_ReactivationCheck" /tr "python -X utf8 C:\path\to\tradeflow-ai\scripts\reactivation_check.py" /sc monthly /d 1 /st 07:00 /f
+```
+
 ## Checklist Pre-Deploy
 
 - [ ] Variabili usate = variabili definite nel file (scope check)

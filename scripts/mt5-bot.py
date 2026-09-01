@@ -47,9 +47,11 @@ from risk_guardian import get_risk_guardian, RiskGuardian
 
 # ── STRATEGY SELECTOR AGENT ───────────────────────────────────────────────────
 try:
-    from strategy_selector import StrategySelector
+    from strategy_selector import StrategySelector, is_hard_blocked
 except ImportError:
     StrategySelector = None
+    def is_hard_blocked(strategy_id):
+        return False
     log_placeholder3 = logging.getLogger('tf-bot')
     log_placeholder3.warning("strategy_selector.py non trovato — uso playbook statico")
 
@@ -103,13 +105,19 @@ _strategy_order_tickets: dict = {}  # {strategy_name: (ticket, direction)}
 SESSION_UTC  = (0, 24)       # operativo 24h — pausa gestita solo da NewsGuardian (-2h/+2h attorno a news HIGH)
 CHECK_SEC    = 10            # polling ogni 10 secondi
 
-# ── S20_FIB_CONFLUENCE — strategia ISOLATA su M5 (2026-08-28) ────────────────
-# NON passa da StrategySelector / RiskGuardian / compounding. Lotto fisso, bucket
-# posizioni separato (non conta in MAX_OPEN_ORDERS), rispetta solo news pause +
-# toggle auto-trade UI. Gestione: entry + SL strutturale + TP hard 2R; a TP1 (1R)
-# chiude S20_PARTIAL_LOT e sposta lo SL del residuo a break-even.
+# ── S20_FIB_CONFLUENCE — integrata nel flusso normale (promossa da isolata 2026-09-01) ──
+# Sizing via RiskGuardian (composite score/tier/compounding) con UNICA eccezione:
+# lotto finale ×2 rispetto al lot RiskGuardian standard (edge validato ma più raro,
+# eq. al vecchio lotto fisso 0.03 vs base_lot 0.02). Partecipa ai cooldown SL condivisi
+# (globale + per-strategia), a MAX_OPEN_ORDERS e alla guardia di correlazione direzionale.
+# Gestione posizione resta un mini-manager proprio (SL strutturale + TP hard 2R; a TP1/1R
+# chiude S20_PARTIAL_LOT e sposta lo SL del residuo a BE) — non generica RiskGuardian,
+# perché l'edge backtestato (OOS PF 1.72) dipende da questa lifecycle specifica.
 S20_ENABLED     = True
-S20_LOT         = 0.03
+S20_LOT         = 0.03      # fallback se RiskGuardian non disponibile
+S20_LOT_MULT    = 2.0       # unica eccezione RiskGuardian per S20: lotto finale ×2
+S20_CONFIDENCE  = 0.55      # strategy_confidence proxy — OOS PF 1.72/WR~52%, edge debole ma reale
+S20_AI_SCORE_PROXY = 55.0   # nessun AI scorer nativo per il segnale M5 Fib Confluence
 S20_PARTIAL_LOT = 0.02      # chiuso a TP1 (residuo 0.01 runner → TP2 / BE)
 S20_TAG         = 'S20_FIB_CONFLUENCE'
 S20_COOLDOWN_MIN = 120      # min tra due ingressi S20 (allineato al backtest)
@@ -194,6 +202,10 @@ STRATEGY_PARAMS = {
     'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.5},
     'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 3.5, 'sl_mult': 1.5},
     'S18_RANGE_REVERSAL':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Range Reversal V1', 'tp_mult': 2.0, 'sl_mult': 1.2},
+    # S20 non passa da questo dict (SL/TP propri, strutturali via fib_confluence_trade_levels,
+    # non ATR-mult) — mult qui allineati a risk_guardian.py::STRATEGY_ATR_PARAMS solo per
+    # coerenza col check pre-commit (usati unicamente dal risk-cap 2% interno a _calc_lot).
+    'S20_FIB_CONFLUENCE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Fib Confluence V2', 'tp_mult': 1.0, 'sl_mult': 1.0},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -633,6 +645,13 @@ def get_signal(I, i, hour, regime):
 
 def quality_gate(strategy_id, direction, I, i):
     """Return True if trade passes additional quality checks."""
+    # 0. Self-learning hard block (data/strategy_overrides.json, score_mult=0.0).
+    # Prima del 2026-09-01 questo override era letto SOLO da StrategySelector —
+    # i playbook statici (REGIME_MULTI_STRATEGIES M30/H1-secondary) lo ignoravano
+    # e continuavano a tradare strategie "bloccate" (vedi 07_self_learning_log.md).
+    if is_hard_blocked(strategy_id):
+        return False
+
     atr_v = I['atr'][i]
     atr_avg = I['atr_avg'][i]
 
@@ -939,7 +958,7 @@ def log_trade_to_json(direction, strategy, price, tp, sl, result):
     with open(fname, 'w', encoding='utf-8') as f:
         json.dump(trades, f, indent=2, ensure_ascii=False)
 
-# ── S20_FIB_CONFLUENCE — strategia isolata M5 (entry + gestione parziale) ─────
+# ── S20_FIB_CONFLUENCE — M5, sizing RiskGuardian (entry + gestione parziale) ─
 def _s20_load_state():
     global _s20_state
     try:
@@ -967,6 +986,7 @@ def s20_rebuild_from_open():
         risk = abs(p.price_open - p.sl) if p.sl else None
         _s20_state[p.ticket] = {'dir': d, 'entry': p.price_open, 'risk': risk,
                                 'tp1': None, 'tp2': p.tp or None, 'be_done': None}
+        _strategy_order_tickets[S20_TAG] = (p.ticket, d)
         log.info(f"[S20] posizione riadottata al riavvio: #{p.ticket} {d} @ {p.price_open}")
     if _s20_state:
         _s20_save_state()
@@ -1010,8 +1030,12 @@ def s20_manage():
         _s20_save_state()
         log.info(f"[S20] ✓ parziale {vol} lot @ TP1 (1R) + SL→BE  #{ticket}")
 
-def s20_check_entry(news_paused, auto_ok):
-    """Ogni barra M5 chiusa: se il segnale S20 è valido e non c'è già una posizione S20 aperta → apre."""
+def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
+                     sl_cooldowns_until=None, sl_cooldown_until=None):
+    """Ogni barra M5 chiusa: se il segnale S20 è valido e non c'è già una posizione S20 aperta → apre.
+    Integrata nel flusso normale: sizing via RiskGuardian (composite/tier/compounding, con lotto
+    finale ×S20_LOT_MULT — unica eccezione), cooldown SL condivisi, MAX_OPEN_ORDERS e guardia
+    di correlazione direzionale come le altre strategie."""
     global _s20_last_bar, _s20_last_entry_ts
     if not S20_ENABLED or not auto_ok:
         return
@@ -1026,11 +1050,21 @@ def s20_check_entry(news_paused, auto_ok):
         return
     if time.time() - _s20_last_entry_ts < S20_COOLDOWN_MIN * 60:   # cooldown tra ingressi
         return
+    now_utc_dt = datetime.datetime.now(datetime.timezone.utc)
+    _sl_cds = sl_cooldowns_until or {}
+    if _sl_cds.get(S20_TAG) and now_utc_dt < _sl_cds[S20_TAG]:
+        return
+    if sl_cooldown_until and now_utc_dt < sl_cooldown_until:
+        return
+    if count_open_positions() >= MAX_OPEN_ORDERS:
+        return
     bar_dt = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc)
     I_m5 = compute_indicators(candles_m5)
     idx = len(candles_m5) - 2
     direction = signal_fib_confluence(I_m5, idx, hour=bar_dt.hour, weekday=bar_dt.weekday())
     if not direction:
+        return
+    if has_position_in_direction(direction):
         return
     lvl = fib_confluence_trade_levels(I_m5, idx, direction)
     if lvl is None:
@@ -1038,12 +1072,43 @@ def s20_check_entry(news_paused, auto_ok):
     risk = lvl['risk']
     tp_usd = round(risk * 2.0, 2)
     sl_usd = round(risk, 2)
+
+    lot_use = S20_LOT
+    rp = None
+    rg = get_risk_guardian()
+    if rg:
+        acc_now = get_account_info()
+        rp = rg.get_order_params(
+            strategy_confidence=S20_CONFIDENCE,
+            atr=risk,
+            strategy_id=S20_TAG,
+            ai_score=S20_AI_SCORE_PROXY,
+            atr_avg=I_m5['atr_avg'][idx],
+            adx=I_m5['adx'][idx],
+            hour_utc=bar_dt.hour,
+            today_pnl=state.pnl_today,
+            current_equity=acc_now['equity'] if acc_now else None,
+            weekly_dd_pct=weekly_dd_pct,
+            direction=direction,
+        )
+        if rp.get('paused'):
+            log.info(f"⛔ SEGNALE S20 SOSPESO (Risk Guardian) — comp={rp.get('composite_score')}")
+            return
+        lot_use = round(rp['lot'] * S20_LOT_MULT, 2)   # unica eccezione RiskGuardian per S20
+
+    if news_risk_mult < 1.0:
+        lot_use = max(0.01, round(lot_use * news_risk_mult, 2))
+        log.info(f"[NewsGuardian] Lot S20 ridotto ×{news_risk_mult:.0%}")
+
     log.info(f"★ SEGNALE S20 (M5): {direction.upper()} | Fib Confluence | 1R=${risk:.2f} | "
-             f"TP2=${tp_usd:.2f} SL=${sl_usd:.2f} | lot={S20_LOT}")
-    result = place_order(direction, tp_usd, sl_usd, S20_TAG, lot_size=S20_LOT)
+             f"TP2=${tp_usd:.2f} SL=${sl_usd:.2f} | lot={lot_use}" +
+             (f" | tier={rp.get('tier_label')} comp={rp.get('composite_score')}" if rp else ""))
+    result = place_order(direction, tp_usd, sl_usd, S20_TAG, lot_size=lot_use)
     if not result:
         return
     ticket = getattr(result, 'order', 0)
+    _strategy_order_tickets[S20_TAG] = (ticket, direction)
+    state.record_trade(0, now_utc_dt)
     tick = mt5.symbol_info_tick(SYMBOL)
     entry = (tick.ask if direction == 'buy' else tick.bid) if tick else I_m5['C'][idx]
     tp1 = entry + risk if direction == 'buy' else entry - risk
@@ -1196,8 +1261,8 @@ def s20_push_stats(trades):
     for r in sorted(s20, key=lambda x: x['time']):
         cum += r['profit']; eq.append({'t': r['time'][:10], 'cum': round(cum, 2)})
     summary = {
-        'mode': 'live', 'lot': S20_LOT,
-        'config': 'v2 · M5 · SL strutturale · TP1 1R (parz.) / TP2 2R · London+NY · no-lunedì · ISOLATA',
+        'mode': 'live', 'lot': f'RiskGuardian ×{S20_LOT_MULT}',
+        'config': 'v2 · M5 · SL strutturale · TP1 1R (parz.) / TP2 2R · London+NY · no-lunedì · integrata',
         'n_total': len(s20), 'n_open': len(_s20_state),
         'overall': agg(s20),
         'buy':  agg([r for r in s20 if r['direction'] == 'buy']),
@@ -1353,12 +1418,12 @@ def run():
     if _strategy_order_tickets:
         log.info(f"Posizioni rilevate al riavvio: {list(_strategy_order_tickets.keys())}")
 
-    # S20_FIB_CONFLUENCE (strategia isolata M5): ripristina stato + riadotta posizioni aperte
+    # S20_FIB_CONFLUENCE (integrata nel flusso normale): ripristina stato + riadotta posizioni aperte
     if S20_ENABLED:
         _s20_load_state()
         s20_rebuild_from_open()
-        log.info(f"S20_FIB_CONFLUENCE attiva — M5 · lot fisso {S20_LOT} · isolata (no selector/compounding) · "
-                 f"{len(_s20_state)} posizioni in gestione")
+        log.info(f"S20_FIB_CONFLUENCE attiva — M5 · sizing RiskGuardian ×{S20_LOT_MULT} · "
+                 f"cooldown SL condivisi · {len(_s20_state)} posizioni in gestione")
 
     # Inizializza Strategy Selector Agent
     strategy_selector = StrategySelector() if StrategySelector else None
@@ -1501,11 +1566,9 @@ def run():
                                 f"| {strategy_closed} | net_profit={net_profit:+.2f}"
                             )
                             closed_this_cycle.append(ticket)
-                            # S20_FIB_CONFLUENCE è isolata: le sue chiusure non toccano i cooldown SL
-                            # condivisi (globale + per-strategia) che mettono in pausa H1/M30.
-                            _is_s20_close = bool(strategy_closed and 'S20' in strategy_closed)
                             # Aggiorna contatore SL consecutivi globale e per strategia
-                            if net_profit < 0 and not _is_s20_close:
+                            # (S20_FIB_CONFLUENCE integrata 2026-09-01: partecipa ai cooldown come le altre)
+                            if net_profit < 0:
                                 consecutive_sl_count += 1
                                 if strategy_closed != 'N/A':
                                     s_id = strategy_closed
@@ -1513,14 +1576,14 @@ def run():
                                     if _strategy_sl_count[s_id] >= 2:
                                         sl_cooldowns_until[s_id] = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=STRATEGY_SL_COOLDOWN_H)
                                         log.warning(f"🛑 COOLDOWN ATTIVO ({s_id}): {_strategy_sl_count[s_id]} SL consecutivi → pausa {STRATEGY_SL_COOLDOWN_H}h (fino a {sl_cooldowns_until[s_id].strftime('%H:%M')} UTC)")
-                                
+
                                 if consecutive_sl_count >= 2:
                                     sl_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=SL_COOLDOWN_H)
                                     log.warning(
                                         f"🛑 COOLDOWN GLOBALE ATTIVO: {consecutive_sl_count} SL consecutivi "
                                         f"→ pausa fino a {sl_cooldown_until.strftime('%H:%M')} UTC"
                                     )
-                            elif not _is_s20_close:
+                            else:
                                 consecutive_sl_count = 0  # profit → reset streak globale
                                 if strategy_closed != 'N/A':
                                     _strategy_sl_count[strategy_closed] = 0 # reset streak strategia
@@ -2600,11 +2663,15 @@ def run():
                                                 'regime':current_regime,'last_signal':h4_id})
                                 last_sync_time = time.time()
 
-            # ── S20_FIB_CONFLUENCE — strategia isolata M5 (indipendente da regime/selector) ──
+            # ── S20_FIB_CONFLUENCE — segnale M5 proprio (fuori da StrategySelector) ──
             if S20_ENABLED:
                 try:
                     s20_manage()
-                    s20_check_entry(current_news_risk.get('paused', False), auto_trade_enabled)
+                    s20_check_entry(current_news_risk.get('paused', False), auto_trade_enabled,
+                                     weekly_dd_pct=weekly_dd_pct,
+                                     news_risk_mult=current_news_risk.get('risk_mult', 1.0),
+                                     sl_cooldowns_until=sl_cooldowns_until,
+                                     sl_cooldown_until=sl_cooldown_until)
                 except Exception as _s20_err:
                     log.warning(f"[S20] errore ciclo: {_s20_err}")
 

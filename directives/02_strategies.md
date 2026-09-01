@@ -1,10 +1,28 @@
 # TradeFlow AI — Strategie Attive
 
-## ⚠️ 2026-08-28 — S20_FIB_CONFLUENCE (port Pine "Repro Overlay — M5"): non promossa
+## ✅ 2026-09-01 — Ri-test completo + S18_RANGE_REVERSAL bloccata + fix bug hard-block
+
+Ri-eseguito il backtest canonico da zero (dati MT5 freschi, `strategy-engine-v2.py --rm` su M30/H1/H4) su richiesta utente, criterio di permanenza nel roster: **WR>50% oppure PF alto e robusto** (non taglio WR rigido — alcune strategie hanno edge asimmetrico, es. S17 WR~45% ma PF 2.2-2.7). Risultato:
+
+| Strategia | TF live | WR ri-test (adattivo) | Note | Stato |
+|---|---|---|---|---|
+| S16_GOLDEN_SQUEEZE | H1 | 47.2% (+$3009.3/24m) | live recente WR 70.6% PF 2.14 | ✅ attiva |
+| S17_CONVERGENCE_SCALP | H4 | 45.7% (+$4181.2/24m) | PF storico 2.2-2.7, edge da R:R non da WR | ✅ attiva |
+| S10_OB_FVG_SCALP | M30/regime | 56.2% (+$248.3/24m, n=16) | campione piccolo, da monitorare | ✅ attiva |
+| S20_FIB_CONFLUENCE | M5 | OOS PF 1.72 | integrata 2026-09-01, vedi sopra | ✅ attiva |
+| S00_MFKK | — | 32-37% nell'adattivo (ma miglior P&L assoluto sui 3 TF nel backtest teorico) | live reale WR 13.3%→50%, molto sotto il teorico — bug trovato (vedi sotto) | ⛔ bloccata (dal 2026-07-16, ora davvero effettivo) |
+| S09_MFKK_SCALPING | — | mista (adattivo M30 WR54.3% n=35, standalone debole) | | ⛔ bloccata (dal 2026-07-16, ora davvero effettivo) |
+| S18_RANGE_REVERSAL | — | **negativa ovunque**: M30 standalone PF 0.629, M30 adattivo -$89/-98, H4 standalone PF 0.202; live 14.3% WR/PF 0.07 | nessun TP raggiunto negli ultimi 7 trade live | ⛔ **bloccata 2026-09-01** (nuova) |
+
+**Bug trovato e corretto**: il hard-block self-learning (`score_mult=0.0` in `data/strategy_overrides.json`) era letto solo da `StrategySelector`, non dai playbook statici (`REGIME_MULTI_STRATEGIES`, `get_signal()`) che generano la maggioranza dei trade reali — per questo S00_MFKK ha continuato a tradare per settimane nonostante il blocco del 07-16. Fix: `is_hard_blocked()` ora richiamata da `quality_gate()`, punto di passaggio comune a tutti i loop di ingresso. Dettagli: `06_known_issues.md` e `07_self_learning_log.md` 2026-09-01.
+
+## ✅ 2026-09-01 — S20_FIB_CONFLUENCE: promossa da isolata a integrata (sizing RiskGuardian ×2)
 
 Portata in `signals.py` (`signal_fib_confluence` + helper `fib_confluence_levels` / `fib_confluence_trade_levels`) la logica di confluenza del Pine scalping "Repro Overlay": estremi 20 barre + candela di inversione + prezzo oltre Fib 0.382/0.618 (swing 50) + ribbon EMA20/50, con **SL/TP sui livelli Fibonacci** (scelta utente) e parziali 50% TP1→BE→50% TP2 (`sim_fib_confluence` in `strategy-engine-v2.py`).
 
-Backtest M5/M15/M30 — port fedele: WR 10–18%, PF 0.49–1.06 standalone. Sprint v1 (90 combo IS/OOS): solo picco isolato non robusto. v2 (ingresso confermato + SL strutturale + EMA200), v3 (BUY: trend stack + momentum + TP largo), v4 (sessione/orari + circuit breaker) — il "filtro orario migliore" era look-ahead, il circuit breaker non scatta a ~3 trade/mese. **Numero onesto**: config di principio (v2 combined + **no-lunedì** + sessione piena London+NY) → full-period PF 1.54, **OOS ultimi 8 mesi PF 1.72** (n=54), walk-forward 1.16/1.23/1.79, BUY+SELL positivi. **Edge debole ma reale e OOS**, nel range di S00. **LIVE TEST da 2026-08-28** a **lotto fisso 0.03**, completamente **isolata**: blocco M5 dedicato in `mt5-bot.py`, NON in `StrategySelector`, no compounding, `RiskGuardian` la salta, cooldown SL condivisi non toccati. `signal_fib_confluence` in `signals.py` = V2 config di principio. Card tab Strategie → 🧪 LIVE 0.03 (stat reali dal bot). Piano: 4-6 settimane → se traccia il backtest (WR ~52%, PF ~1.5) sali a 0.04-0.05, se PF<1.2 → `S20_ENABLED=False`. Vedi `04_bot_operations.md` § S20 LIVE TEST + `07_self_learning_log.md` 2026-08-28. `S20_FIB_CONFLUENCE` resta in `STRATS` (re-testabile, fuori da ogni `REGIME_PRIORITY_*`). Dettagli: `research/s20_fib_confluence/RESULTS.md`, `07_self_learning_log.md` 2026-08-28.
+Backtest M5/M15/M30 — port fedele: WR 10–18%, PF 0.49–1.06 standalone. Sprint v1 (90 combo IS/OOS): solo picco isolato non robusto. v2 (ingresso confermato + SL strutturale + EMA200), v3 (BUY: trend stack + momentum + TP largo), v4 (sessione/orari + circuit breaker) — il "filtro orario migliore" era look-ahead, il circuit breaker non scatta a ~3 trade/mese. **Numero onesto**: config di principio (v2 combined + **no-lunedì** + sessione piena London+NY) → full-period PF 1.54, **OOS ultimi 8 mesi PF 1.72** (n=54), walk-forward 1.16/1.23/1.79, BUY+SELL positivi. **Edge debole ma reale e OOS**, nel range di S00.
+
+**LIVE TEST isolato dal 2026-08-28** a lotto fisso 0.03. **Dal 2026-09-01, su richiesta esplicita, promossa a strategia integrata** dopo solo 4gg di test (non i 4-6 settimane originariamente pianificate — deviazione consapevole, vedi `07_self_learning_log.md` 2026-09-01): sizing ora via `RiskGuardian` (composite score/tier/compounding) con **unica eccezione** lotto finale ×2 (`S20_LOT_MULT`); partecipa ai cooldown SL condivisi (globale + per-strategia) e a `MAX_OPEN_ORDERS`. Resta **fuori da `StrategySelector`** (nessun supporto M5 nel selector H1/M30/H4) e la gestione posizione (SL strutturale, TP1 1R parziale + BE, TP2 2R) resta il mini-manager proprio in `mt5-bot.py`, non generica `RiskGuardian` — l'edge backtestato dipende da questa lifecycle specifica. `signal_fib_confluence` in `signals.py` = V2 config di principio. Vedi `04_bot_operations.md` § S20_FIB_CONFLUENCE per il dettaglio implementativo. `S20_FIB_CONFLUENCE` resta in `STRATS` (fuori da ogni `REGIME_PRIORITY_*` del backtester). Dettagli storici: `research/s20_fib_confluence/RESULTS.md`, `07_self_learning_log.md` 2026-08-28.
 
 ## ✅ 2026-07-17 — Re-tuning parametri: nessun cambiamento adottato
 

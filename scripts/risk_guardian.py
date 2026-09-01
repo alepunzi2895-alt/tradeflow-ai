@@ -82,6 +82,9 @@ STRATEGY_ATR_PARAMS = {
     "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.5},
     "S00_MFKK":             {"tp_atr": 3.5, "sl_atr": 1.5},
     "S18_RANGE_REVERSAL":   {"tp_atr": 2.0, "sl_atr": 1.2},
+    # S20 passa il proprio risk strutturale (fib-based) come "atr" e ignora tp/sl_usd calcolati
+    # qui (usa TP1 1R/TP2 2R propri) — questi mult servono solo al risk-cap 2% dentro _calc_lot.
+    "S20_FIB_CONFLUENCE":   {"tp_atr": 1.0, "sl_atr": 1.0},
 }
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection

@@ -208,6 +208,21 @@ def _load_score_overrides() -> dict:
         return {}
 
 
+def is_hard_blocked(strategy_id: str) -> bool:
+    """True se il PerformanceTracker (self-learning) ha impostato score_mult=0.0
+    per questa strategia in data/strategy_overrides.json (hard block).
+
+    Legge il file ad ogni chiamata (nessun caching) così un blocco applicato
+    mentre il bot gira ha effetto dalla candela successiva.
+
+    Usato sia da StrategySelector._score_strategy() (score forzato a 0) sia,
+    direttamente, dai playbook statici di mt5-bot.py (REGIME_MULTI_STRATEGIES,
+    PLAYBOOK) che non passano da StrategySelector — 2026-09-01: prima di questo
+    fix quei percorsi ignoravano completamente gli override (vedi
+    07_self_learning_log.md 2026-09-01)."""
+    return _load_score_overrides().get(strategy_id, 1.0) == 0.0
+
+
 def _score_strategy(strategy: dict, regime: dict, session: str,
                     recent_wr: float = None) -> dict:
     """Score a single strategy 0-100."""

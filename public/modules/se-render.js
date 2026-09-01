@@ -513,7 +513,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         : id==='S18_RANGE_REVERSAL'
         ? 'BB Band Exhaustion (bb_pct≤0.15/≥0.85) + RSI + WPR + StochRSI mean-reversion · RANGE/WEAK ADX<22 · 7-19h UTC'
         : id==='S20_FIB_CONFLUENCE'
-        ? 'Estremo 20b + ribbon EMA20/50 + Auto-Fib · ingresso confermato (2 candele) + higher-low/lower-high + EMA200 M5 · SL strutturale ≥1.5×ATR · TP1 1R (parz.) / TP2 2R · London+NY, no-lunedì · IN OSSERVAZIONE (paper), il bot non la esegue'
+        ? 'Estremo 20b + ribbon EMA20/50 + Auto-Fib · ingresso confermato (2 candele) + higher-low/lower-high + EMA200 M5 · SL strutturale ≥1.5×ATR · TP1 1R (parz.) / TP2 2R · London+NY, no-lunedì · LIVE, integrata (sizing RiskGuardian ×2)'
         : id==='S05_V3_Sell_Exhaust'
         ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion TREND_UP H1'
         : id==='S01_EXHAUSTION'

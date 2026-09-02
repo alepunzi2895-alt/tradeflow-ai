@@ -28,6 +28,10 @@ Ri-eseguito il backtest canonico da zero (dati MT5 freschi, `strategy-engine-v2.
 
 **Bug trovato e corretto**: il hard-block self-learning (`score_mult=0.0` in `data/strategy_overrides.json`) era letto solo da `StrategySelector`, non dai playbook statici (`REGIME_MULTI_STRATEGIES`, `get_signal()`) che generano la maggioranza dei trade reali — per questo S00_MFKK ha continuato a tradare per settimane nonostante il blocco del 07-16. Fix: `is_hard_blocked()` ora richiamata da `quality_gate()`, punto di passaggio comune a tutti i loop di ingresso. Dettagli: `06_known_issues.md` e `07_self_learning_log.md` 2026-09-01.
 
+## ✅ 2026-09-02 — S20_FIB_CONFLUENCE: sessione ristretta a 8–17 UTC (sprint perf-stabile)
+
+Sweep parametri S20 (harness `opt_harness.evaluate`, holdout PF + gate `is_promotable`, cost model ON) su `FIB_BAND`, `FIB_STRUCT_NEAR/FAR`, `FIB_SL_ATR_K`, `FIB_TP2_R`, `FIB_SESSION`, no-lunedì — anche su M15/M30 come proxy di robustezza. **Unico cambiamento robusto su holdout E su M15+M30**: `FIB_SESSION (7,19) → (8,17)` (solo overlap London+NY liquido). Holdout PF M5 2.37→2.78, M15 1.17→1.58, M30 1.57→3.67; full PF M5 1.51→1.91 con DD -19%. Non tocca SL/TP/entry → **zero impatto sulla size/rischio del book live 0.03**, cambia solo *quando* si opera (via 07:00 e 17:00–19:00 UTC). Tutti gli altri parametri **tenuti** (TP2_R=2.5 e SL_K=1.75 miglioravano M5 ma crollavano su M15 — non robusti). S20 **non** va disattivata: holdout PF M5 ben sopra la soglia 1.2 del piano. Aggiunto flag `FIB_NO_MONDAY` (default True) per rendere il filtro lunedì tunabile. `data/xauusd_m5_mt5.json` fermo al 2026-08-28 (serve MT5 aperto per M5 fresco) — limitazione nota. Dettaglio: `backtests/results/opt_s20_portfolio_2026-09-02.json`.
+
 ## ✅ 2026-09-01 — S20_FIB_CONFLUENCE: promossa da isolata a integrata (sizing RiskGuardian ×2)
 
 Portata in `signals.py` (`signal_fib_confluence` + helper `fib_confluence_levels` / `fib_confluence_trade_levels`) la logica di confluenza del Pine scalping "Repro Overlay": estremi 20 barre + candela di inversione + prezzo oltre Fib 0.382/0.618 (swing 50) + ribbon EMA20/50, con **SL/TP sui livelli Fibonacci** (scelta utente) e parziali 50% TP1→BE→50% TP2 (`sim_fib_confluence` in `strategy-engine-v2.py`).
@@ -129,20 +133,30 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 
 ## Regime Priority per TF (backtester + bot)
 
+> **Trim sprint perf-stabile 2026-09-02** (walk-forward, cost model ON, gate = holdout PF).
+> Contributo per (regime × strategia) misurato su holdout; droppati i drag confermati su holdout **e** full period.
+> Holdout PF adattivo+RM: **H1 0.95→1.16**, **M30 1.04→1.19**, **H4 1.23** (invariato, solo cleanup, full PF 1.60→1.62).
+> Full DD ~dimezzato su H1 (5018→2100) e ridotto su M30. Dettaglio: `backtests/results/opt_s20_portfolio_2026-09-02.json`.
+> NB pesatura TF: **H4 > M30 > H1** — H4 tiene l'edge residuo maggiore (S17@H4 holdout PF 2.09, singolo miglior contributo del portfolio); H1 regge solo grazie a S16.
+> NB self-learning: `S00_MFKK` / `S09_MFKK_SCALPING` / `S18_RANGE_REVERSAL` sono già hard-block in `data/strategy_overrides.json` — il backtester non legge quegli override, quindi i suoi numeri "grezzi" sono più pessimisti del comportamento live.
+
 ### H1 (REGIME_PRIORITY_H1)
-- **TREND**: S16 → S00
-- **WEAK**: S16 → S09 → S00
-- **RANGE/VOLATILE**: S10 → S09
+- **TREND_UP / WEAK_UP**: S16 → S00
+- **TREND_DOWN**: S16 solo *(S00 rimosso: solo long ha edge — TREND_DOWN S00 holdout PF 0.75 / -$780, full 0.92 / -$1277)*
+- **WEAK_DOWN**: S16 → S09 *(S00 rimosso: holdout PF 0.58)*
+- **RANGE/VOLATILE**: S10 → S09 → S17
 
 ### M30 (REGIME_PRIORITY_M30)
-- **TREND**: S16 → S10 → S00
-- **WEAK**: S10 → S16 → S09 → S00
-- **RANGE/VOLATILE**: S10 → S09
+- **TREND**: S10 → S00 *(S16 rimosso: TREND_UP full PF 0.82 / -$599)*
+- **WEAK**: S10 → S16 → S09 → S00 *(S18 rimosso)*
+- **RANGE**: S10 → S09 → S17 *(S18 rimosso: holdout PF 0.51 / -$187, full 0.86 / -$184)*
+- **VOLATILE**: S09 → S10 → S17
 
 ### H4 (REGIME_PRIORITY_H4)
 - **TREND**: S16 → S17 → S00
-- **WEAK**: S16 → S17 → S00
-- **RANGE**: S17 → S00
+- **WEAK_UP**: S16 → S17 → S00
+- **WEAK_DOWN**: S17 → S00 *(S16 rimosso: n=2, -$158)*
+- **RANGE/VOLATILE**: S17 → S00
 
 ## Strategie Attive nel Bot
 

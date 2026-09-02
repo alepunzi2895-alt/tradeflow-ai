@@ -857,34 +857,47 @@ STRATS = {
 # H4: S09/S10 hurt performance (PF 0.446/0.658) — use S16+S17+S00 only
 # S05_MFKK_INTRADAY rimosso 2026-07-16: portfolio concentration study confermato OOS
 # (PF 2.19→2.66, DD -32%, vedi 07_self_learning_log.md) — S05 era l'unico drag del roster H4.
+# 2026-09-02 sprint perf: roster H4 già pulito (holdout PF 1.228, la TF con più edge residuo).
+# S17 star (holdout PF 2.09), S16 holdout PF 1.93, S00 holdout PF 1.21. Solo cleanup: S16 fuori
+# da WEAK_DOWN (n=2, -$158 full) → full PF 1.601→1.619, holdout invariato.
 REGIME_PRIORITY_H4 = {
     'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S00_MFKK'],
     'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S00_MFKK'],
     'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S00_MFKK'],
-    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S17_CONVERGENCE_SCALP', 'S00_MFKK'],
     'RANGE':      ['S17_CONVERGENCE_SCALP', 'S00_MFKK'],
     'VOLATILE':   ['S17_CONVERGENCE_SCALP', 'S00_MFKK'],
     'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
 
 # M30: S05 rimosso da TREND (backtest 2026-05-08: WR 22.7% → drag). S10 resta (WR 49%, +$638 su M30).
+# 2026-09-02 sprint perf (walk-forward, cost model ON): trim dei drag confermati su holdout+full —
+#   • S18_RANGE_REVERSAL fuori (già hard-block live): RANGE holdout PF 0.505 -$187, full 0.857 -$184
+#   • S16_GOLDEN_SQUEEZE fuori da TREND_UP/DOWN: TREND_UP full PF 0.822 -$599 (holdout ~flat)
+#   Risultato: holdout PF 1.040→1.188, full PF 1.147→1.197, holdout DD 1282→994.
+#   S00 tenuto in WEAK_DOWN nonostante holdout PF 0.85 — rimuoverlo peggiora (holdout 1.19→1.14).
 REGIME_PRIORITY_M30 = {
-    'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
-    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S00_MFKK'],
-    'WEAK_UP':    ['S10_OB_FVG_SCALP', 'S18_RANGE_REVERSAL', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
-    'WEAK_DOWN':  ['S10_OB_FVG_SCALP', 'S18_RANGE_REVERSAL', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
-    'RANGE':      ['S18_RANGE_REVERSAL', 'S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
+    'TREND_UP':   ['S10_OB_FVG_SCALP', 'S00_MFKK'],
+    'TREND_DOWN': ['S10_OB_FVG_SCALP', 'S00_MFKK'],
+    'WEAK_UP':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
     'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
-    'UNKNOWN':    ['S18_RANGE_REVERSAL', 'S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
+    'UNKNOWN':    ['S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUEEZE', 'S17_CONVERGENCE_SCALP'],
 }
 
 # H1: S10 rimosso da TREND/WEAK (backtest 2026-05-08: WR 27.1%, -$156 su H1).
 #     S05 rimosso da TREND (WR 29.7% < soglia 35%). S16+S00 coprono i loro slot.
+# 2026-09-02 sprint perf (walk-forward, cost model ON): S00_MFKK ha edge SOLO long —
+#   TREND_DOWN S00 holdout PF 0.746 -$780 / full 0.922 -$1277 (il singolo drag più grande del roster);
+#   WEAK_DOWN S00 holdout PF 0.583 -$133. Rimossi entrambi (S16 copre lo slot short).
+#   S09 tolto da WEAK_UP (rumore n=7). Risultato: holdout PF 0.952→1.158, full PF 1.206→1.519,
+#   full DD 5018→2100. NB: H1 resta la TF con meno edge residuo (holdout PF < H4/M30) → pesare meno.
 REGIME_PRIORITY_H1 = {
     'TREND_UP':   ['S16_GOLDEN_SQUEEZE', 'S00_MFKK'],
-    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE', 'S00_MFKK'],
-    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
-    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING', 'S00_MFKK'],
+    'TREND_DOWN': ['S16_GOLDEN_SQUEEZE'],
+    'WEAK_UP':    ['S16_GOLDEN_SQUEEZE', 'S00_MFKK'],
+    'WEAK_DOWN':  ['S16_GOLDEN_SQUEEZE', 'S09_MFKK_SCALPING'],
     'RANGE':      ['S10_OB_FVG_SCALP', 'S09_MFKK_SCALPING', 'S17_CONVERGENCE_SCALP'],
     'VOLATILE':   ['S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],
     'UNKNOWN':    ['S16_GOLDEN_SQUEEZE', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'],

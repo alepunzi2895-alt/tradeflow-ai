@@ -79,7 +79,7 @@ STRATEGY_ATR_PARAMS = {
     "S09_MFKK_SCALPING":    {"tp_atr": 4.0, "sl_atr": 1.5},
     "S10_OB_FVG_SCALP":     {"tp_atr": 3.5, "sl_atr": 1.5},
     "S16_GOLDEN_SQUEEZE":   {"tp_atr": 3.5, "sl_atr": 2.0},
-    "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.5},
+    "S17_CONVERGENCE_SCALP":{"tp_atr": 4.0, "sl_atr": 1.75},  # sprint 2026-09-02: 1.5→1.75 (holdout PF 0.98→1.32, full 0.90→1.38, 4/4 fold; roster H4 PF 2.09→2.21)
     "S00_MFKK":             {"tp_atr": 3.5, "sl_atr": 1.5},
     "S18_RANGE_REVERSAL":   {"tp_atr": 2.0, "sl_atr": 1.2},
     # S20 passa il proprio risk strutturale (fib-based) come "atr" e ignora tp/sl_usd calcolati

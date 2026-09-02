@@ -986,7 +986,7 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD, tp_mult=None,
             curr_sl = round(av * 1.5, 2)
         elif name == 'S17_CONVERGENCE_SCALP':
             curr_tp = round(av * 4.0, 2)
-            curr_sl = round(av * 1.5, 2)
+            curr_sl = round(av * 1.75, 2)  # sprint 2026-09-02: 1.5→1.75 (SL troppo stretto su H4, vedi opt_minors)
         elif name == 'S00_MFKK':
             curr_tp = round(av * 3.5, 2)
             curr_sl = round(av * 1.5, 2)
@@ -1242,7 +1242,7 @@ def run_adaptive(candles, ind, tf='H1'):
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*4.0, 2); sl_d = round(av*1.5, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.75, 2)  # sprint 2026-09-02: 1.5→1.75
         elif used == 'S00_MFKK':
             tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S18_RANGE_REVERSAL':
@@ -1371,7 +1371,7 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         elif used == 'S05_MFKK_INTRADAY':
             tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S17_CONVERGENCE_SCALP':
-            tp_d = round(av*4.0, 2); sl_d = round(av*1.5, 2)
+            tp_d = round(av*4.0, 2); sl_d = round(av*1.75, 2)  # sprint 2026-09-02: 1.5→1.75
         elif used == 'S00_MFKK':
             tp_d = round(av*3.5, 2); sl_d = round(av*1.5, 2)
         elif used == 'S18_RANGE_REVERSAL':

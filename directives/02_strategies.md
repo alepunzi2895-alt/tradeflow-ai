@@ -1,5 +1,17 @@
 # TradeFlow AI — Strategie Attive
 
+## ✅ 2026-09-02 — Sprint "performance stabile": S17 SL 1.5→1.75×ATR; S10/S09 invariate
+
+Backtester reso realistico in Fase 0 (cost model + fill pessimistico + entry next-open + walk-forward/holdout, `opt_harness.py`). Rivalutate le 3 strategie minori (holdout PF = metrica primaria):
+
+| Strategia | TF | Verdetto | Numeri (holdout / full, backtester realistico) |
+|---|---|---|---|
+| S17_CONVERGENCE_SCALP | H4 | **retune: SL 1.5→1.75×ATR** (TP 4.0 e param segnale invariati) | standalone PF 0.98→1.32 holdout, 0.90→1.38 full, 4/4 fold positivi, live-window 1.15→1.59; adaptive+RM H4 PF 2.09→2.21 holdout, WR 45.7→50.0 |
+| S10_OB_FVG_SCALP | M30 | **invariata, lotto NON scalato** | solo ~19 trade full / holdout n=4 in 2+ anni; nessuna config `is_promotable`; campione troppo sottile per ritoccare |
+| S09_MFKK_SCALPING | M30 | **resta hard-blocked** | nessuna config con holdout PF ≥1.15 & n≥30 & full PF ≥1.10; le config con holdout PF ~1.7 hanno full PF 0.6-0.7 e P&L full negativo (coda fortunata). Full PF mai > ~0.75 |
+
+SL S17 1.75 sincronizzato in `risk_guardian.py`, `mt5-bot.py`, `strategy_selector.py` (base_params, era 1.1 outlier), `strategy-engine-v2.py` (3 rami). Dettagli e sweep: `07_self_learning_log.md` 2026-09-02, `backtests/results/opt_minors_2026-09-02.json`.
+
 ## ✅ 2026-09-01 — Ri-test completo + S18_RANGE_REVERSAL bloccata + fix bug hard-block
 
 Ri-eseguito il backtest canonico da zero (dati MT5 freschi, `strategy-engine-v2.py --rm` su M30/H1/H4) su richiesta utente, criterio di permanenza nel roster: **WR>50% oppure PF alto e robusto** (non taglio WR rigido — alcune strategie hanno edge asimmetrico, es. S17 WR~45% ma PF 2.2-2.7). Risultato:
@@ -140,7 +152,7 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 | `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.5 | VOLATILE, WEAK, RANGE | **M30** | 1.534 M30 | 41.2% |
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK, TREND | **M30 only** | 1.534 M30 | 49.0% |
 | `S16_GOLDEN_SQUEEZE` | Golden Squeeze V5 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.863 H1 | 51.0% |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.5 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.75 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
 | ~~`S05_MFKK_INTRADAY`~~ | ⛔ **Ritirata 2026-07-16** | — | — | era TREND (H4 only) | era H4 (marginale) | — | rimossa da `STRATEGIES_CONFIG` (strategy_selector.py) e da `REGIME_PRIORITY_H4` (strategy-engine-v2.py) — portfolio concentration study: droppando solo S05 dal roster H4, PF OOS 2.19→2.66 e DD -32% a parità di P&L. H4 era il suo unico slot vivo (H1/M30 già negativi). Codice/funzione segnale lasciati intatti in `signals.py` per eventuale re-instaurazione futura, semplicemente non più selezionabile in live. Vedi `07_self_learning_log.md` 2026-07-16. |
 
 ## Strategy Selector Agent (`strategy_selector.py`)

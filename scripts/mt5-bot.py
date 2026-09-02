@@ -199,7 +199,7 @@ STRATEGY_PARAMS = {
     'S09_MFKK_SCALPING':   {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Scalping V2', 'tp_mult': 4.0, 'sl_mult': 1.5},
     'S10_OB_FVG_SCALP':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'OB+FVG Scalp V2', 'tp_mult': 3.5, 'sl_mult': 1.5},
     'S16_GOLDEN_SQUEEZE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Golden Squeeze V3', 'tp_mult': 3.5, 'sl_mult': 2.0, 'be_mult': 1.3},
-    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.5},
+    'S17_CONVERGENCE_SCALP': {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Convergence Scalp V2', 'tp_mult': 4.0, 'sl_mult': 1.75},  # sprint 2026-09-02: 1.5→1.75
     'S00_MFKK':            {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'MFKK Core V2', 'tp_mult': 3.5, 'sl_mult': 1.5},
     'S18_RANGE_REVERSAL':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Range Reversal V1', 'tp_mult': 2.0, 'sl_mult': 1.2},
     # S20 non passa da questo dict (SL/TP propri, strutturali via fib_confluence_trade_levels,

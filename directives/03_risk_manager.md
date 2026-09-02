@@ -127,10 +127,11 @@ In pratica: un swing_high D1 (0.85 × 1.0 = **0.85**) supera un swing_high H1 (0
 | S09_MFKK_SCALPING | 4.0 | **1.5** | era 1.0 |
 | S10_OB_FVG_SCALP | 3.5 | **1.5** | era 1.2 |
 | S16_GOLDEN_SQUEEZE | 3.5 | 2.0 | invariato |
-| S17_CONVERGENCE_SCALP | 4.0 | **1.5** | era 1.0; H4 → ATR H4 già più ampio |
+| S17_CONVERGENCE_SCALP | 4.0 | **1.75** | 1.0→1.5 (2026-04-30)→**1.75** (sprint 2026-09-02): SL 1.5×ATR ancora troppo stretto su H4 |
 | S00_MFKK | 3.5 | **1.5** | era 1.0 |
 
 > `S17_CONVERGENCE_SCALP` usa H4 (PF 1.710), non più M15/M5. Durata attesa 240min.
+> **Sprint 2026-09-02** (backtester realistico: cost model + fill pessimistico + entry next-open): SL S17 1.5→1.75×ATR. Standalone H4 full PF 0.90→1.38, holdout PF 0.98→1.32 (4/4 fold positivi), live-window PF 1.15→1.59. In H4 adaptive+RM: S17 PF 2.09→2.21 holdout, WR 45.7→50.0. Sincronizzato in `risk_guardian.py`, `mt5-bot.py::STRATEGY_PARAMS`, `strategy_selector.py::base_params` (era 1.1, outlier), `strategy-engine-v2.py` (3 rami). Lotto S17 NON scalato (live n=12). Dettagli: `07_self_learning_log.md` 2026-09-02, `backtests/results/opt_minors_2026-09-02.json`.
 
 ### Moltiplicatore dinamico ATR spike
 

@@ -1,0 +1,2204 @@
+{
+  "generated_at": "2026-09-02",
+  "owner": "sprint subagent D \u2014 S20 + portfolio/regime",
+  "cost_model": "ON (half_spread 0.15, slip_entry 0.05, slip_sl 0.10, pessimistic fill, entry next-open)",
+  "s20": {
+    "baseline_ev": {
+      "M5": {
+        "full": {
+          "n": 128,
+          "wr": 54.7,
+          "pnl": 200.5,
+          "pf": 1.508,
+          "dd": 56.9,
+          "avg_day": 2.28,
+          "tr_day": 1.45,
+          "months": "10/18"
+        },
+        "holdout": {
+          "n": 28,
+          "wr": 64.3,
+          "pnl": 128.1,
+          "pf": 2.368,
+          "dd": 46.1,
+          "avg_day": 7.53,
+          "tr_day": 1.65,
+          "months": "3/4"
+        },
+        "live": {
+          "n": 7,
+          "wr": 57.1,
+          "pnl": 16.5,
+          "pf": 1.825,
+          "dd": 12.6,
+          "avg_day": 2.75,
+          "tr_day": 1.17,
+          "months": "2/2"
+        },
+        "folds_pos": 3,
+        "n_folds": 4,
+        "n_trades": 128
+      },
+      "M15": {
+        "full": {
+          "n": 54,
+          "wr": 55.6,
+          "pnl": 46.6,
+          "pf": 1.171,
+          "dd": 48.1,
+          "avg_day": 1.04,
+          "tr_day": 1.2,
+          "months": "12/22"
+        },
+        "holdout": {
+          "n": 12,
+          "wr": 50.0,
+          "pnl": 15.6,
+          "pf": 1.168,
+          "dd": 39.2,
+          "avg_day": 1.74,
+          "tr_day": 1.33,
+          "months": "3/5"
+        },
+        "live": {
+          "n": 5,
+          "wr": 80.0,
+          "pnl": 48.1,
+          "pf": 3.443,
+          "dd": 19.7,
+          "avg_day": 16.02,
+          "tr_day": 1.67,
+          "months": "3/3"
+        },
+        "folds_pos": 2,
+        "n_folds": 4,
+        "n_trades": 54
+      },
+      "note": "harness evaluate() routes S20 through sim_fib_confluence automatically (run_one name-check). Numbers sane vs research/s20_fib_confluence/RESULTS.md (full PF 1.51 vs 1.54 di principio)."
+    },
+    "combos": [
+      {
+        "label": "FIB_BAND=0.2",
+        "cfg": {
+          "FIB_BAND": 0.2
+        },
+        "M5": {
+          "full": {
+            "n": 120,
+            "wr": 55.8,
+            "pnl": 220.1,
+            "pf": 1.629,
+            "dd": 49.8,
+            "avg_day": 2.62,
+            "tr_day": 1.43,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 27,
+            "wr": 63.0,
+            "pnl": 103.4,
+            "pf": 2.04,
+            "dd": 46.1,
+            "avg_day": 6.46,
+            "tr_day": 1.69,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 5,
+            "wr": 60.0,
+            "pnl": 3.2,
+            "pf": 1.218,
+            "dd": 7.4,
+            "avg_day": 0.79,
+            "tr_day": 1.25,
+            "months": "1/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 120
+        },
+        "M15": {
+          "full": {
+            "n": 46,
+            "wr": 56.5,
+            "pnl": 77.3,
+            "pf": 1.34,
+            "dd": 41.1,
+            "avg_day": 1.93,
+            "tr_day": 1.15,
+            "months": "11/20"
+          },
+          "holdout": {
+            "n": 10,
+            "wr": 50.0,
+            "pnl": 10.4,
+            "pf": 1.139,
+            "dd": 34.2,
+            "avg_day": 1.3,
+            "tr_day": 1.25,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 46
+        }
+      },
+      {
+        "label": "FIB_BAND=0.25",
+        "cfg": {
+          "FIB_BAND": 0.25
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 200.5,
+            "pf": 1.508,
+            "dd": 56.9,
+            "avg_day": 2.28,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 128.1,
+            "pf": 2.368,
+            "dd": 46.1,
+            "avg_day": 7.53,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 46.6,
+            "pf": 1.171,
+            "dd": 48.1,
+            "avg_day": 1.04,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 15.6,
+            "pf": 1.168,
+            "dd": 39.2,
+            "avg_day": 1.74,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_BAND=0.3",
+        "cfg": {
+          "FIB_BAND": 0.3
+        },
+        "M5": {
+          "full": {
+            "n": 133,
+            "wr": 53.4,
+            "pnl": 174.6,
+            "pf": 1.415,
+            "dd": 66.6,
+            "avg_day": 1.9,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 29,
+            "wr": 62.1,
+            "pnl": 113.1,
+            "pf": 2.041,
+            "dd": 46.1,
+            "avg_day": 6.28,
+            "tr_day": 1.61,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 133
+        },
+        "M15": {
+          "full": {
+            "n": 60,
+            "wr": 56.7,
+            "pnl": 58.9,
+            "pf": 1.206,
+            "dd": 50.8,
+            "avg_day": 1.23,
+            "tr_day": 1.25,
+            "months": "12/23"
+          },
+          "holdout": {
+            "n": 11,
+            "wr": 45.5,
+            "pnl": -1.1,
+            "pf": 0.987,
+            "dd": 34.2,
+            "avg_day": -0.13,
+            "tr_day": 1.22,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 6,
+            "wr": 66.7,
+            "pnl": 36.5,
+            "pf": 2.169,
+            "dd": 19.7,
+            "avg_day": 9.12,
+            "tr_day": 1.5,
+            "months": "3/3"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 60
+        }
+      },
+      {
+        "label": "STRUCT=(8, 30)",
+        "cfg": {
+          "FIB_STRUCT_NEAR": 8,
+          "FIB_STRUCT_FAR": 30
+        },
+        "M5": {
+          "full": {
+            "n": 117,
+            "wr": 53.8,
+            "pnl": 165.8,
+            "pf": 1.448,
+            "dd": 58.4,
+            "avg_day": 2.0,
+            "tr_day": 1.41,
+            "months": "9/17"
+          },
+          "holdout": {
+            "n": 26,
+            "wr": 53.8,
+            "pnl": 54.9,
+            "pf": 1.438,
+            "dd": 58.3,
+            "avg_day": 3.43,
+            "tr_day": 1.62,
+            "months": "1/4"
+          },
+          "live": {
+            "n": 5,
+            "wr": 60.0,
+            "pnl": 15.7,
+            "pf": 2.247,
+            "dd": 12.6,
+            "avg_day": 3.93,
+            "tr_day": 1.25,
+            "months": "1/2"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 117
+        },
+        "M15": {
+          "full": {
+            "n": 47,
+            "wr": 57.4,
+            "pnl": 57.8,
+            "pf": 1.252,
+            "dd": 65.5,
+            "avg_day": 1.56,
+            "tr_day": 1.27,
+            "months": "12/20"
+          },
+          "holdout": {
+            "n": 10,
+            "wr": 60.0,
+            "pnl": 27.6,
+            "pf": 1.431,
+            "dd": 23.2,
+            "avg_day": 3.94,
+            "tr_day": 1.43,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 3,
+          "promotable": true,
+          "n_trades": 47
+        }
+      },
+      {
+        "label": "STRUCT=(10, 35)",
+        "cfg": {
+          "FIB_STRUCT_NEAR": 10,
+          "FIB_STRUCT_FAR": 35
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 200.5,
+            "pf": 1.508,
+            "dd": 56.9,
+            "avg_day": 2.28,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 128.1,
+            "pf": 2.368,
+            "dd": 46.1,
+            "avg_day": 7.53,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 46.6,
+            "pf": 1.171,
+            "dd": 48.1,
+            "avg_day": 1.04,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 15.6,
+            "pf": 1.168,
+            "dd": 39.2,
+            "avg_day": 1.74,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "STRUCT=(12, 40)",
+        "cfg": {
+          "FIB_STRUCT_NEAR": 12,
+          "FIB_STRUCT_FAR": 40
+        },
+        "M5": {
+          "full": {
+            "n": 149,
+            "wr": 55.7,
+            "pnl": 187.2,
+            "pf": 1.38,
+            "dd": 102.4,
+            "avg_day": 1.82,
+            "tr_day": 1.45,
+            "months": "8/18"
+          },
+          "holdout": {
+            "n": 32,
+            "wr": 65.6,
+            "pnl": 120.2,
+            "pf": 2.035,
+            "dd": 67.7,
+            "avg_day": 6.01,
+            "tr_day": 1.6,
+            "months": "2/4"
+          },
+          "live": {
+            "n": 10,
+            "wr": 60.0,
+            "pnl": 16.9,
+            "pf": 1.547,
+            "dd": 12.6,
+            "avg_day": 2.11,
+            "tr_day": 1.25,
+            "months": "1/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 149
+        },
+        "M15": {
+          "full": {
+            "n": 65,
+            "wr": 49.2,
+            "pnl": -14.9,
+            "pf": 0.958,
+            "dd": 95.4,
+            "avg_day": -0.28,
+            "tr_day": 1.23,
+            "months": "11/23"
+          },
+          "holdout": {
+            "n": 14,
+            "wr": 50.0,
+            "pnl": 7.8,
+            "pf": 1.073,
+            "dd": 39.2,
+            "avg_day": 0.78,
+            "tr_day": 1.4,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 6,
+            "wr": 66.7,
+            "pnl": 34.1,
+            "pf": 2.016,
+            "dd": 19.7,
+            "avg_day": 8.54,
+            "tr_day": 1.5,
+            "months": "3/3"
+          },
+          "folds_pos": 1,
+          "promotable": false,
+          "n_trades": 65
+        }
+      },
+      {
+        "label": "FIB_SL_ATR_K=1.25",
+        "cfg": {
+          "FIB_SL_ATR_K": 1.25
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 53.9,
+            "pnl": 146.4,
+            "pf": 1.454,
+            "dd": 45.2,
+            "avg_day": 1.66,
+            "tr_day": 1.45,
+            "months": "11/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 67.9,
+            "pnl": 97.1,
+            "pf": 2.431,
+            "dd": 25.5,
+            "avg_day": 5.71,
+            "tr_day": 1.65,
+            "months": "4/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 13.2,
+            "pf": 1.784,
+            "dd": 10.7,
+            "avg_day": 2.21,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 3.5,
+            "pf": 1.013,
+            "dd": 54.6,
+            "avg_day": 0.08,
+            "tr_day": 1.2,
+            "months": "11/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 24.9,
+            "pf": 1.311,
+            "dd": 34.3,
+            "avg_day": 2.76,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 54.1,
+            "pf": 4.283,
+            "dd": 16.5,
+            "avg_day": 18.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 0,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_SL_ATR_K=1.5",
+        "cfg": {
+          "FIB_SL_ATR_K": 1.5
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 200.5,
+            "pf": 1.508,
+            "dd": 56.9,
+            "avg_day": 2.28,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 128.1,
+            "pf": 2.368,
+            "dd": 46.1,
+            "avg_day": 7.53,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 46.6,
+            "pf": 1.171,
+            "dd": 48.1,
+            "avg_day": 1.04,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 15.6,
+            "pf": 1.168,
+            "dd": 39.2,
+            "avg_day": 1.74,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_SL_ATR_K=1.75",
+        "cfg": {
+          "FIB_SL_ATR_K": 1.75
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 55.5,
+            "pnl": 271.1,
+            "pf": 1.611,
+            "dd": 63.9,
+            "avg_day": 3.08,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 151.7,
+            "pf": 2.421,
+            "dd": 53.5,
+            "avg_day": 8.93,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 19.7,
+            "pf": 1.852,
+            "dd": 14.6,
+            "avg_day": 3.28,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": true,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 57.4,
+            "pnl": 38.6,
+            "pf": 1.137,
+            "dd": 45.7,
+            "avg_day": 0.86,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": -15.5,
+            "pf": 0.856,
+            "dd": 45.6,
+            "avg_day": -1.73,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 40.5,
+            "pf": 2.768,
+            "dd": 22.9,
+            "avg_day": 13.48,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_TP2_R=1.5",
+        "cfg": {
+          "FIB_TP2_R": 1.5
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 184.8,
+            "pf": 1.469,
+            "dd": 57.1,
+            "avg_day": 2.1,
+            "tr_day": 1.45,
+            "months": "11/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 113.1,
+            "pf": 2.208,
+            "dd": 46.1,
+            "avg_day": 6.65,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.1,
+            "pf": 1.807,
+            "dd": 12.6,
+            "avg_day": 2.69,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 80.5,
+            "pf": 1.296,
+            "dd": 43.8,
+            "avg_day": 1.79,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 11.5,
+            "pf": 1.123,
+            "dd": 39.2,
+            "avg_day": 1.28,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 50.9,
+            "pf": 3.586,
+            "dd": 19.7,
+            "avg_day": 16.96,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_TP2_R=2.0",
+        "cfg": {
+          "FIB_TP2_R": 2.0
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 200.5,
+            "pf": 1.508,
+            "dd": 56.9,
+            "avg_day": 2.28,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 128.1,
+            "pf": 2.368,
+            "dd": 46.1,
+            "avg_day": 7.53,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 46.6,
+            "pf": 1.171,
+            "dd": 48.1,
+            "avg_day": 1.04,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 15.6,
+            "pf": 1.168,
+            "dd": 39.2,
+            "avg_day": 1.74,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_TP2_R=2.5",
+        "cfg": {
+          "FIB_TP2_R": 2.5
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 258.3,
+            "pf": 1.655,
+            "dd": 59.0,
+            "avg_day": 2.94,
+            "tr_day": 1.45,
+            "months": "11/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 160.9,
+            "pf": 2.719,
+            "dd": 46.1,
+            "avg_day": 9.46,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 22.2,
+            "pf": 2.112,
+            "dd": 12.6,
+            "avg_day": 3.71,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": true,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": -13.6,
+            "pf": 0.95,
+            "dd": 67.7,
+            "avg_day": -0.3,
+            "tr_day": 1.2,
+            "months": "11/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": -4.3,
+            "pf": 0.954,
+            "dd": 39.2,
+            "avg_day": -0.48,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 41.1,
+            "pf": 3.09,
+            "dd": 19.7,
+            "avg_day": 13.7,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 1,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_SESSION=(7, 19)",
+        "cfg": {
+          "FIB_SESSION": [
+            7,
+            19
+          ]
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 200.5,
+            "pf": 1.508,
+            "dd": 56.9,
+            "avg_day": 2.28,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 128.1,
+            "pf": 2.368,
+            "dd": 46.1,
+            "avg_day": 7.53,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 46.6,
+            "pf": 1.171,
+            "dd": 48.1,
+            "avg_day": 1.04,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 15.6,
+            "pf": 1.168,
+            "dd": 39.2,
+            "avg_day": 1.74,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_SESSION=(8, 17)",
+        "cfg": {
+          "FIB_SESSION": [
+            8,
+            17
+          ]
+        },
+        "M5": {
+          "full": {
+            "n": 105,
+            "wr": 59.0,
+            "pnl": 258.5,
+            "pf": 1.914,
+            "dd": 46.2,
+            "avg_day": 3.49,
+            "tr_day": 1.42,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 23,
+            "wr": 69.6,
+            "pnl": 126.8,
+            "pf": 2.78,
+            "dd": 46.1,
+            "avg_day": 9.05,
+            "tr_day": 1.64,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 5,
+            "wr": 60.0,
+            "pnl": 3.2,
+            "pf": 1.218,
+            "dd": 7.4,
+            "avg_day": 0.79,
+            "tr_day": 1.25,
+            "months": "1/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 105
+        },
+        "M15": {
+          "full": {
+            "n": 44,
+            "wr": 56.8,
+            "pnl": 54.6,
+            "pf": 1.238,
+            "dd": 39.2,
+            "avg_day": 1.52,
+            "tr_day": 1.22,
+            "months": "11/21"
+          },
+          "holdout": {
+            "n": 9,
+            "wr": 55.6,
+            "pnl": 31.4,
+            "pf": 1.582,
+            "dd": 34.2,
+            "avg_day": 4.48,
+            "tr_day": 1.29,
+            "months": "4/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": true,
+          "n_trades": 44
+        }
+      },
+      {
+        "label": "FIB_SESSION=(7, 17)",
+        "cfg": {
+          "FIB_SESSION": [
+            7,
+            17
+          ]
+        },
+        "M5": {
+          "full": {
+            "n": 112,
+            "wr": 57.1,
+            "pnl": 235.4,
+            "pf": 1.763,
+            "dd": 46.2,
+            "avg_day": 3.06,
+            "tr_day": 1.45,
+            "months": "11/18"
+          },
+          "holdout": {
+            "n": 25,
+            "wr": 64.0,
+            "pnl": 114.3,
+            "pf": 2.367,
+            "dd": 46.1,
+            "avg_day": 7.62,
+            "tr_day": 1.67,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 6,
+            "wr": 50.0,
+            "pnl": -2.3,
+            "pf": 0.885,
+            "dd": 12.6,
+            "avg_day": -0.46,
+            "tr_day": 1.2,
+            "months": "1/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 112
+        },
+        "M15": {
+          "full": {
+            "n": 48,
+            "wr": 56.2,
+            "pnl": 48.8,
+            "pf": 1.203,
+            "dd": 39.5,
+            "avg_day": 1.25,
+            "tr_day": 1.23,
+            "months": "11/21"
+          },
+          "holdout": {
+            "n": 9,
+            "wr": 55.6,
+            "pnl": 31.4,
+            "pf": 1.582,
+            "dd": 34.2,
+            "avg_day": 4.48,
+            "tr_day": 1.29,
+            "months": "4/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": true,
+          "n_trades": 48
+        }
+      },
+      {
+        "label": "FIB_NO_MONDAY=True",
+        "cfg": {
+          "FIB_NO_MONDAY": true
+        },
+        "M5": {
+          "full": {
+            "n": 128,
+            "wr": 54.7,
+            "pnl": 200.5,
+            "pf": 1.508,
+            "dd": 56.9,
+            "avg_day": 2.28,
+            "tr_day": 1.45,
+            "months": "10/18"
+          },
+          "holdout": {
+            "n": 28,
+            "wr": 64.3,
+            "pnl": 128.1,
+            "pf": 2.368,
+            "dd": 46.1,
+            "avg_day": 7.53,
+            "tr_day": 1.65,
+            "months": "3/4"
+          },
+          "live": {
+            "n": 7,
+            "wr": 57.1,
+            "pnl": 16.5,
+            "pf": 1.825,
+            "dd": 12.6,
+            "avg_day": 2.75,
+            "tr_day": 1.17,
+            "months": "2/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 128
+        },
+        "M15": {
+          "full": {
+            "n": 54,
+            "wr": 55.6,
+            "pnl": 46.6,
+            "pf": 1.171,
+            "dd": 48.1,
+            "avg_day": 1.04,
+            "tr_day": 1.2,
+            "months": "12/22"
+          },
+          "holdout": {
+            "n": 12,
+            "wr": 50.0,
+            "pnl": 15.6,
+            "pf": 1.168,
+            "dd": 39.2,
+            "avg_day": 1.74,
+            "tr_day": 1.33,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 5,
+            "wr": 80.0,
+            "pnl": 48.1,
+            "pf": 3.443,
+            "dd": 19.7,
+            "avg_day": 16.02,
+            "tr_day": 1.67,
+            "months": "3/3"
+          },
+          "folds_pos": 2,
+          "promotable": false,
+          "n_trades": 54
+        }
+      },
+      {
+        "label": "FIB_NO_MONDAY=False",
+        "cfg": {
+          "FIB_NO_MONDAY": false
+        },
+        "M5": {
+          "full": {
+            "n": 164,
+            "wr": 55.5,
+            "pnl": 118.5,
+            "pf": 1.211,
+            "dd": 60.8,
+            "avg_day": 1.02,
+            "tr_day": 1.41,
+            "months": "9/18"
+          },
+          "holdout": {
+            "n": 36,
+            "wr": 55.6,
+            "pnl": 64.9,
+            "pf": 1.396,
+            "dd": 60.8,
+            "avg_day": 2.82,
+            "tr_day": 1.57,
+            "months": "2/4"
+          },
+          "live": {
+            "n": 10,
+            "wr": 60.0,
+            "pnl": 11.8,
+            "pf": 1.371,
+            "dd": 20.3,
+            "avg_day": 1.47,
+            "tr_day": 1.25,
+            "months": "1/2"
+          },
+          "folds_pos": 3,
+          "promotable": false,
+          "n_trades": 164
+        },
+        "M15": {
+          "full": {
+            "n": 75,
+            "wr": 52.0,
+            "pnl": -31.1,
+            "pf": 0.927,
+            "dd": 87.6,
+            "avg_day": -0.52,
+            "tr_day": 1.25,
+            "months": "13/23"
+          },
+          "holdout": {
+            "n": 14,
+            "wr": 42.9,
+            "pnl": -31.6,
+            "pf": 0.739,
+            "dd": 44.4,
+            "avg_day": -2.63,
+            "tr_day": 1.17,
+            "months": "3/5"
+          },
+          "live": {
+            "n": 7,
+            "wr": 71.4,
+            "pnl": 32.3,
+            "pf": 1.813,
+            "dd": 20.0,
+            "avg_day": 6.45,
+            "tr_day": 1.4,
+            "months": "3/3"
+          },
+          "folds_pos": 1,
+          "promotable": false,
+          "n_trades": 75
+        }
+      }
+    ],
+    "winner": {
+      "change": "FIB_SESSION (7,19) -> (8,17)   [core London+NY overlap only]",
+      "rationale": "Unico cambiamento robusto su holdout E su M15 (+M30). Non tocca geometria di rischio del trade (SL/TP/entry invariati) \u2014 cambia solo QUANDO si opera.",
+      "M5": {
+        "full_pf": [
+          1.508,
+          1.914
+        ],
+        "full_dd": [
+          56.9,
+          46.2
+        ],
+        "holdout_pf": [
+          2.368,
+          2.78
+        ],
+        "holdout_pnl": [
+          128.1,
+          126.8
+        ],
+        "folds_pos": "3/4 -> 3/4",
+        "live_window_pnl": [
+          16.5,
+          3.2
+        ],
+        "caveat": "live-window M5 n=7->5 pnl cala (dentro training, non holdout)"
+      },
+      "M15": {
+        "full_pf": [
+          1.171,
+          1.238
+        ],
+        "full_dd": [
+          48.1,
+          39.2
+        ],
+        "holdout_pf": [
+          1.168,
+          1.582
+        ],
+        "holdout_pnl": [
+          15.6,
+          31.4
+        ],
+        "promotable": true
+      },
+      "M30": {
+        "holdout_pf": [
+          1.573,
+          3.67
+        ],
+        "holdout_pnl": [
+          25.7,
+          40.3
+        ],
+        "full_pf": [
+          1.055,
+          1.08
+        ]
+      }
+    },
+    "rejected": {
+      "FIB_TP2_R=2.5": "M5 promotable (holdPF 2.72) ma M15 crolla a 0.95 \u2014 non robusto",
+      "FIB_SL_ATR_K=1.75": "M5 promotable (pnl+152) ma M15 holdPF 0.86 \u2014 non robusto",
+      "STRUCT=(8,30)": "M15 promotable ma M5 holdPF 2.37->1.44 \u2014 non robusto",
+      "FIB_BAND": "0.25 resta l'ottimo su entrambi i TF",
+      "FIB_NO_MONDAY=False": "conferma: luned\u00ec OFF nettamente meglio (M5 2.37->1.40, M15 1.17->0.74)"
+    },
+    "verdict": "ADOTTARE FIB_SESSION=(8,17). Robusto su holdout M5/M15/M30, migliora full PF e DD su M5/M15, zero impatto sulla size/rischio del book live 0.03. Tutti gli altri parametri: TENERE. S20 NON va disattivata: holdout PF M5 2.37 (baseline) ben sopra la soglia 1.2 del piano."
+  },
+  "portfolio": {
+    "per_tf_per_regime_contribution": {
+      "H1": {
+        "tf": "H1",
+        "full": {
+          "n": 1356,
+          "wr": 38.4,
+          "pnl": 6755.4,
+          "pf": 1.206,
+          "dd": 5018.0,
+          "avg_day": 27.35,
+          "tr_day": 5.49,
+          "months": "14/24"
+        },
+        "holdout": {
+          "n": 259,
+          "wr": 32.4,
+          "pnl": -384.9,
+          "pf": 0.952,
+          "dd": 2011.2,
+          "avg_day": -7.85,
+          "tr_day": 5.29,
+          "months": "2/5"
+        },
+        "cells": [
+          {
+            "regime": "RANGE",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 1,
+            "full_pnl": -9.8,
+            "full_pf": 0.0,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "RANGE",
+            "strat": "S10_OB_FVG_SCALP",
+            "n": 3,
+            "full_pnl": -80.3,
+            "full_pf": 0.0,
+            "hold_n": 2,
+            "hold_pnl": -67.7,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "TREND_DOWN",
+            "strat": "S00_MFKK",
+            "n": 433,
+            "full_pnl": -1276.9,
+            "full_pf": 0.922,
+            "hold_n": 89,
+            "hold_pnl": -780.5,
+            "hold_pf": 0.746
+          },
+          {
+            "regime": "TREND_DOWN",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 12,
+            "full_pnl": 799.7,
+            "full_pf": 3.021,
+            "hold_n": 2,
+            "hold_pnl": -179.4,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S00_MFKK",
+            "n": 534,
+            "full_pnl": 4033.0,
+            "full_pf": 1.402,
+            "hold_n": 109,
+            "hold_pnl": 411.9,
+            "hold_pf": 1.132
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 178,
+            "full_pnl": 1775.8,
+            "full_pf": 1.564,
+            "hold_n": 27,
+            "hold_pnl": 426.2,
+            "hold_pf": 1.551
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S00_MFKK",
+            "n": 75,
+            "full_pnl": 352.8,
+            "full_pf": 1.256,
+            "hold_n": 13,
+            "hold_pnl": -133.0,
+            "hold_pf": 0.583
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 6,
+            "full_pnl": 29.5,
+            "full_pf": 1.326,
+            "hold_n": 1,
+            "hold_pnl": -22.9,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 6,
+            "full_pnl": 104.1,
+            "full_pf": 2.35,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S00_MFKK",
+            "n": 62,
+            "full_pnl": 800.8,
+            "full_pf": 2.301,
+            "hold_n": 9,
+            "hold_pnl": 29.4,
+            "hold_pf": 1.147
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 7,
+            "full_pnl": -20.8,
+            "full_pf": 0.7,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 39,
+            "full_pnl": 247.6,
+            "full_pf": 1.523,
+            "hold_n": 7,
+            "hold_pnl": -68.7,
+            "hold_pf": 0.672
+          }
+        ]
+      },
+      "M30": {
+        "tf": "M30",
+        "full": {
+          "n": 1624,
+          "wr": 35.0,
+          "pnl": 3742.8,
+          "pf": 1.147,
+          "dd": 1730.2,
+          "avg_day": 9.11,
+          "tr_day": 3.95,
+          "months": "13/24"
+        },
+        "holdout": {
+          "n": 326,
+          "wr": 32.2,
+          "pnl": 255.7,
+          "pf": 1.04,
+          "dd": 1281.7,
+          "avg_day": 3.12,
+          "tr_day": 3.98,
+          "months": "2/5"
+        },
+        "cells": [
+          {
+            "regime": "RANGE",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 7,
+            "full_pnl": 88.1,
+            "full_pf": 3.48,
+            "hold_n": 1,
+            "hold_pnl": 64.0,
+            "hold_pf": 64000.0
+          },
+          {
+            "regime": "RANGE",
+            "strat": "S10_OB_FVG_SCALP",
+            "n": 2,
+            "full_pnl": -12.2,
+            "full_pf": 0.806,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "RANGE",
+            "strat": "S18_RANGE_REVERSAL",
+            "n": 209,
+            "full_pnl": -183.8,
+            "full_pf": 0.857,
+            "hold_n": 36,
+            "hold_pnl": -187.4,
+            "hold_pf": 0.505
+          },
+          {
+            "regime": "TREND_DOWN",
+            "strat": "S00_MFKK",
+            "n": 509,
+            "full_pnl": 1041.8,
+            "full_pf": 1.087,
+            "hold_n": 110,
+            "hold_pnl": -291.3,
+            "hold_pf": 0.883
+          },
+          {
+            "regime": "TREND_DOWN",
+            "strat": "S10_OB_FVG_SCALP",
+            "n": 7,
+            "full_pnl": 146.0,
+            "full_pf": 1.565,
+            "hold_n": 2,
+            "hold_pnl": 29.9,
+            "hold_pf": 2.071
+          },
+          {
+            "regime": "TREND_DOWN",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 10,
+            "full_pnl": 23.0,
+            "full_pf": 1.113,
+            "hold_n": 2,
+            "hold_pnl": -85.4,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S00_MFKK",
+            "n": 379,
+            "full_pnl": 2761.6,
+            "full_pf": 1.639,
+            "hold_n": 75,
+            "hold_pnl": 648.7,
+            "hold_pf": 1.441
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S10_OB_FVG_SCALP",
+            "n": 1,
+            "full_pnl": -20.9,
+            "full_pf": 0.0,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 196,
+            "full_pnl": -599.2,
+            "full_pf": 0.822,
+            "hold_n": 34,
+            "hold_pnl": 17.4,
+            "hold_pf": 1.022
+          },
+          {
+            "regime": "VOLATILE",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 1,
+            "full_pnl": 24.0,
+            "full_pf": 24040.0,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S00_MFKK",
+            "n": 134,
+            "full_pnl": -257.7,
+            "full_pf": 0.883,
+            "hold_n": 26,
+            "hold_pnl": -67.1,
+            "hold_pf": 0.854
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 10,
+            "full_pnl": 204.8,
+            "full_pf": 5.118,
+            "hold_n": 3,
+            "hold_pnl": -49.7,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S10_OB_FVG_SCALP",
+            "n": 5,
+            "full_pnl": 36.8,
+            "full_pf": 1.538,
+            "hold_n": 2,
+            "hold_pnl": 66.9,
+            "hold_pf": 66870.0
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 8,
+            "full_pnl": 27.7,
+            "full_pf": 1.236,
+            "hold_n": 2,
+            "hold_pnl": 8.3,
+            "hold_pf": 1.294
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S00_MFKK",
+            "n": 52,
+            "full_pnl": 197.6,
+            "full_pf": 1.318,
+            "hold_n": 15,
+            "hold_pnl": 16.0,
+            "hold_pf": 1.057
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S09_MFKK_SCALPING",
+            "n": 17,
+            "full_pnl": 48.8,
+            "full_pf": 1.351,
+            "hold_n": 2,
+            "hold_pnl": -37.7,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S10_OB_FVG_SCALP",
+            "n": 1,
+            "full_pnl": 90.9,
+            "full_pf": 90880.0,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 76,
+            "full_pnl": 125.6,
+            "full_pf": 1.152,
+            "hold_n": 16,
+            "hold_pnl": 123.2,
+            "hold_pf": 1.533
+          }
+        ]
+      },
+      "H4": {
+        "tf": "H4",
+        "full": {
+          "n": 406,
+          "wr": 39.4,
+          "pnl": 8606.5,
+          "pf": 1.601,
+          "dd": 1313.6,
+          "avg_day": 56.25,
+          "tr_day": 2.65,
+          "months": "11/23"
+        },
+        "holdout": {
+          "n": 72,
+          "wr": 33.3,
+          "pnl": 927.2,
+          "pf": 1.228,
+          "dd": 1249.9,
+          "avg_day": 30.91,
+          "tr_day": 2.4,
+          "months": "2/5"
+        },
+        "cells": [
+          {
+            "regime": "TREND_DOWN",
+            "strat": "S17_CONVERGENCE_SCALP",
+            "n": 25,
+            "full_pnl": 1075.2,
+            "full_pf": 1.94,
+            "hold_n": 6,
+            "hold_pnl": 814.7,
+            "hold_pf": 6.015
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S00_MFKK",
+            "n": 211,
+            "full_pnl": 2598.8,
+            "full_pf": 1.326,
+            "hold_n": 40,
+            "hold_pnl": 82.6,
+            "hold_pf": 1.034
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 46,
+            "full_pnl": 1159.6,
+            "full_pf": 1.719,
+            "hold_n": 6,
+            "hold_pnl": -45.1,
+            "hold_pf": 0.906
+          },
+          {
+            "regime": "TREND_UP",
+            "strat": "S17_CONVERGENCE_SCALP",
+            "n": 44,
+            "full_pnl": 2195.6,
+            "full_pf": 2.444,
+            "hold_n": 4,
+            "hold_pnl": -39.7,
+            "hold_pf": 0.848
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 2,
+            "full_pnl": -157.8,
+            "full_pf": 0.0,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "WEAK_DOWN",
+            "strat": "S17_CONVERGENCE_SCALP",
+            "n": 6,
+            "full_pnl": 65.5,
+            "full_pf": 1.269,
+            "hold_n": 4,
+            "hold_pnl": -243.8,
+            "hold_pf": 0.0
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S00_MFKK",
+            "n": 37,
+            "full_pnl": 752.9,
+            "full_pf": 1.903,
+            "hold_n": 8,
+            "hold_pnl": 154.1,
+            "hold_pf": 1.446
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S16_GOLDEN_SQUEEZE",
+            "n": 18,
+            "full_pnl": 121.3,
+            "full_pf": 1.247,
+            "hold_n": 0,
+            "hold_pnl": 0,
+            "hold_pf": 0
+          },
+          {
+            "regime": "WEAK_UP",
+            "strat": "S17_CONVERGENCE_SCALP",
+            "n": 17,
+            "full_pnl": 795.4,
+            "full_pf": 3.202,
+            "hold_n": 4,
+            "hold_pnl": 204.4,
+            "hold_pf": 2.544
+          }
+        ]
+      }
+    },
+    "proposed_regime_priority": {
+      "REGIME_PRIORITY_H1": {
+        "TREND_UP": [
+          "S16_GOLDEN_SQUEEZE",
+          "S00_MFKK"
+        ],
+        "TREND_DOWN": [
+          "S16_GOLDEN_SQUEEZE"
+        ],
+        "WEAK_UP": [
+          "S16_GOLDEN_SQUEEZE",
+          "S00_MFKK"
+        ],
+        "WEAK_DOWN": [
+          "S16_GOLDEN_SQUEEZE",
+          "S09_MFKK_SCALPING"
+        ],
+        "RANGE": [
+          "S10_OB_FVG_SCALP",
+          "S09_MFKK_SCALPING",
+          "S17_CONVERGENCE_SCALP"
+        ],
+        "VOLATILE": [
+          "S09_MFKK_SCALPING",
+          "S10_OB_FVG_SCALP",
+          "S17_CONVERGENCE_SCALP"
+        ],
+        "UNKNOWN": [
+          "S16_GOLDEN_SQUEEZE",
+          "S10_OB_FVG_SCALP",
+          "S17_CONVERGENCE_SCALP"
+        ]
+      },
+      "REGIME_PRIORITY_M30": {
+        "TREND_UP": [
+          "S10_OB_FVG_SCALP",
+          "S00_MFKK"
+        ],
+        "TREND_DOWN": [
+          "S10_OB_FVG_SCALP",
+          "S00_MFKK"
+        ],
+        "WEAK_UP": [
+          "S10_OB_FVG_SCALP",
+          "S16_GOLDEN_SQUEEZE",
+          "S09_MFKK_SCALPING",
+          "S00_MFKK"
+        ],
+        "WEAK_DOWN": [
+          "S10_OB_FVG_SCALP",
+          "S16_GOLDEN_SQUEEZE",
+          "S09_MFKK_SCALPING",
+          "S00_MFKK"
+        ],
+        "RANGE": [
+          "S10_OB_FVG_SCALP",
+          "S09_MFKK_SCALPING",
+          "S17_CONVERGENCE_SCALP"
+        ],
+        "VOLATILE": [
+          "S09_MFKK_SCALPING",
+          "S10_OB_FVG_SCALP",
+          "S17_CONVERGENCE_SCALP"
+        ],
+        "UNKNOWN": [
+          "S10_OB_FVG_SCALP",
+          "S16_GOLDEN_SQUEEZE",
+          "S17_CONVERGENCE_SCALP"
+        ]
+      },
+      "REGIME_PRIORITY_H4": {
+        "TREND_UP": [
+          "S16_GOLDEN_SQUEEZE",
+          "S17_CONVERGENCE_SCALP",
+          "S00_MFKK"
+        ],
+        "TREND_DOWN": [
+          "S16_GOLDEN_SQUEEZE",
+          "S17_CONVERGENCE_SCALP",
+          "S00_MFKK"
+        ],
+        "WEAK_UP": [
+          "S16_GOLDEN_SQUEEZE",
+          "S17_CONVERGENCE_SCALP",
+          "S00_MFKK"
+        ],
+        "WEAK_DOWN": [
+          "S17_CONVERGENCE_SCALP",
+          "S00_MFKK"
+        ],
+        "RANGE": [
+          "S17_CONVERGENCE_SCALP",
+          "S00_MFKK"
+        ],
+        "VOLATILE": [
+          "S17_CONVERGENCE_SCALP",
+          "S00_MFKK"
+        ],
+        "UNKNOWN": [
+          "S16_GOLDEN_SQUEEZE",
+          "S17_CONVERGENCE_SCALP"
+        ]
+      }
+    },
+    "holdout_pf_before_after": {
+      "H1_adaptive": {
+        "before": 0.952,
+        "after": 1.164,
+        "full_pf": [
+          1.213,
+          1.511
+        ],
+        "full_dd": [
+          3263,
+          1456
+        ]
+      },
+      "H1_adaptive_rm": {
+        "before": 0.952,
+        "after": 1.158,
+        "full_pf": [
+          1.206,
+          1.519
+        ],
+        "full_dd": [
+          5018,
+          2100
+        ]
+      },
+      "M30_adaptive": {
+        "before": 1.035,
+        "after": 1.189,
+        "full_pf": [
+          1.144,
+          1.202
+        ],
+        "full_dd": [
+          1223,
+          1112
+        ]
+      },
+      "M30_adaptive_rm": {
+        "before": 1.04,
+        "after": 1.188,
+        "full_pf": [
+          1.147,
+          1.197
+        ],
+        "full_dd": [
+          1730,
+          1579
+        ]
+      },
+      "H4_adaptive": {
+        "before": 1.255,
+        "after": 1.255,
+        "full_pf": [
+          1.595,
+          1.616
+        ],
+        "note": "solo cleanup WEAK_DOWN"
+      },
+      "H4_adaptive_rm": {
+        "before": 1.228,
+        "after": 1.228,
+        "full_pf": [
+          1.601,
+          1.619
+        ]
+      }
+    },
+    "drops": {
+      "H1": [
+        "S00_MFKK da TREND_DOWN (holdout PF 0.746, -$780; full 0.922, -$1277)",
+        "S00_MFKK da WEAK_DOWN (holdout PF 0.583, -$133)",
+        "S09_MFKK_SCALPING da WEAK_UP (rumore, n=7)"
+      ],
+      "M30": [
+        "S18_RANGE_REVERSAL da RANGE/WEAK_UP/WEAK_DOWN/UNKNOWN (holdout PF 0.505; full 0.857; gi\u00e0 hard-block live)",
+        "S16_GOLDEN_SQUEEZE da TREND_UP/TREND_DOWN (TREND_UP full PF 0.822, -$599)"
+      ],
+      "H4": [
+        "S16_GOLDEN_SQUEEZE da WEAK_DOWN (n=2, -$158; holdout invariato)"
+      ]
+    },
+    "tf_weighting": {
+      "recommendation": "Pesare H4 > M30 > H1.",
+      "evidence": {
+        "H4": "holdout PF 1.23 (adaptive+RM) / 1.26 (adaptive), full PF 1.62, DD/pnl piu' basso. S17_CONVERGENCE_SCALP su H4 e' il singolo miglior edge del portfolio (holdout PF 2.09).",
+        "M30": "holdout PF 1.19 dopo trim \u2014 solido ma pnl/DD inferiore a H4.",
+        "H1": "holdout PF 1.16 dopo trim (era ~breakeven 0.95). Regge solo grazie a S16_GOLDEN_SQUEEZE; S00_MFKK su H1 e' asimmetrico (long ok, short in perdita). Tenere ma con size/peso ridotto."
+      },
+      "bot_action": "Nei playbook del bot (REGIME_MULTI_STRATEGIES / regime_playbook.json) promuovere S17_CONVERGENCE_SCALP@H4 da terziario a primario/secondario nei regimi TREND e WEAK. NB: S00/S09/S18 sono gia' hard-block in data/strategy_overrides.json \u2014 il grosso del drag H1/M30 e' gia' neutralizzato live; il backtester non leggeva quegli override e per questo mostrava numeri peggiori del comportamento reale."
+    },
+    "tier_analysis": {
+      "method": "run_adaptive_rm con RM_TIERS corrente vs flat lot=1.0 vs compress 0.8-1.2, su priorita' trimmate.",
+      "result": {
+        "H1": {
+          "current": {
+            "full_pf": 1.519,
+            "holdout_pf": 1.158,
+            "full_dd": 2100
+          },
+          "flat_1.0": {
+            "full_pf": 1.511,
+            "holdout_pf": 1.164,
+            "full_dd": 1456
+          },
+          "compress": {
+            "full_pf": 1.515,
+            "holdout_pf": 1.161,
+            "full_dd": 1721
+          }
+        },
+        "M30": {
+          "current": {
+            "full_pf": 1.197,
+            "holdout_pf": 1.188,
+            "full_dd": 1579
+          },
+          "flat_1.0": {
+            "full_pf": 1.202,
+            "holdout_pf": 1.189,
+            "full_dd": 1112
+          },
+          "compress": {
+            "full_pf": 1.199,
+            "holdout_pf": 1.187,
+            "full_dd": 1301
+          }
+        },
+        "H4": {
+          "current": {
+            "full_pf": 1.619,
+            "holdout_pf": 1.228,
+            "full_dd": 1250
+          },
+          "flat_1.0": {
+            "full_pf": 1.616,
+            "holdout_pf": 1.255,
+            "full_dd": 900
+          },
+          "compress": {
+            "full_pf": 1.615,
+            "holdout_pf": 1.245,
+            "full_dd": 1010
+          }
+        }
+      },
+      "conclusion": "Le RM_TIERS attuali (lot 0.5->1.5 per AI score) NON migliorano il PF: e' identico a lot flat 1.0 in tutte le TF (3a cifra decimale). Scalano pnl E drawdown insieme (~+35%). Su holdout H4 le tier attuali danno PF LEGGERMENTE PEGGIORE del flat (1.228 vs 1.255). Con il proxy estimate_ai_score il 93% dei trade finisce in STRONG/MAX \u2192 il sizing adattivo e' di fatto solo leva. Coerente col tema \"performance stabile\": comprimere RM_TIERS verso 0.8-1.2 taglia il DD ~20-30% a parita' di PF. CONFIDENZA BASSA: il proxy non rappresenta l'AI scorer live reale \u2014 decisione di policy di sizing, non un edge. Raccomandazione soft, non bloccante.",
+      "proposed_rm_tiers_compress": [
+        {
+          "score_max": 40,
+          "lot": 0.8,
+          "label": "CONSERVATIVE"
+        },
+        {
+          "score_max": 60,
+          "lot": 0.9,
+          "label": "NORMAL"
+        },
+        {
+          "score_max": 75,
+          "lot": 1.0,
+          "label": "AGGRESSIVE"
+        },
+        {
+          "score_max": 85,
+          "lot": 1.1,
+          "label": "STRONG"
+        },
+        {
+          "score_max": 100,
+          "lot": 1.2,
+          "label": "MAX"
+        }
+      ]
+    },
+    "max_open_orders": "MAX_OPEN_ORDERS e' gia' 2 nel bot live (ridotto da 6). Il backtester non modella posizioni concorrenti (cap giornaliero MAX_TRADES=10 + cooldown 0.5h) quindi non e' testabile qui. Lasciare a 2 \u2014 coerente col contenimento esposizione.",
+    "recommendation": "APPLICARE i trim REGIME_PRIORITY_* (holdout PF: H1 0.95->1.16, M30 1.04->1.19, H4 invariato 1.23 ma full +). Pesare H4 nei playbook del bot. RM_TIERS: compressione opzionale per DD control, bassa confidenza. MAX_OPEN_ORDERS: lasciare 2."
+  }
+}

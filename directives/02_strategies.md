@@ -1,5 +1,51 @@
 # TradeFlow AI — Strategie Attive
 
+## ✅ 2026-09-02 — SPRINT "performance stabile e duratura" — riepilogo (branch `sprint/perf-stabile-2026-09`)
+
+**Contesto**: il backtester dava PF ~1.2-1.6 ma il live reale PF 0.59 (S00) / 0.10 (S09) / 0.88 (S16), −$3 807 su 347 trade.
+
+**Fase 0** (backtester realistico): cost model + fill intrabar pessimistico + entry next-bar-open + walk-forward/holdout.
+→ Il "PF 1.6 canonico" era una **media gonfiata dai dati 2024–metà 2025**. Sull'holdout recente (~5 mesi) il sistema H1 era a **PF 0.95** (breakeven). **L'edge è decaduto — non è un problema di tuning.**
+
+**Fase 1** (4 subagenti paralleli, worktree isolati, fitness = holdout PF): **nessun re-tuning di segnale restaura un edge robusto sul 2026**. Cambiamenti adottati, tutti conservativi:
+
+| Item | Cosa | Effetto |
+|---|---|---|
+| S16 call-path | bot chiamava `signal_golden_squeeze` senza `hour` → tradava 24/7 (76 trade vs 15 backtester). Aggiunto `hour` a tutti i call-site. Nessun cambio parametri. | bot allineato al backtester, meno overtrading |
+| S17 SL | 1.5→1.75×ATR (unico gradiente robusto e monotòno, 4/4 fold) | holdout PF 0.98→1.32; roster H4 2.09→2.21 |
+| S20 sessione | `FIB_SESSION (7,19)→(8,17)` (solo overlap liquido). Zero impatto su size/rischio. | holdout PF M5 2.37→2.78, DD -19% |
+| Portfolio trim | `REGIME_PRIORITY_*` ripuliti dei drag: S00 fuori dagli slot **short** su H1 (edge solo long), S18 fuori M30, S16 fuori M30-TREND & H4-WEAK_DOWN, S09 fuori H1-WEAK_UP | vedi sotto |
+| Deadlock bot | riconciliazione `_strategy_order_tickets` vs MT5 nel sync loop (bot fermo dal 2026-07-10) | bot deployabile (serve restart VPS) |
+
+**Fase 2** — validazione di portafoglio consolidata (`--rm --walkforward`, cost model ON, config finale senza S00 V3):
+
+| TF | Holdout PF prima → dopo | Full PF | Full DD prima → dopo | Fold+ |
+|---|---|---|---|---|
+| **H1** | 0.95 → **1.16** | 1.21 → 1.52 | 5018 → **2100** | 4/4 |
+| **M30** | 1.04 → **1.19** | 1.15 → 1.20 | 1730 → 1579 | 3/4 |
+| **H4** | 1.23 → **1.26** | 1.60 → 1.64 | — | 3/4 |
+
+→ Tutti e 3 i TF ora holdout PF > 1.15, DD ridotto (H1 dimezzato). **Il guadagno viene dal tradare MENO e meglio** (H4 = TF con più edge residuo; S17@H4 miglior contributore singolo), non da nuovi parametri di segnale. File: `backtests/results/bt_sprint_final_{h1,m30,h4}.json`.
+
+### S00_MFKK — candidato V3, NON shippato
+Baseline V2 (ADX-weight 0.80) **confermata morta**: standalone full PF 0.64, holdout 0.47, ≈ live 0.59. Il subagente A, minando ~150 combo, ha trovato una config **eq-weight 0.33/0.33/0.34 + R:R 2.5/2.0 H1-only** che passa `is_promotable` sull'holdout (PF 1.51, 4/4 fold) e rende positiva la finestra live. **Ma è di fatto una strategia diversa selezionata mining sull'holdout (contaminazione multi-comparison)** → **NON è stata portata in `signals.py`**. S00 resta hard-blocked (V2). La config V3 è documentata in `backtests/results/opt_s00_2026-09-02.json` come **candidata per un paper-test dedicato** (stesso percorso di S20: 4-6 settimane isolate, gate PF≥1.2/WR≥40%, altrimenti ritiro definitivo). Applicati solo 2 fix di correttezza al call-path S00 (`hour`+`tf` in `get_signal`/`run_one`), neutrali finché il blocco è attivo.
+
+**Restano hard-blocked**: S00_MFKK, S09_MFKK_SCALPING, S18_RANGE_REVERSAL. **S10** tenuta ma lotto NON scalato (campione sottile). **H4 pesa più di M30 che pesa più di H1.**
+
+---
+
+## ✅ 2026-09-02 — Sprint "performance stabile": S17 SL 1.5→1.75×ATR; S10/S09 invariate
+
+Backtester reso realistico in Fase 0 (cost model + fill pessimistico + entry next-open + walk-forward/holdout, `opt_harness.py`). Rivalutate le 3 strategie minori (holdout PF = metrica primaria):
+
+| Strategia | TF | Verdetto | Numeri (holdout / full, backtester realistico) |
+|---|---|---|---|
+| S17_CONVERGENCE_SCALP | H4 | **retune: SL 1.5→1.75×ATR** (TP 4.0 e param segnale invariati) | standalone PF 0.98→1.32 holdout, 0.90→1.38 full, 4/4 fold positivi, live-window 1.15→1.59; adaptive+RM H4 PF 2.09→2.21 holdout, WR 45.7→50.0 |
+| S10_OB_FVG_SCALP | M30 | **invariata, lotto NON scalato** | solo ~19 trade full / holdout n=4 in 2+ anni; nessuna config `is_promotable`; campione troppo sottile per ritoccare |
+| S09_MFKK_SCALPING | M30 | **resta hard-blocked** | nessuna config con holdout PF ≥1.15 & n≥30 & full PF ≥1.10; le config con holdout PF ~1.7 hanno full PF 0.6-0.7 e P&L full negativo (coda fortunata). Full PF mai > ~0.75 |
+
+SL S17 1.75 sincronizzato in `risk_guardian.py`, `mt5-bot.py`, `strategy_selector.py` (base_params, era 1.1 outlier), `strategy-engine-v2.py` (3 rami). Dettagli e sweep: `07_self_learning_log.md` 2026-09-02, `backtests/results/opt_minors_2026-09-02.json`.
+
 ## ✅ 2026-09-01 — Ri-test completo + S18_RANGE_REVERSAL bloccata + fix bug hard-block
 
 Ri-eseguito il backtest canonico da zero (dati MT5 freschi, `strategy-engine-v2.py --rm` su M30/H1/H4) su richiesta utente, criterio di permanenza nel roster: **WR>50% oppure PF alto e robusto** (non taglio WR rigido — alcune strategie hanno edge asimmetrico, es. S17 WR~45% ma PF 2.2-2.7). Risultato:
@@ -15,6 +61,10 @@ Ri-eseguito il backtest canonico da zero (dati MT5 freschi, `strategy-engine-v2.
 | S18_RANGE_REVERSAL | — | **negativa ovunque**: M30 standalone PF 0.629, M30 adattivo -$89/-98, H4 standalone PF 0.202; live 14.3% WR/PF 0.07 | nessun TP raggiunto negli ultimi 7 trade live | ⛔ **bloccata 2026-09-01** (nuova) |
 
 **Bug trovato e corretto**: il hard-block self-learning (`score_mult=0.0` in `data/strategy_overrides.json`) era letto solo da `StrategySelector`, non dai playbook statici (`REGIME_MULTI_STRATEGIES`, `get_signal()`) che generano la maggioranza dei trade reali — per questo S00_MFKK ha continuato a tradare per settimane nonostante il blocco del 07-16. Fix: `is_hard_blocked()` ora richiamata da `quality_gate()`, punto di passaggio comune a tutti i loop di ingresso. Dettagli: `06_known_issues.md` e `07_self_learning_log.md` 2026-09-01.
+
+## ✅ 2026-09-02 — S20_FIB_CONFLUENCE: sessione ristretta a 8–17 UTC (sprint perf-stabile)
+
+Sweep parametri S20 (harness `opt_harness.evaluate`, holdout PF + gate `is_promotable`, cost model ON) su `FIB_BAND`, `FIB_STRUCT_NEAR/FAR`, `FIB_SL_ATR_K`, `FIB_TP2_R`, `FIB_SESSION`, no-lunedì — anche su M15/M30 come proxy di robustezza. **Unico cambiamento robusto su holdout E su M15+M30**: `FIB_SESSION (7,19) → (8,17)` (solo overlap London+NY liquido). Holdout PF M5 2.37→2.78, M15 1.17→1.58, M30 1.57→3.67; full PF M5 1.51→1.91 con DD -19%. Non tocca SL/TP/entry → **zero impatto sulla size/rischio del book live 0.03**, cambia solo *quando* si opera (via 07:00 e 17:00–19:00 UTC). Tutti gli altri parametri **tenuti** (TP2_R=2.5 e SL_K=1.75 miglioravano M5 ma crollavano su M15 — non robusti). S20 **non** va disattivata: holdout PF M5 ben sopra la soglia 1.2 del piano. Aggiunto flag `FIB_NO_MONDAY` (default True) per rendere il filtro lunedì tunabile. `data/xauusd_m5_mt5.json` fermo al 2026-08-28 (serve MT5 aperto per M5 fresco) — limitazione nota. Dettaglio: `backtests/results/opt_s20_portfolio_2026-09-02.json`.
 
 ## ✅ 2026-09-01 — S20_FIB_CONFLUENCE: promossa da isolata a integrata (sizing RiskGuardian ×2)
 
@@ -117,20 +167,30 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 
 ## Regime Priority per TF (backtester + bot)
 
+> **Trim sprint perf-stabile 2026-09-02** (walk-forward, cost model ON, gate = holdout PF).
+> Contributo per (regime × strategia) misurato su holdout; droppati i drag confermati su holdout **e** full period.
+> Holdout PF adattivo+RM: **H1 0.95→1.16**, **M30 1.04→1.19**, **H4 1.23** (invariato, solo cleanup, full PF 1.60→1.62).
+> Full DD ~dimezzato su H1 (5018→2100) e ridotto su M30. Dettaglio: `backtests/results/opt_s20_portfolio_2026-09-02.json`.
+> NB pesatura TF: **H4 > M30 > H1** — H4 tiene l'edge residuo maggiore (S17@H4 holdout PF 2.09, singolo miglior contributo del portfolio); H1 regge solo grazie a S16.
+> NB self-learning: `S00_MFKK` / `S09_MFKK_SCALPING` / `S18_RANGE_REVERSAL` sono già hard-block in `data/strategy_overrides.json` — il backtester non legge quegli override, quindi i suoi numeri "grezzi" sono più pessimisti del comportamento live.
+
 ### H1 (REGIME_PRIORITY_H1)
-- **TREND**: S16 → S00
-- **WEAK**: S16 → S09 → S00
-- **RANGE/VOLATILE**: S10 → S09
+- **TREND_UP / WEAK_UP**: S16 → S00
+- **TREND_DOWN**: S16 solo *(S00 rimosso: solo long ha edge — TREND_DOWN S00 holdout PF 0.75 / -$780, full 0.92 / -$1277)*
+- **WEAK_DOWN**: S16 → S09 *(S00 rimosso: holdout PF 0.58)*
+- **RANGE/VOLATILE**: S10 → S09 → S17
 
 ### M30 (REGIME_PRIORITY_M30)
-- **TREND**: S16 → S10 → S00
-- **WEAK**: S10 → S16 → S09 → S00
-- **RANGE/VOLATILE**: S10 → S09
+- **TREND**: S10 → S00 *(S16 rimosso: TREND_UP full PF 0.82 / -$599)*
+- **WEAK**: S10 → S16 → S09 → S00 *(S18 rimosso)*
+- **RANGE**: S10 → S09 → S17 *(S18 rimosso: holdout PF 0.51 / -$187, full 0.86 / -$184)*
+- **VOLATILE**: S09 → S10 → S17
 
 ### H4 (REGIME_PRIORITY_H4)
 - **TREND**: S16 → S17 → S00
-- **WEAK**: S16 → S17 → S00
-- **RANGE**: S17 → S00
+- **WEAK_UP**: S16 → S17 → S00
+- **WEAK_DOWN**: S17 → S00 *(S16 rimosso: n=2, -$158)*
+- **RANGE/VOLATILE**: S17 → S00
 
 ## Strategie Attive nel Bot
 
@@ -140,7 +200,7 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 | `S09_MFKK_SCALPING` | MFKK Scalping V3 | ATR×4.0 | ATR×1.5 | VOLATILE, WEAK, RANGE | **M30** | 1.534 M30 | 41.2% |
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK, TREND | **M30 only** | 1.534 M30 | 49.0% |
 | `S16_GOLDEN_SQUEEZE` | Golden Squeeze V5 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.863 H1 | 51.0% |
-| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.5 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
+| `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.75 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
 | ~~`S05_MFKK_INTRADAY`~~ | ⛔ **Ritirata 2026-07-16** | — | — | era TREND (H4 only) | era H4 (marginale) | — | rimossa da `STRATEGIES_CONFIG` (strategy_selector.py) e da `REGIME_PRIORITY_H4` (strategy-engine-v2.py) — portfolio concentration study: droppando solo S05 dal roster H4, PF OOS 2.19→2.66 e DD -32% a parità di P&L. H4 era il suo unico slot vivo (H1/M30 già negativi). Codice/funzione segnale lasciati intatti in `signals.py` per eventuale re-instaurazione futura, semplicemente non più selezionabile in live. Vedi `07_self_learning_log.md` 2026-07-16. |
 
 ## Strategy Selector Agent (`strategy_selector.py`)

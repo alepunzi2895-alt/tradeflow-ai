@@ -92,7 +92,7 @@ STRATEGIES_CONFIG = [
         },
         "optimal_regimes": ["VOLATILE", "TREND_UP", "TREND_DOWN"],
         "min_atr_percentile": 0.60,
-        "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.1},
+        "base_params": {"tp_atr_mult": 4.0, "sl_atr_mult": 1.75},  # sprint 2026-09-02: era 1.1 (outlier), allineato a risk_guardian STRATEGY_ATR_PARAMS 1.75
     },
     {
         "id": "S18_RANGE_REVERSAL",

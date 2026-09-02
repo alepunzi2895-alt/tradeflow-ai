@@ -523,12 +523,12 @@ def signal_convergence_scalp(ind, i, h1_trend=None, hour=None):
 #   Trend HTF: close vs EMA200 (sul TF stesso, M5 ≈ ~16h di contesto)
 #   SL strutturale: min(low_candela − 0.15·ATR, entry − 1.5·ATR)   [simm. per SELL]
 #   TP1 = 1R  ·  TP2 = 2R    (gestione a parziali: chiudi a TP1, resto a BE→TP2)
-#   Sessione London+NY 7–19 UTC · NIENTE lunedì (rumore da gap weekend)
+#   Sessione core London+NY overlap 8–17 UTC · NIENTE lunedì (rumore da gap weekend)
 # ─────────────────────────────────────────────────────────────────────────────
 
 FIB_SWING_LB     = 50        # lookback swing per i livelli Fibonacci
 FIB_SIG_LB       = 20        # lookback estremi per il trigger
-FIB_SESSION      = (7, 19)   # London + NY (UTC)
+FIB_SESSION      = (8, 17)   # core London+NY overlap (UTC) — sweep 2026-09-02: holdout PF M5 2.37->2.78, M15 1.17->1.58, M30 1.57->3.67; full DD M5 -19%
 FIB_BAND         = 0.25      # "zona estremo" = entro il 25% del range 20-barre
 FIB_STRUCT_NEAR  = 10        # finestra swing recente (higher-low / lower-high)
 FIB_STRUCT_FAR   = 35        # finestra swing precedente
@@ -536,6 +536,7 @@ FIB_SL_ATR_K     = 1.5       # SL non più stretto di k·ATR
 FIB_SL_BUF       = 0.15      # buffer oltre il minimo/massimo della candela-segnale (·ATR)
 FIB_TP1_R        = 1.0       # TP1 in multipli di R
 FIB_TP2_R        = 2.0       # TP2 (runner) in multipli di R
+FIB_NO_MONDAY    = True      # niente lunedì (rumore da gap weekend)
 
 
 def fib_confluence_levels(ind, i, swing=FIB_SWING_LB):
@@ -626,7 +627,7 @@ def signal_fib_confluence(ind, i, h1_trend=None, hour=None, weekday=None):
         return None
     if hour is not None and not (FIB_SESSION[0] <= hour < FIB_SESSION[1]):
         return None
-    if weekday is not None and weekday == 0:          # niente lunedì
+    if weekday is not None and FIB_NO_MONDAY and weekday == 0:   # niente lunedì
         return None
 
     buy_setup, sell_setup = _fib_raw_conf(ind, i - 1)  # setup alla barra precedente

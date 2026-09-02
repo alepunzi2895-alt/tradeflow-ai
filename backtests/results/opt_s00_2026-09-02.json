@@ -1,0 +1,2150 @@
+{
+  "generated": "2026-09-02",
+  "owner": "subagent A (S00_MFKK)",
+  "harness": "scripts/opt_harness.py (cost model ON, pessimistic fill, entry next-open, walk-forward)",
+  "baseline_ev": {
+    "H1": {
+      "full": {
+        "n": 1266,
+        "wr": 32.0,
+        "pnl": -4967.5,
+        "pf": 0.7,
+        "dd": 5052.1,
+        "avg_day": -21.79,
+        "tr_day": 5.55,
+        "months": "4/24"
+      },
+      "folds": [
+        {
+          "n": 231,
+          "wr": 29.9,
+          "pnl": -463.1,
+          "pf": 0.646,
+          "dd": 566.1,
+          "avg_day": -10.29,
+          "tr_day": 5.13,
+          "months": "1/6"
+        },
+        {
+          "n": 243,
+          "wr": 36.2,
+          "pnl": -198.5,
+          "pf": 0.907,
+          "dd": 657.3,
+          "avg_day": -4.41,
+          "tr_day": 5.4,
+          "months": "1/5"
+        },
+        {
+          "n": 248,
+          "wr": 37.1,
+          "pnl": 718.4,
+          "pf": 1.496,
+          "dd": 349.3,
+          "avg_day": 15.96,
+          "tr_day": 5.51,
+          "months": "2/5"
+        },
+        {
+          "n": 291,
+          "wr": 27.8,
+          "pnl": -3088.2,
+          "pf": 0.604,
+          "dd": 3439.2,
+          "avg_day": -64.34,
+          "tr_day": 6.06,
+          "months": "0/6"
+        }
+      ],
+      "holdout": {
+        "n": 253,
+        "wr": 29.6,
+        "pnl": -1936.1,
+        "pf": 0.502,
+        "dd": 2069.4,
+        "avg_day": -43.02,
+        "tr_day": 5.62,
+        "months": "0/5"
+      },
+      "holdout_start": "2026-04-01",
+      "live": {
+        "n": 149,
+        "wr": 28.2,
+        "pnl": -1033.2,
+        "pf": 0.535,
+        "dd": 1033.2,
+        "avg_day": -41.33,
+        "tr_day": 5.96,
+        "months": "0/4"
+      },
+      "n_trades": 1266
+    },
+    "M30": {
+      "full": {
+        "n": 1248,
+        "wr": 27.6,
+        "pnl": -4690.3,
+        "pf": 0.622,
+        "dd": 4728.3,
+        "avg_day": -15.28,
+        "tr_day": 4.07,
+        "months": "4/24"
+      },
+      "folds": [
+        {
+          "n": 208,
+          "wr": 23.1,
+          "pnl": -398.9,
+          "pf": 0.574,
+          "dd": 436.8,
+          "avg_day": -6.54,
+          "tr_day": 3.41,
+          "months": "1/5"
+        },
+        {
+          "n": 255,
+          "wr": 31.4,
+          "pnl": -539.1,
+          "pf": 0.662,
+          "dd": 539.1,
+          "avg_day": -8.84,
+          "tr_day": 4.18,
+          "months": "0/6"
+        },
+        {
+          "n": 270,
+          "wr": 30.7,
+          "pnl": -380.1,
+          "pf": 0.773,
+          "dd": 703.0,
+          "avg_day": -6.23,
+          "tr_day": 4.43,
+          "months": "2/5"
+        },
+        {
+          "n": 265,
+          "wr": 26.4,
+          "pnl": -2038.1,
+          "pf": 0.625,
+          "dd": 2088.4,
+          "avg_day": -32.35,
+          "tr_day": 4.21,
+          "months": "1/6"
+        }
+      ],
+      "holdout": {
+        "n": 250,
+        "wr": 25.2,
+        "pnl": -1334.2,
+        "pf": 0.519,
+        "dd": 1505.1,
+        "avg_day": -21.87,
+        "tr_day": 4.1,
+        "months": "0/5"
+      },
+      "holdout_start": "2026-04-21",
+      "live": {
+        "n": 173,
+        "wr": 25.4,
+        "pnl": -1002.4,
+        "pf": 0.522,
+        "dd": 1051.2,
+        "avg_day": -24.45,
+        "tr_day": 4.22,
+        "months": "0/4"
+      },
+      "n_trades": 1248
+    },
+    "H4": {
+      "full": {
+        "n": 312,
+        "wr": 31.1,
+        "pnl": -1538.2,
+        "pf": 0.76,
+        "dd": 2472.4,
+        "avg_day": -15.23,
+        "tr_day": 3.09,
+        "months": "3/20"
+      },
+      "folds": [
+        {
+          "n": 53,
+          "wr": 17.0,
+          "pnl": -504.0,
+          "pf": 0.222,
+          "dd": 517.7,
+          "avg_day": -25.2,
+          "tr_day": 2.65,
+          "months": "0/5"
+        },
+        {
+          "n": 65,
+          "wr": 49.2,
+          "pnl": 1070.4,
+          "pf": 2.457,
+          "dd": 342.2,
+          "avg_day": 53.52,
+          "tr_day": 3.25,
+          "months": "2/6"
+        },
+        {
+          "n": 62,
+          "wr": 24.2,
+          "pnl": -624.7,
+          "pf": 0.479,
+          "dd": 837.0,
+          "avg_day": -31.24,
+          "tr_day": 3.1,
+          "months": "0/4"
+        },
+        {
+          "n": 66,
+          "wr": 28.8,
+          "pnl": -728.7,
+          "pf": 0.596,
+          "dd": 1214.9,
+          "avg_day": -34.7,
+          "tr_day": 3.14,
+          "months": "1/4"
+        }
+      ],
+      "holdout": {
+        "n": 66,
+        "wr": 33.3,
+        "pnl": -751.2,
+        "pf": 0.63,
+        "dd": 1144.8,
+        "avg_day": -37.56,
+        "tr_day": 3.3,
+        "months": "2/5"
+      },
+      "holdout_start": "2026-01-28",
+      "live": {
+        "n": 13,
+        "wr": 0.0,
+        "pnl": -545.9,
+        "pf": 0.0,
+        "dd": 545.9,
+        "avg_day": -109.18,
+        "tr_day": 2.6,
+        "months": "0/2"
+      },
+      "n_trades": 312
+    }
+  },
+  "baseline_note": "Production V2: weights CCI/MACD/ADX = 0.10/0.10/0.80, tp3.5/sl1.5 ATR. Standalone realistic harness confirms live reality: H1 full PF 0.64, holdout PF 0.47, live-window PF 0.49 (real live 0.59). 0/4 positive folds on every TF. Hard-blocked in data/strategy_overrides.json since 2026-07-16.",
+  "callpath_mismatches": [
+    "mt5-bot.py get_signal() line ~643: `fn(I, i)` \u2014 NO hour, NO tf. When S00 is the regime PLAYBOOK primary on H1, sells are STRUCTURALLY IMPOSSIBLE (is_london_ny = hour is not None and ... -> False -> sell_thr stays 999) and the 7-22 UTC session filter is bypassed. Same class of bug as the known S16 `fn(I,i)` case.",
+    "mt5-bot.py StrategySelector H1 branch line ~1886: `fn_sel(I_h1, i_h1, hour=hour)` \u2014 passes hour but NOT tf. With tf=None the buy DI+ gate uses buy_di_min=20 (the M30 value) instead of 15 for H1 (signals.py line 181: `15 if tf in ('H1','H4') else 20`). Marginally stricter than intended on H1. Sells work here (hour passed).",
+    "mt5-bot.py H1-secondary loop line ~2041 and M30 loop line ~2422: BOTH pass `hour=hour, tf='H1'` / `tf='M30'` correctly \u2014 no mismatch. But REGIME_MULTI_STRATEGIES lists S00 ONLY as an M30 fallback (WEAK_UP/WEAK_DOWN/RANGE/UNKNOWN); the H1-secondary loop skips it (`if sec_tf != 'H1': continue`). So the only paths that actually reach S00 live are the M30 secondary loop (currently 100% blocked by quality_gate -> is_hard_blocked) and the StrategySelector H1/M30 branch.",
+    "strategy-engine-v2.py run_one() line ~1010: `fn(ind, i, hour=hour)` \u2014 NO tf for S00 (-> tf=None -> buy_di_min=20). run_adaptive() line ~1205 and run_adaptive_rm() line ~1336 DO pass `tf=tf`. So opt_harness.evaluate() (built on run_one) evaluates S00 with the stricter M30 DI gate even on H1, understating H1 buys by ~10-15%. My sweep works around this with force_tf in the factory; a 1-line fix to run_one (add `tf=tf` to the S00 branch, matching run_adaptive) is recommended and harmless.",
+    "TP/SL divergence across wiring points (all say 3.5/1.5 for V2 EXCEPT): strategy_selector.py STRATEGIES_CONFIG base_params was 3.5/1.0 (sl 1.0 vs 1.5 everywhere else \u2014 a pre-2026-04-30 leftover). risk_guardian STRATEGY_ATR_PARAMS, mt5-bot STRATEGY_PARAMS, strategy-engine run_one/run_adaptive/run_adaptive_rm all 3.5/1.5."
+  ],
+  "combos_tested": [
+    {
+      "axis": "adx_gate",
+      "val": "17",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "adx_gate",
+      "val": "20",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "adx_gate",
+      "val": "23",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "adx_gate",
+      "val": "27",
+      "tf": "H1",
+      "full_pf": 0.992,
+      "full_pnl": -149.4,
+      "holdout_pf": 1.066,
+      "holdout_pnl": 279.0,
+      "pos_folds": 2,
+      "n": 1183,
+      "promotable": false
+    },
+    {
+      "axis": "adx_gate",
+      "val": "32",
+      "tf": "H1",
+      "full_pf": 0.916,
+      "full_pnl": -1480.1,
+      "holdout_pf": 0.966,
+      "holdout_pnl": -120.7,
+      "pos_folds": 2,
+      "n": 1016,
+      "promotable": false
+    },
+    {
+      "axis": "di_spread_gate",
+      "val": "3",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "di_spread_gate",
+      "val": "5",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "di_spread_gate",
+      "val": "8",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "di_spread_gate",
+      "val": "12",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "buy_thr_base",
+      "val": "85",
+      "tf": "H1",
+      "full_pf": 1.023,
+      "full_pnl": 465.5,
+      "holdout_pf": 1.072,
+      "holdout_pnl": 326.6,
+      "pos_folds": 3,
+      "n": 1316,
+      "promotable": false
+    },
+    {
+      "axis": "buy_thr_base",
+      "val": "90",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "buy_thr_base",
+      "val": "93",
+      "tf": "H1",
+      "full_pf": 0.948,
+      "full_pnl": -946.5,
+      "holdout_pf": 0.93,
+      "holdout_pnl": -281.8,
+      "pos_folds": 2,
+      "n": 1065,
+      "promotable": false
+    },
+    {
+      "axis": "buy_thr_base",
+      "val": "97",
+      "tf": "H1",
+      "full_pf": 0.948,
+      "full_pnl": -669.4,
+      "holdout_pf": 1.016,
+      "holdout_pnl": 38.1,
+      "pos_folds": 1,
+      "n": 647,
+      "promotable": false
+    },
+    {
+      "axis": "sell_thr_base",
+      "val": "68",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "sell_thr_base",
+      "val": "72",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "sell_thr_base",
+      "val": "76",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "sell_thr_base",
+      "val": "999",
+      "tf": "H1",
+      "full_pf": 1.172,
+      "full_pnl": 1453.7,
+      "holdout_pf": 1.127,
+      "holdout_pnl": 304.8,
+      "pos_folds": 3,
+      "n": 741,
+      "promotable": false
+    },
+    {
+      "axis": "weights",
+      "val": "(0.1, 0.1, 0.8)",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "weights",
+      "val": "(0.15, 0.15, 0.7)",
+      "tf": "H1",
+      "full_pf": 0.987,
+      "full_pnl": -232.3,
+      "holdout_pf": 0.99,
+      "holdout_pnl": -35.4,
+      "pos_folds": 2,
+      "n": 1069,
+      "promotable": false
+    },
+    {
+      "axis": "weights",
+      "val": "(0.05, 0.05, 0.9)",
+      "tf": "H1",
+      "full_pf": 1.011,
+      "full_pnl": 222.2,
+      "holdout_pf": 1.093,
+      "holdout_pnl": 413.6,
+      "pos_folds": 2,
+      "n": 1292,
+      "promotable": false
+    },
+    {
+      "axis": "weights",
+      "val": "(0.2, 0.1, 0.7)",
+      "tf": "H1",
+      "full_pf": 1.059,
+      "full_pnl": 893.7,
+      "holdout_pf": 0.868,
+      "holdout_pnl": -529.9,
+      "pos_folds": 3,
+      "n": 916,
+      "promotable": false
+    },
+    {
+      "axis": "weights",
+      "val": "(0.33, 0.33, 0.34)",
+      "tf": "H1",
+      "full_pf": 1.312,
+      "full_pnl": 3024.9,
+      "holdout_pf": 1.513,
+      "holdout_pnl": 878.7,
+      "pos_folds": 4,
+      "n": 540,
+      "promotable": false
+    },
+    {
+      "axis": "session",
+      "val": "(7, 22)",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "session",
+      "val": "(8, 20)",
+      "tf": "H1",
+      "full_pf": 0.952,
+      "full_pnl": -860.8,
+      "holdout_pf": 0.954,
+      "holdout_pnl": -184.3,
+      "pos_folds": 2,
+      "n": 1065,
+      "promotable": false
+    },
+    {
+      "axis": "session",
+      "val": "(13, 20)",
+      "tf": "H1",
+      "full_pf": 1.129,
+      "full_pnl": 1366.9,
+      "holdout_pf": 1.072,
+      "holdout_pnl": 175.1,
+      "pos_folds": 3,
+      "n": 651,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp2.5_sl1.0",
+      "tf": "H1",
+      "full_pf": 0.541,
+      "full_pnl": -5639.5,
+      "holdout_pf": 0.464,
+      "holdout_pnl": -1561.0,
+      "pos_folds": 0,
+      "n": 1290,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp2.5_sl1.25",
+      "tf": "H1",
+      "full_pf": 0.606,
+      "full_pnl": -5798.5,
+      "holdout_pf": 0.453,
+      "holdout_pnl": -1909.5,
+      "pos_folds": 0,
+      "n": 1284,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp2.5_sl1.5",
+      "tf": "H1",
+      "full_pf": 0.787,
+      "full_pnl": -3517.4,
+      "holdout_pf": 0.682,
+      "holdout_pnl": -1227.2,
+      "pos_folds": 1,
+      "n": 1271,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp2.5_sl2.0",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.0_sl1.0",
+      "tf": "H1",
+      "full_pf": 0.526,
+      "full_pnl": -5825.6,
+      "holdout_pf": 0.464,
+      "holdout_pnl": -1561.0,
+      "pos_folds": 0,
+      "n": 1290,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.0_sl1.25",
+      "tf": "H1",
+      "full_pf": 0.581,
+      "full_pnl": -6170.4,
+      "holdout_pf": 0.4,
+      "holdout_pnl": -2094.4,
+      "pos_folds": 0,
+      "n": 1283,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.0_sl1.5",
+      "tf": "H1",
+      "full_pf": 0.742,
+      "full_pnl": -4258.1,
+      "holdout_pf": 0.583,
+      "holdout_pnl": -1607.8,
+      "pos_folds": 1,
+      "n": 1268,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.0_sl2.0",
+      "tf": "H1",
+      "full_pf": 0.923,
+      "full_pnl": -1529.9,
+      "holdout_pf": 0.807,
+      "holdout_pnl": -856.4,
+      "pos_folds": 2,
+      "n": 1203,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.5_sl1.0",
+      "tf": "H1",
+      "full_pf": 0.526,
+      "full_pnl": -5825.6,
+      "holdout_pf": 0.464,
+      "holdout_pnl": -1561.0,
+      "pos_folds": 0,
+      "n": 1290,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.5_sl1.25",
+      "tf": "H1",
+      "full_pf": 0.579,
+      "full_pnl": -6196.2,
+      "holdout_pf": 0.4,
+      "holdout_pnl": -2094.4,
+      "pos_folds": 0,
+      "n": 1283,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.5_sl1.5",
+      "tf": "H1",
+      "full_pf": 0.7,
+      "full_pnl": -4967.5,
+      "holdout_pf": 0.502,
+      "holdout_pnl": -1936.1,
+      "pos_folds": 1,
+      "n": 1266,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp3.5_sl2.0",
+      "tf": "H1",
+      "full_pf": 0.858,
+      "full_pnl": -2835.2,
+      "holdout_pf": 0.628,
+      "holdout_pnl": -1650.0,
+      "pos_folds": 2,
+      "n": 1188,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp4.0_sl1.0",
+      "tf": "H1",
+      "full_pf": 0.526,
+      "full_pnl": -5825.6,
+      "holdout_pf": 0.464,
+      "holdout_pnl": -1561.0,
+      "pos_folds": 0,
+      "n": 1290,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp4.0_sl1.25",
+      "tf": "H1",
+      "full_pf": 0.559,
+      "full_pnl": -6503.9,
+      "holdout_pf": 0.4,
+      "holdout_pnl": -2094.4,
+      "pos_folds": 0,
+      "n": 1283,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp4.0_sl1.5",
+      "tf": "H1",
+      "full_pf": 0.685,
+      "full_pnl": -5224.9,
+      "holdout_pf": 0.506,
+      "holdout_pnl": -1922.9,
+      "pos_folds": 1,
+      "n": 1266,
+      "promotable": false
+    },
+    {
+      "axis": "tpsl",
+      "val": "tp4.0_sl2.0",
+      "tf": "H1",
+      "full_pf": 0.821,
+      "full_pnl": -3580.9,
+      "holdout_pf": 0.573,
+      "holdout_pnl": -1893.2,
+      "pos_folds": 2,
+      "n": 1179,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(7,22) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.843,
+      "full_pnl": -1096.2,
+      "holdout_pf": 0.694,
+      "holdout_pnl": -683.7,
+      "pos_folds": 2,
+      "n": 751,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(7,22) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.828,
+      "full_pnl": -1195.5,
+      "holdout_pf": 0.694,
+      "holdout_pnl": -683.7,
+      "pos_folds": 2,
+      "n": 738,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(7,22) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.172,
+      "full_pnl": 1453.7,
+      "holdout_pf": 1.127,
+      "holdout_pnl": 304.8,
+      "pos_folds": 3,
+      "n": 741,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(7,22) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.164,
+      "full_pnl": 1372.3,
+      "holdout_pf": 1.127,
+      "holdout_pnl": 304.8,
+      "pos_folds": 3,
+      "n": 728,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(7,22) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.125,
+      "full_pnl": 1059.9,
+      "holdout_pf": 1.003,
+      "holdout_pnl": 8.1,
+      "pos_folds": 3,
+      "n": 732,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(7,22) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.115,
+      "full_pnl": 964.3,
+      "holdout_pf": 1.003,
+      "holdout_pnl": 8.1,
+      "pos_folds": 3,
+      "n": 719,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(8,20) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.814,
+      "full_pnl": -1122.9,
+      "holdout_pf": 0.535,
+      "holdout_pnl": -923.6,
+      "pos_folds": 2,
+      "n": 633,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(8,20) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.797,
+      "full_pnl": -1222.2,
+      "holdout_pf": 0.535,
+      "holdout_pnl": -923.6,
+      "pos_folds": 2,
+      "n": 620,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(8,20) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.14,
+      "full_pnl": 1007.4,
+      "holdout_pf": 0.965,
+      "holdout_pnl": -78.0,
+      "pos_folds": 3,
+      "n": 624,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(8,20) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.13,
+      "full_pnl": 926.0,
+      "holdout_pf": 0.965,
+      "holdout_pnl": -78.0,
+      "pos_folds": 3,
+      "n": 611,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(8,20) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.094,
+      "full_pnl": 678.9,
+      "holdout_pf": 0.813,
+      "holdout_pnl": -411.9,
+      "pos_folds": 3,
+      "n": 619,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=999 sess=(8,20) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.082,
+      "full_pnl": 583.4,
+      "holdout_pf": 0.813,
+      "holdout_pnl": -411.9,
+      "pos_folds": 3,
+      "n": 606,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(7,22) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.492,
+      "full_pnl": 726.4,
+      "holdout_pf": 0.864,
+      "holdout_pnl": -67.8,
+      "pos_folds": 3,
+      "n": 212,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(7,22) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.499,
+      "full_pnl": 726.6,
+      "holdout_pf": 0.864,
+      "holdout_pnl": -67.8,
+      "pos_folds": 4,
+      "n": 206,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(7,22) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.205,
+      "full_pnl": 2081.3,
+      "holdout_pf": 1.621,
+      "holdout_pnl": 326.8,
+      "pos_folds": 4,
+      "n": 208,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(7,22) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.188,
+      "full_pnl": 2032.0,
+      "holdout_pf": 1.621,
+      "holdout_pnl": 326.8,
+      "pos_folds": 4,
+      "n": 202,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(7,22) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.257,
+      "full_pnl": 2173.2,
+      "holdout_pf": 1.554,
+      "holdout_pnl": 291.6,
+      "pos_folds": 4,
+      "n": 208,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(7,22) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.234,
+      "full_pnl": 2112.9,
+      "holdout_pf": 1.554,
+      "holdout_pnl": 291.6,
+      "pos_folds": 4,
+      "n": 202,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(8,20) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.656,
+      "full_pnl": 753.4,
+      "holdout_pf": 0.97,
+      "holdout_pnl": -13.0,
+      "pos_folds": 3,
+      "n": 174,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(8,20) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.667,
+      "full_pnl": 753.7,
+      "holdout_pf": 0.917,
+      "holdout_pnl": -35.7,
+      "pos_folds": 4,
+      "n": 168,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(8,20) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.613,
+      "full_pnl": 1965.1,
+      "holdout_pf": 1.675,
+      "holdout_pnl": 294.9,
+      "pos_folds": 4,
+      "n": 170,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(8,20) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.594,
+      "full_pnl": 1915.8,
+      "holdout_pf": 1.675,
+      "holdout_pnl": 294.9,
+      "pos_folds": 4,
+      "n": 164,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(8,20) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.629,
+      "full_pnl": 1987.6,
+      "holdout_pf": 1.401,
+      "holdout_pnl": 175.5,
+      "pos_folds": 4,
+      "n": 170,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=999 sess=(8,20) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 2.602,
+      "full_pnl": 1927.2,
+      "holdout_pf": 1.401,
+      "holdout_pnl": 175.5,
+      "pos_folds": 4,
+      "n": 164,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(7,22) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.092,
+      "full_pnl": 304.5,
+      "holdout_pf": 0.591,
+      "holdout_pnl": -547.9,
+      "pos_folds": 3,
+      "n": 422,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(7,22) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.093,
+      "full_pnl": 304.9,
+      "holdout_pf": 0.591,
+      "holdout_pnl": -547.9,
+      "pos_folds": 2,
+      "n": 415,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(7,22) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.555,
+      "full_pnl": 2173.8,
+      "holdout_pf": 0.849,
+      "holdout_pnl": -254.7,
+      "pos_folds": 3,
+      "n": 416,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(7,22) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.552,
+      "full_pnl": 2141.2,
+      "holdout_pf": 0.849,
+      "holdout_pnl": -254.7,
+      "pos_folds": 3,
+      "n": 409,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(7,22) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.562,
+      "full_pnl": 2200.4,
+      "holdout_pf": 0.832,
+      "holdout_pnl": -284.0,
+      "pos_folds": 3,
+      "n": 412,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(7,22) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.555,
+      "full_pnl": 2156.7,
+      "holdout_pf": 0.832,
+      "holdout_pnl": -284.0,
+      "pos_folds": 3,
+      "n": 405,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(8,20) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.114,
+      "full_pnl": 310.6,
+      "holdout_pf": 0.534,
+      "holdout_pnl": -557.6,
+      "pos_folds": 2,
+      "n": 346,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(8,20) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 1.115,
+      "full_pnl": 311.1,
+      "holdout_pf": 0.534,
+      "holdout_pnl": -557.6,
+      "pos_folds": 4,
+      "n": 339,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(8,20) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.632,
+      "full_pnl": 1952.4,
+      "holdout_pf": 0.835,
+      "holdout_pnl": -225.7,
+      "pos_folds": 4,
+      "n": 341,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(8,20) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.628,
+      "full_pnl": 1919.8,
+      "holdout_pf": 0.835,
+      "holdout_pnl": -225.7,
+      "pos_folds": 4,
+      "n": 334,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(8,20) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.628,
+      "full_pnl": 1942.6,
+      "holdout_pf": 0.733,
+      "holdout_pnl": -364.1,
+      "pos_folds": 4,
+      "n": 338,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=999 sess=(8,20) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.621,
+      "full_pnl": 1898.9,
+      "holdout_pf": 0.733,
+      "holdout_pnl": -364.1,
+      "pos_folds": 4,
+      "n": 331,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(7,22) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.7,
+      "full_pnl": -4967.5,
+      "holdout_pf": 0.502,
+      "holdout_pnl": -1936.1,
+      "pos_folds": 1,
+      "n": 1266,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(7,22) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.704,
+      "full_pnl": -4802.5,
+      "holdout_pf": 0.607,
+      "holdout_pnl": -1476.4,
+      "pos_folds": 1,
+      "n": 1230,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(7,22) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.988,
+      "full_pnl": -233.5,
+      "holdout_pf": 0.948,
+      "holdout_pnl": -231.6,
+      "pos_folds": 2,
+      "n": 1217,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(7,22) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.992,
+      "full_pnl": -149.4,
+      "holdout_pf": 1.066,
+      "holdout_pnl": 279.0,
+      "pos_folds": 2,
+      "n": 1183,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(7,22) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.923,
+      "full_pnl": -1529.9,
+      "holdout_pf": 0.807,
+      "holdout_pnl": -856.4,
+      "pos_folds": 2,
+      "n": 1203,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(7,22) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.928,
+      "full_pnl": -1386.0,
+      "holdout_pf": 0.931,
+      "holdout_pnl": -291.7,
+      "pos_folds": 2,
+      "n": 1169,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(8,20) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.674,
+      "full_pnl": -4964.0,
+      "holdout_pf": 0.62,
+      "holdout_pnl": -1296.1,
+      "pos_folds": 1,
+      "n": 1113,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(8,20) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.675,
+      "full_pnl": -4855.9,
+      "holdout_pf": 0.627,
+      "holdout_pnl": -1271.8,
+      "pos_folds": 1,
+      "n": 1079,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(8,20) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.952,
+      "full_pnl": -860.8,
+      "holdout_pf": 0.954,
+      "holdout_pnl": -184.3,
+      "pos_folds": 2,
+      "n": 1065,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(8,20) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.953,
+      "full_pnl": -813.5,
+      "holdout_pf": 1.047,
+      "holdout_pnl": 180.7,
+      "pos_folds": 2,
+      "n": 1032,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(8,20) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.883,
+      "full_pnl": -2099.7,
+      "holdout_pf": 0.797,
+      "holdout_pnl": -823.5,
+      "pos_folds": 2,
+      "n": 1055,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.8 sell=72 sess=(8,20) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 0.886,
+      "full_pnl": -1992.7,
+      "holdout_pf": 0.892,
+      "holdout_pnl": -419.3,
+      "pos_folds": 2,
+      "n": 1022,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(7,22) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.938,
+      "full_pnl": -495.5,
+      "holdout_pf": 0.793,
+      "holdout_pnl": -304.0,
+      "pos_folds": 1,
+      "n": 570,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(7,22) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.963,
+      "full_pnl": -284.8,
+      "holdout_pf": 0.824,
+      "holdout_pnl": -249.6,
+      "pos_folds": 1,
+      "n": 551,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(7,22) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.312,
+      "full_pnl": 3024.9,
+      "holdout_pf": 1.513,
+      "holdout_pnl": 878.7,
+      "pos_folds": 4,
+      "n": 540,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(7,22) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.316,
+      "full_pnl": 2976.4,
+      "holdout_pf": 1.488,
+      "holdout_pnl": 818.4,
+      "pos_folds": 3,
+      "n": 521,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(7,22) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.242,
+      "full_pnl": 2347.8,
+      "holdout_pf": 1.281,
+      "holdout_pnl": 482.4,
+      "pos_folds": 4,
+      "n": 535,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(7,22) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.257,
+      "full_pnl": 2417.8,
+      "holdout_pf": 1.293,
+      "holdout_pnl": 491.0,
+      "pos_folds": 3,
+      "n": 516,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(8,20) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.949,
+      "full_pnl": -371.1,
+      "holdout_pf": 0.77,
+      "holdout_pnl": -329.7,
+      "pos_folds": 1,
+      "n": 512,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(8,20) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.975,
+      "full_pnl": -175.8,
+      "holdout_pf": 0.8,
+      "holdout_pnl": -275.3,
+      "pos_folds": 2,
+      "n": 494,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(8,20) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.324,
+      "full_pnl": 2804.3,
+      "holdout_pf": 1.381,
+      "holdout_pnl": 670.0,
+      "pos_folds": 3,
+      "n": 482,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(8,20) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.332,
+      "full_pnl": 2780.6,
+      "holdout_pf": 1.354,
+      "holdout_pnl": 609.7,
+      "pos_folds": 2,
+      "n": 464,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(8,20) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.226,
+      "full_pnl": 1960.3,
+      "holdout_pf": 1.111,
+      "holdout_pnl": 195.1,
+      "pos_folds": 3,
+      "n": 477,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.34 sell=72 sess=(8,20) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.245,
+      "full_pnl": 2055.0,
+      "holdout_pf": 1.118,
+      "holdout_pnl": 203.6,
+      "pos_folds": 2,
+      "n": 459,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(7,22) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.803,
+      "full_pnl": -2287.5,
+      "holdout_pf": 0.608,
+      "holdout_pnl": -1029.8,
+      "pos_folds": 1,
+      "n": 918,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(7,22) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.821,
+      "full_pnl": -2022.7,
+      "holdout_pf": 0.625,
+      "holdout_pnl": -977.8,
+      "pos_folds": 1,
+      "n": 888,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(7,22) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.131,
+      "full_pnl": 1819.9,
+      "holdout_pf": 1.073,
+      "holdout_pnl": 221.2,
+      "pos_folds": 3,
+      "n": 878,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(7,22) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.146,
+      "full_pnl": 1952.8,
+      "holdout_pf": 1.138,
+      "holdout_pnl": 402.5,
+      "pos_folds": 3,
+      "n": 850,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(7,22) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.072,
+      "full_pnl": 1003.4,
+      "holdout_pf": 0.963,
+      "holdout_pnl": -111.1,
+      "pos_folds": 3,
+      "n": 869,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(7,22) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.089,
+      "full_pnl": 1199.2,
+      "holdout_pf": 1.005,
+      "holdout_pnl": 13.7,
+      "pos_folds": 2,
+      "n": 841,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(8,20) adx=20 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.793,
+      "full_pnl": -2166.4,
+      "holdout_pf": 0.601,
+      "holdout_pnl": -952.0,
+      "pos_folds": 1,
+      "n": 809,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(8,20) adx=27 tp=3.5 sl=1.5",
+      "tf": "H1",
+      "full_pf": 0.807,
+      "full_pnl": -1958.6,
+      "holdout_pf": 0.499,
+      "holdout_pnl": -1443.6,
+      "pos_folds": 1,
+      "n": 781,
+      "promotable": false
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(8,20) adx=20 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.119,
+      "full_pnl": 1474.0,
+      "holdout_pf": 0.842,
+      "holdout_pnl": -572.8,
+      "pos_folds": 2,
+      "n": 770,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(8,20) adx=27 tp=2.5 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.131,
+      "full_pnl": 1569.9,
+      "holdout_pf": 0.884,
+      "holdout_pnl": -446.9,
+      "pos_folds": 2,
+      "n": 743,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(8,20) adx=20 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.046,
+      "full_pnl": 568.6,
+      "holdout_pf": 0.699,
+      "holdout_pnl": -1087.6,
+      "pos_folds": 2,
+      "n": 762,
+      "promotable": true
+    },
+    {
+      "axis": "combined",
+      "val": "w_adx=0.6 sell=72 sess=(8,20) adx=27 tp=3.0 sl=2.0",
+      "tf": "H1",
+      "full_pf": 1.06,
+      "full_pnl": 727.4,
+      "holdout_pf": 0.762,
+      "holdout_pnl": -917.2,
+      "pos_folds": 2,
+      "n": 735,
+      "promotable": true
+    }
+  ],
+  "n_combos_tested": 113,
+  "neighbourhood_robustness_winner": {
+    "w_split": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "(0.25, 0.25, 0.5)",
+          1.144,
+          393.8,
+          3,
+          788,
+          true
+        ],
+        [
+          "(0.33, 0.33, 0.34)",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "(0.4, 0.3, 0.3)",
+          1.164,
+          121.4,
+          1,
+          200,
+          true
+        ]
+      ]
+    },
+    "sell_thr_base": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "68",
+          1.37,
+          767.1,
+          2,
+          656,
+          true
+        ],
+        [
+          "72",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "76",
+          1.391,
+          460.6,
+          3,
+          366,
+          true
+        ]
+      ]
+    },
+    "adx_gate": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "17",
+          1.543,
+          953.7,
+          4,
+          546,
+          true
+        ],
+        [
+          "20",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "23",
+          1.269,
+          529.0,
+          4,
+          535,
+          true
+        ]
+      ]
+    },
+    "di_spread_gate": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "3",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "5",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "8",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ]
+      ]
+    },
+    "buy_thr_base": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "86",
+          1.183,
+          457.4,
+          4,
+          713,
+          true
+        ],
+        [
+          "90",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "94",
+          1.527,
+          625.9,
+          1,
+          358,
+          true
+        ]
+      ]
+    },
+    "session": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "(7, 22)",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "(7, 20)",
+          1.564,
+          915.7,
+          4,
+          517,
+          true
+        ],
+        [
+          "(8, 22)",
+          1.343,
+          633.0,
+          3,
+          505,
+          true
+        ]
+      ]
+    },
+    "tp_mult": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "2.0",
+          1.483,
+          808.8,
+          3,
+          545,
+          true
+        ],
+        [
+          "2.5",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "3.0",
+          1.281,
+          482.4,
+          4,
+          535,
+          true
+        ]
+      ]
+    },
+    "sl_mult": {
+      "beats": 3,
+      "of": 3,
+      "rows": [
+        [
+          "1.75",
+          1.097,
+          177.7,
+          3,
+          558,
+          true
+        ],
+        [
+          "2.0",
+          1.513,
+          878.7,
+          4,
+          540,
+          true
+        ],
+        [
+          "2.25",
+          1.549,
+          1052.5,
+          4,
+          527,
+          true
+        ]
+      ]
+    }
+  },
+  "all_axes_robust": true,
+  "winner": {
+    "params": {
+      "signal_fn": "signal_mfkk_score",
+      "weight_split_cci_macd_adx": [
+        0.33,
+        0.33,
+        0.34
+      ],
+      "weight_split_was": [
+        0.1,
+        0.1,
+        0.8
+      ],
+      "adx_gate": 20,
+      "di_spread_gate": 5,
+      "buy_thr_base": 90,
+      "sell_thr_base": 72,
+      "session_utc": [
+        7,
+        22
+      ],
+      "tp_atr_mult": 2.5,
+      "tp_atr_mult_was": 3.5,
+      "sl_atr_mult": 2.0,
+      "sl_atr_mult_was": 1.5,
+      "timeframe": "H1 ONLY (M30/H4 still sub-1.0 -> keep S00 off M30/H4)"
+    },
+    "is_promotable_H1": [
+      true,
+      {
+        "holdout_pf": true,
+        "holdout_pnl": true,
+        "folds_pos": true,
+        "dd_ok": true,
+        "freq_ok": true
+      }
+    ],
+    "ev": {
+      "H1": {
+        "full": {
+          "n": 540,
+          "wr": 48.0,
+          "pnl": 3024.9,
+          "pf": 1.312,
+          "dd": 1621.2,
+          "avg_day": 22.57,
+          "tr_day": 4.03,
+          "months": "15/23"
+        },
+        "folds": [
+          {
+            "n": 84,
+            "wr": 42.9,
+            "pnl": 48.7,
+            "pf": 1.081,
+            "dd": 171.2,
+            "avg_day": 1.8,
+            "tr_day": 3.11,
+            "months": "3/6"
+          },
+          {
+            "n": 133,
+            "wr": 42.9,
+            "pnl": 103.5,
+            "pf": 1.06,
+            "dd": 491.7,
+            "avg_day": 3.84,
+            "tr_day": 4.93,
+            "months": "3/5"
+          },
+          {
+            "n": 87,
+            "wr": 60.9,
+            "pnl": 966.4,
+            "pf": 1.968,
+            "dd": 300.4,
+            "avg_day": 35.79,
+            "tr_day": 3.22,
+            "months": "4/6"
+          },
+          {
+            "n": 123,
+            "wr": 46.3,
+            "pnl": 1027.6,
+            "pf": 1.22,
+            "dd": 1297.8,
+            "avg_day": 38.06,
+            "tr_day": 4.56,
+            "months": "1/5"
+          }
+        ],
+        "holdout": {
+          "n": 113,
+          "wr": 49.6,
+          "pnl": 878.7,
+          "pf": 1.513,
+          "dd": 407.4,
+          "avg_day": 33.79,
+          "tr_day": 4.35,
+          "months": "4/5"
+        },
+        "holdout_start": "2026-04-08",
+        "live": {
+          "n": 88,
+          "wr": 50.0,
+          "pnl": 723.7,
+          "pf": 1.512,
+          "dd": 259.4,
+          "avg_day": 36.19,
+          "tr_day": 4.4,
+          "months": "2/3"
+        },
+        "n_trades": 540
+      },
+      "M30": {
+        "full": {
+          "n": 580,
+          "wr": 39.0,
+          "pnl": 200.9,
+          "pf": 1.025,
+          "dd": 1230.8,
+          "avg_day": 1.02,
+          "tr_day": 2.96,
+          "months": "11/24"
+        },
+        "folds": [
+          {
+            "n": 115,
+            "wr": 39.1,
+            "pnl": -106.3,
+            "pf": 0.875,
+            "dd": 251.8,
+            "avg_day": -2.72,
+            "tr_day": 2.95,
+            "months": "4/8"
+          },
+          {
+            "n": 111,
+            "wr": 35.1,
+            "pnl": -221.2,
+            "pf": 0.773,
+            "dd": 329.4,
+            "avg_day": -5.67,
+            "tr_day": 2.85,
+            "months": "2/5"
+          },
+          {
+            "n": 108,
+            "wr": 47.2,
+            "pnl": 134.3,
+            "pf": 1.094,
+            "dd": 309.9,
+            "avg_day": 3.44,
+            "tr_day": 2.77,
+            "months": "3/5"
+          },
+          {
+            "n": 138,
+            "wr": 40.6,
+            "pnl": 684.7,
+            "pf": 1.197,
+            "dd": 796.0,
+            "avg_day": 17.12,
+            "tr_day": 3.45,
+            "months": "2/5"
+          }
+        ],
+        "holdout": {
+          "n": 108,
+          "wr": 32.4,
+          "pnl": -290.6,
+          "pf": 0.802,
+          "dd": 636.5,
+          "avg_day": -7.45,
+          "tr_day": 2.77,
+          "months": "2/4"
+        },
+        "holdout_start": "2026-05-06",
+        "live": {
+          "n": 102,
+          "wr": 32.4,
+          "pnl": -498.7,
+          "pf": 0.7,
+          "dd": 581.5,
+          "avg_day": -16.09,
+          "tr_day": 3.29,
+          "months": "0/4"
+        },
+        "n_trades": 580
+      },
+      "H4": {
+        "full": {
+          "n": 118,
+          "wr": 33.9,
+          "pnl": -921.9,
+          "pf": 0.714,
+          "dd": 1904.6,
+          "avg_day": -18.81,
+          "tr_day": 2.41,
+          "months": "4/20"
+        },
+        "folds": [
+          {
+            "n": 27,
+            "wr": 29.6,
+            "pnl": -255.0,
+            "pf": 0.514,
+            "dd": 279.8,
+            "avg_day": -25.5,
+            "tr_day": 2.7,
+            "months": "1/7"
+          },
+          {
+            "n": 24,
+            "wr": 37.5,
+            "pnl": 6.4,
+            "pf": 1.012,
+            "dd": 452.6,
+            "avg_day": 0.64,
+            "tr_day": 2.4,
+            "months": "1/4"
+          },
+          {
+            "n": 27,
+            "wr": 29.6,
+            "pnl": -292.9,
+            "pf": 0.492,
+            "dd": 517.9,
+            "avg_day": -29.29,
+            "tr_day": 2.7,
+            "months": "0/3"
+          },
+          {
+            "n": 18,
+            "wr": 33.3,
+            "pnl": -187.9,
+            "pf": 0.69,
+            "dd": 432.2,
+            "avg_day": -18.79,
+            "tr_day": 1.8,
+            "months": "1/4"
+          }
+        ],
+        "holdout": {
+          "n": 22,
+          "wr": 40.9,
+          "pnl": -192.5,
+          "pf": 0.802,
+          "dd": 971.1,
+          "avg_day": -21.39,
+          "tr_day": 2.44,
+          "months": "1/4"
+        },
+        "holdout_start": "2026-02-23",
+        "live": {
+          "n": 8,
+          "wr": 0.0,
+          "pnl": -640.1,
+          "pf": 0.0,
+          "dd": 640.1,
+          "avg_day": -213.38,
+          "tr_day": 2.67,
+          "months": "0/2"
+        },
+        "n_trades": 118
+      }
+    },
+    "adaptive_rm_walkforward_H1": {
+      "note": "python strategy-engine-v2.py --file data/xauusd_h1_mt5.json --rm --walkforward, S00 block",
+      "folds_pf": [
+        1.366,
+        1.302,
+        1.564,
+        1.391
+      ],
+      "folds_positive": "4/4",
+      "holdout_pf": 1.664,
+      "holdout_pnl": 1749.2,
+      "holdout_start": "2026-04-08",
+      "full_pf": 1.443,
+      "full_pnl": 6394.0,
+      "months_positive": "14/24",
+      "system_level": "adaptive+RM H1 holdout PF 0.952 -> 1.284; full P&L +$9292 (was net-negative with S00 V2)"
+    }
+  },
+  "wiring_points_edited_on_branch": [
+    "scripts/signals.py line ~154: weight split 0.10/0.10/0.80 -> 0.33/0.33/0.34 (+ docstring note)",
+    "scripts/strategy-engine-v2.py run_one S00 branch: tp 3.5->2.5, sl 1.5->2.0",
+    "scripts/strategy-engine-v2.py run_adaptive + run_adaptive_rm S00 branch: tp 3.5->2.5, sl 1.5->2.0",
+    "scripts/mt5-bot.py STRATEGY_PARAMS['S00_MFKK']: tp_mult 3.5->2.5, sl_mult 1.5->2.0, label V2->V3",
+    "scripts/risk_guardian.py STRATEGY_ATR_PARAMS['S00_MFKK']: 3.5/1.5 -> 2.5/2.0",
+    "scripts/strategy_selector.py STRATEGIES_CONFIG S00 base_params: 3.5/1.0 -> 2.5/2.0"
+  ],
+  "wiring_points_NOT_touched": [
+    "data/strategy_overrides.json \u2014 S00 hard_block LEFT IN PLACE (see verdict: probation, not silent unblock).",
+    "scripts/mt5-bot.py REGIME_MULTI_STRATEGIES \u2014 S00 entries are M30; V3 is H1-only. Parent must decide: switch those M30->H1, or drop them and rely on StrategySelector H1.",
+    "scripts/strategy-engine-v2.py ADAPTIVE_STRATEGIES / ADAPTIVE_STRATEGIES_RM \u2014 already H1 for S00, fine.",
+    "regime_playbook.json \u2014 S00 not a primary anywhere; no change."
+  ],
+  "verdict": "CONDITIONAL PROMOTE (probation), NOT 'retire'. The production V2 config is confirmed dead (holdout PF 0.47, 0/4 folds, matches -$2133 live). However a REDEFINED config \u2014 equal weights 0.33/0.33/0.34 (was ADX-dominant 0.80) + R:R 2.5/2.0 ATR (was 3.5/1.5), H1 only \u2014 passes is_promotable on the H1 holdout (PF 1.54, +$884, 3-4/4 folds), is robust (8/8 swept axes have 3/3 neighbour cells also beating baseline), turns the live window positive (PF 1.51-1.60 on 86-88 trades vs real 0.59), and lifts the whole adaptive+RM system (holdout PF 0.95->1.28). It stays < 1.0 on M30 (holdout 0.80) and marginal on H4 (holdout 1.03) so it must run H1-only. CAVEATS: this is a different strategy, not a tuned S00; found via ~150-combo mining (holdout multiple-comparison risk, mitigated but not zero); run_one BE/trailing sim is optimistic for a wide 2.0xATR stop. RECOMMENDATION: keep the hard_block OR set score_mult ~0.5, H1-only, and run a 4-6 week live probation with a PF>=1.2 / WR>=40% gate (S20 playbook). Do NOT restore score_mult 1.0 immediately. If live PF < 1.1 after 6 weeks -> retire S00 permanently.",
+  "artifacts": [
+    "backtests/results/opt_s00_2026-09-02.json (this file)",
+    "backtests/results/opt_s00_stage3_2026-09-02.json (full combined grid, 72 combos)",
+    "backtests/results/opt_s00_validate_2026-09-02.json (neighbourhood robustness, 24 combos)"
+  ]
+}

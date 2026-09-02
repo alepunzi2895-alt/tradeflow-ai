@@ -644,6 +644,13 @@ def get_signal(I, i, hour, regime):
         # sessione interno 7-18 UTC era bypassato e S16 tradava 24/7 su H1 (bot 76 trade
         # vs backtester 15 sulla stessa finestra live). Allinea il bot al backtester.
         direction = fn(I, i, h1_trend=I['st'][i] if I.get('st') else None, hour=hour)
+    elif sname == 'S00_MFKK':
+        # Fix 2026-09-02: passare `hour` e `tf='H1'` — senza `hour` il ramo SELL di S00 è
+        # strutturalmente impossibile (`is_london_ny` = False → sell_thr resta 999) e la
+        # finestra 7-22 UTC è bypassata; senza `tf` buy_di_min = 20 (valore M30) invece di 15.
+        # get_signal serve S00 solo su H1 (return None per tf != 'H1'). S00 resta hard-blocked
+        # in strategy_overrides.json — fix di correttezza, neutrale finché il blocco è attivo.
+        direction = fn(I, i, hour=hour, tf='H1')
     else:
         direction = fn(I, i)
     return (sname, direction) if direction else (None, None)
@@ -1393,6 +1400,7 @@ def run():
     sl_cooldown_until    = None  # datetime UTC fino a cui nuovi ordini sono bloccati globale
     _strategy_sl_count   = {}    # {strategy_name: consecutive_sl_count}
     sl_cooldowns_until   = {}    # {strategy_name: datetime UTC} pausa specifica per strategia
+    _stale_strikes       = set() # {strategy_name} entry stale al sync precedente (fix deadlock 2026-09-02)
     weekly_dd_pct        = 0.0   # drawdown settimanale reale (aggiornato ogni sync)
     _live_dedup          = set() # dedup live scan: {(strat, dir, tf, bar_open_t)}
     _m30_live_cache      = None  # indicatori M30 per live scan (aggiornati ogni 60s)
@@ -1602,6 +1610,25 @@ def run():
                     if ticket not in _tracked_positions:
                         # position_id è p['position_id'] = pos.identifier in MT5
                         _tracked_positions[ticket] = p.get('position_id') or ticket
+
+                # ── Riconciliazione _strategy_order_tickets vs MT5 (fix deadlock 2026-09-02) ──
+                # count_open_positions() = max(mt5_count, len(_strategy_order_tickets)): una entry
+                # stale (pop fallito perché strategy_closed='N/A', o comment troncato non risolto)
+                # gonfia il conteggio per SEMPRE → tutti i blocchi segnale vedono
+                # count_open_positions() >= MAX_OPEN_ORDERS PRIMA del self-heal in
+                # has_open_position_for_strategy() → deadlock permanente (bot fermo dal 2026-07-10).
+                # Fonte di verità = MT5. Due-strike: rimuovi solo dopo 2 sync consecutivi stale,
+                # così una posizione appena aperta ancora non visibile in MT5 (latenza ~500ms)
+                # non viene tolta per errore.
+                if not DRY_RUN and (positions_data or mt5.positions_get(symbol=SYMBOL) is not None):
+                    _live_tickets = set(cur_pos_ids)
+                    _now_stale = {s for s, (tk, _d) in _strategy_order_tickets.items()
+                                  if tk and tk not in _live_tickets}
+                    for s in (_now_stale & _stale_strikes):     # stale su 2 sync consecutivi
+                        log.info(f"🧹 Riconciliazione: rimuovo entry stale {s} (ticket assente da MT5 per 2 sync)")
+                        _strategy_order_tickets.pop(s, None)
+                        _strategy_sl_count.pop(s, None)
+                    _stale_strikes = {s for s in _now_stale if s in _strategy_order_tickets}
 
                 # Se ci sono chiusure rilevate: attendi 3s (race condition MT5),
                 # poi forza sync immediato così il deal è già in history

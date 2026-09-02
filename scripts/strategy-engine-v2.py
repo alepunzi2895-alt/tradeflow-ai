@@ -1020,7 +1020,7 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD, tp_mult=None,
         # scattava quasi sempre (hour è quasi sempre != 0/-1/1), bloccando la maggior parte
         # dei segnali standalone. S17 non usa h1_trend quindi era innocuo per lei.
         if name == 'S00_MFKK':
-            sig = fn(ind, i, hour=hour)
+            sig = fn(ind, i, hour=hour, tf=tf)   # 2026-09-02: passa tf (era assente → buy_di_min=20 anche su H1; run_adaptive/rm lo passavano già)
         elif name == 'S18_RANGE_REVERSAL':
             sig = fn(ind, i, hour=hour)
         elif name == 'S20_FIB_CONFLUENCE':

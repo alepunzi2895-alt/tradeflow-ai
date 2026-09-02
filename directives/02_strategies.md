@@ -1,5 +1,39 @@
 # TradeFlow AI — Strategie Attive
 
+## ✅ 2026-09-02 — SPRINT "performance stabile e duratura" — riepilogo (branch `sprint/perf-stabile-2026-09`)
+
+**Contesto**: il backtester dava PF ~1.2-1.6 ma il live reale PF 0.59 (S00) / 0.10 (S09) / 0.88 (S16), −$3 807 su 347 trade.
+
+**Fase 0** (backtester realistico): cost model + fill intrabar pessimistico + entry next-bar-open + walk-forward/holdout.
+→ Il "PF 1.6 canonico" era una **media gonfiata dai dati 2024–metà 2025**. Sull'holdout recente (~5 mesi) il sistema H1 era a **PF 0.95** (breakeven). **L'edge è decaduto — non è un problema di tuning.**
+
+**Fase 1** (4 subagenti paralleli, worktree isolati, fitness = holdout PF): **nessun re-tuning di segnale restaura un edge robusto sul 2026**. Cambiamenti adottati, tutti conservativi:
+
+| Item | Cosa | Effetto |
+|---|---|---|
+| S16 call-path | bot chiamava `signal_golden_squeeze` senza `hour` → tradava 24/7 (76 trade vs 15 backtester). Aggiunto `hour` a tutti i call-site. Nessun cambio parametri. | bot allineato al backtester, meno overtrading |
+| S17 SL | 1.5→1.75×ATR (unico gradiente robusto e monotòno, 4/4 fold) | holdout PF 0.98→1.32; roster H4 2.09→2.21 |
+| S20 sessione | `FIB_SESSION (7,19)→(8,17)` (solo overlap liquido). Zero impatto su size/rischio. | holdout PF M5 2.37→2.78, DD -19% |
+| Portfolio trim | `REGIME_PRIORITY_*` ripuliti dei drag: S00 fuori dagli slot **short** su H1 (edge solo long), S18 fuori M30, S16 fuori M30-TREND & H4-WEAK_DOWN, S09 fuori H1-WEAK_UP | vedi sotto |
+| Deadlock bot | riconciliazione `_strategy_order_tickets` vs MT5 nel sync loop (bot fermo dal 2026-07-10) | bot deployabile (serve restart VPS) |
+
+**Fase 2** — validazione di portafoglio consolidata (`--rm --walkforward`, cost model ON, config finale senza S00 V3):
+
+| TF | Holdout PF prima → dopo | Full PF | Full DD prima → dopo | Fold+ |
+|---|---|---|---|---|
+| **H1** | 0.95 → **1.16** | 1.21 → 1.52 | 5018 → **2100** | 4/4 |
+| **M30** | 1.04 → **1.19** | 1.15 → 1.20 | 1730 → 1579 | 3/4 |
+| **H4** | 1.23 → **1.26** | 1.60 → 1.64 | — | 3/4 |
+
+→ Tutti e 3 i TF ora holdout PF > 1.15, DD ridotto (H1 dimezzato). **Il guadagno viene dal tradare MENO e meglio** (H4 = TF con più edge residuo; S17@H4 miglior contributore singolo), non da nuovi parametri di segnale. File: `backtests/results/bt_sprint_final_{h1,m30,h4}.json`.
+
+### S00_MFKK — candidato V3, NON shippato
+Baseline V2 (ADX-weight 0.80) **confermata morta**: standalone full PF 0.64, holdout 0.47, ≈ live 0.59. Il subagente A, minando ~150 combo, ha trovato una config **eq-weight 0.33/0.33/0.34 + R:R 2.5/2.0 H1-only** che passa `is_promotable` sull'holdout (PF 1.51, 4/4 fold) e rende positiva la finestra live. **Ma è di fatto una strategia diversa selezionata mining sull'holdout (contaminazione multi-comparison)** → **NON è stata portata in `signals.py`**. S00 resta hard-blocked (V2). La config V3 è documentata in `backtests/results/opt_s00_2026-09-02.json` come **candidata per un paper-test dedicato** (stesso percorso di S20: 4-6 settimane isolate, gate PF≥1.2/WR≥40%, altrimenti ritiro definitivo). Applicati solo 2 fix di correttezza al call-path S00 (`hour`+`tf` in `get_signal`/`run_one`), neutrali finché il blocco è attivo.
+
+**Restano hard-blocked**: S00_MFKK, S09_MFKK_SCALPING, S18_RANGE_REVERSAL. **S10** tenuta ma lotto NON scalato (campione sottile). **H4 pesa più di M30 che pesa più di H1.**
+
+---
+
 ## ✅ 2026-09-02 — Sprint "performance stabile": S17 SL 1.5→1.75×ATR; S10/S09 invariate
 
 Backtester reso realistico in Fase 0 (cost model + fill pessimistico + entry next-open + walk-forward/holdout, `opt_harness.py`). Rivalutate le 3 strategie minori (holdout PF = metrica primaria):

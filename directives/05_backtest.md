@@ -1,5 +1,46 @@
 # TradeFlow AI — Procedure Backtest
 
+## 🆕 2026-09-02 — Cost model + walk-forward (Fase 0 sprint "performance stabile e duratura")
+
+Il backtester sovrastimava il PF vs live (S00 bt ~1.6 / live 0.59). Tre fix in `strategy-engine-v2.py`,
+tutti **attivi di default**, disattivabili per riprodurre i numeri storici:
+
+| Fix | Default | Flag ripristino storico |
+|---|---|---|
+| **Cost model** — spread + slippage sottratti dal P&L lordo di ogni trade | ON | `--no-costs` |
+| **Fill pessimistico** — barra che tocca sia TP che SL → conta SL (`resolve_intrabar()`) | ON | `--optimistic-fill` |
+| **Entry al next-bar-open** invece della close della candela di segnale | ON | `--entry-on-close` |
+
+Costanti costo (in cima al file, calibrate da `scripts/calibrate_costs.py` vs `data/performance_cache.json`):
+`HALF_SPREAD_USD=0.15` (entry+exit) · `SLIP_ENTRY_USD=0.05` · `SLIP_SL_USD=0.10` (gap-through stop) ·
+`COMMISSION_USD=0.0`. Override CLI: `--spread --slippage --sl-slippage --commission`.
+Verifica: `--no-costs --optimistic-fill --entry-on-close` riproduce esatto il baseline storico (H1 --rm PF 1.241).
+
+**Walk-forward** (`--walkforward`): 4 fold cronologici di training + **holdout finale 20% intoccabile**
+(nessun tuning lo vede). `walk_forward_report()` / `print_walk_forward()` riusabili. La metrica di
+promozione della sprint è **PF sull'holdout**, non sul full-period.
+
+**Risultati chiave 2026-09-02** (H1, `--rm --walkforward`, cost model ON):
+
+| Segmento | adattivo+RM PF | S00 PF | S16 PF |
+|---|---|---|---|
+| full period (~24m) | 1.21 | 1.14 | 1.72 |
+| **HOLDOUT (ult. ~5 mesi)** | **0.95** | **0.90** | **1.06** |
+| finestra live (apr-lug 2026, standalone) | — | 0.49 (≈ live 0.59 ✓) | 0.21 (bt 15 trade vs 76 live — vedi sotto) |
+
+→ **L'edge documentato come "PF 1.6 canonico" era una media dominata dai dati 2024–metà 2025.**
+Nel 2026 il sistema H1 è ~breakeven. H4 regge meglio ($56/gg adattivo+RM). M30 ~breakeven (holdout PF 1.04).
+
+**Divergenza bot ↔ backtester (S16)**: il backtester chiama `signal_golden_squeeze(ind, i, h1_trend=…, hour=…)`;
+il bot via `get_signal()`/`PLAYBOOK` (mt5-bot.py ~643) lo chiama `fn(I, i)` **senza `hour`** → il filtro
+sessione 7-18 UTC è bypassato e S16 trada 24/7 (76 trade live vs 15 nel backtester sulla stessa finestra).
+Da riconciliare: il bot e il backtester devono invocare le signal fn con gli stessi argomenti.
+
+`scripts/opt_harness.py` — `evaluate(name, fn, tf, tp_mult, sl_mult)` → `{full, folds, holdout, live}` +
+`is_promotable(ev_new, ev_base)`. Fitness unica per tutti i subagenti della sprint.
+
+---
+
 > ⚠️ **2026-07-17**: la tabella "Refresh 2026-07-16" sotto è a sua volta superata — SL nel backtester disallineato dal live su S00/S09/S10/S17 (1.0-1.2×ATR invece di 1.5×ATR dal 2026-04-30), corretto lo stesso giorno. Numeri freschi riproducibili in `02_strategies.md` § "Refresh 2026-07-17". Dettagli in `07_self_learning_log.md`.
 >
 > ⚠️ **2026-07-16**: i "Risultati Canonici" sotto (2026-05-08) e il baseline 2026-07-07 in `02_strategies.md` sono superati — 2 bug in `strategy-engine-v2.py` (`run_adaptive()` senza ramo S00_MFKK, `run_one()` etichettava vincite trailing-stop come sconfitte) sono stati corretti su `main` il 2026-07-16, e i numeri non tornano identici nemmeno dopo il fix. Dettagli in `07_self_learning_log.md`.

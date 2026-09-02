@@ -45,6 +45,25 @@ _parser.add_argument('--out',  type=str, default='strategy_engine_v2.json',
     help='File output risultati (default: strategy_engine_v2.json)')
 _parser.add_argument('--rm',   action='store_true',
     help='Simula Risk Manager adattivo (AI Score da indicatori → lot/BE/TS)')
+_parser.add_argument('--no-costs', action='store_true',
+    help='Disattiva cost model (spread/slippage) — riproduce i numeri storici pre-2026-09-02')
+_parser.add_argument('--optimistic-fill', action='store_true',
+    help='Ripristina il fill intrabar ottimistico (TP prima di SL) — solo per confronto storico')
+_parser.add_argument('--entry-on-close', action='store_true',
+    help='Entry alla close della candela di segnale invece del next-bar-open (confronto storico)')
+_parser.add_argument('--walkforward', action='store_true',
+    help='Stampa la tabella walk-forward (4 fold cronologici + holdout finale) per il roster adattivo')
+_parser.add_argument('--folds', type=int, default=4, help='Numero di fold walk-forward (default 4)')
+_parser.add_argument('--holdout-frac', type=float, default=0.2,
+    help='Frazione finale del periodo tenuta come holdout intoccabile (default 0.2)')
+_parser.add_argument('--spread', type=float, default=None,
+    help='Override HALF_SPREAD_USD (metà spread XAU applicata a entry ed exit)')
+_parser.add_argument('--slippage', type=float, default=None,
+    help='Override SLIP_ENTRY_USD (slippage avverso su entry)')
+_parser.add_argument('--sl-slippage', type=float, default=None,
+    help='Override SLIP_SL_USD (slippage avverso extra sugli stop, gap-through)')
+_parser.add_argument('--commission', type=float, default=None,
+    help='Override COMMISSION_USD (round-trip, 0.01 lot)')
 _args, _ = _parser.parse_known_args()
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -60,6 +79,58 @@ SESSION_S  = 0
 SESSION_E  = 24
 EXTREME_K  = 3.5
 OUT_FILE   = _args.out
+
+# ── COST MODEL (2026-09-02) ──────────────────────────────────────────────────
+# Storicamente il backtester non modellava spread/slippage e assumeva fill intrabar
+# ottimistici (TP controllato prima di SL) + entry alla close della candela di segnale.
+# Risultato: PF sovrastimato — S00_MFKK bt ~1.6 vs live 0.59, S16 bt ~1.5 vs live 0.88
+# (data/performance_cache.json, 347 trade reali). Le costanti sotto sono calibrate da
+# scripts/calibrate_costs.py contro lo storico reale. Vedi directives/05_backtest.md.
+#
+#   entry effettivo      = signal ± (HALF_SPREAD + SLIP_ENTRY)     [next-bar-open]
+#   uscita a TP          = TP    ∓  HALF_SPREAD
+#   uscita a SL          = SL    ∓ (HALF_SPREAD + SLIP_SL)         [gap-through]
+#   + COMMISSION_USD per round-trip
+#   fill pessimistico    = barra che tocca sia TP che SL → conta SL (loss)
+HALF_SPREAD_USD  = 0.15   # metà spread XAU tipico (~0.30 round-trip su 0.01 lot / $1 punto)
+SLIP_ENTRY_USD   = 0.05
+SLIP_SL_USD      = 0.10
+COMMISSION_USD   = 0.0    # broker XAU spread-only → 0
+COSTS_ON         = not _args.no_costs
+PESSIMISTIC_FILL = not _args.optimistic_fill
+ENTRY_NEXT_OPEN  = not _args.entry_on_close
+
+if _args.spread      is not None: HALF_SPREAD_USD = _args.spread
+if _args.slippage    is not None: SLIP_ENTRY_USD  = _args.slippage
+if _args.sl_slippage is not None: SLIP_SL_USD     = _args.sl_slippage
+if _args.commission  is not None: COMMISSION_USD  = _args.commission
+
+
+def trade_cost(is_stop):
+    """Costo totale in USD (0.01 lot) da sottrarre al P&L lordo di un trade.
+    is_stop=True se l'uscita è uno stop loss (slippage gap-through peggiore)."""
+    if not COSTS_ON:
+        return 0.0
+    c = 2 * HALF_SPREAD_USD + SLIP_ENTRY_USD + COMMISSION_USD
+    if is_stop:
+        c += SLIP_SL_USD
+    return c
+
+
+def resolve_intrabar(jh, jl, tp_p, sl_p, is_buy):
+    """Ritorna 'win' | 'loss' | None per la barra corrente.
+    Con PESSIMISTIC_FILL, una barra che tocca sia TP che SL conta come SL."""
+    if is_buy:
+        hit_tp = jh >= tp_p
+        hit_sl = jl <= sl_p
+    else:
+        hit_tp = jl <= tp_p
+        hit_sl = jh >= sl_p
+    if hit_sl and (PESSIMISTIC_FILL or not hit_tp):
+        return 'loss'
+    if hit_tp:
+        return 'win'
+    return None
 
 # ── CARICAMENTO DATI ──────────────────────────────────────────────────────────
 def load_from_file(path):
@@ -838,7 +909,8 @@ def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
     if sl_d <= 0:
         return None
 
-    def _mk(pnl):
+    def _mk(pnl, is_stop):
+        pnl -= trade_cost(is_stop)          # spread/slippage sul lotto base
         pnl = round(pnl * lot_mult, 2)
         base = round(pnl / lot_mult, 2) if lot_mult else pnl
         return {'dir': sig, 'entry': entry,
@@ -851,27 +923,30 @@ def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
     for j in range(i + 1, min(i + lookahead, n)):
         jh = candles[j]['h']; jl = candles[j]['l']
         if sig == 'buy':
+            # fill pessimistico: lo stop è valutato prima del TP nella stessa barra
+            if jl <= stop:
+                return _mk(-(entry - stop) if not filled_tp1 else booked + 0.5 * (stop - entry), True)
             if not filled_tp1 and jh >= tp1:
                 booked = 0.5 * (tp1 - entry); filled_tp1 = True; stop = entry
             if filled_tp1 and jh >= tp2:
-                return _mk(booked + 0.5 * (tp2 - entry))
-            if jl <= stop:
-                return _mk(-(entry - stop) if not filled_tp1 else booked + 0.5 * (stop - entry))
+                return _mk(booked + 0.5 * (tp2 - entry), False)
         else:
+            if jh >= stop:
+                return _mk(-(stop - entry) if not filled_tp1 else booked + 0.5 * (entry - stop), True)
             if not filled_tp1 and jl <= tp1:
                 booked = 0.5 * (entry - tp1); filled_tp1 = True; stop = entry
             if filled_tp1 and jl <= tp2:
-                return _mk(booked + 0.5 * (entry - tp2))
-            if jh >= stop:
-                return _mk(-(stop - entry) if not filled_tp1 else booked + 0.5 * (entry - stop))
+                return _mk(booked + 0.5 * (entry - tp2), False)
     # Fine lookahead: se TP1 era già stato fillato, la prima metà è profitto reale e il residuo
     # aveva stop a BE (non toccato) → assume wash sul residuo, pnl = booked. Se TP1 non fillato,
     # trade non risolto → scartato come le altre strategie single-exit.
-    return _mk(booked) if filled_tp1 else None
+    return _mk(booked, False) if filled_tp1 else None
 
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
-def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
+def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD, tp_mult=None, sl_mult=None):
+    """tp_mult/sl_mult: se forniti, TP/SL = ATR corrente × mult, sovrascrivendo la tabella
+    hardcoded per-nome (per gli sweep TP/SL della sprint di ottimizzazione)."""
     trades=[]; day_n=defaultdict(int); day_h=defaultdict(lambda:-99)
     n=len(candles)
     
@@ -919,6 +994,12 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             curr_tp = round(av * 2.0, 2)
             curr_sl = round(av * 1.2, 2)
 
+        # Override sweep TP/SL (sprint ottimizzazione 2026-09-02)
+        if tp_mult is not None and av:
+            curr_tp = round(av * tp_mult, 2)
+        if sl_mult is not None and av:
+            curr_sl = round(av * sl_mult, 2)
+
         # Route hour/h1_trend correctly per signal function signature
         # Fix 2026-07-17: il branch 'else' passava `hour` per posizione, che finiva nel
         # parametro h1_trend di signal_mfkk_scalping/signal_ob_fvg_scalp (S09/S10/S05) —
@@ -947,16 +1028,22 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
             day_n[day] += 1; day_h[day] = hour
             continue
 
-        entry=c['c']
+        # Entry al next-bar-open (il segnale è sulla candela chiusa i; il bot entra sulla
+        # candela successiva). --entry-on-close ripristina il vecchio comportamento.
+        if ENTRY_NEXT_OPEN:
+            if i + 1 >= n: continue
+            entry = candles[i+1]['o']
+        else:
+            entry = c['c']
         tp_p=entry+curr_tp if sig=='buy' else entry-curr_tp
         sl_p=entry-curr_sl if sig=='buy' else entry+curr_sl
-        
-        outcome='open'; win=False; close_price=entry
+
+        outcome='open'; win=False; close_price=entry; exit_kind=None
         curr_sl_dyn = sl_p
-        
+
         for j in range(i+1,min(i+lookahead,n)): # Scaled lookahead (base 30 H1)
             jc=candles[j]['c']; jh=candles[j]['h']; jl=candles[j]['l']
-            
+
             # --- SIMULA BE & TRAILING (nuovo richiesto) ---
             profit = (jc - entry) if sig=='buy' else (entry - jc)
             risk = curr_sl
@@ -967,13 +1054,12 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
                 if sig=='buy': curr_sl_dyn = max(curr_sl_dyn, potential)
                 else: curr_sl_dyn = min(curr_sl_dyn, potential) if curr_sl_dyn else potential
 
-            if sig=='buy':
-                if jh>=tp_p: win=True; outcome='win'; close_price=tp_p; break
-                if jl<=curr_sl_dyn: outcome='loss'; close_price=curr_sl_dyn; break
-            else:
-                if jl<=tp_p: win=True; outcome='win'; close_price=tp_p; break
-                if jh>=curr_sl_dyn: outcome='loss'; close_price=curr_sl_dyn; break
-        
+            res = resolve_intrabar(jh, jl, tp_p, curr_sl_dyn, sig=='buy')
+            if res == 'win':
+                win=True; outcome='win'; close_price=tp_p; exit_kind='tp'; break
+            if res == 'loss':
+                outcome='loss'; close_price=curr_sl_dyn; exit_kind='sl'; break
+
         if outcome=='open': continue
         # BUGFIX (2026-07-16): pnl/outcome derivato dal movimento di prezzo firmato reale, non
         # dal ramo (tp_p vs curr_sl_dyn) che ha chiuso il trade. curr_sl_dyn può essere trailato
@@ -983,6 +1069,7 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD):
         # trailato a +$40 e chiuso a +$38 veniva registrato come una perdita di $38. Falsava ogni
         # classifica standalone Fase 1 (vedi research/mtf-confluence, 07_self_learning_log.md).
         pnl = (close_price - entry) if sig=='buy' else (entry - close_price)
+        pnl -= trade_cost(exit_kind == 'sl')
         outcome = 'win' if pnl > 0 else 'loss'
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
                         'outcome':outcome,'pnl':round(pnl,2),'strategy':name})
@@ -1022,6 +1109,63 @@ def equity_curve(trades):
         dt = datetime.datetime.strptime(t['date'], '%Y-%m-%d').replace(hour=t['hour'], tzinfo=datetime.timezone.utc)
         pts.append({'t': int(dt.timestamp()), 'cum_pnl': round(cum, 2)})
     return pts
+
+
+# ── WALK-FORWARD / HOLDOUT ───────────────────────────────────────────────────
+def split_holdout(trades, holdout_frac=0.2):
+    """(train_trades, holdout_trades) — l'ultimo holdout_frac dei GIORNI di trading è holdout.
+    Nessun tuning deve vedere l'holdout."""
+    if not trades:
+        return [], []
+    days = sorted(set(t['date'] for t in trades))
+    n_hold = max(1, int(len(days) * holdout_frac))
+    hold_days = set(days[-n_hold:])
+    train = [t for t in trades if t['date'] not in hold_days]
+    hold  = [t for t in trades if t['date'] in hold_days]
+    return train, hold
+
+
+def walk_forward_report(trades, folds=4, holdout_frac=0.2):
+    """Partiziona i trade (già simulati) in `folds` blocchi cronologici + holdout finale.
+    Ritorna {'folds': [stats,...], 'holdout': stats, 'holdout_start': 'YYYY-MM-DD', 'full': stats}."""
+    if not trades:
+        return None
+    days = sorted(set(t['date'] for t in trades))
+    if len(days) < max(10, folds * 2):
+        return {'folds': [], 'holdout': stats(trades), 'holdout_start': days[0] if days else None,
+                'full': stats(trades)}
+    n_hold = max(1, int(len(days) * holdout_frac))
+    hold_days = set(days[-n_hold:])
+    train_days = days[:-n_hold]
+    fs = max(1, len(train_days) // folds)
+    fold_stats = []
+    for k in range(folds):
+        seg = set(train_days[k*fs:(k+1)*fs]) if k < folds - 1 else set(train_days[k*fs:])
+        fold_stats.append(stats([t for t in trades if t['date'] in seg]))
+    return {
+        'folds': fold_stats,
+        'holdout': stats([t for t in trades if t['date'] in hold_days]),
+        'holdout_start': days[-n_hold],
+        'full': stats(trades),
+    }
+
+
+def print_walk_forward(title, trades, folds=4, holdout_frac=0.2):
+    wf = walk_forward_report(trades, folds, holdout_frac)
+    if not wf:
+        print(f"\n  [{title}] nessun trade — walk-forward saltato")
+        return wf
+    print(f"\n  WALK-FORWARD — {title}")
+    print(f"  {'segmento':<16} {'N':>5} {'WR%':>6} {'PF':>7} {'P&L':>9} {'DD':>8} {'mesi+':>7}")
+    for k, s in enumerate(wf['folds'], 1):
+        print(f"  fold {k:<11} {s['n']:>5} {s['wr']:>6.1f} {s['pf']:>7.3f} {s['pnl']:>9.1f} {s['dd']:>8.1f} {s['months']:>7}")
+    h = wf['holdout']
+    print(f"  {'HOLDOUT ' + str(wf['holdout_start']):<16} {h['n']:>5} {h['wr']:>6.1f} {h['pf']:>7.3f} {h['pnl']:>9.1f} {h['dd']:>8.1f} {h['months']:>7}")
+    f = wf['full']
+    print(f"  {'full period':<16} {f['n']:>5} {f['wr']:>6.1f} {f['pf']:>7.3f} {f['pnl']:>9.1f} {f['dd']:>8.1f} {f['months']:>7}")
+    pos_folds = sum(1 for s in wf['folds'] if s['pf'] >= 1.0)
+    print(f"  → fold positivi: {pos_folds}/{len(wf['folds'])} | holdout PF {h['pf']:.3f}")
+    return wf
 
 # ── ADAPTIVE BACKTEST ─────────────────────────────────────────────────────────
 def run_adaptive(candles, ind, tf='H1'):
@@ -1072,7 +1216,11 @@ def run_adaptive(candles, ind, tf='H1'):
                 s=fn(ind,i,hour=hour)
             if s: sig=s; used=name; break
         if not sig: continue
-        entry=c['c']
+        if ENTRY_NEXT_OPEN:
+            if i + 1 >= n: continue
+            entry = candles[i+1]['o']
+        else:
+            entry = c['c']
 
         # S20: SL/TP sui livelli Fib + parziali — simulazione dedicata
         if used == 'S20_FIB_CONFLUENCE':
@@ -1106,16 +1254,13 @@ def run_adaptive(candles, ind, tf='H1'):
         outcome='open'; win=False
         for j in range(i+1,min(i+lookahead,n)):
             jh=candles[j]['h']; jl=candles[j]['l']
-            if sig=='buy':
-                if jh>=tp_p: win=True; outcome='win'; break
-                if jl<=sl_p: outcome='loss'; break
-            else:
-                if jl<=tp_p: win=True; outcome='win'; break
-                if jh>=sl_p: outcome='loss'; break
+            res = resolve_intrabar(jh, jl, tp_p, sl_p, sig=='buy')
+            if res == 'win': win=True; outcome='win'; break
+            if res == 'loss': outcome='loss'; break
         if outcome=='open': continue
-        pnl=tp_d if win else -sl_d
+        pnl = (tp_d if win else -sl_d) - trade_cost(not win)
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
-                        'outcome':outcome,'pnl':pnl,'strategy':used,'regime':r})
+                        'outcome':('win' if pnl > 0 else 'loss'),'pnl':round(pnl,2),'strategy':used,'regime':r})
         day_n[day]+=1; day_h[day]=hour
     return trades
 
@@ -1239,26 +1384,28 @@ def run_adaptive_rm(candles, ind, tf='H1'):
         tier = get_rm_tier(ai_score)
         lot_mult = tier['lot']
 
-        entry = c['c']
+        if ENTRY_NEXT_OPEN:
+            if i + 1 >= n: continue
+            entry = candles[i+1]['o']
+        else:
+            entry = c['c']
         tp_p  = entry + tp_d if sig=='buy' else entry - tp_d
         sl_p  = entry - sl_d if sig=='buy' else entry + sl_d
         outcome='open'; win=False
 
         for j in range(i+1, min(i+lookahead, n)):
             jh=candles[j]['h']; jl=candles[j]['l']
-            if sig=='buy':
-                if jh >= tp_p: win=True; outcome='win'; break
-                if jl <= sl_p: outcome='loss'; break
-            else:
-                if jl <= tp_p: win=True; outcome='win'; break
-                if jh >= sl_p: outcome='loss'; break
+            res = resolve_intrabar(jh, jl, tp_p, sl_p, sig=='buy')
+            if res == 'win': win=True; outcome='win'; break
+            if res == 'loss': outcome='loss'; break
 
         if outcome=='open': continue
-        # P&L scalato per lot_mult — misura impatto position sizing
-        base_pnl = tp_d if win else -sl_d
+        # P&L scalato per lot_mult — misura impatto position sizing.
+        # I costi (spread/slippage) sono in USD assoluti su 0.01 lot → scalano col lot_mult come il P&L lordo.
+        base_pnl = (tp_d if win else -sl_d) - trade_cost(not win)
         pnl_scaled = round(base_pnl * lot_mult, 2)
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
-                       'outcome':outcome,'pnl':pnl_scaled,'strategy':used,
+                       'outcome':('win' if base_pnl > 0 else 'loss'),'pnl':pnl_scaled,'strategy':used,
                        'regime':r,'ai_score':round(ai_score,1),'tier':tier['label'],
                        'lot_mult':lot_mult,'base_pnl':round(base_pnl,2)})
         day_n[day]+=1; day_h[day]=hour
@@ -1387,6 +1534,22 @@ def main():
         print(f"    Base:   P&L ${sa['pnl']} | PF {sa['pf']} | WR {sa['wr']}%")
         print(f"    Con RM: P&L ${srm['pnl']} | PF {srm['pf']} | WR {srm['wr']}%")
 
+    # ── WALK-FORWARD (--walkforward) ─────────────────────────────────────────
+    wf_adaptive = wf_rm = None
+    if _args.walkforward:
+        print("\n" + "="*72)
+        print(f"WALK-FORWARD — {_args.folds} fold cronologici + holdout finale {int(_args.holdout_frac*100)}%")
+        print(f"cost model: {'ON' if COSTS_ON else 'OFF'} (spread={HALF_SPREAD_USD} slipE={SLIP_ENTRY_USD} "
+              f"slipSL={SLIP_SL_USD} comm={COMMISSION_USD}) | fill: {'pessimistico' if PESSIMISTIC_FILL else 'ottimistico'} | "
+              f"entry: {'next-open' if ENTRY_NEXT_OPEN else 'close'}")
+        print("="*72)
+        wf_adaptive = print_walk_forward(f"adattivo {tf}", adap, _args.folds, _args.holdout_frac)
+        if _args.rm:
+            wf_rm = print_walk_forward(f"adattivo+RM {tf}", rm_trades, _args.folds, _args.holdout_frac)
+            for sname, tl in sorted(by_rm.items(), key=lambda x: -len(x[1])):
+                if len(tl) >= 20:
+                    print_walk_forward(f"{sname} ({tf}, in adaptive+RM)", tl, _args.folds, _args.holdout_frac)
+
     # ── FASE 6: S17_CONVERGENCE_SCALP ─────────────────────────────────────────
     print("\n" + "="*72)
     print("FASE 6: S17_CONVERGENCE_SCALP V2 — EMA34/89 + StochRSI + BB%B + EMA50")
@@ -1414,7 +1577,7 @@ def main():
 
     # ── OUTPUT JSON ───────────────────────────────────────────────────────────
     output={
-        'generated_at':datetime.datetime.utcnow().isoformat(),
+        'generated_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'n_candles':len(candles),
         'indicators':['EMA20','EMA50','EMA100','EMA200','MACD','ADX+DI','RSI','StochRSI',
                        'BollingerBands','KeltnerChannels','Supertrend','Alligator',
@@ -1431,7 +1594,12 @@ def main():
                                                    for n,tl in by_rm.items()}} if rm_trades else {},
         'last_signals':adap[-50:],
         'config':{'tp':TP_USD,'sl':SL_USD,'max_trades':MAX_TRADES,'cooldown_h':COOLDOWN_H,
-                  'session_utc':[SESSION_S,SESSION_E],'extreme_mult':EXTREME_K}
+                  'session_utc':[SESSION_S,SESSION_E],'extreme_mult':EXTREME_K},
+        'cost_model':{'costs_on':COSTS_ON,'half_spread_usd':HALF_SPREAD_USD,
+                      'slip_entry_usd':SLIP_ENTRY_USD,'slip_sl_usd':SLIP_SL_USD,
+                      'commission_usd':COMMISSION_USD,'pessimistic_fill':PESSIMISTIC_FILL,
+                      'entry_next_open':ENTRY_NEXT_OPEN},
+        'walk_forward':{'adaptive':wf_adaptive,'adaptive_rm':wf_rm} if _args.walkforward else {},
     }
     with open(OUT_FILE,'w') as f:
         json.dump(output,f,indent=2,default=str)

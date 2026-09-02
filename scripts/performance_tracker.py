@@ -323,8 +323,19 @@ class PerformanceTracker:
         new_overrides = {}
         changes       = []
 
+        # I blocchi manuali (`type == "hard_block"`) sono STICKY: solo un edit umano o
+        # `reactivation_check.py` (advisory) li rimuove. Fix 2026-09-02: prima
+        # `auto_apply_adjustments()` li ricalcolava dal WR rolling della cache (che
+        # contiene ancora trade storici anche dopo il blocco) e li sbloccava da solo —
+        # es. dry-run del bot ha rimesso S00/S09/S18 a score_mult 1.0/0.7/0.5.
+        for sid, ov in self._overrides.items():
+            if ov.get("type") == "hard_block":
+                new_overrides[sid] = ov
+
         for s in suggestions:
             sid   = s["strategy_id"]
+            if sid in new_overrides and new_overrides[sid].get("type") == "hard_block":
+                continue  # blocco manuale preservato — non toccare
             mult  = s["score_mult"]
             prev  = self._overrides.get(sid, {}).get("score_mult", 1.0)
 

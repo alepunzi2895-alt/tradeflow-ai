@@ -639,6 +639,11 @@ def get_signal(I, i, hour, regime):
         return None, None
     if sname == 'S05_MFKK_INTRADAY':
         direction = fn(I, i, ai_score=current_ai_score)
+    elif sname == 'S16_GOLDEN_SQUEEZE':
+        # Fix 2026-09-02: passare `hour` (+ h1_trend proxy) — senza `hour` il filtro
+        # sessione interno 7-18 UTC era bypassato e S16 tradava 24/7 su H1 (bot 76 trade
+        # vs backtester 15 sulla stessa finestra live). Allinea il bot al backtester.
+        direction = fn(I, i, h1_trend=I['st'][i] if I.get('st') else None, hour=hour)
     else:
         direction = fn(I, i)
     return (sname, direction) if direction else (None, None)
@@ -1879,7 +1884,8 @@ def run():
                             if sel_tf == 'H1' and fn_sel:
                                 if sel_id == 'S16_GOLDEN_SQUEEZE':
                                     _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
-                                    direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t)
+                                    # Fix 2026-09-02: `hour` mancante → filtro sessione 7-18 UTC bypassato (vedi get_signal)
+                                    direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t, hour=hour)
                                 elif sel_id in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
                                     direction = fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], hour=hour)
                                 else:
@@ -2264,7 +2270,8 @@ def run():
 
                             if sname == 'S16_GOLDEN_SQUEEZE':
                                 _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
-                                direction = fn(I_m15, idx, h1_trend=curr_h1_trend, h4_trend=_h4t)
+                                # Fix 2026-09-02: `hour` mancante → filtro sessione 7-18 UTC bypassato (vedi get_signal)
+                                direction = fn(I_m15, idx, h1_trend=curr_h1_trend, h4_trend=_h4t, hour=bar_dt_m15.hour)
                             elif sname in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):
                                 direction = fn(I_m15, idx, h1_trend=curr_h1_trend, hour=bar_dt_m15.hour) if fn else None
                             else:
@@ -2417,7 +2424,8 @@ def run():
                                 if not fn: continue
 
                                 if sname == 'S16_GOLDEN_SQUEEZE':
-                                    direction = fn(I_m30, idx, h1_trend=curr_h1_trend, hour=bar_dt_m30.hour)
+                                    _h4t = cached_I_h4['st'][len(cached_candles_h4)-2] if cached_I_h4 and cached_candles_h4 else None
+                                    direction = fn(I_m30, idx, h1_trend=curr_h1_trend, h4_trend=_h4t, hour=bar_dt_m30.hour)
                                 elif sname == 'S00_MFKK':
                                     direction = fn(I_m30, idx, hour=bar_dt_m30.hour, tf='M30')
                                 elif sname in ('S05_MFKK_INTRADAY', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S17_CONVERGENCE_SCALP'):

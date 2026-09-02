@@ -1,0 +1,94 @@
+{
+  "strategy": "S16_GOLDEN_SQUEEZE",
+  "signal_fn": "signal_golden_squeeze",
+  "owner": "subagent B — sprint perf-stabile 2026-09",
+  "harness": "scripts/opt_harness.py  (evaluate, is_promotable — holdout PF primary)",
+  "data": "data/xauusd_h1_mt5.json (11774 H1 candles), M30 cross-check",
+  "baseline_ev": {
+    "params": "tf=H1, session 7-18 UTC, adx_gate 25, di_spread_min 8, candle_mult 0.35, obv_slope 3-bar, h4_filter=keep (EMA200-rising proxy for SELL), TP 3.5xATR / SL 2.0xATR",
+    "full":    {"n": 223, "wr": 36.8, "pf": 1.428, "pnl": 983.1, "dd": 581.8, "months_pos": "12/23"},
+    "folds":   [{"n":40,"pf":0.644},{"n":53,"pf":1.508},{"n":45,"pf":1.160},{"n":42,"pf":3.289}],
+    "pos_folds": 3,
+    "holdout":  {"n": 43, "wr": 27.9, "pf": 0.691, "pnl": -270.1, "dd": 581.8, "start": "2026-02-23"},
+    "live_window": {"n": 15, "wr": 13.3, "pf": 0.212, "pnl": -307.4},
+    "canonical_walkforward_adaptive_rm": {"folds_pf": [0.987, 1.934, 1.438, 2.940], "holdout_pf": 1.057, "holdout_pnl": 80.6, "holdout_dd": 773.7}
+  },
+  "callpath_table": {
+    "note": "Every S16 invocation. 'hour' missing => internal session filter `if hour is not None and not (7<=hour<18)` is dead => S16 trades 24/7.",
+    "backtester_strategy_engine_v2": [
+      {"fn": "run_one() ~L1015", "args": "fn(ind, i, h1_trend=ind['st'][i], hour=hour)", "hour": "YES", "h1_trend": "st proxy", "h4_trend": "NO -> EMA200-rising proxy", "session": "7-18 active"},
+      {"fn": "walk_forward_report() ~L1203", "args": "fn(ind,i,h1_trend=h1t_st,hour=hour)", "hour": "YES", "h4_trend": "NO -> proxy", "session": "7-18 active"},
+      {"fn": "run_adaptive_rm() ~L1334", "args": "fn(ind,i,h1_trend=h1t_st,hour=hour)", "hour": "YES", "h4_trend": "NO -> proxy", "session": "7-18 active"}
+    ],
+    "bot_mt5_bot_py_BEFORE_FIX": [
+      {"site": "get_signal() / PLAYBOOK ~L643", "args": "fn(I, i)", "hour": "NO (BUG)", "h1_trend": "NO -> st proxy", "h4_trend": "NO -> proxy", "session": "BYPASSED - 24/7", "reachability": "primary H1 when no selector or selector picks non-H1; PLAYBOOK TREND_UP/DOWN => S16/H1"},
+      {"site": "StrategySelector primary ~L1880", "args": "fn_sel(I_h1, i_h1, h1_trend=I_h1['st'][i_h1], h4_trend=_h4t)", "hour": "NO (BUG)", "h1_trend": "explicit H1 ST (==proxy value)", "h4_trend": "explicit H4 ST (DIFFERS from backtester proxy)", "session": "BYPASSED - 24/7", "reachability": "when selector picks S16 on H1 (TREND regime)"},
+      {"site": "H1 secondary loop ~L2037", "args": "fn2(I_h1, i_h1, h1_trend=..., h4_trend=_h4t, hour=hour)", "hour": "YES (already correct)", "session": "7-18 active", "reachability": "REGIME_MULTI_STRATEGIES TREND_UP/DOWN has S16/H1 as entry 0; fires if S16 not the primary"},
+      {"site": "M15 PLAYBOOK block ~L2265", "args": "fn(I_m15, idx, h1_trend=curr_h1_trend, h4_trend=_h4t)", "hour": "NO (BUG)", "session": "BYPASSED (only SESSION_FILTER block_hours 0-8 pre-check)", "reachability": "dead - no regime maps S16 to M15"},
+      {"site": "M30 secondary loop ~L2419", "args": "fn(I_m30, idx, h1_trend=curr_h1_trend, hour=bar_dt_m30.hour)", "hour": "YES", "h4_trend": "NO -> proxy", "session": "7-18 active + SESSION_FILTER 0-8", "reachability": "dead - S16 not in any M30 regime list"}
+    ],
+    "mismatch_summary": [
+      "PRIMARY DIVERGENCE: bot get_signal (L643) and StrategySelector (L1880) omit `hour` -> S16 session filter (7-18 UTC) inert on H1 -> bot trades S16 in Asia session; backtester never does.",
+      "SECONDARY DIVERGENCE: bot StrategySelector/M15/M30 pass explicit H4 Supertrend as h4_trend; backtester uses EMA200-rising-over-4-bars proxy. Both mean 'require H4 bullish for SELL' but are not identical bar-for-bar."
+    ]
+  },
+  "why_76_live_trades_vs_15_backtest": {
+    "backtester_live_window_hour_ON": 15,
+    "backtester_live_window_hour_OFF_H1": 23,
+    "backtester_live_window_hour_OFF_M30": 57,
+    "bot_actual": 76,
+    "decomposition": "Missing session filter explains ~15->23 on H1 (~+50%). The rest of the gap is architectural and outside signals.py: (a) the bot's RiskGuardian exits positions early (BE / trailing-stop / early-exit) and frees the per-strategy slot to re-enter, while run_one holds one position until TP or SL; (b) S16 is reachable from BOTH the primary path and the H1 secondary loop over different bars/regimes; (c) selector routing. Net: adding `hour` will cut S16 entries ~30-45% and is necessary for bot<->backtester parity, but will NOT by itself bring the bot down to 15 - the bulk of the over-trading is position-lifecycle churn.",
+    "is_the_76-trade_behaviour_profitable_on_holdout": "NO. hour=OFF on H1: holdout PF 0.486 (vs 0.691 with filter), DD ~2x, live PF 0.129. hour=OFF on M30: holdout PF 0.664. Both strictly worse than the 7-18 version. Consistent with live -$163 / PF 0.88."
+  },
+  "combos_tested": {
+    "session_window": {
+      "7-18 (baseline)": {"holdout_pf": 0.691, "holdout_pnl": -270.1, "full_pf": 1.428, "promotable": false},
+      "7-20":           {"holdout_pf": 0.619, "holdout_pnl": -366.3, "full_pf": 1.429, "promotable": false},
+      "7-22":           {"holdout_pf": 0.842, "holdout_pnl": -159.1, "full_pf": 1.475, "promotable": true, "robust": false, "reason": "adjacent 7-20 window is WORSE than baseline -> jagged, not a robust plateau"},
+      "8-17":           {"holdout_pf": 0.488, "holdout_pnl": -379.0, "full_pf": 1.346, "promotable": false},
+      "none":           {"holdout_pf": 0.486, "holdout_pnl": -933.2, "full_pf": 1.089, "promotable": false, "note": "= bot behaviour, clearly worst"}
+    },
+    "adx_gate": {
+      "22": {"holdout_pf": 0.616}, "24": {"holdout_pf": 0.555}, "25_base": {"holdout_pf": 0.691},
+      "26": {"holdout_pf": 0.595}, "27": {"holdout_pf": 1.334}, "28": {"holdout_pf": 1.334, "holdout_pnl": 281.1, "full_pf": 1.483, "promotable": true},
+      "29": {"holdout_pf": 0.536}, "30": {"holdout_pf": 1.335}, "32": {"holdout_pf": 0.414},
+      "verdict": "REJECT. 27/28/30 are isolated spikes (PF ~1.33) surrounded by collapsing cells 26 (0.60), 29 (0.54). holdout_n moves 41->41 between adx 26 and 27 while PF doubles => a single loser trade swapped for a winner at the threshold. Classic overfit artifact, fails robustness (adjacent cells must also beat baseline)."
+    },
+    "di_spread_min": {"6": {"holdout_pf": 0.691}, "8_base": {"holdout_pf": 0.691}, "10": {"holdout_pf": 0.597}, "verdict": "baseline best"},
+    "candle_mult": {"0.25": {"holdout_pf": 0.586}, "0.35_base": {"holdout_pf": 0.691}, "0.45": {"holdout_pf": 0.585}, "verdict": "baseline is the local optimum"},
+    "obv_slope_len": {"2": {"holdout_pf": 0.888, "pos_folds": 2}, "3_base": {"holdout_pf": 0.691, "pos_folds": 3}, "4": {"holdout_pf": 1.132, "pos_folds": 2}, "verdict": "REJECT - both variants fail folds_pos (need >=3, get 2); PF gain is thin-sample"},
+    "h4_countertrend_sell_filter": {"keep_base": {"holdout_pf": 0.691, "full_pf": 1.428}, "loosen": {"holdout_pf": 0.659, "full_pf": 1.044}, "drop": {"holdout_pf": 0.490, "full_pf": 0.986, "full_pnl": -65.1}, "verdict": "KEEP - dropping/loosening the H4 filter destroys the full-period edge (PF -> ~1.0) and worsens holdout. The H4-bullish-required-for-SELL rule is load-bearing."},
+    "tp_sl_grid_baseline_params": {
+      "note": "SL widening + TP tightening is the ONLY robust gradient found. Monotonic: at TP3.5, SL 1.5->1.75->2.0->2.25 => holdout PF 0.377->0.595->0.691->0.775. Plausible mechanism: wider SL survives the pessimistic intrabar-fill cost model.",
+      "TP3.0/SL2.0":  {"holdout_pf": 0.785, "holdout_pnl": -187.5, "full_pf": 1.561, "live_pf": 0.402, "promotable": true},
+      "TP3.0/SL2.25": {"holdout_pf": 0.883, "holdout_pnl": -115.0, "full_pf": 1.610, "live_pf": 0.536, "promotable": true, "pos_folds": 3},
+      "TP3.5/SL2.25": {"holdout_pf": 0.775, "holdout_pnl": -222.2, "full_pf": 1.466, "live_pf": 0.202, "promotable": true},
+      "TP4.0/SL2.25": {"holdout_pf": 0.729, "holdout_pnl": -266.7, "full_pf": 1.418, "promotable": true},
+      "TP3.5/SL2.0 (baseline)": {"holdout_pf": 0.691, "full_pf": 1.428}
+    },
+    "adx28_plus_tpsl": {
+      "TP3.0/SL2.25": {"holdout_pf": 1.323, "full_pf": 1.632, "live_pf": 0.425, "note": "best on paper but inherits adx28 non-robustness"}
+    }
+  },
+  "top5_combos_by_holdout_pf": [
+    {"rank": 1, "config": "adx_gate=28 (else baseline)", "holdout_pf": 1.334, "holdout_pnl": 281.1, "full_pf": 1.483, "live_pf": 0.231, "promotable_flag": true, "ROBUST": false, "note": "overfit artifact - adjacent adx 26/29 collapse to ~0.55"},
+    {"rank": 2, "config": "adx_gate=28 + TP3.0/SL2.25", "holdout_pf": 1.323, "holdout_pnl": 306.9, "full_pf": 1.632, "live_pf": 0.425, "promotable_flag": true, "ROBUST": false},
+    {"rank": 3, "config": "TP3.0/SL2.25 (baseline signal)", "holdout_pf": 0.883, "holdout_pnl": -115.0, "full_pf": 1.610, "live_pf": 0.536, "promotable_flag": true, "ROBUST": "gradient-robust but holdout PF still <1.0 (still losing); prior sprints (2026-07-16, 2026-07-17) found S16 TP 3.5->3.0 helped standalone but HURT run_adaptive_rm portfolio (P&L 8087->7766, DD worse)"},
+    {"rank": 4, "config": "session 7-22 (baseline signal)", "holdout_pf": 0.842, "holdout_pnl": -159.1, "full_pf": 1.475, "live_pf": 0.190, "promotable_flag": true, "ROBUST": false, "note": "7-20 sub-window is worse than baseline - jagged"},
+    {"rank": 5, "config": "TP3.0/SL2.0 (baseline signal)", "holdout_pf": 0.785, "holdout_pnl": -187.5, "full_pf": 1.561, "live_pf": 0.402, "promotable_flag": true, "ROBUST": "same caveat as rank 3"}
+  ],
+  "winner": null,
+  "verdict": "NO parameter change adopted. The only is_promotable configs are either single-trade overfit artifacts (adx_gate 27/28/30 - adjacent cells collapse) or repeat a TP/SL shift (3.5->3.0 TP, 2.0->2.25 SL) that two prior sprints already validated standalone and then rejected because it degraded the real adaptive-portfolio backtest (run_adaptive_rm). S16's genuine edge is 2024->mid-2025; on the holdout it is a marginal-losing strategy at every parameterization and only becomes marginally positive (canonical WF holdout PF 1.057) via regime-gating + RiskGuardian tier scaling, not via signal params. Keep baseline params.",
+  "reconciliation_recommendation": {
+    "decision": "Bot MUST pass `hour` at every S16 call site (restrict to 7-18 UTC, matching the backtester). Do NOT widen or remove the session filter - the no-filter holdout is strictly worse (PF 0.691 -> 0.486, DD ~2x).",
+    "code_fix_applied_in_this_worktree": [
+      "mt5-bot.py get_signal() ~L640: added `elif sname == 'S16_GOLDEN_SQUEEZE': direction = fn(I, i, h1_trend=I['st'][i] if I.get('st') else None, hour=hour)`",
+      "mt5-bot.py StrategySelector primary ~L1882: `fn_sel(..., h4_trend=_h4t)` -> added `hour=hour`",
+      "mt5-bot.py M15 block ~L2267: `fn(I_m15, idx, h1_trend=curr_h1_trend, h4_trend=_h4t)` -> added `hour=bar_dt_m15.hour`",
+      "mt5-bot.py M30 block ~L2420: added `h4_trend=_h4t` for consistency (already had hour)"
+    ],
+    "wiring_points_needing_same_hour_value": "The `hour` argument at each S16 site must be the UTC hour of the signal bar: H1 primary/selector => bar_dt.hour (already computed at ~L1868); H1 secondary => hour (same var); M15 => bar_dt_m15.hour; M30 => bar_dt_m30.hour. No shared constant - each loop derives it from its own bar timestamp.",
+    "residual_divergence_to_flag": "Bot passes explicit H4 Supertrend as h4_trend; backtester uses an EMA200-rising proxy. Both enforce 'H4 bullish required for SELL' but are not bar-identical. Options: (a) accept - the proxy is what all canonical backtests use and is slightly conservative; or (b) wire real H4 Supertrend into run_one/walk_forward_report/run_adaptive_rm. Recommend (a) for now, note for a future backtester pass.",
+    "expected_effect_of_the_fix": "S16 H1 entries drop ~30-45%. Standalone-harness holdout PF moves 0.486 (current bot behaviour) -> 0.691 (backtester parity). Live over-trading (76 -> ~40-50 expected) partly corrected; remaining excess is RiskGuardian early-exit re-entry churn, a separate investigation."
+  }
+}

@@ -7,16 +7,23 @@ Asset `US30Cash` (vedi `01_data_sources.md`). Harness dedicato, separato dal ros
 - `scripts/us30_harness.py` — backtest realistico (cost model US30: half-spread 1.0 pt, slip stop 2.5 pt, fill pessimistico, entry next-open) + walk-forward 4 fold + holdout 20%. Firma segnale `fn(candles, ind, i, dt)`. Riusa `compute_all`/`stats`/`walk_forward_report` da `strategy-engine-v2.py`.
 - `scripts/us30_strategies.py` — ipotesi v1: `orb_breakout` (opening-range breakout sessione USA), `bb_fade` (mean-reversion Bollinger fuori ore-trend), `session_momentum` (trend-follow Supertrend+ADX 14-21 UTC).
 
-**Risultato v1 (2026-09-03): nessuna promuovibile.**
+**v1 (2026-09-03)**: orb_breakout / bb_fade / session_momentum → nessuna promuovibile (holdout PF < 1 o campione n<10).
 
-| Strategia | TF | full PF | holdout PF | fold+ | Note |
+**v2 (2026-09-03) — CANDIDATA PROMOSSA: `S30_DOW_DIP`** (`dow_dip_d1` @ H4)
+
+Ragionamento "come Wall Street": l'edge azionario più duraturo è la **mean-reversion di un estremo di breve NELLA DIREZIONE del trend di fondo** (Connors RSI(2), "buy weakness in strength") — long-only, perché l'equity risk premium fa driftare gli indici al rialzo e lo short-mean-reversion non ha lo stesso edge.
+
+Setup (H4, long-only): RSI(2) < 15 · 2 chiusure H4 consecutive in calo · close > EMA50 **e** > EMA233 · EMA50 in salita su 20 barre · prezzo entro 8% dal max di 50 barre. Exit: **TP 1.2×ATR, SL 2.6×ATR, nessun trailing** (si aspetta lo snap-back).
+
+| | n | WR | PF | pnl (pt) | DD (pt) |
 |---|---|---|---|---|---|
-| orb_breakout | M15/M30 | 0.64 | 0.31–0.53 | 0/4 | false-break dominanti; SL 1.2×ATR troppo stretto per l'indice |
-| bb_fade | H1 | 1.68 | **0.57** | 4/4 | full promettente ma solo 49 trade/2y, holdout n=9 → non significativo |
-| bb_fade | M30 | 0.34 | 0.49 | 1/4 | — |
-| session_momentum | H1/M30 | 0.07–0.68 | 0.0–1.49 | 1/4 | filtri troppo stretti, 11–42 trade totali |
+| full (21 mesi) | 130 | 76.2% | **1.63** | +8037 | 1302 |
+| holdout (2026-04-23→) | 26 | 80.8% | **2.09** | +2653 | 1050 |
+| walk-forward | — | — | 1.27 / 1.96 / 1.17 / 1.86 | — | **4/4 fold positivi** |
 
-Prossimo: (a) EDA sistematica su US30 (autocorrelazione, opening range per giorno-settimana, reversion post-spike); (b) sweep parametri `bb_fade` H1 per alzare il campione mantenendo l'edge; (c) se niente regge sull'holdout → US30 non fa roster, come da lezione XAU 2026-09-02.
+Robusto allo sweep (rsi_buy 10-20 × down_closes 1-2 × TP/SL: PF full 1.45-1.64, holdout 1.3-2.4 su **ogni** combo → non è curve-fitting). Il guard di regime (EMA233 + slope + max_below_hi) fa **sedere fuori dal bear market** — zero trade da fine feb a fine apr 2025 (crollo a 36.6k). Worst month −775 pt (≈ −$77 @ 0.1 lot). Frequenza ~6 trade/mese.
+
+**Stato**: candidata, NON ancora nel bot. Percorso di integrazione da decidere (blocco isolato stile S20 su simbolo `US30Cash` vs istanza bot dedicata) + paper/small-size prima di scalare. Harness: `scripts/us30_harness.py --strategy dow_dip_d1`.
 
 ---
 

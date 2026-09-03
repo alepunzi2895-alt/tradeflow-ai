@@ -112,6 +112,101 @@ def session_momentum(candles, ind, i, dt, *, adx_min=22, sess=(14, 21)):
     return None
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# v2 — "come Wall Street": mean-reversion di un estremo di breve NELLA DIREZIONE
+# del trend di fondo. È l'edge azionario più documentato e duraturo (Connors
+# RSI(2), "buy weakness in strength"): gli indici sovra-reagiscono nel breve e
+# rimbalzano verso la media finché il trend primario regge. Non è fade cieco.
+# ═══════════════════════════════════════════════════════════════════════════════
+def _rsi_n(C, i, n):
+    """RSI di Wilder su n periodi calcolato al bar i (serve RSI(2)/RSI(3))."""
+    if i <= n:
+        return None
+    gains = 0.0; losses = 0.0
+    for k in range(i - n + 1, i + 1):
+        ch = C[k] - C[k - 1]
+        if ch >= 0: gains += ch
+        else:       losses -= ch
+    if losses == 0:
+        return 100.0
+    rs = (gains / n) / (losses / n)
+    return 100.0 - 100.0 / (1.0 + rs)
+
+
+def dow_dip(candles, ind, i, dt, *, rsi_len=3, rsi_buy=12,
+            max_stretch=4.0, look=20, sess=(13, 20)):
+    """H1/H4 — pullback di breve in un trend di fondo intatto. **LONG-ONLY**:
+    l'equity risk premium fa driftare gli indici al rialzo → il dip-buy in trend
+    ha edge, il rip-sell (short mean-reversion) no. close>EMA200 & EMA50>EMA200
+    & RSI(3)<12 & il calo dal massimo recente < 4×ATR (dip, non crollo).
+    Sessione USA per fill affidabili."""
+    if not (sess[0] <= _hour(candles[i]['t']) < sess[1]):
+        return None
+    C = ind['C']; e50 = ind['e50'][i]; e200 = ind['e200'][i]; av = ind['atr'][i]
+    if None in (e50, e200, av) or not av:
+        return None
+    r = _rsi_n(C, i, rsi_len)
+    if r is None:
+        return None
+    c = C[i]
+    hi = max(C[max(i - look, 0):i + 1])
+    if c > e200 and e50 > e200 and r < rsi_buy and (hi - c) < max_stretch * av:
+        return 'buy'
+    return None
+
+
+def dow_dip_d1(candles, ind, i, dt, *, rsi_len=2, rsi_buy=15, down_closes=2,
+               regime_slope=20, max_below_hi=0.08):
+    """**S30_DOW_DIP** — mean-reversion azionaria classica (Connors RSI(2)),
+    **LONG-ONLY**, su H4. È l'edge indici più duraturo: "compra la debolezza
+    nella forza". Setup:
+      • RSI(2) < 15  (flusso di vendita di 1-2 giorni)
+      • `down_closes` chiusure H4 consecutive in calo
+      • close > EMA50  E  close > EMA233  (trend di fondo intatto su ~1 sett e ~5 sett)
+      • EMA50 in salita sulle ultime 20 barre  (trend primario vivo)
+      • prezzo entro l'8% dal massimo di 50 barre  (è un dip, non un bear market)
+    Exit (gestito dall'harness / bot): TP 1.2×ATR (snap-back veloce), SL 2.6×ATR
+    (largo — le entry mean-rev peggiorano prima di migliorare), NESSUN trailing.
+    Il guard di regime EMA233+slope è ciò che evita di prendere coltelli nei
+    ribassi veri (fold 1 da PF 0.62 → 1.27)."""
+    C = ind['C']; e50 = ind['e50']; e233 = ind['e233']
+    if i < 60 or None in (e50[i], e50[i - regime_slope], e233[i]):
+        return None
+    r = _rsi_n(C, i, rsi_len)
+    if r is None:
+        return None
+    seq_down = all(C[i - k] < C[i - k - 1] for k in range(down_closes))
+    hi50 = max(C[i - 50:i + 1])
+    regime_ok = (C[i] > e233[i] and e50[i] > e50[i - regime_slope]
+                 and (hi50 - C[i]) / hi50 < max_below_hi)
+    if C[i] > e50[i] and r < rsi_buy and seq_down and regime_ok:
+        return 'buy'
+    return None
+
+
+def vwap_reclaim(candles, ind, i, dt, *, sess=(13, 18), adx_min=14):
+    """M30 — difesa del VWAP nella sessione USA: il prezzo era sotto VWAP nelle
+       ultime barre e ci richiude sopra, con EMA200 in salita → i compratori
+       istituzionali difendono il prezzo medio ponderato. Speculare short."""
+    if not (sess[0] <= _hour(candles[i]['t']) < sess[1]):
+        return None
+    vw = ind['vwap']; C = ind['C']; e200 = ind['e200']; a = ind['adx'][i]
+    if i < 12 or a is None or a < adx_min:
+        return None
+    v_i, v_p = vw[i], vw[i - 1]
+    if None in (v_i, v_p, e200[i], e200[i - 10]):
+        return None
+    below_recent = any(C[k] < vw[k] for k in range(i - 3, i) if vw[k] is not None)
+    slope_up   = e200[i] > e200[i - 10]
+    slope_down = e200[i] < e200[i - 10]
+    if C[i] > v_i and C[i - 1] <= v_p and below_recent and slope_up:
+        return 'buy'
+    above_recent = any(C[k] > vw[k] for k in range(i - 3, i) if vw[k] is not None)
+    if C[i] < v_i and C[i - 1] >= v_p and above_recent and slope_down:
+        return 'sell'
+    return None
+
+
 # ── registro per l'harness ───────────────────────────────────────────────────
 REGISTRY = [
     {'name': 'orb_breakout',     'fn': orb_breakout,
@@ -123,4 +218,16 @@ REGISTRY = [
     {'name': 'session_momentum', 'fn': session_momentum,
      'tfs': ['H1', 'M30'],
      'params': dict(tp_mult=2.8, sl_mult=1.6, session=(14, 21), max_trades_day=2, cooldown_bars=2)},
+    # v2 — Wall Street mean-reversion (long-only, no trailing: si aspetta lo snap-back)
+    {'name': 'dow_dip',          'fn': dow_dip,
+     'tfs': ['H1', 'H4'],
+     'params': dict(tp_mult=1.3, sl_mult=2.6, session=(13, 20), max_trades_day=1,
+                    cooldown_bars=6, be_trail=False)},
+    {'name': 'dow_dip_d1',       'fn': dow_dip_d1,     # ← candidata roster (S30_DOW_DIP)
+     'tfs': ['H4'],
+     'params': dict(tp_mult=1.2, sl_mult=2.6, session=(0, 24), max_trades_day=1,
+                    cooldown_bars=1, be_trail=False)},
+    {'name': 'vwap_reclaim',     'fn': vwap_reclaim,
+     'tfs': ['M30', 'H1'],
+     'params': dict(tp_mult=2.2, sl_mult=1.6, session=(13, 18), max_trades_day=2, cooldown_bars=3)},
 ]

@@ -133,10 +133,11 @@ valutare di reintrodurre un cooldown per-strategia dedicato invece del globale c
 ## Reactivation Check — ri-test mensile strategie bloccate (2026-09-01 →)
 
 `scripts/reactivation_check.py` ri-testa a backtest (non a trade live — vedi motivazione in
-`07_self_learning_log.md` 2026-09-01) le strategie con `score_mult=0.0` in
-`data/strategy_overrides.json` (attualmente S00_MFKK, S09_MFKK_SCALPING, S18_RANGE_REVERSAL) e
+`07_self_learning_log.md` 2026-09-01) le strategie elencate in `data/hard_blocks.json`
+(attualmente S00_MFKK, S09_MFKK_SCALPING, S18_RANGE_REVERSAL) e
 segnala se WR/PF sono tornati sopra soglia (WR ratio≥70% baseline **e** PF≥1.2). **Advisory-only**
-— non riattiva mai nulla da solo, appende una riga a `07_self_learning_log.md`.
+— non riattiva mai nulla da solo, appende una riga a `07_self_learning_log.md`. Per sbloccare
+davvero: rimuovere a mano la entry da `data/hard_blocks.json`, committare, pull + restart bot su VPS.
 
 ```bash
 python scripts/reactivation_check.py                # fetch + backtest + check

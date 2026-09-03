@@ -6,3 +6,12 @@ data/xauusd_*.json
 __pycache__/
 *.pyc
 .env*
+
+# Stato runtime del bot — riscritto a ogni ciclo dal processo live sulla VPS.
+# Git-tracked in passato → working tree VPS sempre dirty → git pull in conflitto
+# e hard-block non aggiornati (vedi directives/07_self_learning_log.md 2026-09-03).
+# Il blocco strategie sta ora in data/hard_blocks.json (tracked, human-only).
+data/strategy_overrides.json
+data/performance_cache.json
+data/ai_score_history.json
+daily_report_*.txt

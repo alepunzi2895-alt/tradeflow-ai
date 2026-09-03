@@ -208,18 +208,43 @@ def _load_score_overrides() -> dict:
         return {}
 
 
-def is_hard_blocked(strategy_id: str) -> bool:
-    """True se il PerformanceTracker (self-learning) ha impostato score_mult=0.0
-    per questa strategia in data/strategy_overrides.json (hard block).
+def _load_hard_blocks() -> set:
+    """Legge data/hard_blocks.json → set di strategy_id disabilitati a livello di
+    esecuzione live. File git-tracked, editabile solo a mano o da reactivation_check.py,
+    MAI toccato da PerformanceTracker (a differenza di strategy_overrides.json, che il
+    bot riscrive a runtime — vedi 07_self_learning_log.md 2026-09-03). Silent on error."""
+    try:
+        _base = os.path.dirname(os.path.abspath(__file__))
+        path  = os.path.join(_base, '..', 'data', 'hard_blocks.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        blocked = raw.get("blocked", raw) if isinstance(raw, dict) else raw
+        if isinstance(blocked, dict):
+            return set(blocked.keys())
+        if isinstance(blocked, (list, set, tuple)):
+            return set(blocked)
+        return set()
+    except Exception:
+        return set()
 
-    Legge il file ad ogni chiamata (nessun caching) così un blocco applicato
+
+def is_hard_blocked(strategy_id: str) -> bool:
+    """True se la strategia è disabilitata a livello di esecuzione live.
+
+    Fonte primaria: data/hard_blocks.json (git-tracked, human-only).
+    Fallback legacy: score_mult=0.0 in data/strategy_overrides.json (compat con
+    blocchi vecchi non ancora migrati).
+
+    Legge i file ad ogni chiamata (nessun caching) così un blocco applicato
     mentre il bot gira ha effetto dalla candela successiva.
 
     Usato sia da StrategySelector._score_strategy() (score forzato a 0) sia,
     direttamente, dai playbook statici di mt5-bot.py (REGIME_MULTI_STRATEGIES,
-    PLAYBOOK) che non passano da StrategySelector — 2026-09-01: prima di questo
-    fix quei percorsi ignoravano completamente gli override (vedi
-    07_self_learning_log.md 2026-09-01)."""
+    PLAYBOOK) che non passano da StrategySelector — 2026-09-01: prima di quel
+    fix quei percorsi ignoravano completamente gli override; 2026-09-03: il
+    blocco è stato spostato da strategy_overrides.json (churny) a hard_blocks.json."""
+    if strategy_id in _load_hard_blocks():
+        return True
     return _load_score_overrides().get(strategy_id, 1.0) == 0.0
 
 
@@ -268,8 +293,8 @@ def _score_strategy(strategy: dict, regime: dict, session: str,
     # ── Performance Tracker override (self-learning) ──────────────────────────
     overrides = _load_score_overrides()
     score_mult = overrides.get(strategy["id"], 1.0)
-    if score_mult == 0.0:
-        # Hard block: strategia bloccata dal PerformanceTracker → score 0, non viene selezionata
+    if score_mult == 0.0 or is_hard_blocked(strategy["id"]):
+        # Hard block (data/hard_blocks.json o score_mult=0.0) → score 0, non viene selezionata
         score = 0.0
     else:
         score *= score_mult

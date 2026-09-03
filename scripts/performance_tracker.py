@@ -48,11 +48,31 @@ MAX_CACHE_TRADES    = 500   # massimo trade in cache locale
 
 COMMENT_PREFIX = "TF-AI "  # prefisso commento ordini (vedi place_order in mt5-bot.py)
 
-_BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
-_DATA_DIR      = os.path.join(_BASE_DIR, '..', 'data')
-CACHE_PATH     = os.path.join(_DATA_DIR, 'performance_cache.json')
-OVERRIDES_PATH = os.path.join(_DATA_DIR, 'strategy_overrides.json')
-LOG_PATH       = os.path.join(_BASE_DIR, '..', 'directives', '07_self_learning_log.md')
+_BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
+_DATA_DIR       = os.path.join(_BASE_DIR, '..', 'data')
+CACHE_PATH      = os.path.join(_DATA_DIR, 'performance_cache.json')
+OVERRIDES_PATH  = os.path.join(_DATA_DIR, 'strategy_overrides.json')
+HARD_BLOCKS_PATH = os.path.join(_DATA_DIR, 'hard_blocks.json')
+LOG_PATH        = os.path.join(_BASE_DIR, '..', 'directives', '07_self_learning_log.md')
+
+
+def _load_hard_blocks() -> dict:
+    """data/hard_blocks.json → {strategy_id: {since, reason}}. File git-tracked,
+    editabile solo a mano / da reactivation_check.py. Il PerformanceTracker lo
+    LEGGE ma non lo scrive mai — è la fonte di verità del blocco esecuzione live,
+    disaccoppiata da strategy_overrides.json (che questo modulo riscrive a runtime).
+    Vedi 07_self_learning_log.md 2026-09-03."""
+    try:
+        with open(HARD_BLOCKS_PATH, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        blocked = raw.get("blocked", {}) if isinstance(raw, dict) else {}
+        if isinstance(blocked, dict):
+            return blocked
+        if isinstance(blocked, list):
+            return {sid: {} for sid in blocked}
+        return {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -96,9 +116,10 @@ class PerformanceTracker:
     """
 
     def __init__(self, magic: int = 20250413):
-        self.magic      = magic
-        self._cache     = self._load_cache()
-        self._overrides = self._load_overrides()
+        self.magic       = magic
+        self._cache      = self._load_cache()
+        self._overrides  = self._load_overrides()
+        self._hard_blocks = _load_hard_blocks()
 
     # ── I/O ───────────────────────────────────────────────────────────────────
 
@@ -268,6 +289,8 @@ class PerformanceTracker:
         suggestions = []
 
         for sid, s in stats.items():
+            if sid in self._hard_blocks:
+                continue  # blocco esecuzione live (data/hard_blocks.json) — non ri-valutare qui
             if s["n"] < MIN_TRADES_ADJUST:
                 continue
 
@@ -323,19 +346,29 @@ class PerformanceTracker:
         new_overrides = {}
         changes       = []
 
-        # I blocchi manuali (`type == "hard_block"`) sono STICKY: solo un edit umano o
-        # `reactivation_check.py` (advisory) li rimuove. Fix 2026-09-02: prima
-        # `auto_apply_adjustments()` li ricalcolava dal WR rolling della cache (che
-        # contiene ancora trade storici anche dopo il blocco) e li sbloccava da solo —
-        # es. dry-run del bot ha rimesso S00/S09/S18 a score_mult 1.0/0.7/0.5.
+        # I blocchi di esecuzione live sono STICKY: la fonte di verità è
+        # data/hard_blocks.json (git-tracked, human-only), che questo modulo NON
+        # scrive mai. Fix 2026-09-03: prima il blocco viveva solo in
+        # strategy_overrides.json (che qui viene riscritto) e (a) un dry-run poteva
+        # ribaltarlo a type:"normal", (b) sulla VPS il file dirty impediva a git pull
+        # di ripristinarlo. Ora ogni sid in hard_blocks.json è forzato a score_mult 0.0
+        # a prescindere dallo stato precedente del file. Compat: si preservano anche le
+        # vecchie entry type=="hard_block" non ancora migrate.
+        for sid, meta in self._hard_blocks.items():
+            new_overrides[sid] = {
+                "score_mult": 0.0,
+                "type":       "hard_block",
+                "reason":     meta.get("reason", "hard_blocks.json"),
+                "updated_at": datetime.datetime.utcnow().isoformat(),
+            }
         for sid, ov in self._overrides.items():
-            if ov.get("type") == "hard_block":
+            if ov.get("type") == "hard_block" and sid not in new_overrides:
                 new_overrides[sid] = ov
 
         for s in suggestions:
             sid   = s["strategy_id"]
             if sid in new_overrides and new_overrides[sid].get("type") == "hard_block":
-                continue  # blocco manuale preservato — non toccare
+                continue  # blocco preservato — non toccare
             mult  = s["score_mult"]
             prev  = self._overrides.get(sid, {}).get("score_mult", 1.0)
 

@@ -1,9 +1,9 @@
 """
 TradeFlow AI — Reactivation Check (mensile)
 ═══════════════════════════════════════════════════════════════════
-Verifica se le strategie hard-bloccate (score_mult=0.0 in
-data/strategy_overrides.json) hanno recuperato un edge sufficiente nel
-backtest per essere ricandidate all'attivazione.
+Verifica se le strategie hard-bloccate (elencate in data/hard_blocks.json;
+compat: score_mult=0.0 in data/strategy_overrides.json) hanno recuperato un
+edge sufficiente nel backtest per essere ricandidate all'attivazione.
 
 Perché serve un check separato, a backtest, e non basta il self-learning
 già presente in performance_tracker.py: quel meccanismo ricalcola
@@ -16,7 +16,7 @@ il regime di mercato tornasse favorevole. Questo script chiude il loop:
 ri-testa via BACKTEST (non serve storico live) ogni strategia bloccata sul
 suo TF canonico e segnala se è tornata sopra soglia.
 
-Advisory-only: non modifica MAI data/strategy_overrides.json. Logga solo
+Advisory-only: non modifica MAI data/hard_blocks.json. Logga solo
 un suggerimento in directives/07_self_learning_log.md — la riattivazione
 resta una decisione umana (comporta rischio di capitale reale).
 
@@ -45,7 +45,8 @@ _DATA_DIR   = os.path.join(_ROOT_DIR, 'data')
 _DIR_DIR    = os.path.join(_ROOT_DIR, 'directives')
 _BT_DIR     = os.path.join(_ROOT_DIR, 'backtests', 'results')
 
-OVERRIDES_PATH = os.path.join(_DATA_DIR, 'strategy_overrides.json')
+OVERRIDES_PATH   = os.path.join(_DATA_DIR, 'strategy_overrides.json')
+HARD_BLOCKS_PATH = os.path.join(_DATA_DIR, 'hard_blocks.json')
 
 # S18_RANGE_REVERSAL bloccata 2026-09-01, non ancora presente nelle tabelle di
 # daily_maintenance.py (aggiunte qui via merge invece di duplicare il modulo).
@@ -62,16 +63,38 @@ REACTIVATION_MIN_PF   = 1.2
 
 
 def load_blocked_strategies() -> dict:
-    """{strategy_id: override_dict} per le strategie con score_mult=0.0."""
-    if not os.path.exists(OVERRIDES_PATH):
-        return {}
+    """{strategy_id: {updated_at, reason, ...}} per le strategie disabilitate live.
+
+    Fonte primaria: data/hard_blocks.json (git-tracked, human-only — 2026-09-03).
+    Fallback legacy: entry score_mult=0.0 in strategy_overrides.json non ancora migrate.
+    """
+    blocked = {}
+
     try:
-        with open(OVERRIDES_PATH, 'r', encoding='utf-8') as f:
-            raw = json.load(f)
+        with open(HARD_BLOCKS_PATH, 'r', encoding='utf-8') as f:
+            hb = json.load(f)
+        for sid, meta in (hb.get('blocked', {}) or {}).items():
+            meta = meta if isinstance(meta, dict) else {}
+            blocked[sid] = {
+                'updated_at': meta.get('since', '?'),
+                'reason':     meta.get('reason', 'hard_blocks.json'),
+            }
+    except FileNotFoundError:
+        pass
     except Exception as e:
-        print(f"[reactivation] errore lettura {OVERRIDES_PATH}: {e}")
-        return {}
-    return {sid: v for sid, v in raw.items() if v.get('score_mult', 1.0) == 0.0}
+        print(f"[reactivation] errore lettura {HARD_BLOCKS_PATH}: {e}")
+
+    if os.path.exists(OVERRIDES_PATH):
+        try:
+            with open(OVERRIDES_PATH, 'r', encoding='utf-8') as f:
+                raw = json.load(f)
+            for sid, v in raw.items():
+                if v.get('score_mult', 1.0) == 0.0 and sid not in blocked:
+                    blocked[sid] = v
+        except Exception as e:
+            print(f"[reactivation] errore lettura {OVERRIDES_PATH}: {e}")
+
+    return blocked
 
 
 def check(skip_fetch: bool, dry_run: bool) -> list:
@@ -157,7 +180,7 @@ def append_report(results: list, dry_run: bool):
         bug = (
             f"**Reactivation Check mensile — {len(candidates)} strategia/e candidata/e alla riattivazione**: {detail}. "
             f"Bloccate dal self-learning il {candidates[0]['blocked_since']} per: {candidates[0]['blocked_reason']}. "
-            f"**Advisory-only, nessuna modifica automatica a strategy_overrides.json** — richiede revisione umana prima di sbloccare."
+            f"**Advisory-only, nessuna modifica automatica a data/hard_blocks.json** — richiede revisione umana prima di sbloccare."
         )
     else:
         checked = ', '.join(f"{r['strategy_id']}@{r['tf']}" for r in results)

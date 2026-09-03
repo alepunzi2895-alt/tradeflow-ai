@@ -172,7 +172,7 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 > Holdout PF adattivo+RM: **H1 0.95→1.16**, **M30 1.04→1.19**, **H4 1.23** (invariato, solo cleanup, full PF 1.60→1.62).
 > Full DD ~dimezzato su H1 (5018→2100) e ridotto su M30. Dettaglio: `backtests/results/opt_s20_portfolio_2026-09-02.json`.
 > NB pesatura TF: **H4 > M30 > H1** — H4 tiene l'edge residuo maggiore (S17@H4 holdout PF 2.09, singolo miglior contributo del portfolio); H1 regge solo grazie a S16.
-> NB self-learning: `S00_MFKK` / `S09_MFKK_SCALPING` / `S18_RANGE_REVERSAL` sono già hard-block in `data/strategy_overrides.json` — il backtester non legge quegli override, quindi i suoi numeri "grezzi" sono più pessimisti del comportamento live.
+> NB self-learning: `S00_MFKK` / `S09_MFKK_SCALPING` / `S18_RANGE_REVERSAL` sono hard-block in `data/hard_blocks.json` — il backtester non legge quel file, quindi i suoi numeri "grezzi" sono più pessimisti del comportamento live.
 
 ### H1 (REGIME_PRIORITY_H1)
 - **TREND_UP / WEAK_UP**: S16 → S00
@@ -228,9 +228,13 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 ### Flusso
 
 1. `tracker.update_from_mt5(mt5)` — accoppia entry+exit per `position_id`, aggiunge nuovi trade a `data/performance_cache.json`
-2. `tracker.auto_apply_adjustments()` — confronta WR recente vs baseline backtest, scrive `data/strategy_overrides.json`
+2. `tracker.auto_apply_adjustments()` — confronta WR recente vs baseline backtest, scrive `data/strategy_overrides.json`. Le strategie in `data/hard_blocks.json` sono forzate a `score_mult 0.0` e mai ri-valutate qui.
 3. `tracker.get_recent_wr_map()` → `{strategy_id: wr}` passato a `StrategySelector.select(recent_wr_map=...)`
-4. In `_score_strategy()`: punteggio finale moltiplicato per `score_mult` da overrides
+4. In `_score_strategy()`: punteggio finale moltiplicato per `score_mult` da overrides; `is_hard_blocked()` (che legge `hard_blocks.json`) forza score 0
+
+### Hard-block esecuzione live (`data/hard_blocks.json`) — 2026-09-03
+
+Fonte di verità del "questa strategia non deve tradare live": **file git-tracked, editabile solo a mano o da `reactivation_check.py`**, MAI scritto dal bot. Letto da `strategy_selector.is_hard_blocked()`, primo check di `mt5-bot.quality_gate()` (comune a tutti i 6 loop di ingresso). Prima viveva in `strategy_overrides.json`, che però il bot riscrive a runtime ed è (era) git-tracked → sulla VPS working tree dirty → `git pull` non aggiornava il blocco e S00/S09/S18 continuavano a tradare (vedi `07_self_learning_log.md` 2026-09-03). `strategy_overrides.json` / `performance_cache.json` / `ai_score_history.json` sono ora **gitignored** (stato runtime locale VPS).
 
 ### Regole di aggiustamento (richiede ≥ 10 trade recenti)
 
@@ -253,7 +257,7 @@ Legge lo storico deals MT5 ogni barra H1, raggruppa per strategia (dal commento 
 | S17_CONVERGENCE_SCALP | 34.0% | 1.75 | H4 adattivo | 103 |
 
 > Ogni cambiamento significativo (|Δmult| ≥ 0.15) viene automaticamente loggato in `07_self_learning_log.md`.
-> Cache trade: `data/performance_cache.json` (max 500 trade). Overrides: `data/strategy_overrides.json`.
+> Cache trade: `data/performance_cache.json` (max 500 trade, **gitignored**). Overrides soft: `data/strategy_overrides.json` (**gitignored**, riscritto dal bot). Hard-block: `data/hard_blocks.json` (**git-tracked, human-only**).
 
 ---
 

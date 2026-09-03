@@ -1,0 +1,17 @@
+{
+  "_comment": "Strategie disabilitate a livello di ESECUZIONE LIVE. File git-tracked, editabile SOLO a mano o da scripts/reactivation_check.py. Letto da strategy_selector.is_hard_blocked() (primo check in mt5-bot.quality_gate). NON viene mai toccato da PerformanceTracker. Motivazione: prima del 2026-09-03 il blocco viveva in data/strategy_overrides.json, che il bot riscrive a runtime ed è git-tracked -> sulla VPS il working tree restava dirty e git pull non aggiornava il file, quindi S00/S09/S18 continuavano a tradare. Vedi directives/06_known_issues.md e 07_self_learning_log.md 2026-09-03.",
+  "blocked": {
+    "S00_MFKK": {
+      "since": "2026-07-16",
+      "reason": "WR live 13.3% vs baseline 49.4%. V2 confermata morta dallo sprint 2026-09-02 (holdout PF 0.47, 0/4 fold). V3 candidata paper-test in backtests/results/opt_s00_2026-09-02.json."
+    },
+    "S09_MFKK_SCALPING": {
+      "since": "2026-07-16",
+      "reason": "WR live 11.8% vs baseline 36.0%, PF live 0.10. Sprint 2026-09-02: nessuna config con full PF > ~0.75."
+    },
+    "S18_RANGE_REVERSAL": {
+      "since": "2026-09-01",
+      "reason": "WR live 14.3% (6 SL su 7 trade), PF 0.07. Ri-test 2026-09-01 negativo su ogni finestra (M30 standalone PF 0.63, H4 PF 0.20)."
+    }
+  }
+}

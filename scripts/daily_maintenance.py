@@ -485,20 +485,20 @@ def _grep_signal_source(strategy_id: str) -> str:
 
 def _grep_self_learning_log(strategy_id: str, max_lines: int = 8) -> list:
     """
-    Righe della tabella di 07_self_learning_log.md che contengono strategy_id.
-    Il file NON è in ordine cronologico stretto (le insert avvengono subito dopo
-    l'header, non in coda) — ordina per la prima colonna (data ISO) discendente
-    prima di troncare, invece di assumere "ultime righe del file" = "più recenti".
+    Righe della tabella dei self-learning log (curato a mano + sidecar auto)
+    che contengono strategy_id. I file NON sono in ordine cronologico stretto
+    (le insert avvengono subito dopo l'header) — ordina per data ISO discendente.
     """
-    log_path = os.path.join(_DIR_DIR, '07_self_learning_log.md')
-    if not os.path.exists(log_path):
-        return []
-    try:
-        with open(log_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-    except Exception as e:
-        log.warning(f"[ai-review] errore lettura self_learning_log: {e}")
-        return []
+    lines = []
+    for fname in ('07_self_learning_log.md', '07_self_learning_auto.md'):
+        p = os.path.join(_DIR_DIR, fname)
+        if not os.path.exists(p):
+            continue
+        try:
+            with open(p, 'r', encoding='utf-8') as f:
+                lines += f.readlines()
+        except Exception as e:
+            log.warning(f"[ai-review] errore lettura {fname}: {e}")
 
     matches = []
     for line in lines:
@@ -815,7 +815,12 @@ def append_to_self_learning_log(findings: list, dry_run: bool):
     if not significant:
         return
 
-    log_path = os.path.join(_DIR_DIR, '07_self_learning_log.md')
+    log_path = os.path.join(_DIR_DIR, '07_self_learning_auto.md')  # sidecar gitignored
+    try:
+        from performance_tracker import _ensure_auto_log
+        _ensure_auto_log(log_path)
+    except Exception:
+        pass
     today    = datetime.date.today().isoformat()
     rows     = []
     for f in significant:
@@ -832,9 +837,9 @@ def append_to_self_learning_log(findings: list, dry_run: bool):
         content = content.replace(marker, marker + '\n' + '\n'.join(rows), 1)
         with open(log_path, 'w', encoding='utf-8') as fl:
             fl.write(content)
-        log.info(f"[log] {len(rows)} righe aggiunte a 07_self_learning_log.md")
+        log.info(f"[log] {len(rows)} righe aggiunte a 07_self_learning_auto.md")
     except Exception as e:
-        log.warning(f"[log] errore scrittura self_learning_log: {e}")
+        log.warning(f"[log] errore scrittura self_learning_auto: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

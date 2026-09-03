@@ -15,4 +15,8 @@ __pycache__/
 data/strategy_overrides.json
 data/performance_cache.json
 data/ai_score_history.json
+data/news_calendar_cache.json
+data/*_live_state.json
+data/s20_paper_trades.json
 daily_report_*.txt
+directives/07_self_learning_auto.md

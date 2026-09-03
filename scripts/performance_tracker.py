@@ -54,7 +54,28 @@ _DATA_DIR       = os.path.join(_BASE_DIR, '..', 'data')
 CACHE_PATH      = os.path.join(_DATA_DIR, 'performance_cache.json')
 OVERRIDES_PATH  = os.path.join(_DATA_DIR, 'strategy_overrides.json')
 HARD_BLOCKS_PATH = os.path.join(_DATA_DIR, 'hard_blocks.json')
-LOG_PATH        = os.path.join(_BASE_DIR, '..', 'directives', '07_self_learning_log.md')
+# Le append automatiche vanno nel sidecar gitignored (07_self_learning_auto.md),
+# non nel log curato a mano — vedi 07_self_learning_log.md 2026-09-03.
+LOG_PATH        = os.path.join(_BASE_DIR, '..', 'directives', '07_self_learning_auto.md')
+
+_AUTO_LOG_HEADER = (
+    "# TradeFlow AI — Self-Learning Log (auto-append)\n\n"
+    "> File gitignored, VPS-local. Righe appese automaticamente da performance_tracker.py,\n"
+    "> reactivation_check.py e daily_maintenance.py. Separato dal log curato a mano\n"
+    "> (07_self_learning_log.md) per non bloccare `git pull` sulla VPS.\n\n"
+    "| Data | Evento | Tipo | Note |\n|---|---|---|---|\n"
+)
+
+
+def _ensure_auto_log(path=LOG_PATH):
+    """Crea il sidecar con l'header se non esiste (è gitignored → assente su fresh clone)."""
+    if not os.path.exists(path):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(_AUTO_LOG_HEADER)
+        except Exception:
+            pass
 
 
 def _load_hard_blocks() -> dict:
@@ -404,8 +425,9 @@ class PerformanceTracker:
         return changes
 
     def _log_changes_to_directive(self, changes: list):
-        """Appende righe di cambiamento significativo in 07_self_learning_log.md."""
+        """Appende righe di cambiamento significativo nel sidecar auto (gitignored)."""
         try:
+            _ensure_auto_log(LOG_PATH)
             today = datetime.date.today().isoformat()
             rows  = []
             for c in changes:

@@ -1,5 +1,12 @@
 # TradeFlow AI — Data Sources & Critical Rules
 
+## Asset
+
+- **XAU/USD** (`GOLD` su MT5 XM) — asset primario, tutto il sistema live.
+- **US30** (`US30Cash` su MT5 XM — "Wall Street 30 Index Cash", digits 2, contract 1.0, vol_min/step 0.1) — **in fase di ricerca strategia dal 2026-09-03**. Solo dati storici per ora; nessun flusso live né bot.
+  - Storico: `python scripts/fetch_mt5_history.py --asset us30 --all-tf` → `data/us30_{tf}_mt5.json` (M15/M30/H1/H4/D1 = 2 anni pieni; M5 cap a 99999 bar ≈ 17 mesi). File **gitignored** (rigenerabili con MT5).
+  - Spread US30Cash: ~1.5-3 pt in RTH, ~6 pt a mercato chiuso/weekend (vs XAU ~0.30).
+
 ## Fonte Dati Prezzi
 
 - **Primaria**: TradingView Scanner (`scanner.tradingview.com/global/scan`)

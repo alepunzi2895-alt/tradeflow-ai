@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """
-TradeFlow AI — Fetch storico H1 GOLD da MetaTrader 5
-Salva i dati in xauusd_h1_mt5.json (stesso formato usato dal backtester).
+TradeFlow AI — Fetch storico candele da MetaTrader 5 (multi-asset, multi-TF)
+Salva i dati in data/{asset}_{tf}_mt5.json (stesso formato usato dal backtester).
 
 USO:
-  python scripts/fetch_mt5_history.py              # 730 giorni (default)
-  python scripts/fetch_mt5_history.py --days 365   # 1 anno
-  python scripts/fetch_mt5_history.py --out custom.json
+  python scripts/fetch_mt5_history.py                       # XAU H1, 730 giorni (default)
+  python scripts/fetch_mt5_history.py --tf M30              # XAU M30
+  python scripts/fetch_mt5_history.py --asset us30 --tf H1  # US30 H1
+  python scripts/fetch_mt5_history.py --asset us30 --all-tf # US30, tutti i TF M5..D1
+  python scripts/fetch_mt5_history.py --days 365 --out custom.json
+
+ASSET:
+  xau  → xauusd_{tf}_mt5.json  (simboli: GOLD / XAUUSD / ...)
+  us30 → us30_{tf}_mt5.json    (simboli: US30Cash / US30 / DJ30 / ...)
 
 PREREQUISITI:
   pip install MetaTrader5
@@ -23,20 +29,33 @@ MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
 MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
 MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 
-SYMBOL_CANDIDATES = ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"]
+# Candidati simbolo per asset (primo visibile/attivabile vince).
+ASSET_SYMBOLS = {
+    'xau':  ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"],
+    'us30': ["US30Cash", "US30", "US30.cash", "DJ30", "WS30", "US30m", "US30.spot", "DJIUSD"],
+}
+# Prefisso file per asset (xau resta 'xauusd' per compat con i path esistenti).
+ASSET_FILE_PREFIX = {'xau': 'xauusd', 'us30': 'us30'}
 
 # ── ARGPARSE ──────────────────────────────────────────────────────────────────
-parser = argparse.ArgumentParser(description='Fetch storico GOLD da MT5 (multi-TF)')
+parser = argparse.ArgumentParser(description='Fetch storico candele da MT5 (multi-asset, multi-TF)')
+parser.add_argument('--asset', type=str, default='xau', choices=list(ASSET_SYMBOLS),
+    help='Asset da scaricare (default xau)')
 parser.add_argument('--days', type=int, default=730, help='Giorni di storia (default 730)')
 parser.add_argument('--tf',   type=str, default='H1',
     choices=['M5','M15','M30','H1','H4','D1'], help='Timeframe (default H1)')
+parser.add_argument('--all-tf', action='store_true',
+    help='Scarica tutti i TF (M5,M15,M30,H1,H4,D1) per l\'asset scelto — ignora --tf/--out')
 parser.add_argument('--out',  type=str, default=None,
-    help='File output (default xauusd_{tf}_mt5.json)')
+    help='File output (default data/{asset}_{tf}_mt5.json)')
 args = parser.parse_args()
 
-DAYS     = args.days
-TF_NAME  = args.tf.upper()
-OUT_FILE = args.out or f"data/xauusd_{TF_NAME.lower()}_mt5.json"
+ASSET            = args.asset
+SYMBOL_CANDIDATES = ASSET_SYMBOLS[ASSET]
+FILE_PREFIX      = ASSET_FILE_PREFIX[ASSET]
+DAYS             = args.days
+TF_NAME          = args.tf.upper()
+OUT_FILE         = args.out or f"data/{FILE_PREFIX}_{TF_NAME.lower()}_mt5.json"
 
 TF_MAP = {
     'M5':  ('TIMEFRAME_M5',   5),
@@ -110,74 +129,81 @@ def rates_to_candles(rates, cutoff):
         candles.append({'t': int(r['time']), 'o': o, 'h': h, 'l': l, 'c': c, 'v': v})
     return candles
 
-def fetch_candles(symbol, days):
+def fetch_candles(symbol, days, tf_name=None):
     """Scarica candele per gli ultimi `days` giorni."""
-    tf_attr   = getattr(mt5, TF_MAP[TF_NAME][0])
-    tf_min    = TF_MAP[TF_NAME][1]
+    tf_name   = (tf_name or TF_NAME).upper()
+    tf_attr   = getattr(mt5, TF_MAP[tf_name][0])
+    tf_min    = TF_MAP[tf_name][1]
     date_to   = datetime.datetime.now(datetime.timezone.utc)
     date_from = date_to - datetime.timedelta(days=days + 5)  # +5 buffer weekend/festivi
     cutoff    = (date_to - datetime.timedelta(days=days)).timestamp()
 
-    print(f"Scaricando {symbol} {TF_NAME} dal {date_from.strftime('%Y-%m-%d')} al {date_to.strftime('%Y-%m-%d')}...")
+    print(f"Scaricando {symbol} {tf_name} dal {date_from.strftime('%Y-%m-%d')} al {date_to.strftime('%Y-%m-%d')}...")
 
     rates = mt5.copy_rates_range(symbol, tf_attr, date_from, date_to)
 
     # Fallback per TF brevi (M5/M15): il terminal potrebbe non avere la storia
     # pre-caricata → chiediamo per count dal bar corrente.
     if rates is None or len(rates) == 0:
-        bars_per_day = (24 * 60) / tf_min          # gold ~24h/day
+        bars_per_day = (24 * 60) / tf_min          # ~24h/day
         trading_days = days * (5 / 7)              # ~5 giorni/settimana
         max_bars     = min(int(trading_days * bars_per_day * 1.2), 99_999)
         print(f"  copy_rates_range vuoto ({mt5.last_error()}), provo copy_rates_from_pos ({max_bars} bar)...")
         rates = mt5.copy_rates_from_pos(symbol, tf_attr, 0, max_bars)
 
     if rates is None or len(rates) == 0:
-        print(f"ERRORE: Nessuna candela ricevuta — {mt5.last_error()}")
+        print(f"  ATTENZIONE: Nessuna candela {tf_name} ricevuta — {mt5.last_error()}")
         print("  Per M5/M15: apri il grafico in MT5 e scorri indietro per pre-caricare la storia.")
-        mt5.shutdown()
-        sys.exit(1)
+        return []
 
     return rates_to_candles(rates, cutoff)
 
-def save(candles, path):
+def save(candles, path, symbol, tf_name):
     """Salva in formato compatibile con il backtester."""
     payload = {
         'candles': candles,
         'fetched_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'source': 'MT5',
-        'symbol': SYMBOL,
-        'timeframe': TF_NAME,
+        'symbol': symbol,
+        'asset': ASSET,
+        'timeframe': tf_name,
         'days': DAYS,
     }
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(payload, f)
     print(f"Salvato: {path} ({len(candles)} candele)")
 
+def run_one_tf(symbol, tf_name):
+    tf_name  = tf_name.upper()
+    out_file = args.out or f"data/{FILE_PREFIX}_{tf_name.lower()}_mt5.json"
+    if args.all_tf:
+        out_file = f"data/{FILE_PREFIX}_{tf_name.lower()}_mt5.json"  # --out ignorato in modalità all-tf
+    candles = fetch_candles(symbol, DAYS, tf_name)
+    if not candles:
+        print(f"  [{tf_name}] nessuna candela valida — skip\n")
+        return False
+    prices = [c['c'] for c in candles]
+    dates  = [datetime.datetime.fromtimestamp(c['t'], tz=datetime.timezone.utc) for c in candles]
+    print(f"  [{tf_name}] {len(candles)} candele | {dates[0]:%Y-%m-%d} → {dates[-1]:%Y-%m-%d} | "
+          f"min/max {min(prices):.2f}/{max(prices):.2f} | ultimo {prices[-1]:.2f}")
+    save(candles, out_file, symbol, tf_name)
+    return True
+
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 connect()
 SYMBOL = find_symbol()
-candles = fetch_candles(SYMBOL, DAYS)
 
-if not candles:
-    print("ERRORE: Nessuna candela valida dopo il filtro.")
-    mt5.shutdown()
+tfs = ['M5','M15','M30','H1','H4','D1'] if args.all_tf else [TF_NAME]
+print(f"\nAsset: {ASSET} | Simbolo: {SYMBOL} | TF: {', '.join(tfs)} | {DAYS} giorni\n")
+ok = [run_one_tf(SYMBOL, tf) for tf in tfs]
+mt5.shutdown()
+
+if not any(ok):
+    print("\nERRORE: nessun TF scaricato.")
     sys.exit(1)
 
-# Statistiche rapide
-prices = [c['c'] for c in candles]
-dates  = [datetime.datetime.fromtimestamp(c['t'], tz=datetime.timezone.utc) for c in candles]
-print(f"\nRisultato:")
-print(f"  Candele totali : {len(candles)}")
-print(f"  Periodo        : {dates[0].strftime('%Y-%m-%d')} → {dates[-1].strftime('%Y-%m-%d')}")
-print(f"  Prezzo min/max : ${min(prices):.2f} / ${max(prices):.2f}")
-print(f"  Ultimo prezzo  : ${prices[-1]:.2f}")
-
-save(candles, OUT_FILE)
-mt5.shutdown()
-print("\nDone. Usa questo file con i backtester:")
-print(f"  python scripts/strategy-engine-v2.py --file {OUT_FILE}")
-print(f"  python scripts/backtest_obv_rsi_mom.py --{TF_NAME.lower()}-file {OUT_FILE}")
-print()
-print("Per scaricare tutti i TF:")
-for tf in ['M15','M30','H1','H4','D1']:
-    print(f"  python scripts/fetch_mt5_history.py --tf {tf}")
+print("\nDone. Usa i file con il backtester, es:")
+print(f"  python scripts/strategy-engine-v2.py --file data/{FILE_PREFIX}_h1_mt5.json")
+if not args.all_tf:
+    print(f"\nPer scaricare tutti i TF di {ASSET}:")
+    print(f"  python scripts/fetch_mt5_history.py --asset {ASSET} --all-tf")

@@ -3,6 +3,7 @@ node_modules/
 .vercel
 *.log
 data/xauusd_*.json
+data/us30_*.json
 __pycache__/
 *.pyc
 .env*

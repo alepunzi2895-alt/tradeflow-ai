@@ -61,11 +61,15 @@ export default async function handler(req, res) {
         'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','TVC:GOLD':'XAU',
         'OANDA:XAGUSD':'XAG','FOREXCOM:XAGUSD':'XAG','TVC:SILVER':'XAG',
         'TVC:DXY':'DXY','TVC:USOIL':'OIL','TVC:US10Y':'US10Y',
-        'OANDA:EURUSD':'EURUSD','OANDA:GBPUSD':'GBPUSD'
+        'OANDA:EURUSD':'EURUSD','OANDA:GBPUSD':'GBPUSD',
+        // US30 + fattori istituzionali equity (confidence score US30 — 2026-09-03)
+        'TVC:DJI':'US30','OANDA:US30USD':'US30','DJCFD:DJI':'US30',
+        'TVC:VIX':'VIX','SP:SPX':'SPX','NASDAQ:NDX':'NDX','TVC:RUT':'RUT','TVC:US02Y':'US02Y'
       };
+      const DEC3 = new Set(['DXY','US10Y','US02Y']);
       const tickers = Object.keys(TICKER_KEY);
       const scannerBody = { symbols: { tickers, query: { types: [] } }, columns: ['close', 'change', 'high', 'low'] };
-      
+
       let prices = {};
       let tvSource = false;
       try {
@@ -76,7 +80,8 @@ export default async function handler(req, res) {
             const key = TICKER_KEY[item.s];
             if (!key || prices[key]) return;
             const [val, chg, hi, lo] = item.d;
-            prices[key] = { price: val.toFixed(2), change: chg.toFixed(2), high: hi?.toFixed(2), low: lo?.toFixed(2), _source: item.s };
+            const dp = DEC3.has(key) ? 3 : 2;
+            prices[key] = { price: val.toFixed(dp), change: chg.toFixed(2), high: hi?.toFixed(dp), low: lo?.toFixed(dp), _source: item.s };
           });
           tvSource = true;
         }

@@ -48,12 +48,13 @@ async function loadPrices(){
       if(bxau){bxau.style.display='';bxau.textContent=`${active} `+conv.sym+conv.val;bxau.className='hbadge '+(assetChg>=0?'hg':'hr');}
       
       // Update labels dynamically
+      const _an = active === 'US30' ? 'US30' : `${active}/USD`;
       const lblAsset=document.getElementById('lbl-asset');
-      if(lblAsset)lblAsset.textContent = `${active}/USD`;
+      if(lblAsset)lblAsset.textContent = _an;
       const lblSent=document.getElementById('lbl-sent-title');
-      if(lblSent)lblSent.textContent = `RETAIL SENTIMENT · ${active}/USD`;
+      if(lblSent)lblSent.textContent = `RETAIL SENTIMENT · ${_an}`;
       const lblMfkk=document.getElementById('lbl-mfkk-title');
-      if(lblMfkk)lblMfkk.textContent = `MFKK STRATEGY SCORE · ${active}/USD H1`;
+      if(lblMfkk)lblMfkk.textContent = `MFKK STRATEGY SCORE · ${_an} H1`;
     } else {
       // price.js failed — try tvprice as XAU quick fallback
       const tv=await fetchJSON('/api/tvprice', 6000);

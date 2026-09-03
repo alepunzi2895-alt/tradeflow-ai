@@ -68,12 +68,27 @@ const SE = {
       } },
     // ── Integrata nel flusso normale dal 2026-09-01: sizing RiskGuardian (composite/tier/compounding ×2) ──
     'S20_FIB_CONFLUENCE': { label: 'Fib Confluence [M5]', pf: 1.54, wr: '52.3%', tp: '1R parz. + 2R runner', sl: 'strut. ≥1.5×ATR',
+      liveTest: true, liveTestLot: '0.03',
+      liveTestNote: 'LIVE TEST — lotto fisso 0.03 · isolata dal roster (no Strategy Selector / compounding)',
       stats: {
         pnl_1m: 19.3, td_1m: 0.15, pnl_6m: 145.4, td_6m: 0.25,
         pnl_12m: 166.4, td_12m: 0.28, pnl_24m: 176.9, td_24m: 0.29,
         maxdd: 46.3, maxdd_pct: '4.6%', trades_12m: 83,
         best_regime: 'London+NY M5 · no-lunedì · backtest 20 mesi @0.01lot · OOS ultimi 8m PF 1.72 · LIVE da 2026-08-28, integrata (RiskGuardian ×2) da 2026-09-01',
         eq: [1.0,-3.2,-3.5,-13.6,10.4,6.1,-5.6,10.1,21.0,14.0,18.5,28.2,23.0,69.9,122.3,104.9,173.4,176.9]
+      } },
+    // ── US30 · mean-reversion azionaria (Connors RSI(2)) · blocco isolato su 2° simbolo dal 2026-09-03 ──
+    // P&L in $ al lotto live 0.10 (US30Cash: 1 pt indice ≈ $0.10 @ 0.10 lot). Ricerca: scripts/us30_harness.py
+    'S30_DOW_DIP': { label: 'Dow Dip [H4] · US30', pf: 1.63, wr: '76.2%', tp: 'ATR×1.2', sl: 'ATR×2.6',
+      liveTest: true, liveTestLot: '0.10',
+      liveTestNote: 'LIVE TEST — US30Cash H4 · lotto fisso 0.10 · isolata (no Strategy Selector / RiskGuardian / compounding) · SL/TP hard su MT5',
+      liveTestEmptyNote: 'nessun segnale ancora — long-only, apre solo su RSI(2) oversold in uptrend, ~5-6/mese',
+      stats: {
+        pnl_1m: 111.2, td_1m: 0.29, pnl_6m: 320.8, td_6m: 0.28,
+        pnl_12m: 525.6, td_12m: 0.32, pnl_24m: 803.7, td_24m: 0.33,
+        maxdd: 130.2, maxdd_pct: '16%', trades_12m: 81,
+        best_regime: 'US30 · uptrend (close>EMA50&EMA233) + RSI(2)<15 + regime guard · long-only · holdout PF 2.09 (4/4 fold WF) · LIVE isolata 2026-09-03',
+        eq: [9.5,14.4,-6.1,-60.6,45.0,171.2,278.1,303.9,300.7,421.6,344.0,412.8,482.9,502.4,556.5,610.4,641.9,692.5,803.7]
       } },
   },
   // ── REGIME PRIORITY (allineata a REGIME_PRIORITY_H1 del backtester) ──

@@ -78,18 +78,16 @@
         <div class="logo-text">
           <div class="logo-title">TradeFlow <span>AI</span></div>
           <div class="logo-sub">
-            <select id="asset-select" onchange="window.switchAsset(this.value)" style="background:transparent;border:none;color:var(--text);font-size:10px;font-family:inherit;outline:none;font-weight:700;letter-spacing:.05em;padding:0;cursor:pointer;-webkit-appearance:none;appearance:none;text-decoration:underline;text-underline-offset:2px">
-              <option value="XAU" style="background:var(--bg)">XAU/USD</option>
-              <option value="XAG" style="background:var(--bg)">XAG/USD</option>
-              <option value="US30" style="background:var(--bg)">US30</option>
-            </select>
-            · DXY · FOREX · <span id="lsub-name" style="color:var(--dim)"></span>
+            <div class="asset-seg" id="asset-seg" role="tablist" aria-label="Asset">
+              <button type="button" data-asset="XAU" role="tab">XAU</button>
+              <button type="button" data-asset="XAG" role="tab">XAG</button>
+              <button type="button" data-asset="US30" role="tab">US30</button>
+            </div>
+            <span id="lsub-name" style="color:var(--dim);font-size:9px;margin-left:6px"></span>
           </div>
         </div>
       </div>
       <div class="hright">
-        <span id="bxau" class="hbadge" style="display:none; cursor:pointer;" onclick="document.getElementById('asset-select').value='XAU';window.switchAsset('XAU')"></span>
-        <span id="bxag" class="hbadge" style="display:none; cursor:pointer;" onclick="document.getElementById('asset-select').value='XAG';window.switchAsset('XAG')"></span>
         <span id="berr" class="hbadge hw" style="display:none"></span>
         <button id="btn-set">⚙️</button>
       </div>

@@ -68,7 +68,14 @@ html, body {
 .logo-text { display: flex; flex-direction: column; }
 .logo-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .03em; }
 .logo-title span { color: var(--g); }
-.logo-sub { font-size: 9px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; }
+.logo-sub { font-size: 9px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; margin-top: 3px; }
+
+/* Selettore asset — segmented control (sostituisce il vecchio <select> + badge) */
+.asset-seg { display: inline-flex; gap: 2px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.asset-seg button { background: none; border: none; color: var(--dim); font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: .02em; text-transform: none; padding: 3px 9px; border-radius: 6px; cursor: pointer; line-height: 1.35; transition: background .15s, color .15s; }
+.asset-seg button.on { background: var(--g); color: #12151c; }
+.asset-seg button:not(.on):hover { color: var(--text); }
+.asset-seg button:not(.on):active { transform: scale(.95); }
 .hright { display: flex; gap: 6px; align-items: center; }
 .hbadge { font-size: 9px; border-radius: 6px; padding: 3px 7px; font-family: monospace; white-space: nowrap; font-weight: 600; opacity: 0.6; transition: all 0.2s; }
 .hbadge:hover { opacity: 0.8; }

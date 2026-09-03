@@ -194,10 +194,13 @@ async function loadSlowData(){
 
 function updatePriceStrip(prices){
   const active = window.activeAsset || 'XAU';
-  const assetKey = active === 'XAG' ? 'SILVER' : 'XAU';
+  // chiave prezzo dell'asset attivo: XAG e US30 tornano col proprio nome dall'API,
+  // XAU è il default. (bug fix 2026-09-03: prima 'SILVER'/'XAU' → US30 mostrava l'oro)
+  const assetKey = (active === 'XAG' || active === 'US30') ? active : 'XAU';
   const map={[assetKey]:'xau',DXY:'dxy',EURUSD:'eur',GBPUSD:'gbp',OIL:'oil'};
   Object.entries(map).forEach(([key,id])=>{
-    const d=prices[key];if(!d)return;
+    const d=prices[key];
+    if(!d)return;
     const chg=d.change;
     // Convert price for non-DXY symbols
     let displayPrice;

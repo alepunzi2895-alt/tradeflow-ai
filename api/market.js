@@ -4,13 +4,16 @@
 const BASE_MFX = 'https://www.myfxbook.com/api';
 
 const TICKERS = [
-  'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD', 'CAPITALCOM:GOLD', 'TVC:GOLD', 
+  'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD', 'CAPITALCOM:GOLD', 'TVC:GOLD',
   'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD',
   'OANDA:WTICOUSD', 'TVC:USOIL', 'CAPITALCOM:OIL', 'FX:USOIL', 'SAXO:USOILUSD', 'FOREXCOM:WTIUSD',
-  'TVC:US10Y', 'TVC:DXY', 
+  'TVC:US10Y', 'TVC:DXY',
   'OANDA:EURUSD', 'OANDA:GBPUSD', 'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
-  'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD', 'CAPITALCOM:SILVER', 'TVC:SILVER', 
-  'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD'
+  'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD', 'CAPITALCOM:SILVER', 'TVC:SILVER',
+  'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD',
+  // US30 + fattori istituzionali equity (confidence score US30 — 2026-09-03)
+  'TVC:DJI', 'OANDA:US30USD', 'DJCFD:DJI',
+  'TVC:VIX', 'SP:SPX', 'NASDAQ:NDX', 'TVC:RUT', 'TVC:US02Y'
 ];
 
 const TICKER_MAP = {
@@ -18,7 +21,9 @@ const TICKER_MAP = {
   'OANDA:XAGUSD':'XAG','FOREXCOM:XAGUSD':'XAG','PEPPERSTONE:XAGUSD':'XAG','CAPITALCOM:SILVER':'XAG','TVC:SILVER':'XAG','FX:XAGUSD':'XAG','SAXO:XAGUSD':'XAG','FPMARKETS:XAGUSD':'XAG',
   'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
   'TVC:DXY':'DXY', 'TVC:US10Y':'US10Y',
-  'OANDA:WTICOUSD':'OIL', 'TVC:USOIL':'OIL', 'CAPITALCOM:OIL':'OIL', 'FX:USOIL':'OIL', 'SAXO:USOILUSD':'OIL', 'FOREXCOM:WTIUSD':'OIL'
+  'OANDA:WTICOUSD':'OIL', 'TVC:USOIL':'OIL', 'CAPITALCOM:OIL':'OIL', 'FX:USOIL':'OIL', 'SAXO:USOILUSD':'OIL', 'FOREXCOM:WTIUSD':'OIL',
+  'TVC:DJI':'US30', 'OANDA:US30USD':'US30', 'DJCFD:DJI':'US30',
+  'TVC:VIX':'VIX', 'SP:SPX':'SPX', 'NASDAQ:NDX':'NDX', 'TVC:RUT':'RUT', 'TVC:US02Y':'US02Y'
 };
 
 async function fetchWithTimeout(url, opts={}, ms=7000) {
@@ -59,7 +64,9 @@ export default async function handler(req, res) {
             if (!key || prices[key]) continue;
             const [close, chg, hi, lo] = item.d;
             if (close == null) continue;
-            const dec = (key==='XAU'||key==='OIL'||key==='XAG') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+            const dec = (key==='XAU'||key==='OIL'||key==='XAG'||key==='VIX') ? 2
+                      : (key==='US30'||key==='SPX'||key==='NDX'||key==='RUT') ? 2
+                      : (key==='DXY'||key==='US10Y'||key==='US02Y') ? 3 : 5;
             prices[key] = {
               price: (+close).toFixed(dec),
               change: +(chg||0).toFixed(2),

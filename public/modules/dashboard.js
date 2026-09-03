@@ -264,6 +264,43 @@ function buildDerivedPrices(prices){
             `G/S ${(gsr||0).toFixed(0)} — neutro`
     };
   }
+
+  // ── US30: contesto istituzionale equity (2026-09-03) ──────────────────────
+  if(prices.US10Y && prices.US02Y){
+    const spread = parseFloat(prices.US10Y.price) - parseFloat(prices.US02Y.price);
+    const dSpread = (parseFloat(prices.US10Y.change)||0) - (parseFloat(prices.US02Y.change)||0);
+    prices.YIELD_CURVE = {
+      spread:+spread.toFixed(2), change:+dSpread.toFixed(3),
+      // curva che si irripidisce = aspettative di crescita = supporto equity;
+      // inversione che si approfondisce = timore recessione = pressione equity
+      signal: dSpread>0.02 ? 'STEEPENING_BULL' : dSpread<-0.02 ? 'FLATTENING_BEAR' : 'STABLE',
+      inverted: spread < 0
+    };
+  }
+  if(prices.NDX && prices.US30){
+    // Nasdaq vs Dow — leadership growth (risk-on) vs value/difensivo
+    const gv = (parseFloat(prices.NDX.change)||0) - (parseFloat(prices.US30.change)||0);
+    prices.GROWTH_VALUE = {
+      diff:+gv.toFixed(2),
+      signal: gv>0.15 ? 'GROWTH_LEAD' : gv<-0.15 ? 'DEFENSIVE_ROTATION' : 'NEUTRO'
+    };
+  }
+  if(prices.VIX){
+    const v=parseFloat(prices.VIX.price), vc=parseFloat(prices.VIX.change)||0;
+    prices.VIX_CONTEXT = {
+      level:+v.toFixed(1), change:+vc.toFixed(2),
+      regime: v>26 ? 'FEAR' : v>19 ? 'ELEVATED' : v<13 ? 'COMPLACENT' : 'CALM',
+      // VIX in forte calo = risk-on rally (bull equity); in forte salita = risk-off
+      signal: vc<-6 ? 'RISK_ON' : vc>8 ? 'RISK_OFF' : 'NEUTRAL'
+    };
+  }
+  if((prices.SPX||prices.NDX||prices.RUT) && prices.US30){
+    const dj=parseFloat(prices.US30.change)||0;
+    const legs=[prices.SPX,prices.NDX,prices.RUT].filter(Boolean).map(p=>parseFloat(p.change)||0);
+    const agree=legs.filter(c=>(c>0.05&&dj>0.05)||(c<-0.05&&dj<-0.05)).length;
+    const disagree=legs.filter(c=>(c>0.05&&dj<-0.05)||(c<-0.05&&dj>0.05)).length;
+    prices.BREADTH = { legs:legs.length, agree, disagree, dir: dj>=0?'up':'down' };
+  }
   return prices;
 }
 
@@ -286,6 +323,7 @@ function updateCorrelation(prices){
 function updateConfidence(prices, sentimentData){
   const active = window.activeAsset || 'XAU';
   const isXag = active === 'XAG';
+  const isUs30 = active === 'US30';   // fattori istituzionali equity invece che metalli (2026-09-03)
   const xRaw=prices?.[active], d=prices?.DXY||dashContext.prices?.DXY, e=prices?.EURUSD||dashContext.prices?.EURUSD, g=prices?.GBPUSD||dashContext.prices?.GBPUSD;
   const x=xRaw||dashContext.prices?.[active];
   const now=new Date();
@@ -293,8 +331,20 @@ function updateConfidence(prices, sentimentData){
   const min=now.getUTCMinutes();
   const totalMins=hour*60+min;
 
-  // ── FACTOR 1: DXY Correlation (peso 20%) — usa stesso valore della correlation card ──
+  // ── FACTOR 1: DXY Correlation (XAU) / VIX regime (US30) ──
   let dxyScore=50, dxyLabel='DXY neutro', dxySub='', dxyCol='var(--dim)';
+  const vx = prices?.VIX_CONTEXT || dashContext.prices?.VIX_CONTEXT;
+  if(isUs30 && vx){
+    // VIX: livello (regime) + variazione (spike/reversal). VIX ↓ forte = risk-on rally.
+    if(vx.signal==='RISK_ON'){dxyScore=82;dxyLabel=`VIX ${vx.level} ↓${Math.abs(vx.change)}%`;dxySub='Compressione volatilità — risk-on bullish';dxyCol='var(--green)';}
+    else if(vx.signal==='RISK_OFF'){dxyScore=18;dxyLabel=`VIX ${vx.level} ↑${Math.abs(vx.change)}%`;dxySub='Spike volatilità — risk-off bearish';dxyCol='var(--red)';}
+    else if(vx.regime==='FEAR'){dxyScore=35;dxyLabel=`VIX ${vx.level} · FEAR`;dxySub='Paura estesa — rimbalzo possibile ma fragile';dxyCol='var(--yellow)';}
+    else if(vx.regime==='COMPLACENT'){dxyScore=58;dxyLabel=`VIX ${vx.level} · calmo`;dxySub='Bassa volatilità — trend può proseguire, occhio ai reversal';dxyCol='var(--green)';}
+    else if(vx.regime==='ELEVATED'){dxyScore=42;dxyLabel=`VIX ${vx.level} · elevato`;dxySub='Volatilità sopra media — size prudente';dxyCol='var(--yellow)';}
+    else{dxyScore=52;dxyLabel=`VIX ${vx.level}`;dxySub='Regime volatilità normale';dxyCol='var(--dim)';}
+  } else if(isUs30){
+    dxyScore=50;dxyLabel='VIX n/d';dxySub='Dato volatilità non disponibile';dxyCol='var(--dim)';
+  } else {
   // Prefer stored correlation (same as top card) to avoid inconsistency
   const corrData = prices?.CORRELATION || dashContext.correlation; // prefer fresh prices
   if(corrData){
@@ -314,8 +364,9 @@ function updateConfidence(prices, sentimentData){
     else if(div){dxyScore=35;dxyLabel='Divergenza DXY/XAU';dxySub='⚠ Possibile manipolazione';dxyCol='var(--yellow)';}
     else{dxyScore=50;dxyLabel='Correlazione debole';dxySub='Mercato indeciso';dxyCol='var(--dim)';}
   }
+  }
 
-  // ── FACTOR 2: Momentum XAU (peso 25%) ─────────────────
+  // ── FACTOR 2: Momentum (asset-agnostico) ─────────────
   let momScore=50, momLabel='Momentum laterale', momSub='', momCol='var(--dim)';
   if(x){
     const chg=parseFloat(x.change)||0;
@@ -333,6 +384,27 @@ function updateConfidence(prices, sentimentData){
   // London Open KZ:  08:00-10:00 UTC (480-600 min)
   // NY Open KZ:      13:30-16:00 UTC (810-960 min) ← il più potente
   let sessScore=50, sessLabel='', sessSub='', sessCol='var(--dim)', sessName='';
+  if(isUs30){
+    // US30: la volatilità è tutta nella sessione cash USA. Apertura 13:30-14:30 UTC
+    // (DST/standard), power hour ultima ora. Londra conta poco, Asia quasi nulla.
+    if(totalMins>=800&&totalMins<=930){          // ~13:20-15:30 apertura cash
+      sessScore=94;sessLabel='US Cash Open 🎯';sessSub='Apertura Wall Street — massima direzionalità';sessCol='var(--green)';sessName='US OPEN';
+    } else if(totalMins>=1140&&totalMins<=1260){ // 19:00-21:00 power hour + close
+      sessScore=84;sessLabel='Power Hour 🎯';sessSub='Ultima ora — posizionamento istituzionale in chiusura';sessCol='var(--green)';sessName='POWER HR';
+    } else if(totalMins>=930&&totalMins<=1140){  // 15:30-19:00 mid session
+      sessScore=62;sessLabel='Mid-session USA';sessSub='Sessione piena, direzionalità media';sessCol='var(--yellow)';sessName='MID USA';
+    } else if(totalMins>=690&&totalMins<=800){   // 11:30-13:20 pre-open
+      sessScore=44;sessLabel='Pre-market USA';sessSub='Attendi apertura cash (13:30 UTC)';sessCol='var(--dim)';sessName='PRE-USA';
+    } else if(totalMins>=420&&totalMins<=690){   // 07:00-11:30 sessione europea
+      sessScore=38;sessLabel='Sessione europea';sessSub='Volumi US30 bassi fuori USA';sessCol='var(--dim)';sessName='EUROPA';
+    } else {
+      sessScore=22;sessLabel='Overnight / Asia';sessSub='Liquidità minima — no entry';sessCol='var(--red)';sessName='OVERNIGHT';
+    }
+    let nUsMins = totalMins<800 ? 800-totalMins : (1440-totalMins)+800;
+    const kzCD2 = sessScore>=84 ? '' : (' · US Open tra '+Math.floor(nUsMins/60)+'h'+(nUsMins%60?nUsMins%60+'m':''));
+    const sEl=document.getElementById('conf-session');
+    if(sEl) sEl.textContent=sessName+kzCD2;
+  } else {
   if(totalMins>=810&&totalMins<=960){
     const minsIn=totalMins-810;
     sessScore=95;sessLabel='NY Kill Zone 🎯';
@@ -362,6 +434,7 @@ function updateConfidence(prices, sentimentData){
   const kzCD=sessScore>=85?'':(' · '+nextKZName+' tra '+Math.floor(nextKZMins/60)+'h'+(nextKZMins%60?nextKZMins%60+'m':''));
   const sessEl=document.getElementById('conf-session');
   if(sessEl) sessEl.textContent=sessName+kzCD;
+  }
 
   // ── FACTOR 4: Sentiment Contrarian (peso 12%) ──────────
   let sentScore=50, sentLabel='Long 50% / Short 50%', sentSub='', sentCol='var(--dim)';
@@ -376,8 +449,24 @@ function updateConfidence(prices, sentimentData){
     else{sentScore=50;sentSub='Sentiment bilanciato';sentCol='var(--dim)';}
   }
 
-  // ── FACTOR 5: Multi-pair Confluence (peso 12%) ──────────
+  // ── FACTOR 5: Multi-pair Confluence (XAU) / Breadth indici (US30) ──
   let multiScore=50, multiLabel='Segnali misti', multiSub='Nessuna confluenza chiara', multiCol='var(--dim)';
+  const brd = prices?.BREADTH || dashContext.prices?.BREADTH;
+  if(isUs30 && brd && brd.legs){
+    const up = brd.dir==='up';
+    if(brd.agree===brd.legs && brd.legs>=2){
+      multiScore = up?82:18; multiLabel = up?'Breadth: tutti su ▲':'Breadth: tutti giù ▼';
+      multiSub = `SPX+NDX+RUT confermano US30 ${up?'bullish':'bearish'}`; multiCol = up?'var(--green)':'var(--red)';
+    } else if(brd.disagree>=2){
+      multiScore=40; multiLabel='Divergenza indici'; multiSub='US30 non confermato da SPX/NDX/RUT — fake move possibile'; multiCol='var(--yellow)';
+    } else if(brd.agree>brd.disagree){
+      multiScore = up?64:36; multiLabel = up?'Breadth parziale ▲':'Breadth parziale ▼'; multiSub=`${brd.agree}/${brd.legs} indici allineati`; multiCol='var(--yellow)';
+    } else {
+      multiScore=50; multiLabel='Breadth mista'; multiSub='Indici senza direzione comune'; multiCol='var(--dim)';
+    }
+  } else if(isUs30){
+    multiScore=50; multiLabel='Breadth n/d'; multiSub='SPX/NDX/RUT non disponibili'; multiCol='var(--dim)';
+  } else
   if(prices.EURUSD&&prices.GBPUSD){
     const ec=parseFloat(prices.EURUSD.change), gc2=parseFloat(prices.GBPUSD.change);
     const xc=x?parseFloat(x.change):0;
@@ -401,19 +490,26 @@ function updateConfidence(prices, sentimentData){
     else if(activeBear&&(eurBear||gbpBear||(isXag && xauBear))){multiScore=35;multiLabel='Parziale SELL';multiSub=`${active} bearish, conferma parziale`;multiCol='var(--yellow)';}
   }
 
-  // ── FACTOR 6: Volatilità (peso 8%) ──────────────────────
+  // ── FACTOR 6: Volatilità ────────────────────────────────
   let volScore=50, volLabel='Volatilità nella norma', volSub='', volCol='var(--dim)';
-  const xVol=x||dashContext.prices?.XAU;
+  const xVol=x||dashContext.prices?.[active]||dashContext.prices?.XAU;
   if(xVol&&xVol.high&&xVol.low){
     const range=parseFloat(xVol.high)-parseFloat(xVol.low);
     const rangePct=xVol.price?(range/parseFloat(xVol.price)*100):0;
-    // XAG is 1.5x - 2x more volatile than XAU
-    const wideThreshold = isXag ? 2.5 : 1.5;
-    const narrowThreshold = isXag ? 1.2 : 0.8;
+    // soglie range giornaliero: XAG ~2x XAU; US30 tipico ~1.1%
+    const wideThreshold = isXag ? 2.5 : isUs30 ? 1.7 : 1.5;
+    const narrowThreshold = isXag ? 1.2 : isUs30 ? 0.7 : 0.8;
+    const fmtR = isUs30 ? range.toFixed(0)+'pt' : '$'+range.toFixed(2);
 
-    if(rangePct > wideThreshold){volScore=25;volLabel=`Range ampio $${range.toFixed(2)}`;volSub='Alta volatilità — rischio elevato';volCol='var(--yellow)';}
-    else if(rangePct > narrowThreshold){volScore=60;volLabel=`Range normale $${range.toFixed(2)}`;volSub='Volatilità nella norma';volCol='var(--green)';}
-    else{volScore=75;volLabel=`Range stretto $${range.toFixed(2)}`;volSub='Bassa volatilità — setup puliti possibili';volCol='var(--green)';}
+    if(rangePct > wideThreshold){volScore=25;volLabel=`Range ampio ${fmtR}`;volSub='Alta volatilità — rischio elevato';volCol='var(--yellow)';}
+    else if(rangePct > narrowThreshold){volScore=60;volLabel=`Range normale ${fmtR}`;volSub='Volatilità nella norma';volCol='var(--green)';}
+    else{volScore=75;volLabel=`Range stretto ${fmtR}`;volSub='Bassa volatilità — setup puliti possibili';volCol='var(--green)';}
+
+    // US30: modula col regime VIX (spike = downgrade, calma = ok)
+    if(isUs30 && vx){
+      if(vx.regime==='FEAR'){volScore=Math.min(volScore,28);volSub='VIX in FEAR — swing violenti, size ridotta';volCol='var(--red)';}
+      else if(vx.regime==='ELEVATED'){volScore=Math.round(volScore*0.8);volSub='VIX elevato — allarga gli stop';volCol='var(--yellow)';}
+    }
   }
 
   // ── FACTOR 7: News Impact (peso 13%) ────────────────────
@@ -432,8 +528,10 @@ function updateConfidence(prices, sentimentData){
       const isMacroRelevant = ['NFP','CPI','FOMC','FEDERAL','FED','PCE','GDP','PAYROLL','POWELL','EMPLOYMENT','INFLATION'].some(k=>eventName.includes(k));
       // For XAG, industrial news (Oil, Production) are also relevant
       const isIndustrial = isXag && (eventName.includes('OIL') || eventName.includes('PRODUCTION') || eventName.includes('MANUFACTURING'));
-      
-      const xm = (isMacroRelevant || isIndustrial) ? 1.3 : 1.0;
+      // For US30, US-equity-sensitive prints
+      const isEquityMacro = isUs30 && ['ISM','PMI','RETAIL SALES','JOBLESS','CONSUMER CONFIDENCE','CONSUMER SENTIMENT','DURABLE','MICHIGAN','ADP','UNEMPLOYMENT'].some(k=>eventName.includes(k));
+
+      const xm = (isMacroRelevant || isIndustrial || isEquityMacro) ? 1.3 : 1.0;
       if(ml>=-60&&ml<=0){newsScore=Math.round(20*xm);newsLabel='📊 '+(next.event||'').split(' ').slice(0,3).join(' ')+' IN CORSO';newsSub='Volatilità estrema — no entry';newsCol='var(--red)';}
       else if(ml>0&&ml<=30){newsScore=Math.round(15*xm);newsLabel='⚠️ '+(next.event||'').split(' ').slice(0,3).join(' ')+' tra '+Math.round(ml)+'min';newsSub='ZONA ROSSA — chiudi size';newsCol='var(--red)';}
       else if(ml>30&&ml<=120){newsScore=Math.round(35*xm);newsLabel='⚡ '+(next.event||'').split(' ').slice(0,3).join(' ')+' tra '+Math.round(ml)+'min';newsSub='Pre-news — size ridotta';newsCol='var(--yellow)';}
@@ -445,9 +543,21 @@ function updateConfidence(prices, sentimentData){
 
   newsScore=Math.max(0,Math.min(100,newsScore));
 
-  // ── FACTOR 8: US 10Y Yield (New - peso 10%) ─────────────
+  // ── FACTOR 8: US10Y Yield (XAU) / Curva 10Y-2Y (US30) ──
   let yieldScore=50, yieldLabel='Rendimenti stabili', yieldSub='', yieldCol='var(--dim)';
-  if(prices.US10Y){
+  const yCurve = prices?.YIELD_CURVE || dashContext.prices?.YIELD_CURVE;
+  if(isUs30 && yCurve){
+    const sp=yCurve.spread, ds=yCurve.change;
+    // Per l'equity: curva che si irripidisce (crescita) = supporto; che si appiattisce/inverte = pressione.
+    // Anche il livello assoluto del 10Y conta: uno strappo violento ↑ colpisce le valutazioni.
+    const y10c = parseFloat(prices.US10Y?.change)||0;
+    if(y10c>0.25){yieldScore=32;yieldLabel=`US10Y ↑${y10c} · curva ${sp>0?'+':''}${sp}`;yieldSub='Strappo rendimenti — pressione sui multipli';yieldCol='var(--red)';}
+    else if(yCurve.signal==='STEEPENING_BULL'){yieldScore=72;yieldLabel=`Curva 10Y-2Y ${sp>0?'+':''}${sp} ↑`;yieldSub='Irripidimento — aspettative di crescita, supporto equity';yieldCol='var(--green)';}
+    else if(yCurve.signal==='FLATTENING_BEAR'){yieldScore=34;yieldLabel=`Curva 10Y-2Y ${sp>0?'+':''}${sp} ↓`;yieldSub=yCurve.inverted?'Inversione che si approfondisce — timore recessione':'Appiattimento — cautela';yieldCol='var(--red)';}
+    else{yieldScore=52;yieldLabel=`Curva 10Y-2Y ${sp>0?'+':''}${sp}${yCurve.inverted?' (invertita)':''}`;yieldSub='Curva stabile — nessuna pressione macro nuova';yieldCol='var(--dim)';}
+  } else if(isUs30){
+    yieldScore=50;yieldLabel='Curva rendimenti n/d';yieldSub='US10Y/US02Y non disponibili';yieldCol='var(--dim)';
+  } else if(prices.US10Y){
     const yc=parseFloat(prices.US10Y.change);
     const yVal=prices.US10Y.price;
     if(yc>0.2){yieldScore=30;yieldLabel=`US10Y ${yVal}% ↑ ${active} ↓`;yieldSub=`Rendimenti ↑${yc}% — pressione bearish`;yieldCol='var(--red)';}
@@ -455,10 +565,20 @@ function updateConfidence(prices, sentimentData){
     else{yieldScore=55;yieldLabel=`US10Y ${yVal}% (Stabile)`;yieldSub='Nessuna pressione macro';yieldCol='var(--dim)';}
   }
 
-  // ── FACTOR 9: Gold/Silver Ratio (New - peso 10%) ───────
+  // ── FACTOR 9: Gold/Silver Ratio (metalli) / Growth-Value NDX-DJI (US30) ──
   let gsrScore=50, gsrLabel='G/S Ratio neutro', gsrSub='', gsrCol='var(--dim)';
   const ratio = (prices.XAU && prices.XAG) ? parseFloat(parseFloat(prices.XAU.price)/parseFloat(prices.XAG.price)).toFixed(1) : 0;
-  
+
+  const gv = prices?.GROWTH_VALUE || dashContext.prices?.GROWTH_VALUE;
+  if(isUs30){
+    if(gv){
+      if(gv.signal==='GROWTH_LEAD'){gsrScore=70;gsrLabel=`Nasdaq guida (+${gv.diff} vs Dow)`;gsrSub='Leadership growth — appetito per il rischio sano';gsrCol='var(--green)';}
+      else if(gv.signal==='DEFENSIVE_ROTATION'){gsrScore=38;gsrLabel=`Rotazione difensiva (${gv.diff} NDX-DJI)`;gsrSub='Dow batte Nasdaq — mercato prudente/difensivo';gsrCol='var(--yellow)';}
+      else{gsrScore=52;gsrLabel='Growth/Value neutro';gsrSub='Nessuna rotazione settoriale netta';gsrCol='var(--dim)';}
+    } else {
+      gsrScore=50;gsrLabel='Growth/Value n/d';gsrSub='NDX non disponibile';gsrCol='var(--dim)';
+    }
+  } else {
   // Integrate Industrial Demand (Oil) for XAG as part of GSR context
   if(isXag && prices.OIL){
     const oilChg = parseFloat(prices.OIL.change);
@@ -481,11 +601,14 @@ function updateConfidence(prices, sentimentData){
       else{gsrScore=60;gsrLabel=`G/S Ratio ${ratio} · NEUTRO`;gsrSub='Regime normale';gsrCol='var(--green)';}
     }
   }
+  }
 
-  // ── FACTOR 10: COT Positioning (New - peso 10%) ───────
+  // ── FACTOR 10: COT Positioning (peso 10%) ───────
   let cotScore=50, cotLabel='Dati COT neutri', cotSub='', cotCol='var(--dim)';
   const cot=window._cotData;
-  if(cot){
+  if(isUs30){
+    cotScore=50;cotLabel='COT indici n/d';cotSub='Posizionamento futures non integrato per US30';cotCol='var(--dim)';
+  } else if(cot){
     if(cot.signal==='BULLISH'){cotScore=85;cotLabel=`COT ${active} Bullish`;cotSub='Istituzionali Long';cotCol='var(--green)';}
     else if(cot.signal==='BEARISH'){cotScore=25;cotLabel=`COT ${active} Bearish`;cotSub='Istituzionali Short';cotCol='var(--red)';}
     else{cotScore=50;cotLabel='COT Neutro';cotSub='Posizionamento misto';cotCol='var(--dim)';}
@@ -547,16 +670,16 @@ function updateConfidence(prices, sentimentData){
     cot:{score:cotScore,label:cotLabel}
   }};
 
-    // Render factors safely
+    // Render factors safely — icona/id del fattore cambiano per US30 (contenuto istituzionale diverso)
     const factorsList = [
       {id:'momentum', ico:'📊', label:momLabel, sub:momSub||'', score:momScore, col:momCol, w:'10%'},
-      {id:'dxy', ico:'🔗', label:dxyLabel, sub:dxySub||'', score:dxyScore, col:dxyCol, w:'10%'},
-      {id:'session', ico:'⏰', label:sessLabel, sub:sessSub||'', score:sessScore, col:sessCol, w:'10%'},
+      {id:isUs30?'us30_vix':'dxy', ico:isUs30?'😱':'🔗', label:dxyLabel, sub:dxySub||'', score:dxyScore, col:dxyCol, w:'10%'},
+      {id:isUs30?'us30_session':'session', ico:'⏰', label:sessLabel, sub:sessSub||'', score:sessScore, col:sessCol, w:'10%'},
       {id:'sentiment', ico:'👥', label:sentLabel, sub:sentSub||'', score:sentScore, col:sentCol, w:'10%'},
-      {id:'multi', ico:'🌍', label:multiLabel, sub:multiSub||'', score:multiScore, col:multiCol, w:'10%'},
-      {id:'yield', ico:'📈', label:yieldLabel, sub:yieldSub||'', score:yieldScore, col:yieldCol, w:'10%'},
-      {id:'gsr', ico:'⚖️', label:gsrLabel, sub:gsrSub||'', score:gsrScore, col:gsrCol, w:'10%'},
-      {id:'cot', ico:'🏛️', label:cotLabel, sub:cotSub||'', score:cotScore, col:cotCol, w:'10%'},
+      {id:isUs30?'us30_breadth':'multi', ico:isUs30?'📶':'🌍', label:multiLabel, sub:multiSub||'', score:multiScore, col:multiCol, w:'10%'},
+      {id:isUs30?'us30_yieldcurve':'yield', ico:'📈', label:yieldLabel, sub:yieldSub||'', score:yieldScore, col:yieldCol, w:'10%'},
+      {id:isUs30?'us30_growthvalue':'gsr', ico:isUs30?'🔄':'⚖️', label:gsrLabel, sub:gsrSub||'', score:gsrScore, col:gsrCol, w:'10%'},
+      {id:isUs30?'us30_cot':'cot', ico:'🏛️', label:cotLabel, sub:cotSub||'', score:cotScore, col:cotCol, w:'10%'},
       {id:'vol', ico:'📉', label:volLabel, sub:volSub||'', score:volScore, col:volCol, w:'10%'},
       {id:'news', ico:'📰', label:newsLabel, sub:newsSub||'', score:newsScore, col:newsCol, w:'10%'},
     ];
@@ -656,6 +779,31 @@ const INDICATOR_DEFS = {
   'cot': {
     title: 'COT Large Speculators',
     meaning: 'Sentiment istituzionale (Smart Money). Seguiamo il posizionamento netto dei grandi speculatori per allinearci ai flussi monetari globali.'
+  },
+  // ── US30: fattori istituzionali equity ──
+  'us30_vix': {
+    title: 'VIX — Regime di Volatilità',
+    meaning: 'Il "termometro della paura" di Wall Street. VIX basso o in forte calo = risk-on, favorevole a US30. Uno spike improvviso del VIX segnala risk-off e vendite sugli indici.'
+  },
+  'us30_session': {
+    title: 'Sessione Cash USA',
+    meaning: 'La volatilità di US30 è quasi tutta nella sessione di Wall Street: apertura cash ~13:30 UTC e power hour (ultima ora). Fuori da quella finestra i volumi crollano e i breakout falliscono.'
+  },
+  'us30_breadth': {
+    title: 'Breadth Indici (SPX / NDX / RUT)',
+    meaning: 'Un movimento di US30 è affidabile solo se S&P 500, Nasdaq 100 e Russell 2000 vanno nella stessa direzione. Se gli indici divergono, il movimento del Dow è spesso un fake.'
+  },
+  'us30_yieldcurve': {
+    title: 'Curva dei Rendimenti 10Y-2Y',
+    meaning: 'Per l\'azionario: una curva che si irripidisce riflette aspettative di crescita (supporto). Un\'inversione che si approfondisce segnala timori di recessione. Uno strappo violento del 10Y comprime i multipli.'
+  },
+  'us30_growthvalue': {
+    title: 'Rotazione Growth / Value (Nasdaq vs Dow)',
+    meaning: 'Quando il Nasdaq batte il Dow c\'è appetito per il rischio "sano" (leadership growth). Quando il Dow sovraperforma è rotazione difensiva — mercato più prudente.'
+  },
+  'us30_cot': {
+    title: 'COT Indici (non integrato)',
+    meaning: 'Il posizionamento COT sui futures E-mini S&P/Dow non è ancora collegato per US30 — questo fattore resta neutro e non sposta il punteggio.'
   }
 };
 

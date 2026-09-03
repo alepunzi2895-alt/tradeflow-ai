@@ -3,6 +3,24 @@
 > **Sostituisce** `risk_manager.py` come agente primario dal 2026-04-17.
 > `risk_manager.py` è mantenuto come fallback per backward compat ma non viene usato direttamente.
 
+## Confidence Score istituzionale (frontend → AI Score)
+
+`updateConfidence()` in `public/modules/dashboard.js` calcola un punteggio a **10 fattori (10% cad.)** per l'asset attivo; il valore viene pushato ogni 60s come `score_push` e diventa l'**AI Score** che il bot usa in `signal_quality`. Fattori: momentum, DXY-corr, kill-zone, sentiment, multi-pair, volatilità, news, US10Y, Gold/Silver ratio, COT.
+
+**Branch per asset** (come `isXag`): dal 2026-09-03 `isUs30` sostituisce i fattori metallo-specifici con equivalenti equity:
+
+| Fattore | XAU | US30 |
+|---|---|---|
+| 2 | Correlazione inversa DXY | **VIX**: regime (FEAR/ELEVATED/CALM/COMPLACENT) + spike/compressione |
+| 3 | Kill zone LON+NY | **solo sessione cash USA**: open ~13:30 UTC + power hour; Europa/Asia declassate |
+| 5 | Confluenza EUR/GBP | **breadth SPX+NDX+RUT** allineati con US30 (divergenza = fake) |
+| 6 | Volatilità range | range (soglie US30 ~0.7/1.7%) + downgrade su VIX FEAR/ELEVATED |
+| 8 | US10Y direzione | **curva 10Y-2Y** (steepening bull / flattening-inversione bear) + strappo 10Y |
+| 9 | Gold/Silver ratio | **rotazione Nasdaq vs Dow** (growth lead / defensive rotation) |
+| 10 | COT oro | neutro fisso (COT E-mini non integrato) |
+
+Dati istituzionali US30 aggiunti a `api/market.js` (`TVC:VIX` `SP:SPX` `NASDAQ:NDX` `TVC:RUT` `TVC:US02Y`); contesti derivati (`VIX_CONTEXT`, `YIELD_CURVE`, `GROWTH_VALUE`, `BREADTH`) calcolati in `buildDerivedPrices()`. Selector: `<option value="US30">` in `index.html`. Vedi `07_self_learning_log.md` 2026-09-03.
+
 ## Composite Confidence Score
 
 Il tier non è più basato solo sull'AI Score, ma su un composite pesato:

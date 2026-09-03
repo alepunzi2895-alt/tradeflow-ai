@@ -130,6 +130,8 @@ async function fetchFxRates(){
 }
 
 function convertPrice(usdPrice){
+  // Indici (US30): sono punti indice, non un prezzo in USD → niente conversione FX
+  if(window.activeAsset==='US30')return{val:parseFloat(usdPrice).toLocaleString('en-US',{maximumFractionDigits:0}),sym:''};
   if(!P.currency||P.currency==='USD')return{val:parseFloat(usdPrice).toFixed(2),sym:'$'};
   const rate=fxRates[P.currency];
   if(!rate){

@@ -1,5 +1,25 @@
 # TradeFlow AI — Strategie Attive
 
+## 🔬 2026-09-03 — Ricerca strategia US30 (in corso, nessuna live)
+
+Asset `US30Cash` (vedi `01_data_sources.md`). Harness dedicato, separato dal roster XAU:
+
+- `scripts/us30_harness.py` — backtest realistico (cost model US30: half-spread 1.0 pt, slip stop 2.5 pt, fill pessimistico, entry next-open) + walk-forward 4 fold + holdout 20%. Firma segnale `fn(candles, ind, i, dt)`. Riusa `compute_all`/`stats`/`walk_forward_report` da `strategy-engine-v2.py`.
+- `scripts/us30_strategies.py` — ipotesi v1: `orb_breakout` (opening-range breakout sessione USA), `bb_fade` (mean-reversion Bollinger fuori ore-trend), `session_momentum` (trend-follow Supertrend+ADX 14-21 UTC).
+
+**Risultato v1 (2026-09-03): nessuna promuovibile.**
+
+| Strategia | TF | full PF | holdout PF | fold+ | Note |
+|---|---|---|---|---|---|
+| orb_breakout | M15/M30 | 0.64 | 0.31–0.53 | 0/4 | false-break dominanti; SL 1.2×ATR troppo stretto per l'indice |
+| bb_fade | H1 | 1.68 | **0.57** | 4/4 | full promettente ma solo 49 trade/2y, holdout n=9 → non significativo |
+| bb_fade | M30 | 0.34 | 0.49 | 1/4 | — |
+| session_momentum | H1/M30 | 0.07–0.68 | 0.0–1.49 | 1/4 | filtri troppo stretti, 11–42 trade totali |
+
+Prossimo: (a) EDA sistematica su US30 (autocorrelazione, opening range per giorno-settimana, reversion post-spike); (b) sweep parametri `bb_fade` H1 per alzare il campione mantenendo l'edge; (c) se niente regge sull'holdout → US30 non fa roster, come da lezione XAU 2026-09-02.
+
+---
+
 ## ✅ 2026-09-02 — SPRINT "performance stabile e duratura" — riepilogo (branch `sprint/perf-stabile-2026-09`)
 
 **Contesto**: il backtester dava PF ~1.2-1.6 ma il live reale PF 0.59 (S00) / 0.10 (S09) / 0.88 (S16), −$3 807 su 347 trade.

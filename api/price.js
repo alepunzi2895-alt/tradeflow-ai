@@ -21,11 +21,13 @@ export default async function handler(req, res) {
   const MULTI_TICKERS = [
     'TVC:GOLD', 'OANDA:XAUUSD', 'FOREXCOM:XAUUSD', 'PEPPERSTONE:XAUUSD', 'CAPITALCOM:GOLD', 'EASYMARKETS:XAUUSD', 'FX:XAUUSD', 'SAXO:XAUUSD', 'FPMARKETS:XAUUSD',
     'TVC:SILVER', 'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD', 'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'FX:XAGUSD', 'SAXO:XAGUSD', 'FPMARKETS:XAGUSD',
+    'TVC:DJI', 'OANDA:US30USD', 'DJCFD:DJI',
     'TVC:DXY', 'TVC:USOIL', 'TVC:US10Y', 'OANDA:EURUSD', 'OANDA:GBPUSD', 'FPMARKETS:EURUSD', 'FPMARKETS:GBPUSD',
   ];
   const TICKER_KEY = {
     'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','PEPPERSTONE:XAUUSD':'XAU','CAPITALCOM:GOLD':'XAU','EASYMARKETS:XAUUSD':'XAU','TVC:GOLD':'XAU','FX:XAUUSD':'XAU','SAXO:XAUUSD':'XAU','FPMARKETS:XAUUSD':'XAU',
     'OANDA:XAGUSD':'XAG', 'FOREXCOM:XAGUSD':'XAG', 'PEPPERSTONE:XAGUSD':'XAG', 'CAPITALCOM:SILVER':'XAG', 'EASYMARKETS:XAGUSD':'XAG', 'TVC:SILVER':'XAG', 'FX:XAGUSD':'XAG', 'SAXO:XAGUSD':'XAG', 'FPMARKETS:XAGUSD':'XAG',
+    'TVC:DJI':'US30', 'OANDA:US30USD':'US30', 'DJCFD:DJI':'US30',
     'TVC:DXY':'DXY', 'TVC:USOIL':'OIL', 'TVC:US10Y':'US10Y', 'OANDA:EURUSD':'EURUSD', 'OANDA:GBPUSD':'GBPUSD', 'FPMARKETS:EURUSD':'EURUSD', 'FPMARKETS:GBPUSD':'GBPUSD',
   };
 
@@ -58,8 +60,10 @@ export default async function handler(req, res) {
       return out.length >= 30 ? out : null;
     }
 
-    // GC=F (futures) accettato come fallback SOLO per candles/indicatori tecnici
-    const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F'] : ['XAUUSD=X', 'GC=F'];
+    // GC=F / YM=F (futures) accettati come fallback SOLO per candles/indicatori tecnici
+    const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F']
+                  : (asset === 'US30' || asset === 'DJI') ? ['YM=F', '^DJI']
+                  : ['XAUUSD=X', 'GC=F'];
     // Try query1 + query2, v8 + v7 for each symbol to maximise availability
     const yahooHosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
     const yahooVers  = ['v8', 'v7'];
@@ -108,7 +112,7 @@ export default async function handler(req, res) {
           if (!key || !item.d || prices[key]) continue;
           const [close, chgPct, high, low] = item.d;
           if (close == null || isNaN(+close)) continue;
-          const dec = (key==='XAU'||key==='OIL'||key==='XAG') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
+          const dec = (key==='XAU'||key==='OIL'||key==='XAG'||key==='US30') ? 2 : (key==='DXY'||key==='US10Y') ? 3 : 5;
           prices[key] = { price: (+close).toFixed(dec), change: +(chgPct || 0).toFixed(2), high: high != null ? (+high).toFixed(dec) : null, low: low != null ? (+low).toFixed(dec) : null, _source: item.s };
         }
         return res.status(200).json({ ok: true, prices, source: 'tradingview', timestamp: new Date().toISOString() });
@@ -121,8 +125,11 @@ export default async function handler(req, res) {
 
   // ── SINGLE ASSET LOGIC (Original price.js) ──
   const isXag = asset === 'XAG' || asset === 'SILVER';
+  const isUs30 = asset === 'US30' || asset === 'DJI';
   try {
-    const tickers = isXag ? [
+    const tickers = isUs30 ? [
+      'TVC:DJI', 'OANDA:US30USD', 'DJCFD:DJI'
+    ] : isXag ? [
       'TVC:SILVER', 'OANDA:XAGUSD', 'FOREXCOM:XAGUSD', 'PEPPERSTONE:XAGUSD',
       'CAPITALCOM:SILVER', 'EASYMARKETS:XAGUSD', 'FPMARKETS:XAGUSD',
       'FX:XAGUSD', 'SAXO:XAGUSD'
@@ -166,7 +173,8 @@ export default async function handler(req, res) {
 
   // Fallback to Yahoo
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${asset === 'SILVER' ? 'XAG' : asset}USD=X?interval=1m&range=1d`;
+    const ySym = isUs30 ? '%5EDJI' : `${asset === 'SILVER' ? 'XAG' : asset}USD=X`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ySym}?interval=1m&range=1d`;
     const response = await fetchT(url, { headers: { "User-Agent": "Mozilla/5.0" } }, 5000);
     const data = await response.json();
     const quote = data?.chart?.result?.[0]?.meta;

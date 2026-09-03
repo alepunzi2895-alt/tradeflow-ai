@@ -113,10 +113,13 @@ def get_diff(base_ref: str = None) -> str:
     cmd += ['--', *MONITORED_FILES]
 
     try:
-        proc = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=15)
+        # encoding esplicito: su Windows text=True usa cp1252 e crasha nel reader thread
+        # sui caratteri non-latin1 del diff (box-drawing, →, ·, emoji nei commenti).
+        proc = subprocess.run(cmd, cwd=root, capture_output=True, text=True,
+                              encoding='utf-8', errors='replace', timeout=15)
         if proc.returncode != 0:
             return ''
-        return proc.stdout
+        return proc.stdout or ''
     except Exception:
         return ''
 

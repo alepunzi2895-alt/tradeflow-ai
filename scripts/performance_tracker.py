@@ -36,6 +36,7 @@ BACKTEST_BASELINES = {
     "S10_OB_FVG_SCALP":      {"wr": 0.281, "pf": 1.28},   # H1 fresh backtest 2026-06-01: WR 0% su 4 trade live (aggiornato da 52.8%)
     "S16_GOLDEN_SQUEEZE":    {"wr": 0.514, "pf": 1.50},   # H1 adattivo 51.4% · 140 trade
     "S17_CONVERGENCE_SCALP": {"wr": 0.340, "pf": 1.75},   # H4 adattivo 34.0% · 103 trade
+    "S30_DOW_DIP":           {"wr": 0.760, "pf": 1.63},   # US30 H4 · harness 130 trade / holdout PF 2.09 (2026-09-03)
 }
 
 ROLLING_WINDOW      = 30    # trade recenti per WR/PF rolling

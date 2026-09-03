@@ -155,33 +155,15 @@ def dow_dip(candles, ind, i, dt, *, rsi_len=3, rsi_buy=12,
     return None
 
 
-def dow_dip_d1(candles, ind, i, dt, *, rsi_len=2, rsi_buy=15, down_closes=2,
-               regime_slope=20, max_below_hi=0.08):
-    """**S30_DOW_DIP** — mean-reversion azionaria classica (Connors RSI(2)),
-    **LONG-ONLY**, su H4. È l'edge indici più duraturo: "compra la debolezza
-    nella forza". Setup:
-      • RSI(2) < 15  (flusso di vendita di 1-2 giorni)
-      • `down_closes` chiusure H4 consecutive in calo
-      • close > EMA50  E  close > EMA233  (trend di fondo intatto su ~1 sett e ~5 sett)
-      • EMA50 in salita sulle ultime 20 barre  (trend primario vivo)
-      • prezzo entro l'8% dal massimo di 50 barre  (è un dip, non un bear market)
-    Exit (gestito dall'harness / bot): TP 1.2×ATR (snap-back veloce), SL 2.6×ATR
-    (largo — le entry mean-rev peggiorano prima di migliorare), NESSUN trailing.
-    Il guard di regime EMA233+slope è ciò che evita di prendere coltelli nei
-    ribassi veri (fold 1 da PF 0.62 → 1.27)."""
-    C = ind['C']; e50 = ind['e50']; e233 = ind['e233']
-    if i < 60 or None in (e50[i], e50[i - regime_slope], e233[i]):
-        return None
-    r = _rsi_n(C, i, rsi_len)
-    if r is None:
-        return None
-    seq_down = all(C[i - k] < C[i - k - 1] for k in range(down_closes))
-    hi50 = max(C[i - 50:i + 1])
-    regime_ok = (C[i] > e233[i] and e50[i] > e50[i - regime_slope]
-                 and (hi50 - C[i]) / hi50 < max_below_hi)
-    if C[i] > e50[i] and r < rsi_buy and seq_down and regime_ok:
-        return 'buy'
-    return None
+from signals import signal_dow_dip as _signal_dow_dip  # source of truth
+
+
+def dow_dip_d1(candles, ind, i, dt, **kw):
+    """**S30_DOW_DIP** — wrapper sull'implementazione canonica in signals.py
+    (`signal_dow_dip`). Mean-reversion azionaria Connors RSI(2), long-only, H4.
+    Setup e razionale: vedi signals.py. Exit: TP 1.2×ATR / SL 2.6×ATR / no
+    trailing / time-stop 18 barre H4."""
+    return _signal_dow_dip(ind, i)
 
 
 def vwap_reclaim(candles, ind, i, dt, *, sess=(13, 18), adx_min=14):

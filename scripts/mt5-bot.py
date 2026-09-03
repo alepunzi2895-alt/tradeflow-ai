@@ -32,6 +32,7 @@ from signals import (
     signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp,
     signal_range_reversal,
     signal_fib_confluence, fib_confluence_trade_levels,
+    signal_dow_dip, DOW_DIP_TP_ATR, DOW_DIP_SL_ATR, DOW_DIP_MAX_BARS,
 )
 
 # ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
@@ -125,6 +126,26 @@ S20_STATE_FILE  = os.path.join(os.path.dirname(__file__), '..', 'data', 's20_liv
 _s20_state: dict = {}       # {ticket(str): {dir, entry, risk, tp1, tp2, be_done}}
 _s20_last_bar = None
 _s20_last_entry_ts = 0.0
+
+# ── S30_DOW_DIP — US30 mean-reversion, blocco ISOLATO su 2° simbolo (2026-09-03) ──
+# Connors RSI(2) long-only su H4 (ricerca: scripts/us30_harness.py — full PF 1.63 /
+# holdout PF 2.09 / 4-4 fold walk-forward). Completamente separato dal flusso XAU:
+# simbolo proprio (US30Cash), niente StrategySelector/playbook/RiskGuardian/compounding,
+# non conta in MAX_OPEN_ORDERS GOLD. Exit: SL/TP hard ATR-based lasciati a MT5 +
+# time-stop. Fase iniziale: lotto fisso minimo, come fece S20 (paper→0.03→scala).
+US30_ENABLED     = True
+US30_SYMBOL_CANDIDATES = ["US30Cash", "US30", "US30.cash", "DJ30", "WS30", "US30m", "US30.spot"]
+US30_SYMBOL      = None                       # risolto a startup
+US30_TAG         = 'S30_DOW_DIP'
+US30_LOT         = 0.10                       # vol_min US30Cash; fisso in fase small-size
+US30_TP_ATR      = DOW_DIP_TP_ATR             # 1.2
+US30_SL_ATR      = DOW_DIP_SL_ATR             # 2.6
+US30_MAX_BARS    = DOW_DIP_MAX_BARS           # 18 barre H4 (~3 gg) → time-stop
+US30_COOLDOWN_H  = 4                          # ore min tra due ingressi
+US30_STATE_FILE  = os.path.join(os.path.dirname(__file__), '..', 'data', 'us30_live_state.json')
+_us30_state: dict = {}                        # {ticket(str): {entry, sl, tp, open_ts}}
+_us30_last_bar = None
+_us30_last_entry_ts = 0.0
 
 # Se sei su VPS Standalone, usa http://localhost:3000
 VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
@@ -1130,6 +1151,170 @@ def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
     _s20_last_entry_ts = time.time()
     _s20_save_state()
 
+# ── S30_DOW_DIP — US30 mean-reversion, blocco isolato (2° simbolo) ───────────
+def _us30_resolve_symbol():
+    """Trova il simbolo US30 attivo sul broker (una volta, a startup)."""
+    global US30_SYMBOL
+    for s in US30_SYMBOL_CANDIDATES:
+        info = mt5.symbol_info(s)
+        if info is None:
+            continue
+        if not info.visible:
+            mt5.symbol_select(s, True)
+            info = mt5.symbol_info(s)
+        if info and info.visible:
+            US30_SYMBOL = s
+            return s
+    return None
+
+def _us30_candles_h4(n=450):
+    if not US30_SYMBOL:
+        return None
+    rates = mt5.copy_rates_from_pos(US30_SYMBOL, mt5.TIMEFRAME_H4, 0, n)
+    if rates is None or len(rates) == 0:
+        log.warning(f"[S30] nessuna candela H4 {US30_SYMBOL} — {mt5.last_error()}")
+        return None
+    return _rates_to_list(rates)
+
+def _us30_open_positions():
+    return [p for p in (mt5.positions_get(symbol=US30_SYMBOL) or []) if p.magic == MAGIC]
+
+def _us30_load_state():
+    global _us30_state
+    try:
+        if os.path.exists(US30_STATE_FILE):
+            with open(US30_STATE_FILE, encoding='utf-8') as f:
+                _us30_state = {int(k): v for k, v in json.load(f).items()}
+    except Exception as e:
+        log.warning(f"[S30] load state: {e}")
+
+def _us30_save_state():
+    try:
+        with open(US30_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump({str(k): v for k, v in _us30_state.items()}, f, indent=2)
+    except Exception as e:
+        log.warning(f"[S30] save state: {e}")
+
+def _us30_rebuild_from_open():
+    """Al riavvio: riadotta posizioni S30 aperte non ancora tracciate."""
+    for p in _us30_open_positions():
+        if p.ticket in _us30_state or 'S30' not in (p.comment or ''):
+            continue
+        _us30_state[p.ticket] = {'entry': p.price_open, 'sl': p.sl, 'tp': p.tp, 'open_ts': p.time}
+        log.info(f"[S30] posizione riadottata al riavvio: #{p.ticket} @ {p.price_open}")
+    if _us30_state:
+        _us30_save_state()
+
+def _us30_close_position(p, reason):
+    if DRY_RUN:
+        log.info(f"[S30][DRY] chiusura #{p.ticket} ({reason})")
+        _us30_state.pop(p.ticket, None); _us30_save_state()
+        return
+    tick = mt5.symbol_info_tick(US30_SYMBOL)
+    if not tick:
+        return
+    close_type = mt5.ORDER_TYPE_SELL if p.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
+    px = tick.bid if p.type == mt5.ORDER_TYPE_BUY else tick.ask
+    r = mt5.order_send({"action": mt5.TRADE_ACTION_DEAL, "symbol": US30_SYMBOL, "position": p.ticket,
+                        "volume": p.volume, "type": close_type, "price": px, "deviation": 30,
+                        "magic": MAGIC, "comment": "TF-AI S30 exit",
+                        "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC})
+    if r and r.retcode == mt5.TRADE_RETCODE_DONE:
+        log.info(f"[S30] ✓ chiusura #{p.ticket} ({reason})")
+        _us30_state.pop(p.ticket, None); _us30_save_state()
+    else:
+        log.warning(f"[S30] chiusura fallita #{p.ticket}: {r.comment if r else 'err'}")
+
+def _us30_manage():
+    """Rileva posizioni chiuse (pulisce lo stato) + time-stop."""
+    if not US30_ENABLED or not _us30_state:
+        return
+    open_pos = {p.ticket: p for p in _us30_open_positions()}
+    for ticket in list(_us30_state):
+        st = _us30_state[ticket]
+        if ticket not in open_pos:
+            _us30_state.pop(ticket, None); _us30_save_state()
+            log.info(f"[S30] posizione #{ticket} chiusa (TP/SL)")
+            continue
+        held_h = (time.time() - st.get('open_ts', time.time())) / 3600
+        if held_h > US30_MAX_BARS * 4:
+            _us30_close_position(open_pos[ticket], f"time-stop {held_h:.0f}h")
+
+def _us30_place_order(sl_pts, tp_pts, lot):
+    tick = mt5.symbol_info_tick(US30_SYMBOL)
+    info = mt5.symbol_info(US30_SYMBOL)
+    if not tick or not info:
+        log.error("[S30] tick/info simbolo non disponibili")
+        return None
+    digits = info.digits
+    price = tick.ask
+    sl_price = round(price - sl_pts, digits)
+    tp_price = round(price + tp_pts, digits)
+    min_stop = (getattr(info, 'trade_stops_level', 0) or 0) * info.point
+    if min_stop:
+        if price - sl_price < min_stop:
+            sl_price = round(price - min_stop * 1.5, digits)
+        if tp_price - price < min_stop:
+            tp_price = round(price + min_stop * 1.5, digits)
+    req = {"action": mt5.TRADE_ACTION_DEAL, "symbol": US30_SYMBOL, "volume": lot,
+           "type": mt5.ORDER_TYPE_BUY, "price": price, "sl": sl_price, "tp": tp_price,
+           "deviation": 30, "magic": MAGIC, "comment": f"TF-AI {US30_TAG}",
+           "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC}
+    if DRY_RUN:
+        import random
+        t = random.randint(100000, 999999)
+        log.info(f"[DRY-RUN] Ordine simulato: BUY {lot} {US30_SYMBOL} @ {price:.2f}  "
+                 f"TP={tp_price:.2f}  SL={sl_price:.2f}  [{US30_TAG}] ticket={t}")
+        class _DryResult:
+            retcode = 10009; order = t; simulated = True
+        return _DryResult(), price, sl_price, tp_price
+    r = mt5.order_send(req)
+    if not r or r.retcode != mt5.TRADE_RETCODE_DONE:
+        log.error(f"[S30] ordine fallito: retcode={r.retcode if r else '?'} — {r.comment if r else ''}")
+        return None
+    log.info(f"[S30] ✓ ordine #{r.order} BUY {lot} {US30_SYMBOL} @ {price:.2f}  "
+             f"TP={tp_price:.2f}  SL={sl_price:.2f}")
+    return r, price, sl_price, tp_price
+
+def _us30_check_entry(news_paused, auto_ok):
+    """Ogni barra H4 chiusa: segnale S30_DOW_DIP valido + nessuna posizione S30 aperta → apre."""
+    global _us30_last_bar, _us30_last_entry_ts
+    if not US30_ENABLED or not auto_ok or not US30_SYMBOL:
+        return
+    candles = _us30_candles_h4(450)
+    if not candles or len(candles) < 300:
+        return
+    bar_t = candles[-2]['t']
+    if bar_t == _us30_last_bar:
+        return
+    _us30_last_bar = bar_t
+    if _us30_state or news_paused:                                   # max 1 posizione S30
+        return
+    if time.time() - _us30_last_entry_ts < US30_COOLDOWN_H * 3600:
+        return
+    if is_hard_blocked(US30_TAG):                                    # safety net self-learning
+        return
+    I = compute_indicators(candles)
+    idx = len(candles) - 2
+    if signal_dow_dip(I, idx) != 'buy':
+        return
+    av = I['atr'][idx]
+    if not av:
+        return
+    sl_pts = round(av * US30_SL_ATR, 2)
+    tp_pts = round(av * US30_TP_ATR, 2)
+    log.info(f"★ SEGNALE S30_DOW_DIP (H4): BUY {US30_SYMBOL} | RSI(2) oversold in uptrend | "
+             f"ATR={av:.1f}  TP={tp_pts:.0f}pt  SL={sl_pts:.0f}pt  lot={US30_LOT}")
+    res = _us30_place_order(sl_pts, tp_pts, US30_LOT)
+    if not res:
+        return
+    result, entry, sl_price, tp_price = res
+    ticket = getattr(result, 'order', 0)
+    _us30_state[ticket] = {'entry': round(entry, 2), 'sl': round(sl_price, 2),
+                           'tp': round(tp_price, 2), 'open_ts': time.time()}
+    _us30_save_state()
+    _us30_last_entry_ts = time.time()
+
 # ── VERCEL SYNC ───────────────────────────────────────────────────────────────
 def get_open_positions_data():
     """Legge le posizioni aperte da MT5 e le serializza"""
@@ -1437,6 +1622,19 @@ def run():
         s20_rebuild_from_open()
         log.info(f"S20_FIB_CONFLUENCE attiva — M5 · sizing RiskGuardian ×{S20_LOT_MULT} · "
                  f"cooldown SL condivisi · {len(_s20_state)} posizioni in gestione")
+
+    # S30_DOW_DIP — blocco isolato su 2° simbolo (US30)
+    us30_ok = False
+    if US30_ENABLED:
+        _sym = _us30_resolve_symbol()
+        if _sym:
+            _us30_load_state()
+            _us30_rebuild_from_open()
+            us30_ok = True
+            log.info(f"S30_DOW_DIP attiva — {_sym} H4 · mean-reversion long-only · lot {US30_LOT} fisso · "
+                     f"isolata (2° simbolo, no selector/RG/compounding) · {len(_us30_state)} posizioni")
+        else:
+            log.warning("S30_DOW_DIP: simbolo US30 non trovato sul broker — disattivata per questa sessione")
 
     # Inizializza Strategy Selector Agent
     strategy_selector = StrategySelector() if StrategySelector else None
@@ -2709,6 +2907,14 @@ def run():
                                      sl_cooldown_until=sl_cooldown_until)
                 except Exception as _s20_err:
                     log.warning(f"[S20] errore ciclo: {_s20_err}")
+
+            # ── S30_DOW_DIP — US30 H4, blocco isolato su 2° simbolo ──
+            if us30_ok:
+                try:
+                    _us30_manage()
+                    _us30_check_entry(current_news_risk.get('paused', False), auto_trade_enabled)
+                except Exception as _s30_err:
+                    log.warning(f"[S30] errore ciclo: {_s30_err}")
 
             time.sleep(CHECK_SEC)
 

@@ -98,6 +98,23 @@ Il `bot_status` pushato ogni 20s include ora:
 | 10019 | No money | Margine insufficiente — ridurre LOT_SIZE |
 | 10021 | No prices | Mercato chiuso o connessione assente |
 
+## S30_DOW_DIP — US30, blocco isolato su 2° simbolo (2026-09-03 →)
+
+Prima strategia su un asset diverso da XAU. Mean-reversion azionaria (Connors RSI(2), long-only, H4) — vedi `02_strategies.md`. **Completamente isolata** dal flusso XAU:
+
+| aspetto | S30_DOW_DIP |
+|---|---|
+| Simbolo | `US30Cash` (risolto a startup da `US30_SYMBOL_CANDIDATES`; se non trovato → disattivata per la sessione) |
+| Segnale | `signal_dow_dip()` da `signals.py`, valutato a ogni nuova barra H4 chiusa su `US30Cash` |
+| Sizing | **lotto fisso** `US30_LOT`=0.10 (vol_min broker). NIENTE RiskGuardian / composite / compounding / StrategySelector. Fase small-size come fece S20 |
+| SL/TP | hard, ATR-based: SL `US30_SL_ATR`=2.6×ATR, TP `US30_TP_ATR`=1.2×ATR — impostati sull'ordine, gestiti da MT5. Nessun trailing/BE (l'edge mean-rev dipende dal non trailare) |
+| Time-stop | `_us30_manage()` chiude a mercato dopo `US30_MAX_BARS`=18 barre H4 (~72h) se non ha toccato TP/SL |
+| Esposizione | max 1 posizione S30 · cooldown `US30_COOLDOWN_H`=4h tra ingressi · **non conta** in `MAX_OPEN_ORDERS` GOLD (simbolo diverso) · rispetta `news_paused` |
+| Safety net | `is_hard_blocked('S30_DOW_DIP')` controllato prima di ogni ingresso — il self-learning può disattivarla (baseline WR 0.76 / PF 1.63 in `performance_tracker.BACKTEST_BASELINES`) |
+| Stato | `data/us30_live_state.json` (ricostruito al riavvio da posizioni `US30Cash` col tag `S30`) |
+
+**Per disattivare**: `US30_ENABLED = False` in `mt5-bot.py`. Le posizioni aperte restano gestite da MT5 (SL/TP). **Serve `US30Cash` visibile in Market Watch** sul terminal della VPS (il bot lo attiva via `symbol_select`, ma il terminal deve avere accesso al simbolo).
+
 ## S20_FIB_CONFLUENCE — integrata nel flusso normale (2026-09-01 →)
 
 S20 (config di principio, OOS PF 1.72) girava dal 2026-08-28 **live sul bot ma isolata** a

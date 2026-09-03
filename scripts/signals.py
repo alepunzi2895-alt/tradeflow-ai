@@ -658,3 +658,71 @@ def signal_fib_confluence(ind, i, h1_trend=None, hour=None, weekday=None):
         return None
 
     return direction
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S30_DOW_DIP — mean-reversion azionaria (US30 / Dow), LONG-ONLY, TF H4
+# ─────────────────────────────────────────────────────────────────────────────
+#   "Compra la debolezza nella forza" (Connors RSI(2)). È l'edge indici più
+#   duraturo: gli indici sovra-reagiscono nel breve e rimbalzano verso la media
+#   finché il trend primario regge. Long-only: l'equity risk premium fa driftare
+#   gli indici al rialzo → lo short-mean-reversion non ha lo stesso edge.
+#   Ricerca: scripts/us30_harness.py — full PF 1.63 / holdout PF 2.09 / 4-4 fold WF.
+#   Exit (gestito dal chiamante): TP DOW_DIP_TP_ATR·ATR, SL DOW_DIP_SL_ATR·ATR,
+#   NESSUN trailing, time-stop dopo DOW_DIP_MAX_BARS barre H4.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+DOW_DIP_RSI_LEN      = 2       # RSI ultra-breve (Connors)
+DOW_DIP_RSI_BUY      = 15      # soglia oversold
+DOW_DIP_DOWN_CLOSES  = 2       # chiusure H4 consecutive in calo richieste
+DOW_DIP_REGIME_SLOPE = 20      # barre per la pendenza EMA50 (trend primario vivo)
+DOW_DIP_MAX_BELOW_HI = 0.08    # max distanza dal massimo di 50 barre (è un dip, non un bear market)
+DOW_DIP_TP_ATR       = 1.2     # TP = k·ATR (snap-back veloce)
+DOW_DIP_SL_ATR       = 2.6     # SL = k·ATR (largo: le entry mean-rev peggiorano prima di migliorare)
+DOW_DIP_MAX_BARS     = 18      # time-stop in barre H4 (~3 giorni)
+
+
+def _rsi_wilder_n(C, i, n):
+    """RSI di Wilder su n periodi calcolato al bar i (per RSI(2)/RSI(3))."""
+    if i <= n:
+        return None
+    gains = 0.0
+    losses = 0.0
+    for k in range(i - n + 1, i + 1):
+        ch = C[k] - C[k - 1]
+        if ch >= 0:
+            gains += ch
+        else:
+            losses -= ch
+    if losses == 0:
+        return 100.0
+    rs = (gains / n) / (losses / n)
+    return 100.0 - 100.0 / (1.0 + rs)
+
+
+def signal_dow_dip(ind, i, hour=None, **kwargs):
+    """S30_DOW_DIP — ritorna 'buy' | None (long-only). TF atteso: H4.
+    Richiede in `ind`: C, e50, e233 (o e200 come fallback), atr."""
+    C = ind['C']
+    e50 = _get(ind, 'e50')
+    e233 = _get(ind, 'e233', 'e200')
+    if C is None or e50 is None or e233 is None:
+        return None
+    if i < 60 or e50[i] is None or e233[i] is None or e50[i - DOW_DIP_REGIME_SLOPE] is None:
+        return None
+    r = _rsi_wilder_n(C, i, DOW_DIP_RSI_LEN)
+    if r is None or r >= DOW_DIP_RSI_BUY:
+        return None
+    # N chiusure consecutive in calo
+    for k in range(DOW_DIP_DOWN_CLOSES):
+        if not (C[i - k] < C[i - k - 1]):
+            return None
+    hi50 = max(C[i - 50:i + 1])
+    if hi50 <= 0:
+        return None
+    regime_ok = (C[i] > e233[i]
+                 and e50[i] > e50[i - DOW_DIP_REGIME_SLOPE]
+                 and (hi50 - C[i]) / hi50 < DOW_DIP_MAX_BELOW_HI)
+    if C[i] > e50[i] and regime_ok:
+        return 'buy'
+    return None

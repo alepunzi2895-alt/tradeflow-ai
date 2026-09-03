@@ -23,7 +23,7 @@ Setup (H4, long-only): RSI(2) < 15 · 2 chiusure H4 consecutive in calo · close
 
 Robusto allo sweep (rsi_buy 10-20 × down_closes 1-2 × TP/SL: PF full 1.45-1.64, holdout 1.3-2.4 su **ogni** combo → non è curve-fitting). Il guard di regime (EMA233 + slope + max_below_hi) fa **sedere fuori dal bear market** — zero trade da fine feb a fine apr 2025 (crollo a 36.6k). Worst month −775 pt (≈ −$77 @ 0.1 lot). Frequenza ~6 trade/mese.
 
-**Stato**: candidata, NON ancora nel bot. Percorso di integrazione da decidere (blocco isolato stile S20 su simbolo `US30Cash` vs istanza bot dedicata) + paper/small-size prima di scalare. Harness: `scripts/us30_harness.py --strategy dow_dip_d1`.
+**Stato**: **integrata nel bot (2026-09-03)** come blocco isolato su 2° simbolo `US30Cash` — `signal_dow_dip` in `signals.py`, blocco `_us30_*` in `mt5-bot.py` (`US30_ENABLED`), lotto fisso 0.10, SL/TP hard a MT5, time-stop 18 barre H4, `is_hard_blocked` come safety net. Fuori da StrategySelector/RiskGuardian/`MAX_OPEN_ORDERS`. Dettagli operativi: `04_bot_operations.md`. Fase small-size (come S20: 0.10 fisso → si valuta lo scale dopo 4-6 sett). Harness: `scripts/us30_harness.py --strategy dow_dip_d1`.
 
 ---
 

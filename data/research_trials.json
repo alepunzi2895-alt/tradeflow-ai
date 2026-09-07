@@ -1,0 +1,85 @@
+{
+  "total": 290,
+  "log": [
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 42,
+      "cumulative_after": 42,
+      "asset": "XAU",
+      "strategy_id": "S09_MFKK_SCALPING",
+      "note": "grid tp/sl M5 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 42,
+      "cumulative_after": 84,
+      "asset": "XAU",
+      "strategy_id": "S09_MFKK_SCALPING",
+      "note": "grid tp/sl M15 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 30,
+      "cumulative_after": 114,
+      "asset": "XAU",
+      "strategy_id": "S18_RANGE_REVERSAL",
+      "note": "grid tp/sl M15 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 30,
+      "cumulative_after": 144,
+      "asset": "XAU",
+      "strategy_id": "S18_RANGE_REVERSAL",
+      "note": "grid tp/sl H1 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 36,
+      "cumulative_after": 180,
+      "asset": "XAU",
+      "strategy_id": "S17_CONVERGENCE_SCALP",
+      "note": "grid tp/sl M30 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 36,
+      "cumulative_after": 216,
+      "asset": "XAU",
+      "strategy_id": "S17_CONVERGENCE_SCALP",
+      "note": "grid tp/sl M15 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 36,
+      "cumulative_after": 252,
+      "asset": "XAU",
+      "strategy_id": "S10_OB_FVG_SCALP",
+      "note": "grid tp/sl M15 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:09:33Z",
+      "n_trials": 36,
+      "cumulative_after": 288,
+      "asset": "XAU",
+      "strategy_id": "S10_OB_FVG_SCALP",
+      "note": "grid tp/sl M30 (sprint 2026-09-07)"
+    },
+    {
+      "ts": "2026-09-07T11:20:09Z",
+      "n_trials": 1,
+      "cumulative_after": 289,
+      "asset": "XAU",
+      "strategy_id": "feature_screen",
+      "note": "ML feature screening H1 horizon=10 (62 indicatori + 61 pattern TA-Lib) — AUC holdout 0.579"
+    },
+    {
+      "ts": "2026-09-07T11:20:09Z",
+      "n_trials": 1,
+      "cumulative_after": 290,
+      "asset": "US30",
+      "strategy_id": "feature_screen",
+      "note": "ML feature screening H4 horizon=6 — AUC holdout 0.483, NON affidabile (n=1366, holdout=274)"
+    }
+  ]
+}

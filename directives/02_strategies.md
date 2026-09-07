@@ -1,5 +1,55 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-07 — Pipeline ricerca strategie: registro trial + feature screening ML
+
+Infrastruttura per creare/testare nuove strategie a cadenza regolare (manuale, non cron —
+niente automazione non presidiata su un conto live) senza ripetere l'errore di oggi
+(re-tuning aggressivo senza correzione statistica onesta):
+
+**1. `scripts/research_trials.py`** — registro cumulativo persistente (`data/research_trials.json`).
+Ogni sessione di ricerca (grid search, feature screening) DEVE chiamare `record_trials()` dopo
+aver aggregato i risultati, e ogni uso di `dsr_check()`/`is_promotable(..., num_trials=...)` DEVE
+passare `total_trials()`, mai un numero scelto a mano — altrimenti il DSR mente per ottimismo
+man mano che la cadenza di ricerca si accumula nel tempo. Baseline 2026-09-07: 290 trial totali
+(288 dello sprint reparametrizzazione + 2 sessioni di feature screening, vedi sotto).
+
+**2. `scripts/extra_indicators.py`** — 18 indicatori extra dal catalogo standard TradingView non
+presenti in `compute_all()`: Ichimoku, Parabolic SAR, Awesome Oscillator, MFI, CMF, Aroon,
+Vortex, TRIX, Ultimate Oscillator, Choppiness Index, Elder Ray, Force Index, Coppock Curve,
+DPO, Donchian Channels, Chandelier Exit, Historical Volatility, Fisher Transform. Formule
+standard pubbliche (non richiesto l'uso di TradingView MCP — riservato a casi con ambiguità
+di formula/parametri). **Solo per ricerca** — mai importato da `signals.py`/`mt5-bot.py`.
+
+**3. `scripts/feature_screen.py`** — feature screening ML (skill `signal-classification`):
+combina i ~44 indicatori di `compute_all()` + 18 di `extra_indicators.py` + 61 pattern
+candlestick TA-Lib (`pip install TA-Lib`, wheel precompilato Windows/Py3.12, nessuna
+compilazione C richiesta) = **~123 feature candidate**. Le feature price-level (EMA, Bollinger,
+Ichimoku, Donchian, ecc.) sono normalizzate come distanza in unità ATR — usare il prezzo grezzo
+avrebbe fatto imparare al modello solo il drift secolare (stesso bug scoperto sul Hurst exponent,
+vedi sezione sotto). RandomForest fit su 80% train, **permutation importance misurata SOLO
+sull'holdout 20%** (out-of-sample, stesso schema di `opt_harness.py`) — non è un modello da
+mettere in produzione, serve solo a dire quali indicatori meritano una strategia rule-based
+scritta a mano in `signals.py`.
+
+```bash
+cd scripts
+python feature_screen.py --asset XAU --tf H1 --horizon 10
+python feature_screen.py --asset US30 --tf H4 --horizon 6
+```
+
+**Risultati baseline 2026-09-07**:
+- **XAU H1** (horizon 10 barre): AUC holdout 0.579 — segnale modesto ma reale. Top feature:
+  distanza da EMA233, TRIX, StochRSI-D, breakout Donchian upper, ADX, MFI, Choppiness Index,
+  Elder Bear Power. Candidato per una nuova ipotesi di segnale rule-based (trend-following su
+  EMA lunga + conferma momentum/volume) — non ancora scritta in `signals.py`.
+- **US30 H4** (horizon 6 barre): AUC holdout 0.483 (sotto il caso) — **non affidabile**, n=1366
+  totali/274 holdout troppo piccolo (stesso problema di scarsità dati di `S10_OB_FVG_SCALP`,
+  vedi sotto). Da ripetere quando ci sarà più storico.
+
+**Prossimo passo (non fatto)**: tradurre le feature top di XAU H1 in una funzione segnale
+esplicita in `signals.py`, testarla con `opt_harness.py`, e verificarla con `dsr_check()`
+usando `research_trials.total_trials()` come `num_trials` prima di qualsiasi promozione.
+
 ## 🆕 2026-09-07 — Sprint reparametrizzazione strategie deboli (8 subagenti, nessuna promozione)
 
 Grid search tp_mult×sl_mult via `opt_harness.py` su S09_MFKK_SCALPING (M5, M15), S18_RANGE_REVERSAL

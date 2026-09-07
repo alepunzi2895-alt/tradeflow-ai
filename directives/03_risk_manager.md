@@ -74,6 +74,18 @@ dagli ultimi 200 trade reali (stesso dataset di `pnl_today`/`weekly_dd_pct`). **
 l'apertura di trade** — è solo esposto in `bot_status` (`var_95`, `cvar_95`, `var_95_n_days`)
 per monitoraggio. Richiede almeno 10 giorni di storico, altrimenti `var`/`cvar` sono `None`.
 
+## Correlazione cross-asset XAU/US30 (informativo, 2026-09-07)
+
+`scripts/correlation_report.py` — rolling correlation (Pearson su log-return) tra XAU/USD e
+US30 su H4, con z-score vs distribuzione storica (`elevated=True` se |z|>1.5). Motivazione:
+`has_position_in_direction()` copre solo la correlazione direzionale **per-simbolo**, non il
+rischio che S20_FIB_CONFLUENCE (XAU) e S30_DOW_DIP (US30) — entrambi blocchi isolati a lotto
+fisso — si muovano insieme in un regime di risk-off. **Script standalone, non wired nel loop
+live né in `daily_maintenance.py`** — da lanciare a mano (`python scripts/correlation_report.py`)
+finché non si decide se/come integrarlo in monitoraggio automatico. Baseline 2026-09-07 (H4,
+~3057 barre): corr 20-barre 0.53, 60-barre 0.36, media storica ~0.18-0.19 — nessun regime
+elevato al momento.
+
 > **Limite posizioni**: `MAX_OPEN_ORDERS = 6` (max 1 per strategia × 6 strategie attive). Il limite è per strategia, non globale.
 > **Correlazione direzionale** (fix 2026-05-12): `has_position_in_direction()` blocca qualsiasi nuovo ordine nella stessa direzione di una posizione già aperta — mai più di 1 BUY o 1 SELL aperto contemporaneamente, indipendentemente dalla strategia.
 > **Race condition fix**: `has_position_in_direction()` controlla `_strategy_order_tickets` in-memory prima di MT5 per essere immune alla latenza post-`place_order()` (~500ms).

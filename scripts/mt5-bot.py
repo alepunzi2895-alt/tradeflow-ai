@@ -44,7 +44,7 @@ except ImportError:
     log_placeholder.warning("risk_manager.py non trovato — uso lot size fisso")
 
 # ── RISK GUARDIAN (mandatory — bot non parte senza) ──────────────────────────
-from risk_guardian import get_risk_guardian, RiskGuardian
+from risk_guardian import get_risk_guardian, RiskGuardian, var_report
 
 # ── STRATEGY SELECTOR AGENT ───────────────────────────────────────────────────
 try:
@@ -1779,6 +1779,8 @@ def run():
                             closed_this_cycle.append(ticket)
                             # Aggiorna contatore SL consecutivi globale e per strategia
                             # (S20_FIB_CONFLUENCE integrata 2026-09-01: partecipa ai cooldown come le altre)
+                            if rg:
+                                rg.record_trade_result(net_profit)  # tiene sincronizzato il circuit breaker (5 SL consecutivi)
                             if net_profit < 0:
                                 consecutive_sl_count += 1
                                 if strategy_closed != 'N/A':
@@ -1852,6 +1854,10 @@ def run():
                     weekly_dd_pct = 0.0
                 _sl_cd_ts = sl_cooldown_until.isoformat() if sl_cooldown_until else None
                 _rg_last = rg._last_params if rg and getattr(rg, '_last_params', None) else None
+                try:
+                    _var95 = var_report(trades_data, confidence=0.95)
+                except Exception:
+                    _var95 = {'n_days': 0, 'var': None, 'cvar': None}
                 bot_status = {
                     'running': True,
                     'dry_run': DRY_RUN,
@@ -1873,6 +1879,10 @@ def run():
                     'rg_tier':        _rg_last.get('tier_label', '—') if _rg_last else '—',
                     'rg_composite':   _rg_last.get('composite_score') if _rg_last else None,
                     'rg_lot':         _rg_last.get('lot') if _rg_last else None,
+                    'var_95':         _var95.get('var'),
+                    'cvar_95':        _var95.get('cvar'),
+                    'var_95_n_days':  _var95.get('n_days'),
+                    'circuit_breaker': _rg_last.get('circuit_breaker_reason') if _rg_last else None,
                     'last_logs':      _ring_handler.get_lines(),
                 }
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)

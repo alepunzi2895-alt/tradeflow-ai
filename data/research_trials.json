@@ -1,5 +1,5 @@
 {
-  "total": 321,
+  "total": 329,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -128,6 +128,14 @@
       "asset": "XAU",
       "strategy_id": "telegram_signal_study",
       "note": "Studio key-level (PDH/PDL/PWH/PWL/pivot/R1-R2/S1-S2/round number/swing/Fibonacci) su M5/M15/M30/H1/H4 - 9 fit classificatore (M5-sell scartato per campione insufficiente, M5 dataset copre solo ~11 mesi vs 2.5 anni segnali)"
+    },
+    {
+      "ts": "2026-09-07T14:54:49Z",
+      "n_trials": 8,
+      "cumulative_after": 329,
+      "asset": "XAU",
+      "strategy_id": "ivan_signal_backtest",
+      "note": "Confidence score (DI dominance + ADX>=20 + trend EMA233) come filtro/sizing su segnali Ivan trailing - 4 varianti x 2 TF (M15/M30), soglie pre-committed - PEGGIORA il PF in tutti i casi (0.928->0.70 filtro, 0.879 sizing su M15), ipotesi respinta"
     }
   ]
 }

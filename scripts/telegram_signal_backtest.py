@@ -41,6 +41,26 @@ SE2 = oh.SE2
 FILL_WAIT_BARS = 384   # M15: 4 giorni max di attesa riempimento limit
 MAX_HOLD_BARS = 2880   # M15: 30 giorni max di detenzione prima di mark-to-market forzato
 
+# ── Confidence score (2026-09-07) — riusa le feature validate nello screening ML di
+# oggi (DI dominance, ADX>=20, trend EMA233): 3 criteri equal-weight, score in {0,1/3,2/3,1}.
+# Soglie fissate PRIMA di vedere i risultati, per non ripetere l'errore di tunare finché
+# non "sembra" positivo — qualunque esito viene riportato così com'è.
+CONF_FILTER_THRESHOLD = 0.67   # richiede almeno 2 criteri su 3 allineati per aprire
+CONF_SIZE_MIN_MULT = 0.5       # lotto scalato tra 0.5x (score 0) e 1.0x (score 1)
+
+
+def confidence_score(ind, fill_idx, is_buy):
+    """0/0.33/0.67/1.0 — quanti dei 3 criteri di regime (DI dominance, ADX>=20,
+    prezzo vs EMA233) sono allineati con la direzione del segnale."""
+    adx = ind['adx'][fill_idx]; dip = ind['dip'][fill_idx]; dim = ind['dim'][fill_idx]
+    c = ind['C'][fill_idx]; e233 = ind['e233'][fill_idx]
+    if None in (adx, dip, dim, c, e233):
+        return None
+    di_aligned = (dip > dim) if is_buy else (dim > dip)
+    adx_trending = adx >= 20
+    ema_aligned = (c > e233) if is_buy else (c < e233)
+    return sum([di_aligned, adx_trending, ema_aligned]) / 3.0
+
 # Refusi nel canale sorgente (verificati manualmente, es. "SL @ 48328" invece di ~4832 —
 # battitura umana, non bug di parsing): SL/TP a distanza irrealistica dall'entry vengono
 # scartati. Soglia scelta empiricamente: p99 delle distanze reali è ~88, il cluster di
@@ -53,7 +73,8 @@ def load_signals():
         return json.load(f)['signals']
 
 
-def backtest_signal(candles, times, signal, balance_ref, halve, atr_arr=None, trailing=False):
+def backtest_signal(candles, times, signal, balance_ref, halve, atr_arr=None, trailing=False,
+                     ind=None, conf_filter=False, conf_sizing=False):
     is_buy = signal['direction'] == 'buy'
     lo, hi = sorted([signal['entry_lo'], signal['entry_hi']])
     entry_mid = (lo + hi) / 2.0
@@ -91,8 +112,16 @@ def backtest_signal(candles, times, signal, balance_ref, halve, atr_arr=None, tr
     if fill_idx is None:
         return []
 
+    conf = None
+    if (conf_filter or conf_sizing) and ind is not None:
+        conf = confidence_score(ind, fill_idx, is_buy)
+        if conf_filter and (conf is None or conf < CONF_FILTER_THRESHOLD):
+            return []
+
     n_legs = len(tps)
     lot_total = lots.base_total_lot(balance_ref) / (2.0 if halve else 1.0)
+    if conf_sizing and conf is not None:
+        lot_total *= (CONF_SIZE_MIN_MULT + (1 - CONF_SIZE_MIN_MULT) * conf)
     lot_leg = lots._round_lot(lot_total / n_legs)
 
     remaining = list(enumerate(tps))
@@ -163,7 +192,7 @@ def backtest_signal(candles, times, signal, balance_ref, halve, atr_arr=None, tr
     return trades
 
 
-def run(tf='M15', balance=1000.0, halve=True, trailing=False):
+def run(tf='M15', balance=1000.0, halve=True, trailing=False, conf_filter=False, conf_sizing=False):
     path = os.path.join(DATA, f'xauusd_{tf.lower()}_mt5.json')
     candles, _ = SE2.load_from_file(path)
     times = [c['t'] for c in candles]
@@ -171,19 +200,24 @@ def run(tf='M15', balance=1000.0, halve=True, trailing=False):
     if trailing:
         H = [c['h'] for c in candles]; L = [c['l'] for c in candles]; C = [c['c'] for c in candles]
         atr_arr = SE2.atr(H, L, C, 14)
+    ind = None
+    if conf_filter or conf_sizing:
+        ind = SE2.compute_all(candles)
 
     signals = load_signals()
     all_trades = []
     n_unfilled = 0
     for s in signals:
-        trades = backtest_signal(candles, times, s, balance, halve, atr_arr=atr_arr, trailing=trailing)
+        trades = backtest_signal(candles, times, s, balance, halve, atr_arr=atr_arr, trailing=trailing,
+                                  ind=ind, conf_filter=conf_filter, conf_sizing=conf_sizing)
         if not trades:
             n_unfilled += 1
         all_trades.extend(trades)
 
-    print(f"\nSegnali totali: {len(signals)} | senza trade (fuori range dati o non riempiti/senza SL-TP): {n_unfilled}")
+    print(f"\nSegnali totali: {len(signals)} | senza trade (fuori range dati, non riempiti, senza SL-TP, o sotto soglia confidence): {n_unfilled}")
     print(f"Gambe TP simulate: {len(all_trades)}")
-    print(f"Balance riferimento: {balance}€ | lottaggio dimezzato: {halve} | trailing stop (0.3xATR dopo BE): {trailing}")
+    print(f"Balance riferimento: {balance}€ | lottaggio dimezzato: {halve} | trailing: {trailing} | "
+          f"conf_filter(>={CONF_FILTER_THRESHOLD}): {conf_filter} | conf_sizing: {conf_sizing}")
     print(f"Lotto totale @ {balance}€: {lots.base_total_lot(balance) / (2 if halve else 1):.2f} "
           f"(÷4 gambe = {lots._round_lot(lots.base_total_lot(balance)/(2 if halve else 1)/4):.2f} per gamba tipica)")
 
@@ -205,5 +239,10 @@ if __name__ == '__main__':
     ap.add_argument('--no-halve', action='store_true')
     ap.add_argument('--trailing', action='store_true',
                      help='Trailing stop 0.3xATR attivato dopo la prima gamba TP, invece di SL fisso a BE')
+    ap.add_argument('--conf-filter', action='store_true',
+                     help=f'Apri solo se confidence>={CONF_FILTER_THRESHOLD} (2/3 criteri regime allineati)')
+    ap.add_argument('--conf-sizing', action='store_true',
+                     help=f'Scala il lotto {CONF_SIZE_MIN_MULT}x-1.0x in base alla confidence')
     args = ap.parse_args()
-    run(args.tf, args.balance, halve=not args.no_halve, trailing=args.trailing)
+    run(args.tf, args.balance, halve=not args.no_halve, trailing=args.trailing,
+        conf_filter=args.conf_filter, conf_sizing=args.conf_sizing)

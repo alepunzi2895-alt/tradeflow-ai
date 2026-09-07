@@ -64,6 +64,22 @@ deliberatamente piuttosto che stimato male.
 separata (vedi nota di conformità sopra). Il pattern "training ok, holdout recente in
 crollo" è un argomento in più per la cautela, non per l'urgenza di renderla live.
 
+**Aggiornamento — confidence score regime-based (richiesto dall'utente)**: testato come
+filtro (apri solo se ≥2/3 criteri allineati: DI dominance, ADX≥20, trend EMA233 — le
+feature validate nello screening ML di oggi) e come sizing (lotto scalato 0.5x-1.0x in
+base allo score). Soglie fissate PRIMA di vedere i risultati (`CONF_FILTER_THRESHOLD=0.67`,
+`CONF_SIZE_MIN_MULT=0.5`), nessun tuning successivo.
+
+**Risultato: peggiora in tutte e 4 le combinazioni testate** (filtro/sizing × M15/M30) —
+es. M15 trailing PF 0.928 → 0.70 con filtro, → 0.879 con sizing. Il filtro inoltre taglia
+il campione da 3750 a 793 gambe (81% escluso), aumentando la varianza oltre a peggiorare
+il PF medio. **Ipotesi respinta**: l'allineamento con il regime tecnico proprietario del
+progetto non è un buon proxy per la qualità dei segnali di questo canale specifico — non
+sorprendente, dato che il canale segue una logica discrezionale non necessariamente legata
+agli stessi indicatori. Filtro news (richiesto in parallelo) non backtestabile
+retroattivamente: `news_guardian.py` tiene solo cache "settimana corrente", nessun
+archivio storico dal 2024 — applicabile solo in avanti (Fase 1 listener / eventuale Fase 2).
+
 ## 🆕 2026-09-07 — Listener live segnali Telegram (FASE 1: solo log, nessun ordine)
 
 `scripts/telegram_signal_listener.py` — ascolta in tempo reale il canale via Telethon

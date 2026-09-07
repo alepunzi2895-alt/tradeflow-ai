@@ -39,6 +39,35 @@ dell'entry timing, backtestare i segnali COSÌ COME SONO (entry/SL/TP dichiarati
 se seguirli sarebbe stato profittevole — una domanda diversa e più diretta, che userebbe gli
 stessi dati già estratti.
 
+**Aggiornamento 2026-09-07 (key level, tutti i TF)** — `scripts/key_levels.py`: 15 feature
+di livello chiave (PDH/PDL, PWH/PWL, pivot point classico + R1/R2/S1/S2, distanza da round
+number $10/$25, swing high/low fractal 5-barre, posizione/distanza Fibonacci sull'ultimo
+swing) — nessuna presente prima in `compute_all()`/`extra_indicators.py` (tutte le feature
+esistenti erano "forma" — oscillatori/medie — non "livello"). Studio ripetuto su
+M5/M15/M30/H1/H4 con `telegram_signal_study.py --all-tf`.
+
+**Caveat dati**: M5 copre solo le ultime ~99999 candele (~11 mesi, limite MT5) contro 2.5
+anni di segnali — solo 14-17 segnali BUY overlap, risultato M5 statisticamente inaffidabile
+e scartato. M15/M30/H1 hanno copertura piena (~540-560 segnali allineati su ~555-562 totali).
+
+**Risultato**: AUC out-of-sample **consistente 0.54-0.57** su M15/M30/H1 (buy e sell) — non
+migliora sostanzialmente rispetto allo studio senza key-level di prima (H1 era già
+0.567/0.557). H4 sotto 0.5 su entrambe le direzioni (holdout troppo corto, 570 righe, rumore).
+Però: **pivot/R1/R2/PDH/PWH ricorrono con effetto Cohen's d 0.13-0.26 in modo coerente su
+3 timeframe indipendenti** (M15, M30, H1) — più difficile da liquidare come puro rumore
+rispetto a un singolo risultato isolato. Il pattern più chiaro: i **SELL** del canale
+tendono a occorrere con prezzo SOTTO pivot/R1/PDH (fallimento a tenere sopra il massimo di
+ieri/il pivot) — sui BUY la relazione è molto più debole. **Round number ($10/$25)** emerge
+come feature più importante nel classificatore multivariato SELL su H4 e compare ripetuto
+in H1/M30 SELL — segnale minoritario ma presente.
+
+**Conclusione**: i key level aggiungono un contributo reale ma piccolo, non trasformativo —
+l'ipotesi dell'utente aveva del merito (i livelli SELL sono più informativi delle sole
+"forme" indicatore), ma il segnale resta nella stessa fascia debole (AUC 0.54-0.57) che ha
+già fatto scartare S21/S22 oggi. Non ancora tradotto in una funzione segnale — da valutare
+se vale la pena tentare un'ipotesi SELL-only mirata (prezzo sotto pivot/PDH + round number
+vicino) con lo stesso rigore (opt_harness.py + DSR) prima di procedere.
+
 ## 🆕 2026-09-07 — Pipeline ricerca strategie: registro trial + feature screening ML
 
 Infrastruttura per creare/testare nuove strategie a cadenza regolare (manuale, non cron —

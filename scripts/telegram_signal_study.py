@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from feature_screen import build_features  # riusa la stessa feature matrix di oggi
+import key_levels as kl
 import opt_harness as oh  # riusa il loader di strategy-engine-v2.py già collaudato (gestisce lo stdout wrapper)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -55,7 +56,7 @@ def cohens_d(a, b):
     return (a.mean() - b.mean()) / pooled_std
 
 
-def study(tf='H1', min_bars=233, top=25):
+def study(tf='H1', min_bars=233, top=25, with_key_levels=True):
     path = os.path.join(DATA, f'xauusd_{tf.lower()}_mt5.json')
     candles, _ = SE2.load_from_file(path)
     ind = SE2.compute_all(candles)
@@ -65,6 +66,14 @@ def study(tf='H1', min_bars=233, top=25):
     bar_idx = align_to_bars(signals, candle_times)
 
     X = build_features(ind)
+
+    if with_key_levels:
+        d1_path = os.path.join(DATA, 'xauusd_d1_mt5.json')
+        d1_candles, _ = SE2.load_from_file(d1_path)
+        kl_feats = kl.build_key_level_features(ind['H'], ind['L'], ind['C'], candle_times,
+                                                ind['atr'], d1_candles)
+        for name, arr in kl_feats.items():
+            X[name] = arr
 
     buy_rows, sell_rows = [], []
     for s, bi in zip(signals, bar_idx):
@@ -120,7 +129,7 @@ def classify_check(X, positive_idx, holdout_frac=0.2, label=""):
     clf.fit(Xtr, ytr)
     proba = clf.predict_proba(Xho)[:, 1]
     auc = roc_auc_score(yho, proba)
-    perm = permutation_importance(clf, Xho, yho, n_repeats=15, random_state=42, n_jobs=-1)
+    perm = permutation_importance(clf, Xho, yho, n_repeats=10, random_state=42, n_jobs=-1)
     imp = pd.DataFrame({'feature': Xho.columns, 'importance': perm.importances_mean}
                        ).sort_values('importance', ascending=False)
     print(f"\n=== Classificatore '{label}' — bar-segnale vs resto ===")
@@ -130,13 +139,36 @@ def classify_check(X, positive_idx, holdout_frac=0.2, label=""):
     return auc, imp
 
 
+def run_tf(tf, top):
+    print(f"\n{'='*70}\nTIMEFRAME {tf}\n{'='*70}")
+    df, Xbuy, Xsell, baseline = study(tf, top=top)
+    X_full = pd.concat([Xbuy, Xsell, baseline]).sort_index()
+    X_full = X_full[~X_full.index.duplicated()]
+    auc_buy = classify_check(X_full, Xbuy.index, label=f"BUY {tf}")
+    auc_sell = classify_check(X_full, Xsell.index, label=f"SELL {tf}")
+    kl_top = df[df['feature'].str.contains(
+        'pdh|pdl|pwh|pwl|pivot|r1|s1|r2|s2|round|swing|fib', regex=True)].head(5)
+    return {
+        'tf': tf,
+        'auc_buy': auc_buy[0] if auc_buy else None,
+        'auc_sell': auc_sell[0] if auc_sell else None,
+        'top_key_level_features': kl_top[['feature', 'abs_max']].to_dict('records'),
+    }
+
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--tf', default='H1')
     ap.add_argument('--top', type=int, default=25)
+    ap.add_argument('--all-tf', action='store_true',
+                     help='Esegue lo studio su M5/M15/M30/H1/H4 in sequenza')
     args = ap.parse_args()
-    df, Xbuy, Xsell, baseline = study(args.tf, top=args.top)
-    X_full = pd.concat([Xbuy, Xsell, baseline]).sort_index()
-    X_full = X_full[~X_full.index.duplicated()]
-    classify_check(X_full, Xbuy.index, label="BUY")
-    classify_check(X_full, Xsell.index, label="SELL")
+
+    if args.all_tf:
+        summary = [run_tf(tf, args.top) for tf in ['M5', 'M15', 'M30', 'H1', 'H4']]
+        print(f"\n{'='*70}\nRIEPILOGO TUTTI I TIMEFRAME\n{'='*70}")
+        for s in summary:
+            print(f"{s['tf']:4} AUC buy={s['auc_buy']} sell={s['auc_sell']}  "
+                  f"top key-level: {s['top_key_level_features']}")
+    else:
+        run_tf(args.tf, args.top)

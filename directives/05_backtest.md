@@ -39,6 +39,30 @@ Da riconciliare: il bot e il backtester devono invocare le signal fn con gli ste
 `scripts/opt_harness.py` — `evaluate(name, fn, tf, tp_mult, sl_mult)` → `{full, folds, holdout, live}` +
 `is_promotable(ev_new, ev_base)`. Fitness unica per tutti i subagenti della sprint.
 
+## 🆕 2026-09-07 — Deflated Sharpe Ratio / PBO (skill `walk-forward-validation`)
+
+`scripts/opt_harness.py` importa `overfit_detector.py` dalla skill
+`.claude/skills/walk-forward-validation/scripts/` (richiede `pip install scipy`, già installato).
+
+- `dsr_check(ev, num_trials, holdout_frac=0.2)` — Deflated Sharpe Ratio sull'**holdout** di `ev`
+  (da `evaluate()`). `num_trials` = quante varianti/combinazioni di parametri sono state provate
+  in questa sprint PRIMA di arrivare a questa config — **va dichiarato onestamente da chi chiama**,
+  non è deducibile dai dati. Ritorna `None` (non "passato") se l'holdout ha <10 giorni con trade.
+- `is_promotable(ev_new, ev_base, num_trials=None)` — se `num_trials` è passato, aggiunge il check
+  `dsr_ok` (DSR p-value > 0.95) come gate aggiuntivo, oltre a PF/DD/fold/frequenza esistenti.
+  **Se `num_trials` è omesso il comportamento è identico a prima** (nessuna rottura retrocompatibile).
+- `pbo_check(variants: dict[nome, trades], n_groups=6, n_test_groups=2)` — Probability of Backtest
+  Overfitting via CPCV su più varianti candidate della stessa sprint (serie di P&L giornaliero
+  allineate per data). Utile per capire se il processo di selezione tra N varianti tende a
+  premiare rumore.
+- `print_eval(label, ev, num_trials=None)` stampa il DSR se `num_trials` è passato.
+
+Motivazione: il backtester ha già walk-forward/holdout, ma nessun modo di quantificare quanto
+"lo Sharpe sull'holdout regge dopo aver corretto per il numero di varianti testate" — lo stesso
+tipo di giudizio fatto a occhio per scartare S00 V3 ("contaminazione multi-comparison", vedi
+`02_strategies.md`). Verificato con smoke test su S00_MFKK/S16_GOLDEN_SQUEEZE H1: entrambi DSR
+non significativo su holdout con PF<1, coerente con i numeri PF già noti.
+
 ---
 
 > ⚠️ **2026-07-17**: la tabella "Refresh 2026-07-16" sotto è a sua volta superata — SL nel backtester disallineato dal live su S00/S09/S10/S17 (1.0-1.2×ATR invece di 1.5×ATR dal 2026-04-30), corretto lo stesso giorno. Numeri freschi riproducibili in `02_strategies.md` § "Refresh 2026-07-17". Dettagli in `07_self_learning_log.md`.

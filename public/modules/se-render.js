@@ -514,6 +514,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'BB Band Exhaustion (bb_pct≤0.15/≥0.85) + RSI + WPR + StochRSI mean-reversion · RANGE/WEAK ADX<22 · 7-19h UTC'
         : id==='S20_FIB_CONFLUENCE'
         ? 'Estremo 20b + ribbon EMA20/50 + Auto-Fib · ingresso confermato (2 candele) + higher-low/lower-high + EMA200 M5 · SL strutturale ≥1.5×ATR · TP1 1R (parz.) / TP2 2R · London+NY, no-lunedì · LIVE, integrata (sizing RiskGuardian ×2)'
+        : id==='S30_DOW_DIP'
+        ? 'US30 · mean-reversion Connors RSI(2)<15 + 2 chiusure H4 in calo, LONG-ONLY dentro un uptrend (close>EMA50 & EMA233, EMA50 in salita, entro 8% dal max50) · TP 1.2×ATR / SL 2.6×ATR, no trailing, time-stop 18 barre · blocco isolato su US30Cash'
         : id==='S05_V3_Sell_Exhaust'
         ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion TREND_UP H1'
         : id==='S01_EXHAUSTION'
@@ -527,7 +529,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       return `
       <div style="background:var(--bg2); border:1px solid ${isLT?'#c8a96e55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
-        ${isLT ? `<div style="position:absolute;top:0;right:0;background:#c8a96e;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🧪 LIVE 0.03</div>` : ''}
+        ${isLT ? `<div style="position:absolute;top:0;right:0;background:#c8a96e;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🧪 LIVE ${s.liveTestLot||'0.03'}</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isLT?'#c8a96e':isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:5px;align-items:center;font-size:10px">
@@ -539,7 +541,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
         ${isLT ? `
         <div style="background:#1a1600;border:1px solid #c8a96e40;border-radius:5px;padding:6px 8px;margin-bottom:5px">
-          <div style="font-size:8px;color:#c8a96e;font-weight:700;margin-bottom:3px">🧪 LIVE TEST — lotto fisso 0.03 · isolata dal roster (no Strategy Selector / compounding)${pl&&pl.synced_at?` · agg. ${new Date(pl.synced_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:''}</div>
+          <div style="font-size:8px;color:#c8a96e;font-weight:700;margin-bottom:3px">🧪 ${s.liveTestNote||'LIVE TEST — lotto fisso 0.03 · isolata dal roster (no Strategy Selector / compounding)'}${pl&&pl.synced_at?` · agg. ${new Date(pl.synced_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:''}</div>
           ${plClosed ? `
           <div style="display:flex;gap:10px;font-size:9px;flex-wrap:wrap">
             <span style="color:var(--dim)">chiusi <b style="color:var(--fg)">${plClosed.n}</b></span>
@@ -549,7 +551,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
             ${pl.n_open?`<span style="color:#c8a96e">${pl.n_open} aperta</span>`:''}
           </div>
           ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
-          ` : `<div style="font-size:8px;color:var(--dim)">📡 nessun trade S20 ancora — la strategia apre solo in London+NY, no-lunedì, ~5-6/mese</div>`}
+          ` : `<div style="font-size:8px;color:var(--dim)">📡 ${s.liveTestEmptyNote||'nessun trade S20 ancora — la strategia apre solo in London+NY, no-lunedì, ~5-6/mese'}</div>`}
         </div>
         ` : ''}
         ${st.eq && st.eq.length>1 ? `

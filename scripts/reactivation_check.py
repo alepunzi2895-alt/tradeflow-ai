@@ -37,7 +37,7 @@ import sys, os, json, datetime, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import daily_maintenance as dm  # imposta anche sys.stdout UTF-8 + logging condivisi
-from performance_tracker import PENALTY_THRESHOLD  # WR recente/baseline >= 0.70 = fuori dalla zona di penalità
+from performance_tracker import PENALTY_THRESHOLD, _ensure_auto_log  # PENALTY: WR/baseline >= 0.70 = fuori zona penalità
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _ROOT_DIR   = os.path.join(_SCRIPT_DIR, '..')
@@ -158,7 +158,8 @@ def append_report(results: list, dry_run: bool):
     if dry_run or not results:
         return
     today = datetime.date.today().isoformat()
-    log_path = os.path.join(_DIR_DIR, '07_self_learning_log.md')
+    log_path = os.path.join(_DIR_DIR, '07_self_learning_auto.md')  # sidecar gitignored
+    _ensure_auto_log(log_path)
 
     # Dedup: se oggi è già stata loggata una riga di questo tag, non duplicare
     # (es. run ripetuti manualmente lo stesso giorno).

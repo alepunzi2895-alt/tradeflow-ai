@@ -1,6 +1,24 @@
 // TradeFlow AI — app.js
 
-window.activeAsset = 'XAU';
+// Asset attivo: ripristina l'ultima scelta (localStorage) prima che partano i fetch di startup
+window.activeAsset = (function () {
+  try { return JSON.parse(localStorage.getItem('tf_asset')) || 'XAU'; } catch { return 'XAU'; }
+})();
+
+// Evidenzia il pill attivo nel segmented control + wire dei click (una volta, a DOM pronto)
+function _syncAssetSeg() {
+  document.querySelectorAll('#asset-seg button').forEach(b => {
+    b.classList.toggle('on', b.dataset.asset === window.activeAsset);
+  });
+}
+(function _wireAssetSeg() {
+  const seg = document.getElementById('asset-seg');
+  if (!seg) { return setTimeout(_wireAssetSeg, 100); }
+  seg.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => window.switchAsset(b.dataset.asset));
+  });
+  _syncAssetSeg();
+})();
 
 // ── TRADINGVIEW CHART WIDGET ─────────────────────────────
 function initTVChart(){
@@ -83,7 +101,9 @@ function updateHdr(){
 window.switchAsset = function(asset) {
   if (window.activeAsset === asset) return;
   window.activeAsset = asset;
-  
+  try { localStorage.setItem('tf_asset', JSON.stringify(asset)); } catch {}
+  _syncAssetSeg();
+
   // Update TV Chart
   initTVChart();
   

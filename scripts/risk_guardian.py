@@ -115,6 +115,48 @@ CIRCUIT_BREAKERS = {
 MIN_COMPOSITE_TO_TRADE = 45
 
 
+# ── VaR / CVaR STORICO (skill risk-management, 2026-09-07) ──────────────────
+def historical_var(daily_pnls: list, confidence: float = 0.95) -> float:
+    """VaR storico: perdita giornaliera al percentile (1-confidence), in USD (>=0).
+    Es. confidence=0.95 → nel 95% dei giorni la perdita non supera il valore ritornato."""
+    if not daily_pnls:
+        return 0.0
+    s = sorted(daily_pnls)
+    idx = int((1 - confidence) * len(s))
+    idx = min(idx, len(s) - 1)
+    return abs(min(s[idx], 0.0))
+
+
+def expected_shortfall(daily_pnls: list, confidence: float = 0.95) -> float:
+    """CVaR storico: perdita media nel tail oltre il VaR (peggior (1-confidence)% dei giorni)."""
+    if not daily_pnls:
+        return 0.0
+    s = sorted(daily_pnls)
+    idx = max(1, int((1 - confidence) * len(s)))
+    tail = s[:idx]
+    return abs(sum(tail) / len(tail)) if tail else 0.0
+
+
+def var_report(trades: list, confidence: float = 0.95, min_days: int = 10) -> dict:
+    """VaR/CVaR giornaliero da una lista di trade con 'time'/'time_close' + 'profit'.
+    Solo informativo — non blocca l'apertura di trade. Ritorna n=0 se storico insufficiente."""
+    by_day = {}
+    for t in trades:
+        day = (t.get('time') or t.get('time_close') or '')[:10]
+        if not day:
+            continue
+        by_day[day] = by_day.get(day, 0.0) + t.get('profit', 0.0)
+    pnls = list(by_day.values())
+    if len(pnls) < min_days:
+        return {'n_days': len(pnls), 'var': None, 'cvar': None}
+    return {
+        'n_days': len(pnls),
+        'var': round(historical_var(pnls, confidence), 2),
+        'cvar': round(expected_shortfall(pnls, confidence), 2),
+        'confidence': confidence,
+    }
+
+
 def composite_score(strategy_confidence: float,
                     signal_quality: float,
                     market_conditions: float) -> float:
@@ -322,6 +364,16 @@ class RiskGuardian:
         Compute full order parameters.
         strategy_confidence: 0-1 from StrategySelector.select()['confidence']
         """
+        # Circuit breaker (daily/weekly loss %, 5 SL consecutivi) — unico choke point:
+        # tutti i call site di get_order_params() già controllano rp['paused'], quindi
+        # basta bloccare qui perché l'halt sia effettivo ovunque nel bot.
+        broken, reason = self.is_circuit_broken(today_pnl, current_equity, weekly_dd_pct)
+        if broken:
+            log.warning(f"🛑 CIRCUIT BREAKER [{strategy_id}] — {reason}")
+            return {"paused": True, "tier": "CONSERVATIVE", "tier_label": "🔵 CONSERVATIVE",
+                    "lot": 0.0, "tp_usd": 0.0, "sl_usd": 0.0, "composite_score": 0.0,
+                    "paused_reason": "circuit_breaker", "circuit_breaker_reason": reason}
+
         # Build composite confidence
         conf = self.build_composite(
             strategy_confidence, ai_score,

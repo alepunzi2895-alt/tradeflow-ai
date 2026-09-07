@@ -1,5 +1,46 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-07 — Sprint reparametrizzazione strategie deboli (8 subagenti, nessuna promozione)
+
+Grid search tp_mult×sl_mult via `opt_harness.py` su S09_MFKK_SCALPING (M5, M15), S18_RANGE_REVERSAL
+(M15, H1), S17_CONVERGENCE_SCALP (M15, M30), S10_OB_FVG_SCALP (M15, M30) — le 4 strategie con PF
+standalone <1 su (quasi) tutti i TF. 288 combinazioni totali valutate.
+
+**Esito: nessuna promozione.** 3 candidati passavano `is_promotable()` senza correzione statistica
+(S18 M15 tp1.5/sl1.75, S17 M30 tp2.0/sl2.5, S17 M15 tp3.0/sl2.5), ma **tutti falliscono il DSR
+check centralizzato** (`dsr_check`, num_trials=288 — somma onesta di tutte le combo testate nello
+sprint). Anche il migliore (S17 M30, holdout PF 1.124, pnl +296) non è significativo nemmeno a
+num_trials=1 (DSR p=0.70, sotto soglia 0.95) — il problema di fondo è il campione holdout corto
+(~20-70 giorni), non solo il numero di tentativi.
+
+S10_OB_FVG_SCALP scartato dai subagenti stessi prima ancora del DSR: M15 ha PF instabile (1.11-3.39
+su appena 9 trade, stesso set su tutta la grid), M30 ha risultati identici su tutte le 36 combo
+(TP non toccato per primo nei 4 trade holdout) — dati non informativi, non un problema di tuning.
+
+**Conclusione, coerente con lo sprint 2026-09-02**: il problema di queste 4 strategie è l'edge
+decaduto/campione insufficiente, non i parametri tp/sl. Riottimizzare aggressivamente su più TF
+non ha prodotto nulla di statisticamente distinguibile dal rumore. `STRATEGIES_CONFIG` invariato.
+
+## 🆕 2026-09-07 — Hurst exponent / CUSUM in strategy_selector.py (skill regime-detection)
+
+`detect_regime_extended()` ora calcola anche `hurst`, `hurst_bias` (TRENDING/MEAN_REVERTING/
+RANDOM_WALK), `regime_shift_flag` (CUSUM change-point nelle ultime 5 barre) — **solo metadata
+informativa, `_score_strategy()` non li usa**: il punteggio (regime match + PF + sessione +
+recent WR, 100 pt) resta identico a prima, zero impatto sulla selezione live.
+
+Bug scoperto e fixato in fase di test: Hurst va calcolato sui **log-return**, non sui prezzi
+grezzi — su un livello prezzo con drift secolare (XAU 2024-2026 quasi sempre in uptrend) l'R/S
+classico satura a ~1.0 anche su finestre di 150 barre H1, rendendo la metrica inutile. Sui
+return il bias upward noto del metodo R/S su campioni finiti resta: baseline osservata su H1
+XAU (25 campioni random) → range 0.59-0.86, media ~0.70. Le soglie 0.55/0.45 (dalla skill,
+generiche) quindi classificano quasi sempre TRENDING — **da ricalibrare su questo dataset
+prima di usarle per pesare lo score**, non prendere i valori della skill come oro colato.
+
+Prossimo passo (non fatto, richiede validazione backtest prima di toccare lo score live):
+usare `opt_harness.py` per testare se pesare `_score_strategy()` con hurst/regime_shift
+migliora PF/DD sull'holdout rispetto al roster attuale, con soglie calibrate su XAU/US30
+invece di quelle generiche.
+
 ## 🔬 2026-09-03 — Ricerca strategia US30 (in corso, nessuna live)
 
 Asset `US30Cash` (vedi `01_data_sources.md`). Harness dedicato, separato dal roster XAU:

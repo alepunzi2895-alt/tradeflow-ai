@@ -48,12 +48,13 @@ async function loadPrices(){
       if(bxau){bxau.style.display='';bxau.textContent=`${active} `+conv.sym+conv.val;bxau.className='hbadge '+(assetChg>=0?'hg':'hr');}
       
       // Update labels dynamically
+      const _an = active === 'US30' ? 'US30' : `${active}/USD`;
       const lblAsset=document.getElementById('lbl-asset');
-      if(lblAsset)lblAsset.textContent = `${active}/USD`;
+      if(lblAsset)lblAsset.textContent = _an;
       const lblSent=document.getElementById('lbl-sent-title');
-      if(lblSent)lblSent.textContent = `RETAIL SENTIMENT · ${active}/USD`;
+      if(lblSent)lblSent.textContent = `RETAIL SENTIMENT · ${_an}`;
       const lblMfkk=document.getElementById('lbl-mfkk-title');
-      if(lblMfkk)lblMfkk.textContent = `MFKK STRATEGY SCORE · ${active}/USD H1`;
+      if(lblMfkk)lblMfkk.textContent = `MFKK STRATEGY SCORE · ${_an} H1`;
     } else {
       // price.js failed — try tvprice as XAU quick fallback
       const tv=await fetchJSON('/api/tvprice', 6000);
@@ -193,10 +194,13 @@ async function loadSlowData(){
 
 function updatePriceStrip(prices){
   const active = window.activeAsset || 'XAU';
-  const assetKey = active === 'XAG' ? 'SILVER' : 'XAU';
+  // chiave prezzo dell'asset attivo: XAG e US30 tornano col proprio nome dall'API,
+  // XAU è il default. (bug fix 2026-09-03: prima 'SILVER'/'XAU' → US30 mostrava l'oro)
+  const assetKey = (active === 'XAG' || active === 'US30') ? active : 'XAU';
   const map={[assetKey]:'xau',DXY:'dxy',EURUSD:'eur',GBPUSD:'gbp',OIL:'oil'};
   Object.entries(map).forEach(([key,id])=>{
-    const d=prices[key];if(!d)return;
+    const d=prices[key];
+    if(!d)return;
     const chg=d.change;
     // Convert price for non-DXY symbols
     let displayPrice;

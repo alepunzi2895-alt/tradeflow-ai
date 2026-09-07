@@ -3,11 +3,14 @@
 """
 TradeFlow AI — Indicatori extra per feature screening (2026-09-07)
 
-18 indicatori standard del catalogo TradingView non presenti in strategy-engine-v2.py::
-compute_all() (che resta l'unica source of truth per il bot LIVE — questo modulo è
-SOLO per feature_screen.py, ricerca/hypothesis-generation, mai importato da signals.py
-o mt5-bot.py). Formule standard pubbliche (non richiedono verifica via TradingView MCP —
-riservata a casi con ambiguità di formula/parametri, es. tipo di smoothing non ovvio).
+18 indicatori standard del catalogo TradingView. Formule standard pubbliche (non richiedono
+verifica via TradingView MCP — riservata a casi con ambiguità di formula/parametri, es. tipo
+di smoothing non ovvio).
+
+Stato 2026-09-07: **trix / choppiness_index / mfi promossi al path LIVE** — importati sia da
+strategy-engine-v2.py::compute_all() che da mt5-bot.py::compute_indicators() (stessa funzione,
+stesso codice → zero rischio di divergenza backtest↔live). Gli altri 15 indicatori restano
+SOLO per feature_screen.py (research/hypothesis-generation), non importati da signals.py.
 
 Tutte le funzioni prendono array numpy H,L,C,(V) e ritornano array numpy della stessa
 lunghezza (NaN nel periodo di warmup). Nessuna guarda avanti nel tempo (causali).

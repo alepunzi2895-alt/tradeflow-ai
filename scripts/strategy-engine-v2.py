@@ -30,6 +30,8 @@ from signals import (
     signal_fib_confluence as s_fib_confluence,
     fib_confluence_trade_levels,
 )
+import numpy as np
+import extra_indicators as ei
 try:
     import yfinance as yf
     HAS_YF = True
@@ -539,6 +541,14 @@ def compute_all(candles):
     stk_k = sma([x if x is not None else 50 for x in stk50], 8)
     stk_d = sma([x if x is not None else 50 for x in stk_k], 8)
 
+    # TRIX / Choppiness Index / MFI (2026-09-07) — condivisi con mt5-bot.py::compute_indicators()
+    # via extra_indicators.py (stessa funzione, stesso codice) per garantire zero divergenza
+    # backtest↔live (vedi CLAUDE.md "signals.py: MAI duplicare logica").
+    _Hn, _Ln, _Cn, _Vn = np.array(H, dtype=float), np.array(L, dtype=float), np.array(C, dtype=float), np.array(V, dtype=float)
+    trix_v = [None if np.isnan(x) else float(x) for x in ei.trix(_Cn)]
+    choppiness_v = [None if np.isnan(x) else float(x) for x in ei.choppiness_index(_Hn, _Ln, _Cn)]
+    mfi_v = [None if np.isnan(x) else float(x) for x in ei.mfi(_Hn, _Ln, _Cn, _Vn)]
+
     return {
         'n':n,'H':H,'L':L,'C':C,'V':V,'O':O,
         'e13':e13,'e34':e34,'e89':e89,'e233':e233,
@@ -557,6 +567,7 @@ def compute_all(candles):
         'ob_bull':ob_bull,'ob_bear':ob_bear,
         'fvg_bull':fvg_bull,'fvg_bear':fvg_bear,
         'cci':stk_d, # MFKK uses the smoothed stochastic of CCI
+        'trix':trix_v, 'choppiness':choppiness_v, 'mfi':mfi_v,
     }
 
 # ── REGIME DETECTION ─────────────────────────────────────────────────────────

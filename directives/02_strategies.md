@@ -63,6 +63,26 @@ rigido (es. soglia su probabilità invece di crossing discreto), oppure promuove
 Choppiness/MFI da `extra_indicators.py` (research-only oggi) nel path live invece di
 limitarsi ai soli indicatori già in `compute_all()`/`compute_indicators()`.
 
+**Aggiornamento 2026-09-07 (seconda ipotesi)** — TRIX/Choppiness Index/MFI promossi da
+`extra_indicators.py` (research-only) a `compute_all()`/`compute_indicators()` (path live),
+tramite import condiviso della stessa funzione (zero rischio di divergenza backtest↔live,
+a differenza del bug storico ADX Wilder/SMA — vedi `01_data_sources.md`). Nuova ipotesi
+`signal_trix_chop_confluence` (`S22_TRIX_CHOP_CONFLUENCE`): Choppiness<38.2 (soglia standard
+"mercato in trend") + prezzo vs EMA233 + TRIX concorde e in crescita (trigger continuo,
+non discreto) + MFI in fascia utile. **Anche questa NON promossa**: full-period PF<1 su
+tutte le 13 configurazioni testate (0.52-0.77) — rigetto più netto di S21, l'holdout non
+mostra nemmeno un falso positivo isolato. Tentativo di affinamento (filtro dominanza DI)
+ha dato risultati IDENTICI alla v1 — il filtro era ridondante, non la causa. Il problema
+è la selettività: il setup lascia passare troppi trade marginali (~3.1/giorno).
+
+**Bilancio delle prime due ipotesi ML-driven**: entrambe respinte onestamente dal processo
+di validazione, nessuna promozione forzata. Indicazione per la prossima iterazione: un
+classificatore con AUC 0.55-0.58 non garantisce che *qualsiasi* discretizzazione in soglie
+fisse catturi l'edge — andrebbe provato un approccio che usi l'output del modello stesso
+(es. probabilità predetta > soglia) invece di ricostruire manualmente le soglie sulle
+singole feature, oppure accettare che l'edge trovato dal classificatore sia troppo diffuso
+tra molte feature deboli per essere isolato in una regola semplice.
+
 ## 🆕 2026-09-07 — Sprint reparametrizzazione strategie deboli (8 subagenti, nessuna promozione)
 
 Grid search tp_mult×sl_mult via `opt_harness.py` su S09_MFKK_SCALPING (M5, M15), S18_RANGE_REVERSAL

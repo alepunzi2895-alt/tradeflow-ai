@@ -80,7 +80,7 @@ scripts/
   install_git_hooks.py — setup one-time hook pre-commit
   opt_harness.py     — fitness condivisa per sprint ottimizzazione: evaluate/is_promotable/dsr_check/pbo_check
   research_trials.py — registro cumulativo trial di ricerca (data/research_trials.json) — SEMPRE usarlo per num_trials in dsr_check, mai un numero a mano
-  extra_indicators.py — 18 indicatori extra (Ichimoku, PSAR, MFI, ecc.) SOLO per feature_screen.py, mai importato da signals.py/mt5-bot.py
+  extra_indicators.py — 18 indicatori extra (Ichimoku, PSAR, MFI, ecc.); trix/choppiness_index/mfi promossi al path live (compute_all/compute_indicators), gli altri 15 restano research-only
   feature_screen.py  — ML feature screening (RandomForest + permutation importance) per generare ipotesi di nuove strategie, vedi directives/02_strategies.md
 
 data/             — xauusd_*.json (price history)

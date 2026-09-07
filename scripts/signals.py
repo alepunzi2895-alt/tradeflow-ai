@@ -789,3 +789,63 @@ def signal_ema_trend_confluence(ind, i, hour=None, **kwargs):
         if k_cross_down:
             return 'sell'
     return None
+
+
+def signal_trix_chop_confluence(ind, i, hour=None, **kwargs):
+    """S22_TRIX_CHOP_CONFLUENCE V1 (2026-09-07) — seconda ipotesi da feature_screen.py,
+    "seconda strada" rispetto a S21: invece di irrigidire ulteriormente EMA+StochRSI-cross,
+    promuove TRIX/Choppiness Index/MFI (skill ta-lib/regime-detection, prima solo in
+    extra_indicators.py research-only) nel path live — vedi compute_all()/compute_indicators()
+    2026-09-07 — e li usa come filtro PRINCIPALE al posto del trigger discreto StochRSI K/D
+    (S21 lezione: un crossing binario butta via informazione, qui TRIX>0/crescente è un
+    trigger continuo più morbido).
+
+    Entry: Choppiness Index < 38.2 (soglia standard "mercato in trend", non range) + prezzo
+    sopra/sotto EMA233 (contesto trend lungo, unico filtro tenuto da S21) + TRIX concorde e
+    in crescita/calo (momentum, non un cross discreto) + MFI in fascia utile (non ipercomprato/
+    ipervenduto) + ADX>=18 (più permissivo di S21 — la Choppiness già filtra il range).
+
+    TESTATA 2026-09-07 con opt_harness.py (13 trial totali, vedi research_trials.json):
+    full-period PF<1 su TUTTE le 13 configurazioni testate (0.52-0.77), sia full che holdout —
+    a differenza di S21 qui nemmeno l'holdout mostra un falso positivo isolato, rigetto netto.
+    Aggiunto un filtro di dominanza DI (+DI/-DI) come tentativo di affinamento: risultati
+    IDENTICI alla v1 senza quel filtro — era già implicito nelle altre condizioni, non la
+    causa del problema. Il problema è la selettività complessiva del setup (Choppiness<38.2 +
+    TRIX rising + banda MFI lascia passare troppi trade marginali, ~3.1 trade/giorno a bassa
+    qualità). NON PROMOSSA, NON wired in STRATEGIES_CONFIG/PLAYBOOK.
+    """
+    if i < 233:
+        return None
+    if hour is not None and not (7 <= hour < 18):
+        return None
+
+    C = ind['C']
+    e233 = _get(ind, 'e233')
+    adx_arr = _get(ind, 'adx')
+    dip_arr = _get(ind, 'dip'); dim_arr = _get(ind, 'dim')
+    trix_arr = _get(ind, 'trix')
+    chop_arr = _get(ind, 'choppiness')
+    mfi_arr = _get(ind, 'mfi')
+    if None in (e233, adx_arr, dip_arr, dim_arr, trix_arr, chop_arr, mfi_arr):
+        return None
+
+    c = C[i]
+    e233_v = e233[i]
+    adx_v = adx_arr[i]
+    dip_v, dim_v = dip_arr[i], dim_arr[i]
+    trix_v, trix_prev = trix_arr[i], trix_arr[i - 1]
+    chop_v = chop_arr[i]
+    mfi_v = mfi_arr[i]
+    if None in (e233_v, adx_v, dip_v, dim_v, trix_v, trix_prev, chop_v, mfi_v):
+        return None
+    if adx_v < 18 or chop_v >= 38.2:
+        return None
+
+    trend_up = c > e233_v
+    trend_down = c < e233_v
+
+    if trend_up and dip_v > dim_v and trix_v > 0 and trix_v > trix_prev and 40 <= mfi_v <= 80:
+        return 'buy'
+    if trend_down and dim_v > dip_v and trix_v < 0 and trix_v < trix_prev and 20 <= mfi_v <= 60:
+        return 'sell'
+    return None

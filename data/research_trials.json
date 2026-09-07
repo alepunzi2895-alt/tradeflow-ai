@@ -1,5 +1,5 @@
 {
-  "total": 297,
+  "total": 310,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -88,6 +88,22 @@
       "asset": "XAU",
       "strategy_id": "S21_EMA_TREND_CONFLUENCE",
       "note": "v1 nuova ipotesi da feature screening (EMA233/200/100 + ADX + StochRSI cross + MACD hist), tp/sl grid H1 — full period PF<1 su tutte le 7 config, NON promossa"
+    },
+    {
+      "ts": "2026-09-07T12:47:47Z",
+      "n_trials": 7,
+      "cumulative_after": 304,
+      "asset": "XAU",
+      "strategy_id": "S22_TRIX_CHOP_CONFLUENCE",
+      "note": "v1 seconda ipotesi (TRIX+Choppiness+MFI+EMA233, senza DI dominance), tp/sl grid H1 — full period PF<1 su tutte le 7 config, NON promossa"
+    },
+    {
+      "ts": "2026-09-07T12:48:26Z",
+      "n_trials": 6,
+      "cumulative_after": 310,
+      "asset": "XAU",
+      "strategy_id": "S22_TRIX_CHOP_CONFLUENCE",
+      "note": "v1.1 con filtro DI dominance aggiunto — risultati IDENTICI a v1 (filtro ridondante, gia' implicito), full period PF<1 confermato, NON promossa"
     }
   ]
 }

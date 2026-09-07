@@ -34,6 +34,8 @@ from signals import (
     signal_fib_confluence, fib_confluence_trade_levels,
     signal_dow_dip, DOW_DIP_TP_ATR, DOW_DIP_SL_ATR, DOW_DIP_MAX_BARS,
 )
+import numpy as np
+import extra_indicators as ei
 
 # ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
 try:
@@ -594,6 +596,14 @@ def compute_indicators(candles):
     for i in range(30,n):
         vals=[I['atr'][j] for j in range(i-30,i) if I['atr'][j] is not None]
         I['atr_avg'][i]=sum(vals)/len(vals) if vals else None
+
+    # TRIX / Choppiness Index / MFI (2026-09-07) — condivisi con strategy-engine-v2.py::
+    # compute_all() via extra_indicators.py (stessa funzione, stesso codice) per garantire
+    # zero divergenza backtest↔live.
+    _Hn, _Ln, _Cn, _Vn = np.array(H, dtype=float), np.array(L, dtype=float), np.array(C, dtype=float), np.array(V, dtype=float)
+    I['trix'] = [None if np.isnan(x) else float(x) for x in ei.trix(_Cn)]
+    I['choppiness'] = [None if np.isnan(x) else float(x) for x in ei.choppiness_index(_Hn, _Ln, _Cn)]
+    I['mfi'] = [None if np.isnan(x) else float(x) for x in ei.mfi(_Hn, _Ln, _Cn, _Vn)]
 
     return I
 

@@ -1,5 +1,44 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-07 — Studio segnali storici da canale Telegram privato (reverse-engineering)
+
+`scripts/parse_telegram_signals.py` + `scripts/telegram_signal_study.py` — dato un export
+JSON di Telegram Desktop ("Export chat history") di un canale segnali, estrae SOLO i dati
+strutturati (asset/direzione/entry range/SL/TP/timestamp UTC), **mai il testo grezzo dei
+messaggi**, e confronta lo stato degli indicatori (stessa feature matrix di
+`feature_screen.py`) nei bar precedenti ai segnali contro un baseline, sia con effect size
+univariato (Cohen's d) che con un classificatore multivariato (RF + permutation importance,
+holdout out-of-sample).
+
+> ⚠️ **Nota di conformità**: il canale usato come sorgente (servizio VIP a pagamento) dichiara
+> esplicitamente nella propria FAQ che copia/condivisione dei segnali è vietata (citano una
+> comunicazione CONSOB sul mirroring) e forniscono range invece di livelli precisi apposta per
+> impedirlo. Procedere con l'estrazione è stata una scelta esplicita e consapevole dell'utente
+> (proprio abbonamento, uso personale di ricerca) — **`data/telegram_signals.json` NON va mai
+> committato** (è in `.gitignore`), solo il codice di analisi è tracciato in git.
+
+**Risultato 2026-09-07** (canale IvanTrades VIP, 1087 segnali XAUUSD marzo 2024–set 2026,
+963 allineabili ai dati H1 disponibili, 560 buy/404 sell):
+- Cohen's d univariato: **nessuna feature con effetto oltre "piccolo"** (max |d|=0.35,
+  `atr_regime` — sia buy che sell tendono a occorrere con ATR corrente sotto la propria
+  media mobile 30, cioè in una "pausa" di volatilità locale, non in uno spike).
+- Classificatore multivariato (RF, holdout out-of-sample): **AUC 0.567 (buy) / 0.557 (sell)**
+  — segnale debole, più debole di quello trovato oggi per il forward-return generico (AUC
+  0.579). Nessuna feature dominante interpretabile (importance sparse su force_index/aroon
+  per buy, hist_volatility/donchian per sell).
+
+**Conclusione onesta**: non emerge un setup tecnico meccanico forte dietro le chiamate del
+canale — compatibile con un processo decisionale discrezionale/multi-fattore (price action,
+S/R, contesto fondamentale) che uno snapshot di indicatori single-bar non cattura bene, o con
+un edge del provider che non sta nel *timing* dell'entry ma altrove (risk management, size,
+selezione). **Nessuna funzione segnale scritta da questo studio** — il segnale trovato è
+troppo debole per giustificarla, si ripeterebbe l'errore già visto oggi con S21/S22.
+
+Prossimo passo naturale (non fatto, richiede conferma): invece di reverse-engineering
+dell'entry timing, backtestare i segnali COSÌ COME SONO (entry/SL/TP dichiarati) per capire
+se seguirli sarebbe stato profittevole — una domanda diversa e più diretta, che userebbe gli
+stessi dati già estratti.
+
 ## 🆕 2026-09-07 — Pipeline ricerca strategie: registro trial + feature screening ML
 
 Infrastruttura per creare/testare nuove strategie a cadenza regolare (manuale, non cron —

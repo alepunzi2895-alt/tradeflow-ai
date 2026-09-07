@@ -1,5 +1,5 @@
 {
-  "total": 310,
+  "total": 312,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -104,6 +104,22 @@
       "asset": "XAU",
       "strategy_id": "S22_TRIX_CHOP_CONFLUENCE",
       "note": "v1.1 con filtro DI dominance aggiunto — risultati IDENTICI a v1 (filtro ridondante, gia' implicito), full period PF<1 confermato, NON promossa"
+    },
+    {
+      "ts": "2026-09-07T13:15:15Z",
+      "n_trials": 1,
+      "cumulative_after": 311,
+      "asset": "XAU",
+      "strategy_id": "telegram_signal_study",
+      "note": "Cohen's d screening + classificatore BUY (1087 segnali canale Telegram vs baseline H1) - AUC holdout 0.567, effetto debole"
+    },
+    {
+      "ts": "2026-09-07T13:15:15Z",
+      "n_trials": 1,
+      "cumulative_after": 312,
+      "asset": "XAU",
+      "strategy_id": "telegram_signal_study",
+      "note": "classificatore SELL (stesso studio) - AUC holdout 0.557, effetto debole, nessun pattern forte identificato"
     }
   ]
 }

@@ -38,9 +38,31 @@ semplice "SL a BE dopo la prima gamba TP" assunto qui), o la sua esperienza real
 dal backtest per ragioni non catturabili dal solo testo dei messaggi. Da tenere presente
 prima di decidere se rendere questa strategia live.
 
+**Aggiornamento — trailing stop invece di SL fisso a BE** (richiesto dall'utente, `--trailing`):
+0.3×ATR dopo la prima gamba TP (stessa convenzione di `risk_guardian.py::ts_step_usd`),
+al posto dello SL fisso a breakeven. Migliora ma non ribalta il quadro:
+
+| TF | full PF (trailing) | HOLDOUT PF (trailing) |
+|---|---|---|
+| M15 | 0.928 (WR 47.7%) | 0.580 |
+| M30 | 0.882 (WR 47.1%) | 0.553 |
+
+**Pattern più interessante del numero aggregato**: sia con SL-fisso che con trailing, sia
+su M15 che su M30, i **fold di training sono vicini/sopra PF 1.0 (spesso 3-4/4 positivi)
+ma l'HOLDOUT (ultimi ~5 mesi) crolla sistematicamente** (PF 0.44-0.58). Stesso pattern di
+"edge decaduto di recente" già scoperto per le strategie proprietarie del progetto nello
+sprint 2026-09-02 — non un caso isolato di questo canale.
+
+**Chiusure discrezionali NON modellate**: la maggior parte dei messaggi di gestione del
+canale sono istruzioni relative e ambigue ("chiudete le voci alte, tenete quelle basse")
+che si riferiscono a ingressi multipli paralleli — un concetto che il modello attuale
+(1 entry + 4 TP a gamba fissa) non rappresenta, e non ricostruibile in modo affidabile dal
+solo testo. Tentare di forzarlo avrebbe prodotto un numero preciso ma inventato — omesso
+deliberatamente piuttosto che stimato male.
+
 **Non ancora inserita come strategia live/sempre-attiva** — richiede conferma esplicita
-separata (vedi nota di conformità sopra), a maggior ragione ora che il backtest as-is non
-supporta chiaramente la profittabilità dichiarata.
+separata (vedi nota di conformità sopra). Il pattern "training ok, holdout recente in
+crollo" è un argomento in più per la cautela, non per l'urgenza di renderla live.
 
 ## 🆕 2026-09-07 — Listener live segnali Telegram (FASE 1: solo log, nessun ordine)
 

@@ -105,6 +105,25 @@ def handle_message(msg_text: str, msg_date, msg_id):
               'msg_id': msg_id, 'msg_date': str(msg_date)})
 
 
+async def _resolve_channel(client, channel_id: int, name_hint: str = None):
+    """Un ID nudo è ambiguo per Telethon (non sa se è uno user o un canale) — va
+    risolto esplicitamente come PeerChannel, e serve prima "scaldare" la cache
+    entità dell'account con get_dialogs() (Telethon risolve solo entità già viste
+    nella sessione). Fallback: cerca tra i dialoghi per titolo se l'ID fallisce."""
+    from telethon.tl.types import PeerChannel
+
+    await client.get_dialogs()  # popola la cache entità per tutti i canali/gruppi di cui l'account è membro
+    try:
+        return await client.get_entity(PeerChannel(channel_id))
+    except Exception as e:
+        print(f"Risoluzione per ID fallita ({e}) — provo per titolo tra i dialoghi...")
+        if name_hint:
+            async for dialog in client.iter_dialogs():
+                if name_hint.lower() in (dialog.name or '').lower():
+                    return dialog.entity
+        raise
+
+
 async def main(backfill: int = 0):
     from telethon import TelegramClient, events
 
@@ -119,7 +138,7 @@ async def main(backfill: int = 0):
     await client.start()  # primo avvio: chiede telefono + OTP nel terminale (login interattivo utente)
     print("Connesso a Telegram.")
 
-    entity = await client.get_entity(int(CHANNEL_ID))
+    entity = await _resolve_channel(client, int(CHANNEL_ID), name_hint="IvanTrades")
     print(f"Canale: {entity.title}")
 
     if backfill:

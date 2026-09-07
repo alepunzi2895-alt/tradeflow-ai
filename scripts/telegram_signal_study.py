@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 from feature_screen import build_features  # riusa la stessa feature matrix di oggi
-import key_levels as kl
+import telegram_key_levels as kl
 import opt_harness as oh  # riusa il loader di strategy-engine-v2.py già collaudato (gestisce lo stdout wrapper)
 
 HERE = os.path.dirname(os.path.abspath(__file__))

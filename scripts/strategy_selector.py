@@ -15,6 +15,8 @@ import json
 import logging
 import os
 
+import numpy as np
+
 log = logging.getLogger('tf-bot')
 
 # ── STRATEGY REGISTRY ─────────────────────────────────────────────────────────
@@ -145,6 +147,65 @@ def _best_tf(strategy: dict) -> tuple:
     return max(perf.items(), key=lambda x: x[1]["pf"] * x[1]["wr"])
 
 
+# ── HURST EXPONENT / CUSUM (skill regime-detection, 2026-09-07) ─────────────
+# Solo metadata informativa in detect_regime_extended() — NON entra nel punteggio di
+# _score_strategy() (che resta invariato: regime match + PF + sessione + recent WR).
+# Wiring nel punteggio richiede prima una validazione via backtest (opt_harness.py),
+# non da fare alla cieca su un conto live. Vedi directives/02_strategies.md.
+def hurst_exponent(closes: list, max_lag: int = 50) -> float:
+    """Hurst exponent via Rescaled Range (R/S). 0.5≈random walk, >0.5 persistente/trending,
+    <0.5 mean-reverting. Ritorna 0.5 (neutro) se i dati sono insufficienti."""
+    values = np.asarray([c for c in closes if c is not None], dtype=float)
+    if len(values) < max_lag * 2:
+        return 0.5
+    lags = range(2, min(max_lag, len(values) // 4))
+    rs_means, valid_lags = [], []
+    for lag in lags:
+        n_chunks = len(values) // lag
+        if n_chunks < 1:
+            continue
+        rs_list = []
+        for c in range(n_chunks):
+            chunk = values[c * lag:(c + 1) * lag]
+            if len(chunk) < lag:
+                continue
+            cumdev = np.cumsum(chunk - chunk.mean())
+            r = cumdev.max() - cumdev.min()
+            s = chunk.std(ddof=1)
+            if s > 0:
+                rs_list.append(r / s)
+        if rs_list:
+            rs_means.append(np.mean(rs_list))
+            valid_lags.append(lag)
+    if len(valid_lags) < 5:
+        return 0.5
+    slope = np.polyfit(np.log(valid_lags), np.log(rs_means), 1)[0]
+    return float(np.clip(slope, 0.0, 1.0))
+
+
+def cusum_change_points(returns: list, threshold: float = 2.0) -> list:
+    """CUSUM change-point detection su una serie di return. Ritorna gli indici dove
+    viene rilevato uno shift statistico (mean/varianza) — utile per capire se il regime
+    è appena cambiato piuttosto che dedurlo solo da ADX/ATR istantanei."""
+    r = [x for x in returns if x is not None]
+    if len(r) < 10:
+        return []
+    arr = np.asarray(r, dtype=float)
+    mean_r, std_r = arr.mean(), arr.std()
+    if std_r == 0:
+        return []
+    s_pos = s_neg = 0.0
+    changes = []
+    for idx, x in enumerate(arr):
+        z = (x - mean_r) / std_r
+        s_pos = max(0.0, s_pos + z - 0.5)
+        s_neg = max(0.0, s_neg - z - 0.5)
+        if s_pos > threshold or s_neg > threshold:
+            changes.append(idx)
+            s_pos = s_neg = 0.0
+    return changes
+
+
 def detect_regime_extended(I: dict, i: int) -> dict:
     """
     Extended regime detection returning type + strength + atr_percentile.
@@ -186,6 +247,28 @@ def detect_regime_extended(I: dict, i: int) -> dict:
         regime_type = "WEAK"
         strength = 0.3
 
+    # Hurst/CUSUM: metadata aggiuntiva, non usata da _score_strategy() (vedi nota sopra).
+    # Hurst va calcolato sui LOG-RETURN, non sui prezzi grezzi: su un livello prezzo con
+    # drift secolare (XAU 2024-2026 in uptrend quasi ininterrotto) l'R/S classico satura
+    # a ~1.0 anche su finestre corte (bug scoperto e verificato empiricamente 2026-09-07 —
+    # vedi directives/02_strategies.md). Sui return, il classico bias upward del metodo
+    # R/S su campioni finiti resta: su H1 XAU osservato range 0.59-0.86, media ~0.70 — le
+    # soglie 0.55/0.45 sotto sono quelle generiche della skill, NON calibrate su questo
+    # dataset. Prima di usare hurst_bias per pesare _score_strategy() serve calibrare le
+    # soglie via backtest (opt_harness.py), altrimenti quasi ogni finestra legge TRENDING.
+    hurst = hurst_bias = None
+    regime_shift_flag = False
+    closes = I.get('C')
+    if closes:
+        window = closes[max(0, i - 149):i + 1]
+        rets = [np.log(window[k] / window[k - 1]) for k in range(1, len(window)) if window[k - 1]]
+        if len(rets) >= 70:
+            hurst = round(hurst_exponent(rets), 3)
+            hurst_bias = "TRENDING" if hurst > 0.55 else ("MEAN_REVERTING" if hurst < 0.45 else "RANDOM_WALK")
+        if len(rets) >= 30:
+            cps = cusum_change_points(rets)
+            regime_shift_flag = bool(cps and cps[-1] >= len(rets) - 5)
+
     return {
         "type": regime_type,
         "strength": round(min(strength, 1.0), 3),
@@ -193,6 +276,9 @@ def detect_regime_extended(I: dict, i: int) -> dict:
         "adx": adx,
         "dip": dip,
         "dim": dim,
+        "hurst": hurst,
+        "hurst_bias": hurst_bias,
+        "regime_shift_flag": regime_shift_flag,
     }
 
 

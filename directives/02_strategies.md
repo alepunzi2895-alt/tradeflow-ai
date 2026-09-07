@@ -1,5 +1,25 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-07 — Hurst exponent / CUSUM in strategy_selector.py (skill regime-detection)
+
+`detect_regime_extended()` ora calcola anche `hurst`, `hurst_bias` (TRENDING/MEAN_REVERTING/
+RANDOM_WALK), `regime_shift_flag` (CUSUM change-point nelle ultime 5 barre) — **solo metadata
+informativa, `_score_strategy()` non li usa**: il punteggio (regime match + PF + sessione +
+recent WR, 100 pt) resta identico a prima, zero impatto sulla selezione live.
+
+Bug scoperto e fixato in fase di test: Hurst va calcolato sui **log-return**, non sui prezzi
+grezzi — su un livello prezzo con drift secolare (XAU 2024-2026 quasi sempre in uptrend) l'R/S
+classico satura a ~1.0 anche su finestre di 150 barre H1, rendendo la metrica inutile. Sui
+return il bias upward noto del metodo R/S su campioni finiti resta: baseline osservata su H1
+XAU (25 campioni random) → range 0.59-0.86, media ~0.70. Le soglie 0.55/0.45 (dalla skill,
+generiche) quindi classificano quasi sempre TRENDING — **da ricalibrare su questo dataset
+prima di usarle per pesare lo score**, non prendere i valori della skill come oro colato.
+
+Prossimo passo (non fatto, richiede validazione backtest prima di toccare lo score live):
+usare `opt_harness.py` per testare se pesare `_score_strategy()` con hurst/regime_shift
+migliora PF/DD sull'holdout rispetto al roster attuale, con soglie calibrate su XAU/US30
+invece di quelle generiche.
+
 ## 🔬 2026-09-03 — Ricerca strategia US30 (in corso, nessuna live)
 
 Asset `US30Cash` (vedi `01_data_sources.md`). Harness dedicato, separato dal roster XAU:

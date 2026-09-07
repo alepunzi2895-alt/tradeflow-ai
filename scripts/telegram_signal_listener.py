@@ -38,6 +38,7 @@ import re
 from dotenv import load_dotenv
 
 from parse_telegram_signals import ENTRY_PAT, SL_PAT, TP_PAT, _GOLD_ALIASES
+from news_guardian import get_news_guardian
 
 load_dotenv()
 
@@ -93,8 +94,21 @@ def handle_message(msg_text: str, msg_date, msg_id):
     signal = parse_message_text(msg_text)
     if signal:
         signal.update({'type': 'ENTRY_SIGNAL', 'msg_id': msg_id, 'msg_date': str(msg_date)})
+        # Solo osservazione/log — news_guardian ha copertura solo prospettica (nessun
+        # archivio storico, vedi directives/02_strategies.md), quindi qui è utile
+        # solo per il monitoraggio live, non era backtestabile sullo storico.
+        try:
+            risk = get_news_guardian().check_news_risk()
+            signal['news_paused'] = risk.get('paused', False)
+            signal['news_risk_mult'] = risk.get('risk_mult', 1.0)
+            signal['news_reason'] = risk.get('reason', '')
+        except Exception as e:
+            signal['news_paused'] = None
+            signal['news_reason'] = f'check fallito: {e}'
         print(f"\n🔔 NUOVO SEGNALE — {signal['asset']} {signal['direction'].upper()} "
               f"{signal['entry_lo']}-{signal['entry_hi']} SL={signal['sl']} TP={signal['tps']}")
+        if signal.get('news_paused'):
+            print(f"   ⚠️  NEWS AD ALTO IMPATTO IN FINESTRA — {signal['news_reason']}")
         print("   [FASE 1 — solo log, nessun ordine inviato]")
         _log(signal)
         return

@@ -102,6 +102,15 @@ Setup (da fare dall'utente, MAI da Claude — richiede login interattivo con OTP
 avvio chiede telefono+OTP nel terminale dell'utente; sessione poi salvata in
 `data/telegram_session.session` (gitignored).
 
+**Aggiornamento — news_guardian integrato (solo osservazione)**: ogni `ENTRY_SIGNAL`
+rilevato viene arricchito con `news_paused`/`news_risk_mult`/`news_reason` da
+`news_guardian.py::check_news_risk()` e loggato insieme al segnale. Possibile solo qui
+(prospettico) e non nel backtest storico — `news_guardian.py` non ha archivio, solo cache
+rolling della settimana corrente (vedi sopra). Decisione dell'utente 2026-09-07: continuare
+ad osservare in avanti con il listener (Fase 1) invece di continuare a cercare aggiustamenti
+al backtest storico, dato che i tentativi onesti finora (trailing, confidence score) non
+hanno ribaltato il quadro negativo.
+
 Messaggi di gestione (BE/chiusura/SL hit) sono in linguaggio libero, non strutturato come
 gli entry signal — vengono solo FLAGGATI per revisione manuale (`MANAGEMENT_KEYWORDS`),
 non parsati/agiti automaticamente: il rischio di misinterpretare testo libero come comando

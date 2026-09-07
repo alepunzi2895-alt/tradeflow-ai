@@ -1,5 +1,5 @@
 {
-  "total": 290,
+  "total": 297,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -80,6 +80,14 @@
       "asset": "US30",
       "strategy_id": "feature_screen",
       "note": "ML feature screening H4 horizon=6 — AUC holdout 0.483, NON affidabile (n=1366, holdout=274)"
+    },
+    {
+      "ts": "2026-09-07T12:38:23Z",
+      "n_trials": 7,
+      "cumulative_after": 297,
+      "asset": "XAU",
+      "strategy_id": "S21_EMA_TREND_CONFLUENCE",
+      "note": "v1 nuova ipotesi da feature screening (EMA233/200/100 + ADX + StochRSI cross + MACD hist), tp/sl grid H1 — full period PF<1 su tutte le 7 config, NON promossa"
     }
   ]
 }

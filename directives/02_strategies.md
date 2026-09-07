@@ -46,9 +46,22 @@ python feature_screen.py --asset US30 --tf H4 --horizon 6
   totali/274 holdout troppo piccolo (stesso problema di scarsità dati di `S10_OB_FVG_SCALP`,
   vedi sotto). Da ripetere quando ci sarà più storico.
 
-**Prossimo passo (non fatto)**: tradurre le feature top di XAU H1 in una funzione segnale
-esplicita in `signals.py`, testarla con `opt_harness.py`, e verificarla con `dsr_check()`
-usando `research_trials.total_trials()` come `num_trials` prima di qualsiasi promozione.
+**Aggiornamento 2026-09-07 (stesso giorno)** — ipotesi tradotta e testata:
+`signal_ema_trend_confluence` (`S21_EMA_TREND_CONFLUENCE`) in `signals.py` — EMA233/200/100
+allineate + ADX≥20 + DI dominance + MACD histogram concorde + StochRSI K/D cross come timing.
+Grid tp/sl (7 trial, registrati in `research_trials.json`): **full-period PF<1 su tutte le 7
+configurazioni** (0.66-0.89) — l'AUC 0.579 del classificatore non si è tradotto in un edge
+reale una volta discretizzato in regole esplicite. L'holdout mostrava a tratti PF>1 ma su
+n=18 trade con full-period negativo è rumore, non edge (stesso pattern di S10_OB_FVG_SCALP
+oggi). **NON promossa**, funzione presente in `signals.py` ma non wired in `STRATEGIES_CONFIG`/
+`PLAYBOOK` — tenuta come record storico dell'ipotesi, zero impatto sul bot live.
+
+Lezione per la prossima iterazione: il trigger StochRSI K/D-cross butta via troppa
+informazione del classificatore (l'AUC misura la separabilità continua, non garantisce che
+un trigger binario arbitrario la catturi). Prossimi esperimenti da provare: trigger meno
+rigido (es. soglia su probabilità invece di crossing discreto), oppure promuovere TRIX/
+Choppiness/MFI da `extra_indicators.py` (research-only oggi) nel path live invece di
+limitarsi ai soli indicatori già in `compute_all()`/`compute_indicators()`.
 
 ## 🆕 2026-09-07 — Sprint reparametrizzazione strategie deboli (8 subagenti, nessuna promozione)
 

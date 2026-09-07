@@ -726,3 +726,66 @@ def signal_dow_dip(ind, i, hour=None, **kwargs):
     if C[i] > e50[i] and regime_ok:
         return 'buy'
     return None
+
+
+def signal_ema_trend_confluence(ind, i, hour=None, **kwargs):
+    """S21_EMA_TREND_CONFLUENCE V1 (2026-09-07) — ipotesi generata da feature_screen.py
+    (ML feature screening, skill signal-classification): su XAU H1 le feature con maggior
+    permutation importance out-of-sample (AUC holdout 0.579) erano distanza da EMA233/200/100
+    (contesto trend lungo), ADX, StochRSI K/D (timing), MACD histogram (momentum) — vedi
+    directives/02_strategies.md 2026-09-07. TRIX/Donchian/MFI/Choppiness/Elder Ray (altre
+    feature top) NON sono ancora nel pipeline live (solo in extra_indicators.py, research-only)
+    — v1 usa solo indicatori già in compute_all()/compute_indicators(), niente promozione
+    di nuovi indicatori nel path live per ora.
+
+    Entry: prezzo sopra (buy) / sotto (sell) EMA233+EMA200+EMA100 (allineamento trend lungo)
+    + ADX>=20 (evita mercati choppy) + DI dominance + MACD histogram concorde + StochRSI K
+    che incrocia D nella direzione del trade (timing pullback), K non ancora ipercomprato/ipervenduto.
+
+    TESTATA 2026-09-07 con opt_harness.py, grid tp/sl (7 trial, vedi research_trials.json):
+    full-period PF<1 su TUTTE le configurazioni testate (0.66-0.89) — l'AUC 0.579 del
+    classificatore NON si è tradotto in un edge reale una volta discretizzato in regole
+    esplicite. L'holdout mostrava occasionalmente PF>1 (es. tp2.5/sl1.25 → holdout PF 1.914)
+    ma con n=18 trade e full-period negativo è quasi certamente rumore, non edge — stesso
+    pattern già visto oggi su S10_OB_FVG_SCALP. NON PROMOSSA, NON wired in STRATEGIES_CONFIG/
+    PLAYBOOK. Tenuta come record storico dell'ipotesi (vedi directives/02_strategies.md).
+    Ipotesi per v2 (non fatta): il crossing StochRSI K/D scarta troppa informazione del
+    classificatore — provare un trigger meno rigido, o promuovere TRIX/Choppiness/MFI da
+    extra_indicators.py nel path live invece di limitarsi ai soli indicatori già esistenti.
+    """
+    if i < 233:
+        return None
+    if hour is not None and not (7 <= hour < 18):
+        return None
+
+    C = ind['C']
+    e233 = _get(ind, 'e233'); e200 = _get(ind, 'e200'); e100 = _get(ind, 'e100')
+    adx_arr = _get(ind, 'adx'); dip_arr = _get(ind, 'dip'); dim_arr = _get(ind, 'dim')
+    macd_hist = _get(ind, 'macd_hist', 'mh')
+    srsi_k = _get(ind, 'srsi_k'); srsi_d = _get(ind, 'srsi_d')
+    if None in (e233, e200, e100, adx_arr, dip_arr, dim_arr, macd_hist, srsi_k, srsi_d):
+        return None
+
+    c = C[i]
+    e233_v, e200_v, e100_v = e233[i], e200[i], e100[i]
+    adx_v, dip_v, dim_v = adx_arr[i], dip_arr[i], dim_arr[i]
+    mh_v = macd_hist[i]
+    k_v, d_v = srsi_k[i], srsi_d[i]
+    k_prev, d_prev = srsi_k[i - 1], srsi_d[i - 1]
+    if None in (e233_v, e200_v, e100_v, adx_v, dip_v, dim_v, mh_v, k_v, d_v, k_prev, d_prev):
+        return None
+    if adx_v < 20:
+        return None
+
+    trend_up = c > e233_v and c > e200_v and c > e100_v
+    trend_down = c < e233_v and c < e200_v and c < e100_v
+
+    if trend_up and dip_v > dim_v and mh_v > 0:
+        k_cross_up = k_prev <= d_prev and k_v > d_v and k_v < 75
+        if k_cross_up:
+            return 'buy'
+    elif trend_down and dim_v > dip_v and mh_v < 0:
+        k_cross_down = k_prev >= d_prev and k_v < d_v and k_v > 25
+        if k_cross_down:
+            return 'sell'
+    return None

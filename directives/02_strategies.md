@@ -1,5 +1,32 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-07 — Listener live segnali Telegram (FASE 1: solo log, nessun ordine)
+
+`scripts/telegram_signal_listener.py` — ascolta in tempo reale il canale via Telethon
+(user client, non bot — il canale è privato e l'utente non lo amministra) e logga i
+segnali riconosciuti con lo stesso parser di `parse_telegram_signals.py` (riusato, non
+duplicato). **Nessun ordine MT5 viene aperto/chiuso/modificato** — è deliberatamente solo
+osservazione. Log in `data/telegram_live_signals.jsonl` (gitignored).
+
+> ⚠️ **Stessa nota di conformità di sopra, più stringente qui**: un listener automatico
+> continuo è più vicino alla pratica di "mirroring" che il provider vieta esplicitamente
+> (citano CONSOB) rispetto allo studio storico una tantum. L'utente ha confermato
+> esplicitamente di voler procedere comunque, consapevole della distinzione. **Una
+> eventuale Fase 2 (esecuzione reale di ordini MT5 dal listener) richiede una conferma
+> esplicita separata — non va mai aggiunta come estensione naturale senza chiederlo di
+> nuovo.**
+
+Setup (da fare dall'utente, MAI da Claude — richiede login interattivo con OTP):
+`TELEGRAM_API_ID`/`TELEGRAM_API_HASH` da https://my.telegram.org/apps in `.env`,
+`TELEGRAM_CHANNEL_ID` (2112242007 per IvanTrades VIP, dall'export 2026-09-07). Primo
+avvio chiede telefono+OTP nel terminale dell'utente; sessione poi salvata in
+`data/telegram_session.session` (gitignored).
+
+Messaggi di gestione (BE/chiusura/SL hit) sono in linguaggio libero, non strutturato come
+gli entry signal — vengono solo FLAGGATI per revisione manuale (`MANAGEMENT_KEYWORDS`),
+non parsati/agiti automaticamente: il rischio di misinterpretare testo libero come comando
+è troppo alto per farne trigger automatici.
+
 ## 🆕 2026-09-07 — Studio segnali storici da canale Telegram privato (reverse-engineering)
 
 `scripts/parse_telegram_signals.py` + `scripts/telegram_signal_study.py` — dato un export

@@ -24,3 +24,6 @@ directives/07_self_learning_auto.md
 # Dati estratti da canale Telegram privato (clausola di riservatezza del provider,
 # vedi directives/02_strategies.md 2026-09-07) — solo locale, mai committato.
 data/telegram_signals.json
+data/telegram_live_signals.jsonl
+data/telegram_session.session
+data/telegram_session.session-journal

@@ -1,5 +1,47 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-07 — Backtest segnali Telegram COSÌ COME SONO (entry/SL/TP dichiarati)
+
+`scripts/telegram_signal_backtest.py` + `scripts/ivan_lot_sizing.py` — a differenza dello
+studio di reverse-engineering (che analizza il *timing*), qui si simula esattamente quello
+che il canale ha dichiarato: entry range, SL, 4 TP a gamba equa con lot sizing dalla
+tabella fornita dal provider (screenshot utente, dimezzata su richiesta esplicita
+"dimezziamo i lottaggi però per ora"). Risponde alla domanda diretta: seguire questi
+segnali sarebbe stato profittevole?
+
+**2 bug trovati e corretti durante l'implementazione** (entrambi avrebbero gonfiato/distorto
+il risultato):
+1. `parse_telegram_signals.py::SL_PAT` non gestiva il formato `SL @ 2908` (il canale è
+   passato da `SL: X` a `SL @ X` a un certo punto) — 942/1088 segnali avevano `sl=None`
+   prima del fix. Un refuso reale del canale (`SL @ 48328` invece di ~4832) è stato
+   scartato con un filtro di sanità (`MAX_SANE_DISTANCE=150`, oltre il p99 empirico ~88).
+2. Segnali antecedenti l'inizio dei dati M15 disponibili (agosto 2024, ma i segnali
+   partono da marzo 2024) venivano comunque "riempiti" contro prezzi di mesi/anni dopo
+   (bug: `bisect_left` su timestamp fuori range ritorna indice 0 silenziosamente) —
+   fix: scarto esplicito se `ts_unix` fuori dal periodo coperto dai dati.
+
+**Risultato (1076 segnali XAUUSD, 948 con dati sufficienti, ~3750 gambe TP simulate,
+balance riferimento 1000€, lotto dimezzato, cost model realistico riusato da
+strategy-engine-v2.py)**:
+
+| TF | full PF | full pnl | HOLDOUT PF | HOLDOUT pnl |
+|---|---|---|---|---|
+| M15 | 0.83 | -6173.5 | 0.454 | -6364.4 |
+| M30 | 0.778 | -8245.5 | 0.441 | -6415.1 |
+
+**Perdita netta su entrambi i timeframe testati, più marcata nell'holdout (ultimi ~5 mesi,
+811-835 trade)** — risultato consistente tra M15 e M30 (cross-check), non un artefatto di
+un singolo TF. L'utente ha una percezione soggettiva positiva ("lo seguo da anni, è
+profittevole") — possibili spiegazioni della divergenza: non prende tutti i segnali,
+gestisce i trade più attivamente del modello (trailing/chiusure discrezionali oltre al
+semplice "SL a BE dopo la prima gamba TP" assunto qui), o la sua esperienza reale diverge
+dal backtest per ragioni non catturabili dal solo testo dei messaggi. Da tenere presente
+prima di decidere se rendere questa strategia live.
+
+**Non ancora inserita come strategia live/sempre-attiva** — richiede conferma esplicita
+separata (vedi nota di conformità sopra), a maggior ragione ora che il backtest as-is non
+supporta chiaramente la profittabilità dichiarata.
+
 ## 🆕 2026-09-07 — Listener live segnali Telegram (FASE 1: solo log, nessun ordine)
 
 `scripts/telegram_signal_listener.py` — ascolta in tempo reale il canale via Telethon

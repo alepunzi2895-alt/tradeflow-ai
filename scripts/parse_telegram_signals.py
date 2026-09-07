@@ -27,7 +27,7 @@ ENTRY_PAT = re.compile(
     r'([\d]+\.?\d*)\s*-?\s*([\d]+\.?\d*)?',
     re.IGNORECASE,
 )
-SL_PAT = re.compile(r'SL\s*[:\s]+([\d]+\.?\d*)', re.IGNORECASE)
+SL_PAT = re.compile(r'SL\s*[:@=\s]+([\d]+\.?\d*)', re.IGNORECASE)
 TP_PAT = re.compile(r'TP\s*\d*\s*[:\s]+(open|[\d]+\.?\d*)', re.IGNORECASE)
 
 _GOLD_ALIASES = {'GOLD', 'XAUUSD', 'XAU', 'XAUUS'}
@@ -77,7 +77,7 @@ def parse_signals(messages: list, asset_filter: set = None) -> list:
     return out
 
 
-def dedupe_consecutive(signals: list, window_sec: int = 3600) -> list:
+def dedupe_consecutive(signals: list, window_sec: int = 21600) -> list:
     """Rimuove segnali duplicati/ripetuti (stesso asset+direzione+entry identico entro
     `window_sec`) — il canale a volte ri-posta lo stesso setup non ancora eseguito."""
     out = []

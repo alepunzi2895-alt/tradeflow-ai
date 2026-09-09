@@ -50,13 +50,31 @@ from risk_guardian import get_risk_guardian, RiskGuardian, var_report
 
 # ── STRATEGY SELECTOR AGENT ───────────────────────────────────────────────────
 try:
-    from strategy_selector import StrategySelector, is_hard_blocked
+    from strategy_selector import StrategySelector, is_hard_blocked, _load_hard_blocks
 except ImportError:
     StrategySelector = None
     def is_hard_blocked(strategy_id):
         return False
+    def _load_hard_blocks():
+        return set()
     log_placeholder3 = logging.getLogger('tf-bot')
     log_placeholder3.warning("strategy_selector.py non trovato — uso playbook statico")
+
+
+def _strategy_is_hard_blocked(name: str) -> bool:
+    """Come is_hard_blocked() ma tollerante ai nomi troncati dal broker nel
+    campo comment MT5 (es. 'S09_MFKK_SCALPIN', 'S18_RANGE_REVERS'). Usato per
+    filtrare i trade storici delle strategie bloccate dal calcolo del weekly DD:
+    le loro perdite non devono armare il circuit breaker che ferma TUTTE le
+    strategie (incluse quelle sane). Vedi 07_self_learning_log.md 2026-09-09."""
+    if not name:
+        return False
+    if is_hard_blocked(name):
+        return True
+    for bid in _load_hard_blocks():
+        if name.startswith(bid) or bid.startswith(name):
+            return True
+    return False
 
 # ── KEY LEVELS AGENT ──────────────────────────────────────────────────────────
 try:
@@ -1074,7 +1092,7 @@ def s20_manage():
         log.info(f"[S20] ✓ parziale {vol} lot @ TP1 (1R) + SL→BE  #{ticket}")
 
 def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
-                     sl_cooldowns_until=None, sl_cooldown_until=None):
+                     sl_cooldowns_until=None, sl_cooldown_until=None, pnl_today=0.0):
     """Ogni barra M5 chiusa: se il segnale S20 è valido e non c'è già una posizione S20 aperta → apre.
     Integrata nel flusso normale: sizing via RiskGuardian (composite/tier/compounding, con lotto
     finale ×S20_LOT_MULT — unica eccezione), cooldown SL condivisi, MAX_OPEN_ORDERS e guardia
@@ -1129,7 +1147,7 @@ def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
             atr_avg=I_m5['atr_avg'][idx],
             adx=I_m5['adx'][idx],
             hour_utc=bar_dt.hour,
-            today_pnl=state.pnl_today,
+            today_pnl=pnl_today,
             current_equity=acc_now['equity'] if acc_now else None,
             weekly_dd_pct=weekly_dd_pct,
             direction=direction,
@@ -1597,6 +1615,8 @@ def run():
     sl_cooldowns_until   = {}    # {strategy_name: datetime UTC} pausa specifica per strategia
     _stale_strikes       = set() # {strategy_name} entry stale al sync precedente (fix deadlock 2026-09-02)
     weekly_dd_pct        = 0.0   # drawdown settimanale reale (aggiornato ogni sync)
+    pnl_today_real       = 0.0   # P&L realizzato oggi (UTC), reale — aggiornato ogni sync
+    _cb_halt_logged      = False # dedup log transizione circuit breaker weekly-DD
     _live_dedup          = set() # dedup live scan: {(strat, dir, tf, bar_open_t)}
     _m30_live_cache      = None  # indicatori M30 per live scan (aggiornati ogni 60s)
     _m30_live_cnds       = None  # candles M30 per live scan
@@ -1852,9 +1872,14 @@ def run():
                 pnl_today_real = round(sum(t['profit'] for t in trades_data if t['time'][:10] == today_str), 2)
                 trades_today_real = sum(1 for t in trades_data if t['time'][:10] == today_str)
                 # ── Weekly drawdown reale: somma profitti ultimi 7gg vs equity corrente ─
+                # Esclude le strategie hard-bloccate: le loro perdite storiche non
+                # devono armare il circuit breaker weekly-DD, che fermerebbe anche
+                # S16/S17/S10/S20 (sane). Vedi 07_self_learning_log.md 2026-09-09.
                 try:
                     _week_ago = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)).date().isoformat()
-                    _weekly_pnl = sum(t['profit'] for t in trades_data if t.get('time','')[:10] >= _week_ago)
+                    _weekly_pnl = sum(t['profit'] for t in trades_data
+                                      if t.get('time','')[:10] >= _week_ago
+                                      and not _strategy_is_hard_blocked(t.get('strategy', '')))
                     _cur_equity = acc_data['equity'] if acc_data and acc_data.get('equity') else initial_equity
                     if _cur_equity > 0 and _weekly_pnl < 0:
                         weekly_dd_pct = round(abs(_weekly_pnl) / _cur_equity, 4)
@@ -1862,6 +1887,16 @@ def run():
                         weekly_dd_pct = 0.0
                 except Exception:
                     weekly_dd_pct = 0.0
+                # Log di transizione dell'halt weekly-DD (il circuit breaker logga
+                # per-call-site ma senza evidenziare l'ingresso/uscita dallo stato).
+                _cb_now = weekly_dd_pct > 0.05
+                if _cb_now and not _cb_halt_logged:
+                    log.warning(f"🛑 CIRCUIT BREAKER ARMATO — weekly DD {weekly_dd_pct:.1%} > 5% "
+                                f"(_weekly_pnl={_weekly_pnl:+.2f}, equity={_cur_equity:.0f}) — "
+                                f"nuovi ingressi XAU sospesi finché non rientra")
+                elif not _cb_now and _cb_halt_logged:
+                    log.info(f"✅ CIRCUIT BREAKER RIENTRATO — weekly DD {weekly_dd_pct:.1%} ≤ 5%")
+                _cb_halt_logged = _cb_now
                 _sl_cd_ts = sl_cooldown_until.isoformat() if sl_cooldown_until else None
                 _rg_last = rg._last_params if rg and getattr(rg, '_last_params', None) else None
                 try:
@@ -1946,7 +1981,7 @@ def run():
                     # Applica sempre la SL-streak penalty anche quando Vercel è online:
                     # se abbiamo SL consecutivi, limitiamo lo score al massimo locale
                     # (Vercel può restare stale a 50.0 per ore senza riflettere le perdite)
-                    _local_penalty = _local_ai_score(consecutive_sl_count, state.pnl_today)
+                    _local_penalty = _local_ai_score(consecutive_sl_count, pnl_today_real)
                     if consecutive_sl_count > 0:
                         current_ai_score = min(_fetched_score, _local_penalty)
                         _score_source = f"Vercel+SL({consecutive_sl_count})"
@@ -1955,7 +1990,7 @@ def run():
                         _score_source = "Vercel"
                 else:
                     # Vercel offline: calcola proxy locale da streak SL + pnl giornaliero
-                    current_ai_score = _local_ai_score(consecutive_sl_count, state.pnl_today)
+                    current_ai_score = _local_ai_score(consecutive_sl_count, pnl_today_real)
                     _score_source = f"locale (SL streak={consecutive_sl_count})"
 
                 last_ai_score = current_ai_score
@@ -2093,7 +2128,7 @@ def run():
                         atr_avg=atr_avg or atr_v,
                         hour_utc=bar_dt.hour,
                         adx=I_h1['adx'][i_h1],
-                        today_pnl=state.pnl_today,
+                        today_pnl=pnl_today_real,
                         current_equity=_acc_prev['equity'] if _acc_prev else None,
                     )
                     # Snapshot orario: score + composite + regime (una entry per candela H1)
@@ -2184,7 +2219,7 @@ def run():
                                     dip=I_h1['dip'][i_h1],
                                     dim=I_h1['dim'][i_h1],
                                     hour_utc=bar_dt.hour,
-                                    today_pnl=state.pnl_today,
+                                    today_pnl=pnl_today_real,
                                     current_equity=acc_now['equity'] if acc_now else None,
                                     weekly_dd_pct=weekly_dd_pct,
                                     tp_atr_mult=sel_tp_mult,
@@ -2325,7 +2360,7 @@ def run():
                                     atr=atr_i2, strategy_id=sec_id, ai_score=last_ai_score,
                                     atr_avg=I_h1['atr_avg'][i_h1], adx=I_h1['adx'][i_h1],
                                     dip=I_h1['dip'][i_h1], dim=I_h1['dim'][i_h1], hour_utc=bar_dt.hour,
-                                    today_pnl=state.pnl_today,
+                                    today_pnl=pnl_today_real,
                                     current_equity=acc_now['equity'] if acc_now else None,
                                     weekly_dd_pct=weekly_dd_pct,
                                     tp_atr_mult=sec_params.get('tp_mult', 1.5),
@@ -2443,7 +2478,7 @@ def run():
                                         atr_avg=_I_l['atr_avg'][_i_l],
                                         adx=_I_l['adx'][_i_l], dip=_I_l['dip'][_i_l],
                                         dim=_I_l['dim'][_i_l], hour_utc=_h_l,
-                                        today_pnl=state.pnl_today,
+                                        today_pnl=pnl_today_real,
                                         current_equity=_ac_l['equity'] if _ac_l else None,
                                         weekly_dd_pct=weekly_dd_pct,
                                         tp_atr_mult=_pm_l.get('tp_mult', 2.0),
@@ -2555,7 +2590,7 @@ def run():
                                         atr_avg=I_m15.get('atr_avg', [None]*len(candles_m15))[idx],
                                         adx=I_m15['adx'][idx], dip=I_m15['dip'][idx],
                                         dim=I_m15['dim'][idx], hour_utc=bar_dt_m15.hour,
-                                        today_pnl=state.pnl_today,
+                                        today_pnl=pnl_today_real,
                                         current_equity=acc_now['equity'] if acc_now else None,
                                         weekly_dd_pct=weekly_dd_pct,
                                         tp_atr_mult=params.get('tp_mult', 1.5),
@@ -2720,7 +2755,7 @@ def run():
                                         atr_avg=I_m30.get('atr_avg', [None]*len(candles_m30))[idx],
                                         adx=I_m30['adx'][idx], dip=I_m30['dip'][idx],
                                         dim=I_m30['dim'][idx], hour_utc=bar_dt_m30.hour,
-                                        today_pnl=state.pnl_today,
+                                        today_pnl=pnl_today_real,
                                         current_equity=acc_now['equity'] if acc_now else None,
                                         weekly_dd_pct=weekly_dd_pct,
                                         tp_atr_mult=params.get('tp_mult', 1.5),
@@ -2860,7 +2895,7 @@ def run():
                                     atr_avg=I_h4.get('atr_avg', [None]*len(candles_h4))[idx],
                                     adx=I_h4['adx'][idx], dip=I_h4['dip'][idx],
                                     dim=I_h4['dim'][idx], hour_utc=bar_dt_h4.hour,
-                                    today_pnl=state.pnl_today,
+                                    today_pnl=pnl_today_real,
                                     current_equity=acc_now['equity'] if acc_now else None,
                                     weekly_dd_pct=weekly_dd_pct,
                                     tp_atr_mult=params.get('tp_mult', 2.5),
@@ -2924,7 +2959,8 @@ def run():
                                      weekly_dd_pct=weekly_dd_pct,
                                      news_risk_mult=current_news_risk.get('risk_mult', 1.0),
                                      sl_cooldowns_until=sl_cooldowns_until,
-                                     sl_cooldown_until=sl_cooldown_until)
+                                     sl_cooldown_until=sl_cooldown_until,
+                                     pnl_today=pnl_today_real)
                 except Exception as _s20_err:
                     log.warning(f"[S20] errore ciclo: {_s20_err}")
 

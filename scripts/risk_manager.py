@@ -382,6 +382,11 @@ class RiskManager:
         """
         import urllib.request, ssl, json as _json
         from datetime import datetime, timezone, timedelta
+        # Guard: senza un base URL valido urllib solleva ValueError("unknown url
+        # type: '/api/db...'") ad ogni ciclo → il chiamante cade sempre sul proxy
+        # locale. Meglio ritornare None esplicito e silenzioso.
+        if not vercel_url or not str(vercel_url).startswith(('http://', 'https://')):
+            return None
         try:
             try:
                 import certifi
@@ -390,8 +395,15 @@ class RiskManager:
                 _ctx = ssl.create_default_context()
                 _ctx.check_hostname = False
                 _ctx.verify_mode = ssl.CERT_NONE
-            url = f"{vercel_url}/api/db?action=mt5_get"
-            req = urllib.request.Request(url, headers={'Content-Type': 'application/json'})
+            # POST con body JSON: l'endpoint /api/db instrada le action solo via
+            # POST — un GET con ?action=mt5_get ritorna il banner di servizio
+            # ({ok:true, service:...}) senza 'data', quindi lo score era sempre None.
+            url = f"{vercel_url.rstrip('/')}/api/db"
+            req = urllib.request.Request(
+                url,
+                data=_json.dumps({'action': 'mt5_get'}).encode(),
+                headers={'Content-Type': 'application/json'},
+                method='POST')
             with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
                 data = _json.loads(r.read().decode())
                 inner = data.get('data') or {}

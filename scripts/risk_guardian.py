@@ -273,6 +273,12 @@ class RiskGuardian:
         # Consecutive loss counter for circuit breaker
         self._consecutive_losses: int = 0
         self._last_closed_profits: list = []
+        # Giorno UTC a cui si riferisce _consecutive_losses. L'halt "5 SL consecutivi"
+        # si azzera al cambio di giorno UTC: senza questo reset resterebbe latchato
+        # per sempre, perché in halt il bot non apre più trade → non può mai chiuderne
+        # uno in profitto per riportare il contatore a 0 (vedi 07_self_learning_log.md
+        # 2026-09-09).
+        self._cl_day = datetime.datetime.now(datetime.timezone.utc).date()
 
         # Last computed order params (exposed to bot_status)
         self._last_params: dict = None
@@ -299,6 +305,16 @@ class RiskGuardian:
     def is_circuit_broken(self, today_pnl: float, current_equity: float,
                           weekly_dd_pct: float) -> tuple:
         """Returns (broken: bool, reason: str)."""
+        # Reset giornaliero (UTC) del contatore SL consecutivi — evita il latch
+        # permanente: in halt il bot non chiude trade, quindi record_trade_result()
+        # non verrebbe mai più chiamato per riportare il contatore a 0.
+        _today = datetime.datetime.now(datetime.timezone.utc).date()
+        if _today != self._cl_day:
+            if self._consecutive_losses:
+                log.info(f"[circuit] nuovo giorno UTC — reset {self._consecutive_losses} SL consecutivi")
+            self._consecutive_losses = 0
+            self._cl_day = _today
+
         if current_equity and current_equity > 0:
             daily_pct = today_pnl / current_equity
             if daily_pct < -CIRCUIT_BREAKERS["daily_loss_pct"]:
@@ -639,13 +655,25 @@ class RiskGuardian:
         return actions
 
     # ── RECORD TRADE RESULT (for circuit breaker) ──────────────────────────────
+    # Soglia sotto la quale una chiusura conta come "perdita" ai fini del circuit
+    # breaker. Le chiusure in break-even / scratch (BE stop, early-exit, trailing
+    # che scatta appena sopra l'entry) restano leggermente negative per spread e
+    # commissioni: contarle come SL faceva salire _consecutive_losses a 5 anche in
+    # una serie di trade sostanzialmente in pareggio, armando l'halt a sproposito.
+    SCRATCH_LOSS_USD = -2.0
+
     def record_trade_result(self, profit: float):
-        """Call when a trade closes to update consecutive loss counter."""
+        """Call when a trade closes to update consecutive loss counter.
+
+        - profit > 0           → reset streak
+        - profit < SCRATCH_LOSS_USD → SL vero, incrementa streak
+        - in mezzo (break-even) → neutro, non tocca lo streak
+        """
         self._last_closed_profits.append(profit)
-        if profit <= 0:
-            self._consecutive_losses += 1
-        else:
+        if profit > 0:
             self._consecutive_losses = 0
+        elif profit < self.SCRATCH_LOSS_USD:
+            self._consecutive_losses += 1
 
     # ── HELPERS ────────────────────────────────────────────────────────────────
     def _calc_lot(self, tier: dict, current_equity: float = None,

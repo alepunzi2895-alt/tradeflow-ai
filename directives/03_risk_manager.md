@@ -53,11 +53,11 @@ composite = strategy_confidence × 0.50
 
 ## Circuit Breaker
 
-| Trigger | Azione |
-|---|---|
-| Daily loss > 3% equity | Halt trading |
-| Weekly drawdown > 5% | Halt trading |
-| 5 consecutive losses | Halt trading |
+| Trigger | Azione | Reset |
+|---|---|---|
+| Daily loss > 3% equity | Halt trading | automatico a nuovo giorno (`state.pnl_today`) |
+| Weekly drawdown > 5% | Halt trading (solo strategie XAU via `get_order_params`) | quando la somma P&L rolling 7gg rientra sopra −5% |
+| 5 consecutive losses (perdite reali, non BE/scratch) | Halt trading | **a nuovo giorno UTC** (`_cl_day` in `is_circuit_broken`) o su un trade in profitto |
 
 > ⚠️ **2026-09-07**: fino a questa data `is_circuit_broken()`/`record_trade_result()` erano definite in
 > `risk_guardian.py` ma **mai chiamate da `mt5-bot.py`** — la tabella sopra descriveva un comportamento
@@ -66,6 +66,19 @@ composite = strategy_confidence × 0.50
 > controlla `rp['paused']`), e `rg.record_trade_result(net_profit)` viene chiamato ad ogni chiusura
 > posizione. Il cooldown per-strategia/globale su 2 SL consecutivi (`mt5-bot.py` ~1787-1796) era invece
 > già reale e funzionante — è un meccanismo separato, più granulare, non toccato da questo fix.
+
+> 🛠 **2026-09-09**: il wiring del 07-09 aveva fermato il bot. Tre correzioni:
+> 1. **`_consecutive_losses` non si latchava più**: contava come perdita anche `profit <= 0` (chiusure
+>    in BE/scratch, normali con RiskGuardian) e non si azzerava mai (in halt il bot non chiude trade →
+>    non può resettarlo con una vincita). Ora: conta solo `profit < SCRATCH_LOSS_USD` (−2$), e
+>    `is_circuit_broken()` azzera il contatore al cambio di giorno UTC.
+> 2. **`weekly_dd_pct` escludeva le strategie hard-bloccate**: le perdite storiche di S00/S09/S18
+>    gonfiavano il DD e armavano un halt che fermava anche S16/S17/S10/S20 (sane). Ora
+>    `mt5-bot.py` filtra i trade delle strategie in `hard_blocks.json` (match prefisso per il comment
+>    troncato) dal calcolo di `_weekly_pnl`. Log di transizione esplicito quando l'halt si arma/rientra.
+> 3. **`today_pnl` passato a `get_order_params()` era sempre 0.0** (`state.pnl_today`, mai alimentato:
+>    tutti i `state.record_trade()` passano `pnl=0`) → daily-loss breaker + downgrade tier giornaliero
+>    di fatto morti. Ora il bot passa `pnl_today_real` (P&L realizzato oggi dai trade MT5 reali).
 
 ## VaR / CVaR (informativo, 2026-09-07)
 

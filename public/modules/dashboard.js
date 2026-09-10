@@ -344,7 +344,7 @@ async function loadLayoutScores(){
         </div>
         <div style="font-size:7.5px;color:#666;margin-top:1px">${meta.name} — ${meta.inds}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-          <span style="font-size:8px;color:var(--dim);min-width:58px">${conf!=null?'confidence':'score setup'}</span>
+          <span style="font-size:8px;color:var(--dim);min-width:58px">${conf!=null?'fattori allineati':'score setup'}</span>
           <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${score}%;background:${confCol};transition:width .4s"></div>
           </div>

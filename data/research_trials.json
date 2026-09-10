@@ -1,5 +1,5 @@
 {
-  "total": 1729,
+  "total": 1735,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -190,6 +190,14 @@
       "n_trials": 42,
       "cumulative_after": 1729,
       "asset": "S32/S33/S34 full-stack test: confidence score (fattori PDF: MTF + BOS/CHoCH + oscillatore + premium/discount + sessione + candela + news-proxy) + circuit breaker + weekly-DD + sizing. S33 H1 PBO 1.00->0.80 (migliora ma resta overfit, knife-edge sul gate), S32/S34 invariate morte.",
+      "strategy_id": "",
+      "note": ""
+    },
+    {
+      "ts": "2026-09-10T16:52:33Z",
+      "n_trials": 6,
+      "cumulative_after": 1735,
+      "asset": "Test decisivo: confidence score predice l esito delle ENTRY? ~3000 candidati (param larghi) S32/S33/S34. Spearman(conf,pnl) = -0.02..+0.02, p>0.5 su TUTTE. ZERO potere predittivo, relazione se mai leggermente invertita (bucket conf-basso migliori). Chiude la domanda: l intelligenza sulle entry NON aumenta la profittabilita di questi segnali.",
       "strategy_id": "",
       "note": ""
     }

@@ -61,6 +61,22 @@ Nuova infra (sottoprodotti tenuti perché utili altrove):
 **Il sistema intelligente NON le rende profittevoli.** Sharpa S33 al margine (unica con un
 battito) ma niente supera la barra di validazione.
 
+**TEST 3 (richiesta utente: "se usiamo l'intelligenza per le ENTRY aumenta la
+profittabilità?")** — `confidence_edge_test()`: candidati con parametri LARGHI (~3000
+setup), confidence + esito per ognuno, decile confidence vs P&L:
+
+| Strat | Spearman(conf, pnl) | p | Bucket migliore |
+|---|---|---|---|
+| S32 M5 | **−0.001** | 0.97 | tutti in perdita |
+| S33 M30 | **+0.021** | 0.50 | Q1 = **conf più basso** (+$1158, PF 1.70) |
+| S34 H1 | **−0.023** | 0.62 | Q1 = **conf più basso** (+$345) |
+
+**RISPOSTA DEFINITIVA: NO.** Il confidence score ha **zero potere predittivo** sull'esito
+delle entry (correlazione ≈ 0, se mai leggermente invertita). Non c'è edge da selezionare.
+Il "miglioramento" di S33 nel TEST 2 (PBO 1.00→0.80) era fortuna sul valore del gate, non
+selettività reale. Il numero in dashboard è un **readout di contesto** (quali fattori sono
+allineati adesso), NON una probabilità di successo. `research_trials.json` 1729→1735.
+
 **→ Le 3 restano come CONFIDENCE SCORE in dashboard** (card "CONFIDENCE LAYOUT XAU",
 `strat_live_push` key S32/S33/S34 via `layout_scores_push()` ogni barra chiusa —
 `_layout_confidence_live()` calcola il confidence + breakdown fattori). Mostrano indicatori

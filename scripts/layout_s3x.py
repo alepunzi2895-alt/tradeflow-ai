@@ -57,10 +57,26 @@ RiskGuardian, e le info dai PDF") — `evaluate_s3x(..., system={})`:
               3/4→2/4. Il gate RIMUOVE vincitori ⇒ conferma che è rumore.
 
   VERDETTO: il sistema intelligente NON le rende profittevoli. Sharpa S33 al margine
-  (l'unica con un battito) ma niente supera la barra. Le 3 restano SOLO come confidence
-  score in dashboard (supporto al trading DISCREZIONALE), il bot non apre ordini.
-  Sottoprodotti utili tenuti: `market_structure.py` (BOS/CHoCH, gap G1 priorità alta),
-  `layout_confidence.py` (score multi-fattore riusabile per S31/S16).
+  (l'unica con un battito) ma niente supera la barra.
+
+TEST 3 (2026-09-10, richiesta utente: "se usiamo l'intelligenza per le ENTRY aumenta la
+profittabilità?") — `confidence_edge_test()`: genera i candidati con parametri LARGHI
+(~3000 setup totali), per ognuno confidence + esito trade, poi decile di confidence vs P&L.
+
+  S32 M5  : Spearman(conf, pnl) = -0.001  (p 0.97)  — ZERO potere predittivo
+  S33 M30 : Spearman = +0.021  (p 0.50)   — ZERO. Bucket conf-BASSO (Q1) = il migliore (+$1158)
+  S34 H1  : Spearman = -0.023  (p 0.62)   — ZERO. Idem, relazione se mai INVERTITA
+
+  RISPOSTA DEFINITIVA: NO. Il confidence score — pur costruito da concetti di trading veri
+  (MTF, BOS/CHoCH, oscillatori, premium/discount, sessione, candele) — NON separa le entry
+  buone dalle cattive su questi segnali. Non c'è edge da selezionare. Il miglioramento
+  apparente di S33 nel TEST 2 (PBO 1.00→0.80) era fortuna sul valore specifico del gate,
+  non potere selettivo reale.
+
+  Le 3 restano come readout di CONTESTO in dashboard (quali fattori sono allineati ADESSO —
+  utile per il trading discrezionale) ma il numero NON predice l'esito. Il bot non apre
+  ordini. Sottoprodotti tenuti: `market_structure.py` (BOS/CHoCH, gap G1), `layout_confidence.py`
+  (fattori riusabili per S31/S16 — lì da RI-validare, potrebbero funzionare su un segnale con edge).
 ────────────────────────────────────────────────────────────────────────────────
 """
 import os, sys, importlib.util, datetime
@@ -322,10 +338,123 @@ def evaluate_s3x(strat, tf=None, P=None, folds=4, cooldown_bars=None, system=Non
             'live': live, 'n_trades': len(trades), 'trades': trades}
 
 
+# parametri LARGHI: generano molti più candidati -> test del potere selettivo del confidence
+LOOSE_P = {
+    'S32': dict(sweep_lb=10, sweep_pen=0.02, reclaim_max=2.5, require_ribbon=False,
+                obv_confirm=False, cooldown_bars=2, stop_max=3.2),
+    'S33': dict(mouth_min=0.02, pullback_atr=2.5, mom_needed=1, adx_min=None,
+                session=(0, 24), cooldown_bars=2, stop_max=3.6),
+    'S34': dict(edge_tol=0.7, reject_wick=0.10, rvol_min=1.0, adx_max=None,
+                min_va_width_atr=0.6, cooldown_bars=2, stop_max=3.4),
+}
+
+
+def confidence_edge_test(strat, tf=None, bins=5):
+    """Test diretto: 'l'intelligenza sulle ENTRY aumenta la profittabilità?'
+    Genera i candidati con parametri LARGHI, per ognuno calcola il confidence score e
+    l'esito del trade (stessa gestione TP1/BE/trail). Poi raggruppa per decile/quintile
+    di confidence e guarda WR / P&L medio / PF per bucket. Se il confidence ha potere
+    predittivo i bucket alti battono i bassi in modo monotòno."""
+    import signals as SIG
+    import layout_confidence as LC
+    import numpy as np
+    from scipy.stats import spearmanr
+    se2 = SE2()
+    strat = strat.upper()
+    tf = tf or SPECS[strat]['tf']
+    candles, ind, O, H, L, C, T, n = _prep(tf)
+    ms_a, sh_a, sl_a, hbias = _prep_system(tf)
+    base = {'S32': SIG.S32_PARAMS, 'S33': SIG.S33_PARAMS, 'S34': SIG.S34_PARAMS}[strat]
+    PP = dict(base); PP.update(LOOSE_P[strat])
+    scan = {'S32': SIG.s32_scan, 'S33': SIG.s33_scan, 'S34': SIG.s34_scan}[strat]
+    status_fn = {'S32': SIG.s32_status, 'S33': SIG.s33_status, 'S34': SIG.s34_status}[strat]
+    mstep = {'S32': SIG.s32_manage_step, 'S33': SIG.s33_manage_step, 'S34': SIG.s34_manage_step}[strat]
+    la = TF_LOOKAHEAD[tf]; e20 = ind.get('e20')
+    rows = []
+    state = {}
+    i = 320
+    while i < n - 2:
+        atr_i = _get_i(ind, 'atr', i)
+        if not (np.isfinite(atr_i or np.nan) and (atr_i or 0) > 0):
+            i += 1; continue
+        dt = datetime.datetime.utcfromtimestamp(int(T[i]))
+        sp = scan(ind, i, state, dt=dt, P=PP)
+        if sp is None:
+            i += 1; continue
+        d = sp['dir']; sgn = 1 if d == 'buy' else -1
+        entry = candles[i + 1]['o']
+        sl = sp['sl']; risk = abs(entry - sl)
+        if risk <= 0 or risk > PP['stop_max'] * atr_i:
+            i += 1; continue
+        tp1 = entry + sgn * risk * PP['tp1_r']
+        tp2 = sp['tp2']
+        if not ((d == 'buy' and entry < tp1 <= tp2) or (d == 'sell' and entry > tp1 >= tp2)):
+            tp2 = entry + sgn * risk * PP['tp2_r']
+        ind['_hour'] = dt.hour
+        try:
+            ssc = status_fn(ind, i, {}, in_position=False, P=PP).get('score')
+        except Exception:
+            ssc = None
+        conf, _f = LC.setup_confidence(ind, i, d, strat, ms=ms_a, htf_bias=hbias,
+                                       status_score=ssc, swing_hi=sh_a, swing_lo=sl_a)
+        ind.pop('_hour', None)
+        pos = {'dir': d, 'entry': entry, 'sl': sl, 'tp1': tp1, 'tp2': tp2, 'risk': risk,
+               'part': False, 'booked': 0.0, 'hh': entry, 'll': entry, 'ebar': i + 1}
+        pnl = None
+        for j in range(i + 1, min(i + 1 + la, n)):
+            jh, jl, jc = H[j], L[j], C[j]
+            if strat == 'S32':
+                cp_, ek = mstep(pos, jh, jl, jc, e20[j] if e20 else None, _get_i(ind, 'atr', j), PP)
+            elif strat == 'S33':
+                ii = {'st': _get_i(ind, 'st', j), 'jaw': _get_i(ind, 'jaw', j),
+                      'teeth': _get_i(ind, 'teeth', j), 'lips': _get_i(ind, 'lips', j)}
+                cp_, ek = mstep(pos, jh, jl, jc, ii, _get_i(ind, 'atr', j), PP)
+            else:
+                lb = 5
+                cp_, ek = mstep(pos, jh, jl, jc, float(np.min(L[max(0, j - lb):j + 1])),
+                                float(np.max(H[max(0, j - lb):j + 1])), _get_i(ind, 'atr', j), PP)
+            if cp_ is None and (j - pos['ebar']) >= la:
+                cp_, ek = jc, 'maxbars'
+            if cp_ is not None:
+                mv = (cp_ - entry) if d == 'buy' else (entry - cp_)
+                rem = (1.0 - PP.get('tp1_frac', 0.5)) if pos['part'] else 1.0
+                pnl = pos['booked'] + rem * mv - se2.trade_cost(ek == 'sl')
+                i = j
+                break
+        if pnl is None:
+            i += 1; continue
+        rows.append((conf, pnl))
+        i += 1
+
+    if len(rows) < 40:
+        print(f"{strat} {tf}: solo {len(rows)} candidati — insufficiente"); return
+    confs = np.array([r[0] for r in rows]); pnls = np.array([r[1] for r in rows])
+    rho, p = spearmanr(confs, pnls)
+    order = np.argsort(confs)
+    print(f"\n=== {strat} {tf} · CONFIDENCE vs ESITO ENTRY ({len(rows)} candidati, param larghi) ===")
+    print(f"  Spearman(confidence, pnl) = {rho:+.3f}  (p={p:.3f})   "
+          f"{'← predittivo' if p < 0.05 and rho > 0.1 else '← nessun potere predittivo'}")
+    q = np.array_split(order, bins)
+    print(f"  {'bucket':<8}{'conf range':<14}{'n':>4}{'WR':>7}{'pnl medio':>11}{'PF':>7}{'pnl tot':>10}")
+    for k, idxs in enumerate(q):
+        cs = confs[idxs]; ps = pnls[idxs]
+        wr = 100 * (ps > 0).mean()
+        gw = ps[ps > 0].sum(); gl = -ps[ps <= 0].sum() or 1e-9
+        print(f"  Q{k+1:<7}{cs.min():.0f}-{cs.max():<10.0f}{len(idxs):>4}{wr:>6.0f}%"
+              f"{ps.mean():>11.2f}{gw/gl:>7.2f}{ps.sum():>10.0f}")
+    top = pnls[order[-len(order)//bins:]]; bot = pnls[order[:len(order)//bins]]
+    print(f"  top-quintile pnl tot {top.sum():+.0f}  vs  bottom-quintile {bot.sum():+.0f}  "
+          f"(Δ {top.sum()-bot.sum():+.0f})")
+
+
 if __name__ == '__main__':
     import warnings; warnings.filterwarnings('ignore')
     import opt_harness as OH
     args = [a.upper() for a in sys.argv[1:]]
+    if args and args[0] == 'EDGE':
+        for s in (['S32', 'S33', 'S34'] if len(args) < 2 else [args[1]]):
+            confidence_edge_test(s, SPECS[s]['tf'] if len(args) < 3 else args[2])
+        sys.exit(0)
     combos = ([(args[0], args[1] if len(args) > 1 else SPECS[args[0]]['tf'])]
               if args else [(s, SPECS[s]['tf']) for s in SPECS])
     for strat, tf in combos:

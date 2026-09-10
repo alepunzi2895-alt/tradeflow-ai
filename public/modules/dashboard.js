@@ -190,6 +190,75 @@ async function loadSlowData(){
     console.log('Calendar Error:', e.message);
     updateCalendar([]);
   });
+
+  // Layout Smart (S31) — stato setup + P&L live dal bot
+  loadLayoutSmart();
+}
+
+async function loadLayoutSmart(){
+  const card = document.getElementById('ls-card');
+  if(!card) return;
+  try{
+    const r = await fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'strat_live_get', key:'S31' }) });
+    const j = await r.json();
+    if(!j || !j.ok || !j.data){ card.style.display='none'; return; }
+    renderLayoutSmart(j.data);
+  }catch(e){ /* silenzioso */ }
+}
+
+function renderLayoutSmart(d){
+  const card = document.getElementById('ls-card');
+  if(!card) return;
+  const su = d.setup || null;
+  const ov = d.overall || null;
+  // niente dato utile → nascondi
+  if(!su && !ov){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const score = su ? (su.score||0) : 0;
+  const PHASE = {
+    in_position:  { txt:'IN POSIZIONE', col:'var(--green)' },
+    break_pending:{ txt:'BREAK — ATTENDO RETEST', col:'var(--yellow)' },
+    watching:     { txt:'TREND PULITO — nessun break', col:'var(--blue)' },
+    flat:         { txt:'NESSUN SETUP', col:'var(--dim)' },
+  };
+  const ph = PHASE[su?.phase || 'flat'] || PHASE.flat;
+
+  const circ = document.getElementById('ls-circle');
+  const C = 163.4;
+  if(circ){ circ.style.strokeDashoffset = String(C - C*(score/100)); circ.setAttribute('stroke', ph.col); }
+  document.getElementById('ls-num').textContent = su ? score : '—';
+  document.getElementById('ls-bias').textContent = ph.txt;
+  document.getElementById('ls-bias').style.color = ph.col;
+
+  const dirTxt = su?.pending_dir ? (su.pending_dir==='buy'?'▲ BUY':'▼ SELL') : (su?.trend ? (su.trend==='up'?'trend ▲':'trend ▼') : '—');
+  document.getElementById('ls-desc').textContent = su?.phase==='break_pending'
+    ? `${dirTxt} · attesa da ${su.bars_waiting} barre · scade tra ${su.bars_left}`
+    : su?.phase==='watching' ? `${dirTxt} · in attesa di una rottura di trendline`
+    : su?.phase==='in_position' ? 'posizione aperta — gestione: TP1 1.5R parz. + trailing sulla trendline'
+    : 'trend non abbastanza pulito (EMA200 piatta) — la strategia sta ferma';
+
+  const det = document.getElementById('ls-detail');
+  const nz = su?.nearest_zone;
+  det.innerHTML = [
+    su?.trend ? `Trend EMA200: <b style="color:${su.trend==='up'?'var(--green)':'var(--red)'}">${su.trend==='up'?'RIALZO':'RIBASSO'}</b>` : `Trend EMA200: <b style="color:var(--dim)">piatto</b>`,
+    nz ? `Zona di confluenza più vicina: <b>${nz.center}</b> (${nz.n_levels} livelli, ${nz.dist_atr>0?'+':''}${nz.dist_atr} ATR)` : `Nessuna zona di confluenza vicina`,
+    su?.price ? `<span style="color:var(--dim)">prezzo bot: ${su.price}</span>` : '',
+  ].filter(Boolean).map(x=>`<div>${x}</div>`).join('');
+
+  const live = document.getElementById('ls-live');
+  if(ov){
+    live.innerHTML = `Live nel roster: <b>${ov.n}</b> chiusi · WR <b style="color:var(--blue)">${ov.wr}%</b> · PF <b style="color:${ov.pf>=1?'var(--green)':'var(--red)'}">${ov.pf}</b> · P&L <b style="color:${ov.pnl>=0?'var(--green)':'var(--red)'}">${ov.pnl>=0?'+':''}$${ov.pnl}</b>${d.n_open?` · <span style="color:var(--yellow)">${d.n_open} aperta</span>`:''}`;
+  } else {
+    live.textContent = 'Nessun trade S31 ancora — apre solo su retest a zona di confluenza (~2-3/mese)';
+  }
+
+  const t = document.getElementById('ls-time');
+  if(t && (su?.bar_utc || d.synced_at)){
+    const dt = new Date(su?.bar_utc || d.synced_at);
+    t.textContent = 'barra ' + dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }
 }
 
 function updatePriceStrip(prices){

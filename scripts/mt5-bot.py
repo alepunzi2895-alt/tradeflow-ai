@@ -33,7 +33,7 @@ from signals import (
     signal_range_reversal,
     signal_fib_confluence, fib_confluence_trade_levels,
     signal_dow_dip, DOW_DIP_TP_ATR, DOW_DIP_SL_ATR, DOW_DIP_MAX_BARS,
-    ls_scan, ls_manage_step, LS_PARAMS,
+    ls_scan, ls_manage_step, ls_status, LS_PARAMS,
 )
 import numpy as np
 import extra_indicators as ei
@@ -193,6 +193,7 @@ _ls_state: dict = {}                         # {ticket(str): {dir,entry,sl,tp1,t
 _ls_scan_state: dict = {'pending': None}     # stato della state-machine di ingresso (break in attesa di retest)
 _ls_last_bar = None
 _ls_last_entry_ts = 0.0
+_ls_status: dict = {}                        # snapshot setup per la UI (dashboard), aggiornato ogni barra H1
 
 # Se sei su VPS Standalone, usa http://localhost:3000
 VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
@@ -1340,6 +1341,14 @@ def ls_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
 
     # la state-machine va SEMPRE avanzata (registra i break anche mentre siamo flat/in posizione)
     spec = ls_scan(I, idx, _ls_scan_state, dt=bar_dt, vol_ratio=vr, P=LS_PARAMS)
+    # snapshot setup per la dashboard (read-only)
+    try:
+        global _ls_status
+        _ls_status = ls_status(I, idx, _ls_scan_state, in_position=bool(_ls_state), P=LS_PARAMS)
+        _ls_status['bar_utc'] = bar_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        _ls_status['price'] = round(I['C'][idx], 2)
+    except Exception as _e:
+        log.debug(f"[S31] status: {_e}")
     if spec is None:
         return
     if _ls_state or news_paused:
@@ -1737,6 +1746,46 @@ def s20_push_stats(trades):
         urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
     except Exception as e:
         log.debug(f"[S20] push stats: {e}")
+
+def ls_push_stats(trades):
+    """Aggrega i trade S31_LAYOUT_SMART reali e li POSTa per la card nel tab Strategie
+    (action generica strat_live_push, key='S31')."""
+    if not SYNC_ENABLED or not VERCEL_URL:
+        return
+    rows = [t for t in (trades or []) if str(t.get('strategy', '')).startswith('S31')]
+    def agg(rr):
+        if not rr:
+            return None
+        n = len(rr); wins = [r for r in rr if r['profit'] > 0]
+        gw = sum(r['profit'] for r in wins)
+        gl = abs(sum(r['profit'] for r in rr if r['profit'] <= 0)) or 1e-9
+        return {'n': n, 'wr': round(100 * len(wins) / n, 1), 'pf': round(gw / gl, 3),
+                'pnl': round(sum(r['profit'] for r in rr), 2)}
+    cum = 0.0; eq = []
+    for r in sorted(rows, key=lambda x: x['time']):
+        cum += r['profit']; eq.append({'t': r['time'][:10], 'cum': round(cum, 2)})
+    summary = {
+        'mode': 'live', 'lot': 'RiskGuardian',
+        'config': 'H1 · break→retest→confluenza · SL strutturale · TP1 1.5R (parz.) / TP2 · nel roster',
+        'n_total': len(rows), 'n_open': len(_ls_state),
+        'overall': agg(rows),
+        'buy':  agg([r for r in rows if r['direction'] == 'buy']),
+        'sell': agg([r for r in rows if r['direction'] == 'sell']),
+        'setup': _ls_status or None,
+        'equity': eq[-60:],
+        'recent': [{'bar_utc': r['time'], 'dir': r['direction'],
+                    'resolution': r.get('close_reason', ''), 'pnl': r['profit']}
+                   for r in sorted(rows, key=lambda x: x['time'])[-8:]],
+    }
+    try:
+        req = urllib.request.Request(
+            f"{VERCEL_URL}/api/db",
+            data=json.dumps({'action': 'strat_live_push', 'secret': MT5_SECRET,
+                             'key': 'S31', 'summary': summary}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
+    except Exception as e:
+        log.debug(f"[S31] push stats: {e}")
 
 def sync_to_vercel(acc, positions, trades, bot_status):
     """Invia lo stato corrente alla UI su Vercel"""
@@ -2172,6 +2221,8 @@ def run():
                 sync_to_vercel(acc_data, positions_data, trades_data, bot_status)
                 if S20_ENABLED:
                     s20_push_stats(trades_data)
+                if LS_ENABLED:
+                    ls_push_stats(trades_data)
                 last_sync_time = now_ts
 
             # ── News Guardian: aggiorna rischio ogni 60s (era 15min — bug timezone fix 2026-04-28) ──

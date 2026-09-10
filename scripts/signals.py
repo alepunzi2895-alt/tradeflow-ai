@@ -1350,3 +1350,46 @@ def ls_manage_step(pos, jh, jl, jc, tlb_low_i, tlb_up_i, atr0, P=None):
     if hit_tp2:
         return pos['tp2'], 'tp2'
     return None, None
+
+
+def ls_status(ind, i, state, in_position=False, P=None):
+    """Stato corrente del setup S31 per la UI (dashboard). Read-only, non muta `state`.
+    Ritorna un dict compatto:
+      { phase: 'in_position'|'break_pending'|'watching'|'flat',
+        trend: 'up'|'down'|None, pending_dir, bars_waiting, bars_left,
+        nearest_zone: {center, n_levels, dist_atr} | None, score (0-100) }
+    """
+    P = P or LS_PARAMS
+    C = ind['C']
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    out = {'phase': 'flat', 'trend': None, 'pending_dir': None,
+           'bars_waiting': None, 'bars_left': None, 'nearest_zone': None, 'score': 0}
+    if not atr or i < 300:
+        return out
+    trend = ls_clean_trend(ind, i, atr, P)
+    out['trend'] = trend
+    pend = state.get('pending')
+    zs = ls_confluence_zones(ind, i, atr, P['band'], P['min_lv'])
+    c = C[i]
+    if zs:
+        nz = min(zs, key=lambda z: abs(z[3] - c))
+        out['nearest_zone'] = {'center': round(nz[3], 2), 'n_levels': nz[2],
+                               'dist_atr': round((c - nz[3]) / atr, 2)}
+    if in_position:
+        out['phase'] = 'in_position'; out['score'] = 100
+        return out
+    if pend and pend['start'] <= i <= pend['exp']:
+        out['phase'] = 'break_pending'
+        out['pending_dir'] = pend['dir']
+        out['bars_waiting'] = i - pend['start']
+        out['bars_left'] = pend['exp'] - i
+        # score: più vicino a una zona di confluenza allineata → più alto
+        sc = 55
+        if out['nearest_zone']:
+            d = abs(out['nearest_zone']['dist_atr'])
+            sc = int(max(55, min(95, 95 - d * 40)))
+        out['score'] = sc
+        return out
+    if trend:
+        out['phase'] = 'watching'; out['score'] = 30
+    return out

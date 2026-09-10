@@ -298,6 +298,34 @@ async function s20PaperGet(db) {
   return { ok: true, data: JSON.parse(r.rows[0].payload), updated_at: r.rows[0].updated_at };
 }
 
+// ── LIVE STATS PER-STRATEGIA (generico) ─────────────────────────────────────
+// Il bot POSTa il riepilogo live di una strategia parallela (S31_LAYOUT_SMART, ...).
+// La UI lo legge senza auth per la card nel tab Strategie. key = tag breve ([A-Za-z0-9_]).
+async function stratLivePush(db, body) {
+  const { secret, key, summary } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  const k = String(key || "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
+  if (!k) throw new Error("key required");
+  const uid = `strat-${k}-live`;
+  const payload = JSON.stringify({ ...(summary || {}), synced_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES (?, ?, 'strat_live', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [uid, uid, payload],
+  });
+  return { ok: true };
+}
+
+async function stratLiveGet(db, body) {
+  const k = String((body && body.key) || "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
+  if (!k) return { ok: true, data: null };
+  const r = await db.execute({ sql: "SELECT payload, updated_at FROM user_data WHERE user_id=? AND doc_type='strat_live'", args: [`strat-${k}-live`] });
+  if (!r.rows.length) return { ok: true, data: null };
+  return { ok: true, data: JSON.parse(r.rows[0].payload), updated_at: r.rows[0].updated_at };
+}
+
 async function adminReset(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and pass required");
@@ -322,6 +350,8 @@ const ACTIONS = {
   auto_trade_get:   (db)       => autoTradeGet(db),
   s20_paper_push:   (db, body) => s20PaperPush(db, body),
   s20_paper_get:    (db)       => s20PaperGet(db),
+  strat_live_push:  (db, body) => stratLivePush(db, body),
+  strat_live_get:   (db, body) => stratLiveGet(db, body),
 };
 
 export default async function handler(req, res) {

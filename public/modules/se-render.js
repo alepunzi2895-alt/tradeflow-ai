@@ -516,6 +516,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'Estremo 20b + ribbon EMA20/50 + Auto-Fib · ingresso confermato (2 candele) + higher-low/lower-high + EMA200 M5 · SL strutturale ≥1.5×ATR · TP1 1R (parz.) / TP2 2R · London+NY, no-lunedì · LIVE, integrata (sizing RiskGuardian ×2)'
         : id==='S30_DOW_DIP'
         ? 'US30 · mean-reversion Connors RSI(2)<15 + 2 chiusure H4 in calo, LONG-ONLY dentro un uptrend (close>EMA50 & EMA233, EMA50 in salita, entro 8% dal max50) · TP 1.2×ATR / SL 2.6×ATR, no trailing, time-stop 18 barre · blocco isolato su US30Cash'
+        : id==='S31_LAYOUT_SMART'
+        ? 'Layout TradingView (Trendlines with Breaks LuxAlgo + Pivot Fibonacci + Key Levels SpacemanBTC + EMA200) · SOLO in trend pulito (EMA200 in pendenza) · break trendline → attesa RETEST su una ZONA DI CONFLUENZA (≥2 livelli tra Fib pivot / PDH-PDL-PWH-PWL / H-L sessioni / prev-4H / EMA200) → candela di rifiuto · SL strutturale oltre la zona · TP1 1.5R parziale + BE, trailing dietro la trendline, runner a TP2 · H1 only, sessione 7-21 UTC'
         : id==='S05_V3_Sell_Exhaust'
         ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion TREND_UP H1'
         : id==='S01_EXHAUSTION'
@@ -523,13 +525,15 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         : id==='S13_STRUC_BREAK'
         ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
-      const pl = s.paperLive || null;
+      const pl = s.paperLive || s.rosterLive || null;
       const plClosed = pl && pl.overall ? pl.overall : null;
       const isLT = !!s.liveTest;
+      const isRosterLive = !s.liveTest && !!s.rosterLive;   // S31: strategia reale nel roster, mostra P&L live isolato
       return `
       <div style="background:var(--bg2); border:1px solid ${isLT?'#c8a96e55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
         ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
         ${isLT ? `<div style="position:absolute;top:0;right:0;background:#c8a96e;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🧪 LIVE ${s.liveTestLot||'0.03'}</div>` : ''}
+        ${isRosterLive ? `<div style="position:absolute;top:0;right:0;background:var(--green);color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">📡 LIVE · ROSTER</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isLT?'#c8a96e':isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:5px;align-items:center;font-size:10px">
@@ -552,6 +556,21 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
           ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
           ` : `<div style="font-size:8px;color:var(--dim)">📡 ${s.liveTestEmptyNote||'nessun trade S20 ancora — la strategia apre solo in London+NY, no-lunedì, ~5-6/mese'}</div>`}
+        </div>
+        ` : ''}
+        ${isRosterLive ? `
+        <div style="background:#0a1410;border:1px solid var(--green)40;border-radius:5px;padding:6px 8px;margin-bottom:5px">
+          <div style="font-size:8px;color:var(--green);font-weight:700;margin-bottom:3px">📡 LIVE · nel roster${pl&&pl.synced_at?` · agg. ${new Date(pl.synced_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:''}</div>
+          ${plClosed ? `
+          <div style="display:flex;gap:10px;font-size:9px;flex-wrap:wrap">
+            <span style="color:var(--dim)">chiusi <b style="color:var(--fg)">${plClosed.n}</b></span>
+            <span style="color:var(--dim)">WR <b style="color:var(--blue)">${plClosed.wr}%</b></span>
+            <span style="color:var(--dim)">PF <b style="color:${plClosed.pf>=1?'var(--green)':'var(--red)'}">${plClosed.pf}</b></span>
+            <span style="color:var(--dim)">P&L <b style="color:${plClosed.pnl>=0?'var(--green)':'var(--red)'}">${plClosed.pnl>=0?'+':''}$${plClosed.pnl}</b></span>
+            ${pl.n_open?`<span style="color:#c8a96e">${pl.n_open} aperta</span>`:''}
+          </div>
+          ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
+          ` : `<div style="font-size:8px;color:var(--dim)">📡 nessun trade S31 ancora — apre solo su retest a zona di confluenza in trend pulito, ~2-3/mese</div>`}
         </div>
         ` : ''}
         ${st.eq && st.eq.length>1 ? `

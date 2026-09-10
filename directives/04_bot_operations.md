@@ -167,6 +167,7 @@ alle altre".
 | Filtri | sessione 7–21 UTC, no venerdì ≥16 UTC, news pause (+ `news_risk_mult`), toggle auto-trade |
 | Stato | `data/ls_live_state.json` (gitignored, ricostruito al riavvio da posizioni tag `S31`) |
 | Backtest overlay | `strategy-engine-v2.py --file …h1… --rm --layout-smart` — mostra S31 isolata + impatto portafoglio (H1: PF 1.519→1.534, P&L +$499, DD −$86) |
+| UI | **Tab Strategie**: card `S31_LAYOUT_SMART` con curva equità backtest + badge `📡 LIVE · ROSTER` + P&L live isolato (da `ls_push_stats` → `strat_live_push` key=`S31`, letto ogni 60s via `strat_live_get`). **Dashboard**: card "LAYOUT SMART SCORE · XAU/USD H1" (`#ls-card`) — stato del setup pushato dal bot (`ls_status()` in `signals.py`, campo `setup` nel summary): `in_position` / `break_pending` (attendo retest) / `watching` (trend pulito, no break) / `flat`, con zona di confluenza più vicina e P&L live. Read-only, si popola solo col bot acceso |
 
 **Per disattivare**: `LS_ENABLED = False` in `mt5-bot.py` (riga ~171). Posizioni aperte
 restano con SL/TP hard.

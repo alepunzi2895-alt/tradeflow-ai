@@ -77,6 +77,19 @@ const SE = {
         best_regime: 'London+NY M5 · no-lunedì · backtest 20 mesi @0.01lot · OOS ultimi 8m PF 1.72 · LIVE da 2026-08-28, integrata (RiskGuardian ×2) da 2026-09-01',
         eq: [1.0,-3.2,-3.5,-13.6,10.4,6.1,-5.6,10.1,21.0,14.0,18.5,28.2,23.0,69.9,122.3,104.9,173.4,176.9]
       } },
+    // ── Layout TradingView XAU_* (break→retest→confluenza) · nel roster dal 2026-09-10 ──
+    // Ricerca: scripts/layout_smart.py · ~1500 trial (trigger discreti + ML tutti falliti);
+    // solo H1 con questa lifecycle passa (PBO 0.33). M30 overfit, M15 morto.
+    // stats @0.01 lot · 22 mesi · cost model ON · eq = curva equità mensile cumulata
+    'S31_LAYOUT_SMART': { label: 'Layout Smart [H1]', pf: 1.95, wr: '52.8%', tp: '1.5R parz. + zona conf.', sl: 'strut. (zona) ≤2.8×ATR',
+      rosterLive: null,   // riempito da strat_live_get {key:'S31'}
+      stats: {
+        pnl_1m: -11.3, td_1m: 0.07, pnl_6m: 129.7, td_6m: 0.06,
+        pnl_12m: 536.1, td_12m: 0.08, pnl_24m: 515.7, td_24m: 0.07,
+        maxdd: 130.4, maxdd_pct: '25.3%', trades_12m: 29,
+        best_regime: 'Trend pulito (EMA200 slope) · H1 only · break trendline LuxAlgo → retest zona di confluenza (≥2 livelli: Fib pivot / PDH-PDL-PWH-PWL / H-L sessioni / prev-4H / EMA200) → rifiuto · holdout PF 1.86 · walk-forward 3/4 fold+ · PBO 0.33 (non overfit) · buy+sell entrambi positivi · ~2.4 trade/mese',
+        eq: [8.7,18.2,30.3,36.7,56.7,63.0,16.6,-21.7,-41.2,-28.6,-20.4,51.8,186.8,194.5,219.9,338.2,386.0,441.3,412.3,310.8,526.9,515.7]
+      } },
     // ── US30 · mean-reversion azionaria (Connors RSI(2)) · blocco isolato su 2° simbolo dal 2026-09-03 ──
     // P&L in $ al lotto live 0.10 (US30Cash: 1 pt indice ≈ $0.10 @ 0.10 lot). Ricerca: scripts/us30_harness.py
     'S30_DOW_DIP': { label: 'Dow Dip [H4] · US30', pf: 1.63, wr: '76.2%', tp: 'ATR×1.2', sl: 'ATR×2.6',
@@ -329,6 +342,12 @@ async function seRefresh() {
       body: JSON.stringify({ action:'s20_paper_get' }) })
       .then(r=>r.json())
       .then(j=>{ if (j && j.ok && SE.strategies.S20_FIB_CONFLUENCE) SE.strategies.S20_FIB_CONFLUENCE.paperLive = j.data || null; })
+      .catch(()=>{});
+    // S31_LAYOUT_SMART: riepilogo live dal roster (stessa cadenza)
+    fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'strat_live_get', key:'S31' }) })
+      .then(r=>r.json())
+      .then(j=>{ if (j && j.ok && SE.strategies.S31_LAYOUT_SMART) SE.strategies.S31_LAYOUT_SMART.rosterLive = j.data || null; })
       .catch(()=>{});
   }
 

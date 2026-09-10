@@ -849,3 +849,504 @@ def signal_trix_chop_confluence(ind, i, hour=None, **kwargs):
     if trend_down and dim_v > dip_v and trix_v < 0 and trix_v < trix_prev and 20 <= mfi_v <= 60:
         return 'sell'
     return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYOUT-COMBO STRATEGIES (2026-09-10) — dai layout TradingView XAU_M15/M30/H1
+#
+# I layout XAU_* (tutti tranne MFKK_GOLD, che è già S00) condividono lo stesso
+# toolkit discrezionale:
+#   • Trendlines with Breaks [LuxAlgo]   (length 14, slope ATR×1)  → tlb_up/tlb_dn
+#   • Pivot Points Standard (Fibonacci, daily)                     → dpiv/dr1..3/ds1..3
+#   • Key Levels SpacemanBTC IDWM (PDH/PDL, PWH/PWL)               → pdh/pdl/pwh/pwl
+#   • Moving Average Exponential 200 (close)                       → ema200
+#   • Sessions [LuxAlgo] (London 07-16, NY 12-21 UTC)             → filtro hour
+# Tutti gli array sono prodotti da compute_all() (strategy-engine-v2.py).
+# BE + trailing sono applicati dal backtester (run_one) — non qui.
+#
+# Parametri tunabili raccolti in TLB_* / PIV_* per gli sweep opt_harness.
+# ─────────────────────────────────────────────────────────────────────────────
+
+TLB_SESSION       = (7, 20)   # London open → NY close (UTC)
+TLB_ADX_MIN       = 18        # gate direzionalità minima sul break
+PIV_SESSION       = (7, 19)
+PIV_TOL_ATR       = 0.35      # "tocco" di un livello = entro k·ATR
+PIV_REV_RSI_BUY   = 45        # RSI massimo per un buy di reversione
+PIV_REV_RSI_SELL  = 55        # RSI minimo per un sell di reversione
+
+
+def signal_tlb_trend(ind, i, hour=None, **kwargs):
+    """SA_TLB_TREND — LuxAlgo Trendline Break in direzione del trend EMA200, in sessione.
+    Combo: Trendlines with Breaks + Moving Average Exponential(200) + Sessions.
+    Trend-following: si entra sulla barra in cui il prezzo rompe la trendline
+    (discendente per un buy, ascendente per un sell) solo se è dal lato "giusto"
+    dell'EMA200 e con ADX minimo.
+    """
+    s0, s1 = kwargs.get('session', TLB_SESSION)
+    if i < 260:
+        return None
+    if hour is not None and not (s0 <= hour < s1):
+        return None
+    up = ind.get('tlb_up'); dn = ind.get('tlb_dn')
+    ema200 = ind.get('ema200')
+    if up is None or dn is None or ema200 is None:
+        return None
+    e = ema200[i]; c = ind['C'][i]
+    if e is None:
+        return None
+    adx_min = kwargs.get('adx_min', TLB_ADX_MIN)
+    a_arr = ind.get('adx'); a = a_arr[i] if a_arr else None
+    if a is not None and a < adx_min:
+        return None
+    use_ema = kwargs.get('use_ema', True)
+    fade = kwargs.get('fade', False)
+    if kwargs.get('strict', False):
+        up = ind.get('tlb_up_s', up); dn = ind.get('tlb_dn_s', dn)
+    if fade:
+        # fade: shorta un up-break che avviene SOTTO l'EMA200 (probabile falso breakout)
+        if up[i] and (not use_ema or c < e):
+            return 'sell'
+        if dn[i] and (not use_ema or c > e):
+            return 'buy'
+        return None
+    if up[i] and (not use_ema or c > e):
+        return 'buy'
+    if dn[i] and (not use_ema or c < e):
+        return 'sell'
+    return None
+
+
+def _recent_cross(arr, C, i, lb, up):
+    """True se il prezzo ha attraversato `arr` (livello) nella direzione `up`
+    nelle ultime `lb` barre (close da un lato a close dall'altro)."""
+    if arr is None:
+        return False
+    for j in range(max(1, i - lb), i + 1):
+        lv = arr[j]
+        if lv is None or arr[j-1] is None:
+            continue
+        if up and C[j-1] <= lv < C[j]:
+            return True
+        if (not up) and C[j-1] >= lv > C[j]:
+            return True
+    return False
+
+
+def signal_tlb_confluence(ind, i, hour=None, **kwargs):
+    """SD_TLB_CONFLUENCE — la "tesi" vera dei layout: si entra SOLO quando più cose
+    si allineano. Trendline break (stretto) + il prezzo ha appena attraversato un
+    livello Fib pivot nella stessa direzione + EMA200 concorde + sessione London/NY.
+    Poche entrate, per costruzione."""
+    s0, s1 = kwargs.get('session', (7, 20))
+    if i < 300:
+        return None
+    if hour is not None and not (s0 <= hour < s1):
+        return None
+    C = ind['C']; c = C[i]
+    ema200 = ind.get('ema200')
+    up = ind.get('tlb_up_s'); dn = ind.get('tlb_dn_s')
+    if ema200 is None or up is None or ema200[i] is None:
+        return None
+    e = ema200[i]
+    atr = ind['atr'][i]
+    if not atr:
+        return None
+    a_arr = ind.get('adx'); a = a_arr[i] if a_arr else None
+    if a is not None and a < kwargs.get('adx_min', 18):
+        return None
+    lb = kwargs.get('cross_lb', 3)
+    pivot_keys = kwargs.get('pivot_keys', ('dpiv', 'dr1', 'ds1'))
+    piv_up = any(_recent_cross(ind.get(k), C, i, lb, True) for k in pivot_keys)
+    piv_dn = any(_recent_cross(ind.get(k), C, i, lb, False) for k in pivot_keys)
+    if up[i] and c > e and piv_up:
+        return 'buy'
+    if dn[i] and c < e and piv_dn:
+        return 'sell'
+    return None
+
+
+def signal_pivot_bias_pullback(ind, i, hour=None, **kwargs):
+    """SE_PIVOT_PULLBACK — bias dal pivot giornaliero + EMA200, ingresso sul RITRACCIAMENTO.
+    Bias long: close > P (pivot) e close > EMA200. In quel bias si compra un pullback
+    che tocca S1 (o l'EMA200) e stampa una candela di inversione rialzista. Mirror per short.
+    Non è un breakout — si entra CONTRO il movimento di breve, con il trend di fondo."""
+    s0, s1 = kwargs.get('session', (7, 19))
+    if i < 300:
+        return None
+    if hour is not None and not (s0 <= hour < s1):
+        return None
+    C = ind['C']; H = ind['H']; L = ind['L']; O = ind['O']
+    c = C[i]; cp = C[i-1]; op = O[i]; lo = L[i]; hi = H[i]
+    e_arr = ind.get('ema200'); p_arr = ind.get('dpiv')
+    if e_arr is None or p_arr is None or e_arr[i] is None or p_arr[i] is None:
+        return None
+    e = e_arr[i]; p = p_arr[i]
+    atr = ind['atr'][i]
+    if not atr:
+        return None
+    tol = kwargs.get('tol_atr', 0.4) * atr
+    s1_arr = ind.get('ds1'); r1_arr = ind.get('dr1')
+    rev_bull = c > op and c > cp                 # candela verde che chiude sopra la precedente
+    rev_bear = c < op and c < cp
+    if c > p and c > e:                          # bias long
+        pull_targets = [x for x in (s1_arr[i] if s1_arr else None, e) if x is not None]
+        if any(lo <= t + tol and c > t for t in pull_targets) and rev_bull:
+            return 'buy'
+    if c < p and c < e:                          # bias short
+        pull_targets = [x for x in (r1_arr[i] if r1_arr else None, e) if x is not None]
+        if any(hi >= t - tol and c < t for t in pull_targets) and rev_bear:
+            return 'sell'
+    return None
+
+
+def signal_session_range_break(ind, i, hour=None, weekday=None, **kwargs):
+    """SF_SESSION_ORB — opening-range breakout della sessione di Londra.
+    Le prime `or_bars` barre dopo l'apertura Londra (07:00 UTC) definiscono un range;
+    una chiusura oltre l'estremo del range, nella direzione del bias pivot, entra.
+    Un solo trade per sessione (gestito dal cooldown/MAX_TRADES del backtester)."""
+    if i < 300 or hour is None:
+        return None
+    or_bars = kwargs.get('or_bars', 4)
+    tf_min = kwargs.get('tf_min', 60)
+    open_hour = kwargs.get('open_hour', 7)
+    # quante barre servono per coprire l'opening range e quante ne restano nella sessione
+    span = or_bars
+    if not (open_hour <= hour < open_hour + kwargs.get('window_h', 6)):
+        return None
+    C = ind['C']; H = ind['H']; L = ind['L']
+    import datetime as _dt
+    # trova l'indice della prima barra della sessione odierna
+    def _h(j): return _dt.datetime.utcfromtimestamp(ind['T'][j]).hour if ind.get('T') else None
+    T = ind.get('T')
+    if T is None:
+        return None
+    day0 = _dt.datetime.utcfromtimestamp(T[i]).date()
+    start = None
+    for j in range(i, max(0, i - 40), -1):
+        dj = _dt.datetime.utcfromtimestamp(T[j])
+        if dj.date() != day0:
+            break
+        if dj.hour < open_hour:
+            break
+        start = j
+    if start is None or i - start < span:
+        return None
+    orh = max(H[start:start + span]); orl = min(L[start:start + span])
+    if i < start + span:
+        return None
+    c = C[i]; cp = C[i-1]
+    e_arr = ind.get('ema200'); p_arr = ind.get('dpiv')
+    e = e_arr[i] if e_arr else None
+    p = p_arr[i] if p_arr else None
+    atr = ind['atr'][i]
+    if not atr:
+        return None
+    margin = kwargs.get('margin_atr', 0.1) * atr
+    long_bias = (p is None or c > p) and (e is None or c > e)
+    short_bias = (p is None or c < p) and (e is None or c < e)
+    if cp <= orh and c > orh + margin and long_bias:
+        return 'buy'
+    if cp >= orl and c < orl - margin and short_bias:
+        return 'sell'
+    return None
+
+
+def _piv_levels(ind, i, keys):
+    out = []
+    for k in keys:
+        arr = ind.get(k)
+        if arr is not None and arr[i] is not None:
+            out.append(arr[i])
+    return out
+
+
+def signal_pivot_reversal(ind, i, hour=None, **kwargs):
+    """SB_PIVOT_REV — rifiuto di un livello Fib pivot o key level (PDH/PDL/PWH/PWL).
+    Combo: Pivot Points Standard (Fibonacci) + Key Levels SpacemanBTC + Sessions.
+    Mean-reversion: la barra buca il livello con la mecca (wick) ma chiude dal lato
+    opposto, chiusura contro la barra precedente, oscillatore RSI esausto.
+    """
+    s0, s1 = kwargs.get('session', PIV_SESSION)
+    if i < 260:
+        return None
+    if hour is not None and not (s0 <= hour < s1):
+        return None
+    C = ind['C']; H = ind['H']; L = ind['L']; O = ind['O']
+    c = C[i]; hi = H[i]; lo = L[i]; op = O[i]
+    atr = ind['atr'][i]
+    if not atr or atr <= 0:
+        return None
+    atr_avg = ind['atr30'][i]
+    if atr_avg and atr > kwargs.get('spike_k', 1.8) * atr_avg:
+        return None                                        # no news spike
+    a_arr = ind.get('adx'); a = a_arr[i] if a_arr else None
+    if a is not None and a >= kwargs.get('adx_max', 24):
+        return None                                        # solo range / weak-trend
+    tol = kwargs.get('tol_atr', PIV_TOL_ATR) * atr
+    wick_min = kwargs.get('wick_atr', 0.30) * atr
+    r_arr = ind.get('rsi'); r = r_arr[i] if r_arr else None
+    rsi_buy = kwargs.get('rsi_buy', PIV_REV_RSI_BUY)
+    rsi_sell = kwargs.get('rsi_sell', PIV_REV_RSI_SELL)
+    res = [x for x in _piv_levels(ind, i, ('dr1', 'dr2', 'dr3', 'pdh', 'pwh')) if x >= c]
+    sup = [x for x in _piv_levels(ind, i, ('ds1', 'ds2', 'ds3', 'pdl', 'pwl')) if x <= c]
+    lvl_r = min(res) if res else None                      # solo il livello più vicino
+    lvl_s = max(sup) if sup else None
+    if lvl_r is not None:
+        upper_wick = hi - max(c, op)
+        if (hi >= lvl_r - tol and c < lvl_r and c < op
+                and upper_wick >= wick_min and (r is None or r > rsi_sell)):
+            return 'sell'
+    if lvl_s is not None:
+        lower_wick = min(c, op) - lo
+        if (lo <= lvl_s + tol and c > lvl_s and c > op
+                and lower_wick >= wick_min and (r is None or r < rsi_buy)):
+            return 'buy'
+    return None
+
+
+def signal_pivot_break(ind, i, hour=None, **kwargs):
+    """SC_PIVOT_BREAK — breakout di continuazione oltre un livello Fib pivot.
+    Combo: Pivot Points Standard + Moving Average Exponential(200) + Trendlines with Breaks.
+    La barra chiude oltre il livello (P / R1 / R2 per un buy; P / S1 / S2 per un sell),
+    dal lato giusto dell'EMA200; opzionale conferma di un trendline break concorde.
+    """
+    s0, s1 = kwargs.get('session', PIV_SESSION)
+    if i < 260:
+        return None
+    if hour is not None and not (s0 <= hour < s1):
+        return None
+    C = ind['C']; c = C[i]; cp = C[i-1]
+    ema200 = ind.get('ema200')
+    if ema200 is None or ema200[i] is None:
+        return None
+    e = ema200[i]
+    atr = ind['atr'][i]
+    if not atr:
+        return None
+    atr_avg = ind['atr30'][i]
+    if atr_avg and atr > kwargs.get('spike_k', 2.2) * atr_avg:
+        return None
+    a_arr = ind.get('adx'); a = a_arr[i] if a_arr else None
+    if a is not None and a < kwargs.get('adx_min', 20):
+        return None                                        # breakout ha bisogno di trend
+    margin = kwargs.get('margin_atr', 0.15) * atr
+    approach = kwargs.get('approach_bars', 6)
+    need_tlb = kwargs.get('need_tlb', False)
+    up = ind.get('tlb_up'); dn = ind.get('tlb_dn')
+    ups = _piv_levels(ind, i, ('dpiv', 'dr1', 'dr2', 'pdh'))
+    dns = _piv_levels(ind, i, ('dpiv', 'ds1', 'ds2', 'pdl'))
+    for lvl in ups:
+        if (cp < lvl and c > lvl + margin and c > e
+                and all(C[j] < lvl for j in range(i - approach, i))
+                and (not need_tlb or (up and up[i]))):
+            return 'buy'
+    for lvl in dns:
+        if (cp > lvl and c < lvl - margin and c < e
+                and all(C[j] > lvl for j in range(i - approach, i))
+                and (not need_tlb or (dn and dn[i]))):
+            return 'sell'
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S31_LAYOUT_SMART — break → retest → confluenza (2026-09-10)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Come si trada DAVVERO il toolkit dei layout TradingView XAU_* (non "compra ogni
+# rottura"):
+#   REGIME  : solo trend pulito — EMA200 in pendenza (slope >= k*ATR su N barre) e
+#             prezzo dal lato giusto. In range/chop non si opera.
+#   TRIGGER : rottura di una trendline LuxAlgo (stretta, close oltre la linea) nel
+#             verso del trend -> si MEMORIZZA il livello rotto, non si entra.
+#   RETEST  : nelle K barre il prezzo torna su una ZONA DI CONFLUENZA (>= min_lv
+#             livelli tra Fib pivot / PDH-PDL-PWH-PWL / H-L sessioni / prev-4H /
+#             EMA200 / trendline, raggruppati entro band*ATR) vicina al livello rotto.
+#   ENTRY   : candela di rifiuto alla zona (mecca >= w*ATR, chiusura ricentrata);
+#             opzionale conferma di volume (layout XAU_H1_Volumes).
+#   STOP    : strutturale, oltre la zona / lo swing del rifiuto, cap a stop_max*ATR.
+#   TARGET  : TP1 fisso 1.5R (parziale 50%) -> BE -> trailing dietro la TRENDLINE ->
+#             runner a TP2 (zona di confluenza successiva o 3R).
+#
+# Backtest (H1, 22 mesi, cost model ON, 0.01 lot): full PF 1.99 - +$516 - DD $130 -
+# 16/22 mesi+ - holdout PF 1.86 - live-window PF 1.66 - walk-forward 3/4 fold+ -
+# PBO 0.33 (non overfit) - regge spread x2 - buy+sell entrambi positivi. n=53
+# (sottile). M30 PBO 0.53 (overfit), M15 morto -> SOLO H1.
+#
+# layout_smart.py (backtest) e mt5-bot.py (blocco _ls_*) usano ENTRAMBI queste
+# funzioni -- nessuna logica duplicata (regola CLAUDE.md).
+
+LS_LEVEL_KEYS = ('dpiv', 'dr1', 'dr2', 'dr3', 'ds1', 'ds2', 'ds3', 'pdh', 'pdl', 'pwh', 'pwl',
+                 'ema200', 'sess_asia_hi', 'sess_asia_lo', 'sess_lon_hi', 'sess_lon_lo',
+                 'sess_ny_hi', 'sess_ny_lo', 'p4h_hi', 'p4h_lo', 'day_open',
+                 'tlb_upper', 'tlb_lower')
+
+LS_PARAMS = dict(
+    slope_bars=10, slope_min=0.12, retest_min=1, retest_max=16,
+    band=0.55, min_lv=2, retest_tol=0.35, reject_wick=0.22,
+    stop_buf=0.25, stop_max=2.8, min_risk_atr=0.25,
+    tp1_r=1.5, tp2_r=3.0, be_off=0.05, session=(7, 21), no_friday_pm=True, vol_min=0.0,
+)
+
+
+def ls_confluence_zones(ind, i, atr, band, min_lv):
+    """Raggruppa i livelli LS_LEVEL_KEYS entro band*ATR. -> [(lo, hi, n, center), ...]."""
+    lv = []
+    for k in LS_LEVEL_KEYS:
+        a = ind.get(k)
+        v = a[i] if (a is not None and i < len(a)) else None
+        if v is not None and v == v:
+            lv.append(float(v))
+    lv.sort()
+    if not lv:
+        return []
+    out = []
+    cur = [lv[0]]
+    bw = band * atr
+    for x in lv[1:]:
+        if x - cur[-1] <= bw:
+            cur.append(x)
+        else:
+            if len(cur) >= min_lv:
+                out.append((cur[0], cur[-1], len(cur), sum(cur) / len(cur)))
+            cur = [x]
+    if len(cur) >= min_lv:
+        out.append((cur[0], cur[-1], len(cur), sum(cur) / len(cur)))
+    return out
+
+
+def ls_clean_trend(ind, i, atr, P):
+    """'up' / 'down' / None -- trend pulito = EMA200 in pendenza + prezzo dal lato giusto."""
+    e_a = ind.get('ema200')
+    if e_a is None or i < P['slope_bars']:
+        return None
+    e = e_a[i]; ep = e_a[i - P['slope_bars']]
+    c = ind['C'][i]
+    if e is None or ep is None or not atr:
+        return None
+    slope = (e - ep) / atr
+    if slope >= P['slope_min'] and c > e:
+        return 'up'
+    if slope <= -P['slope_min'] and c < e:
+        return 'down'
+    return None
+
+
+def ls_scan(ind, i, state, dt=None, vol_ratio=None, P=None):
+    """State machine di INGRESSO. `state` = dict mutabile con chiave 'pending'.
+    Ritorna un entry_spec (segnale sulla barra i, esecuzione al next-bar-open) o None.
+    NON gestisce la posizione (vedi ls_manage_step).
+      entry_spec = {'dir', 'sl', 'tp1', 'tp2', 'risk', 'zone': (lo,hi,n,center)}
+    """
+    P = P or LS_PARAMS
+    C = ind['C']; H = ind['H']; L = ind['L']; O = ind['O']
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or atr <= 0 or i < 300:
+        return None
+
+    up_s = ind.get('tlb_up_s'); dn_s = ind.get('tlb_dn_s')
+    tlu = ind.get('tlb_upper'); tld = ind.get('tlb_lower')
+
+    trend = ls_clean_trend(ind, i, atr, P)
+    if trend == 'up' and up_s and up_s[i] and tlu and tlu[i] is not None:
+        state['pending'] = {'dir': 'buy', 'L': float(tlu[i]), 'start': i, 'exp': i + P['retest_max']}
+    elif trend == 'down' and dn_s and dn_s[i] and tld and tld[i] is not None:
+        state['pending'] = {'dir': 'sell', 'L': float(tld[i]), 'start': i, 'exp': i + P['retest_max']}
+
+    pend = state.get('pending')
+    if not pend or not (pend['start'] + P['retest_min'] <= i <= pend['exp']):
+        if pend and i > pend['exp']:
+            state['pending'] = None
+        return None
+
+    if dt is not None:
+        s0, s1 = P['session']
+        if not (s0 <= dt.hour < s1):
+            return None
+        if P['no_friday_pm'] and dt.weekday() == 4 and dt.hour >= 16:
+            return None
+
+    d = pend['dir']; Lb = pend['L']
+    zs = ls_confluence_zones(ind, i, atr, P['band'], P['min_lv'])
+    tol = P['retest_tol'] * atr
+    near = None
+    for z in zs:
+        if abs(z[3] - Lb) <= tol or (z[0] - tol <= Lb <= z[1] + tol):
+            near = z
+            break
+    if near is None:
+        if i >= pend['exp']:
+            state['pending'] = None
+        return None
+
+    zlo, zhi, zn, zc = near
+    c = C[i]; o = O[i]; hi = H[i]; lo = L[i]
+    if d == 'buy':
+        touched = lo <= zhi + tol
+        wick = min(c, o) - lo
+        reject = c > o and wick >= P['reject_wick'] * atr and c > zc
+    else:
+        touched = hi >= zlo - tol
+        wick = hi - max(c, o)
+        reject = c < o and wick >= P['reject_wick'] * atr and c < zc
+    if P['vol_min'] > 0 and vol_ratio is not None:
+        if not (vol_ratio == vol_ratio and vol_ratio >= P['vol_min']):
+            reject = False
+    if not (touched and reject):
+        if i >= pend['exp']:
+            state['pending'] = None
+        return None
+
+    entry_ref = c
+    if d == 'buy':
+        sl = min(zlo, lo) - P['stop_buf'] * atr
+    else:
+        sl = max(zhi, hi) + P['stop_buf'] * atr
+    risk = abs(entry_ref - sl)
+    if risk > P['stop_max'] * atr or risk < P['min_risk_atr'] * atr:
+        state['pending'] = None
+        return None
+    sgn = 1 if d == 'buy' else -1
+    fwd = sorted([z for z in zs if (z[3] > entry_ref) == (d == 'buy') and z[3] != zc],
+                 key=lambda z: z[3], reverse=(d == 'sell'))
+    tp1 = entry_ref + sgn * risk * P['tp1_r']
+    tp2 = fwd[1][3] if len(fwd) > 1 else (fwd[0][3] if fwd else entry_ref + sgn * risk * P['tp2_r'])
+    if not ((d == 'buy' and entry_ref < tp1 <= tp2) or (d == 'sell' and entry_ref > tp1 >= tp2)):
+        tp2 = entry_ref + sgn * risk * P['tp2_r']
+    state['pending'] = None
+    return {'dir': d, 'sl': sl, 'tp1': tp1, 'tp2': tp2, 'risk': risk, 'zone': near}
+
+
+def ls_manage_step(pos, jh, jl, jc, tlb_low_i, tlb_up_i, atr0, P=None):
+    """Un passo di gestione posizione (per barra). Muta `pos` in place.
+    pos = {'dir','entry','sl','tp1','tp2','risk','part'(bool),'booked','hh','ll'}
+    Ritorna (close_price | None, exit_kind). Priorita: hard SL > TP2.
+      - a TP1 (1.5R): chiude 50%, SL -> BE
+      - dopo TP1: trailing dietro la trendline LuxAlgo (fallback: giveback 1R)
+    """
+    P = P or LS_PARAMS
+    d = pos['dir']; entry = pos['entry']; R = pos['risk']
+    is_buy = d == 'buy'
+    be_off = P.get('be_off', 0.05) * atr0
+    pos['hh'] = max(pos['hh'], jh); pos['ll'] = min(pos['ll'], jl)
+
+    # TP1 (1.5R) toccato INTRABAR -> chiude 50%, SL a BE (+/- piccolo offset)
+    tp1_hit = (jh >= pos['tp1']) if is_buy else (jl <= pos['tp1'])
+    if not pos['part'] and tp1_hit:
+        m1 = (pos['tp1'] - entry) if is_buy else (entry - pos['tp1'])
+        pos['booked'] += 0.5 * m1
+        pos['part'] = True
+        be = (entry + be_off) if is_buy else (entry - be_off)
+        pos['sl'] = max(pos['sl'], be) if is_buy else min(pos['sl'], be)
+
+    if pos['part']:
+        tl = tlb_low_i if is_buy else tlb_up_i
+        cand = float(tl) if (tl is not None and tl == tl) else ((jc - R) if is_buy else (jc + R))
+        pos['sl'] = max(pos['sl'], cand) if is_buy else min(pos['sl'], cand)
+
+    # priorita pessimistica: se la barra tocca sia SL che TP2 -> SL
+    hit_sl = (jl <= pos['sl']) if is_buy else (jh >= pos['sl'])
+    hit_tp2 = (jh >= pos['tp2']) if is_buy else (jl <= pos['tp2'])
+    if hit_sl:
+        return pos['sl'], ('sl' if not pos['part'] else 'trail')
+    if hit_tp2:
+        return pos['tp2'], 'tp2'
+    return None, None

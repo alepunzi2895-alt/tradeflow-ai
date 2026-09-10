@@ -33,9 +33,11 @@ from signals import (
     signal_range_reversal,
     signal_fib_confluence, fib_confluence_trade_levels,
     signal_dow_dip, DOW_DIP_TP_ATR, DOW_DIP_SL_ATR, DOW_DIP_MAX_BARS,
+    ls_scan, ls_manage_step, LS_PARAMS,
 )
 import numpy as np
 import extra_indicators as ei
+import layout_indicators
 
 # ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
 try:
@@ -167,6 +169,31 @@ _us30_state: dict = {}                        # {ticket(str): {entry, sl, tp, op
 _us30_last_bar = None
 _us30_last_entry_ts = 0.0
 
+# ── S31_LAYOUT_SMART — break -> retest -> confluenza, H1 (2026-09-10) ─────────
+# Come si trada DAVVERO il toolkit dei layout TradingView XAU (Trendlines with Breaks
+# + Pivot Fibonacci + Key Levels SpacemanBTC + EMA200 + Sessions): rottura trendline
+# nel verso del trend EMA200 -> attesa del RETEST su una ZONA DI CONFLUENZA -> candela
+# di rifiuto -> stop strutturale -> TP1 1.5R parziale -> BE -> trailing dietro la
+# trendline -> runner. Ricerca: layout_smart.py / directives 02_strategies.md §2026-09-10.
+#   H1 22 mesi @0.01: full PF 1.95 - +$499 - DD $130 - 16/22 mesi+ - holdout PF 1.86 -
+#   walk-forward 3/4 fold+ - PBO 0.33 (non overfit). n=53 (~2.4/mese). M30 overfit, M15 morto.
+# Strategia REALE nel roster: sizing via RiskGuardian, cooldown SL condivisi, conta in
+# MAX_OPEN_ORDERS. Logica = signals.ls_scan / ls_manage_step (stessa del backtest).
+# Lifecycle propria (SL strutturale + trailing su trendline) come S20 -> mini-manager qui,
+# non RiskGuardian generico (l'edge dipende da questa gestione).
+LS_ENABLED       = True
+LS_TAG           = 'S31_LAYOUT_SMART'
+LS_TF            = 'H1'
+LS_LOT           = 0.02                       # fallback se RiskGuardian non disponibile
+LS_CONFIDENCE    = 0.55                       # proxy strategy_confidence (edge debole ma reale/OOS, ~ S00/S20)
+LS_AI_SCORE_PROXY = 55.0
+LS_COOLDOWN_H    = 3                          # ore min tra due ingressi (== cooldown_bars 3 su H1 nel backtest)
+LS_STATE_FILE    = os.path.join(os.path.dirname(__file__), '..', 'data', 'ls_live_state.json')
+_ls_state: dict = {}                         # {ticket(str): {dir,entry,sl,tp1,tp2,risk,part,booked,hh,ll}}
+_ls_scan_state: dict = {'pending': None}     # stato della state-machine di ingresso (break in attesa di retest)
+_ls_last_bar = None
+_ls_last_entry_ts = 0.0
+
 # Se sei su VPS Standalone, usa http://localhost:3000
 VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
 MT5_SECRET   = os.getenv("MT5_BOT_SECRET", "tradeflow-mt5-secret") 
@@ -247,6 +274,10 @@ STRATEGY_PARAMS = {
     # non ATR-mult) — mult qui allineati a risk_guardian.py::STRATEGY_ATR_PARAMS solo per
     # coerenza col check pre-commit (usati unicamente dal risk-cap 2% interno a _calc_lot).
     'S20_FIB_CONFLUENCE':  {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Fib Confluence V2', 'tp_mult': 1.0, 'sl_mult': 1.0},
+    # S31 non passa da questo dict (SL strutturale via signals.ls_scan + trailing su trendline,
+    # non ATR-mult) — mult qui allineati a risk_guardian.py::STRATEGY_ATR_PARAMS solo per il
+    # check pre-commit e il risk-cap 2% interno a _calc_lot.
+    'S31_LAYOUT_SMART':    {'tp_usd': 'ATR', 'sl_usd': 'ATR', 'label': 'Layout Smart (break→retest→confl)', 'tp_mult': 3.0, 'sl_mult': 1.0},
 }
 
 # Playbook caricato da regime_playbook.json al boot; fallback hardcoded
@@ -622,6 +653,13 @@ def compute_indicators(candles):
     I['trix'] = [None if np.isnan(x) else float(x) for x in ei.trix(_Cn)]
     I['choppiness'] = [None if np.isnan(x) else float(x) for x in ei.choppiness_index(_Hn, _Ln, _Cn)]
     I['mfi'] = [None if np.isnan(x) else float(x) for x in ei.mfi(_Hn, _Ln, _Cn, _Vn)]
+
+    # Layout indicators per S31_LAYOUT_SMART (2026-09-10) — bundle condiviso con
+    # strategy-engine-v2.py::compute_all() via layout_indicators.py (zero divergenza).
+    try:
+        I.update(layout_indicators.compute_layout_indicators(candles, ema))
+    except Exception as e:
+        log.warning(f"[compute_indicators] layout_indicators skip: {e}")
 
     return I
 
@@ -1179,6 +1217,200 @@ def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
     _s20_last_entry_ts = time.time()
     _s20_save_state()
 
+# ── S31_LAYOUT_SMART — H1, break→retest→confluenza (2026-09-10) ──────────────
+def _ls_load_state():
+    global _ls_state
+    try:
+        if os.path.exists(LS_STATE_FILE):
+            with open(LS_STATE_FILE, encoding='utf-8') as f:
+                _ls_state = {int(k): v for k, v in json.load(f).items()}
+    except Exception as e:
+        log.warning(f"[S31] load state: {e}")
+
+def _ls_save_state():
+    try:
+        with open(LS_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump({str(k): v for k, v in _ls_state.items()}, f, indent=2)
+    except Exception as e:
+        log.warning(f"[S31] save state: {e}")
+
+def ls_rebuild_from_open():
+    """Al riavvio: riadotta eventuali posizioni S31 aperte non ancora tracciate."""
+    if not LS_ENABLED:
+        return
+    for p in (mt5.positions_get(symbol=SYMBOL) or []):
+        if p.magic != MAGIC or not (p.comment and 'S31' in p.comment) or p.ticket in _ls_state:
+            continue
+        d = 'buy' if p.type == 0 else 'sell'
+        risk = abs(p.price_open - p.sl) if p.sl else None
+        _ls_state[p.ticket] = {'dir': d, 'entry': p.price_open, 'sl': p.sl or None,
+                               'tp1': None, 'tp2': p.tp or None, 'risk': risk,
+                               'part': True, 'booked': 0.0,   # be_done ignoto → trattala come già parziale
+                               'hh': p.price_open, 'll': p.price_open}
+        _strategy_order_tickets[LS_TAG] = (p.ticket, d)
+        log.info(f"[S31] posizione riadottata al riavvio: #{p.ticket} {d} @ {p.price_open}")
+    if _ls_state:
+        _ls_save_state()
+
+def ls_manage():
+    """Ogni ciclo: gestione posizioni S31 aperte — TP1 1.5R parziale 50% + SL→BE, poi
+    trailing dello SL dietro la trendline LuxAlgo (via signals.ls_manage_step)."""
+    if not LS_ENABLED or not _ls_state:
+        return
+    open_pos = {p.ticket: p for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC}
+    tick = mt5.symbol_info_tick(SYMBOL)
+    candles = get_candles_tf(LS_TF, 450)
+    if not candles or len(candles) < 320 or tick is None:
+        return
+    I = compute_indicators(candles)
+    j = len(candles) - 1
+    tlb_low = I.get('tlb_lower', [None] * len(candles))[j]
+    tlb_up = I.get('tlb_upper', [None] * len(candles))[j]
+    atr0 = I['atr'][j] or 0.0
+    px_bid, px_ask = tick.bid, tick.ask
+    for ticket in list(_ls_state.keys()):
+        st = _ls_state[ticket]
+        p = open_pos.get(ticket)
+        if p is None:
+            _ls_state.pop(ticket, None); _ls_save_state()
+            _strategy_order_tickets.pop(LS_TAG, None)
+            log.info(f"[S31] posizione #{ticket} chiusa")
+            continue
+        if not st.get('risk'):
+            continue
+        d = st['dir']
+        jh = max(px_bid, px_ask); jl = min(px_bid, px_ask)
+        jc = px_bid if d == 'buy' else px_ask
+        was_part = st['part']
+        sl_before = st['sl']
+        # ls_manage_step muta st in place (part/booked/hh/ll/sl); ritorna (close_price|None, kind)
+        _cp, _kind = ls_manage_step(st, jh, jl, jc, tlb_low, tlb_up, atr0, LS_PARAMS)
+        # 1) prima volta che tocca TP1 → parziale 50% + SL a BE
+        if st['part'] and not was_part and not DRY_RUN:
+            vol = round(min(p.volume / 2.0, max(p.volume - 0.01, 0.0)), 2)
+            if vol >= 0.01:
+                close_type = mt5.ORDER_TYPE_SELL if p.type == 0 else mt5.ORDER_TYPE_BUY
+                cprice = px_bid if p.type == 0 else px_ask
+                r1 = mt5.order_send({"action": mt5.TRADE_ACTION_DEAL, "symbol": SYMBOL, "volume": vol,
+                                     "type": close_type, "position": ticket, "price": cprice, "deviation": 20,
+                                     "magic": MAGIC, "comment": "TF-AI S31 partial",
+                                     "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC})
+                if r1 and r1.retcode == mt5.TRADE_RETCODE_DONE:
+                    log.info(f"[S31] ✓ parziale {vol} lot @ TP1 (1.5R)  #{ticket}")
+                else:
+                    log.warning(f"[S31] parziale fallito #{ticket}: {r1.comment if r1 else 'err'}")
+        elif st['part'] and not was_part and DRY_RUN:
+            log.info(f"[S31][DRY] TP1 (1.5R) → parziale 50% + SL→BE  #{ticket}")
+        # 2) trailing: se ls_manage_step ha alzato/abbassato lo SL, aggiorna su MT5
+        new_sl = st['sl']
+        moved = (d == 'buy' and new_sl > (sl_before or -1e18) + 0.05) or \
+                (d == 'sell' and new_sl < (sl_before or 1e18) - 0.05)
+        if moved and not DRY_RUN:
+            digits = mt5.symbol_info(SYMBOL).digits
+            mt5.order_send({"action": mt5.TRADE_ACTION_SLTP, "symbol": SYMBOL, "position": ticket,
+                            "sl": round(new_sl, digits), "tp": p.tp})
+            log.info(f"[S31] SL trailato → {new_sl:.2f}  #{ticket}")
+        elif moved:
+            log.info(f"[S31][DRY] SL trail → {new_sl:.2f}  #{ticket}")
+        _ls_save_state()
+
+def ls_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
+                    sl_cooldowns_until=None, sl_cooldown_until=None, pnl_today=0.0):
+    """Ogni barra H1 chiusa: guida la state-machine break→retest (signals.ls_scan). Se
+    emette un ingresso e non c'è già una posizione S31 → apre con SL/TP2 hard a MT5.
+    Strategia reale nel roster: sizing RiskGuardian, cooldown SL condivisi, MAX_OPEN_ORDERS."""
+    global _ls_last_bar, _ls_last_entry_ts, _ls_scan_state
+    if not LS_ENABLED or not auto_ok:
+        return
+    candles = get_candles_tf(LS_TF, 450)
+    if not candles or len(candles) < 320:
+        return
+    bar_t = candles[-2]['t']
+    if bar_t == _ls_last_bar:
+        return
+    _ls_last_bar = bar_t
+    I = compute_indicators(candles)
+    idx = len(candles) - 2
+    bar_dt = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc)
+    vsma = None
+    if LS_PARAMS.get('vol_min', 0) > 0:
+        vv = [c['v'] or 0 for c in candles[idx - 20:idx]]
+        vsma = (sum(vv) / len(vv)) if vv else None
+    vr = (candles[idx]['v'] / vsma) if (vsma and LS_PARAMS.get('vol_min', 0) > 0) else None
+
+    # la state-machine va SEMPRE avanzata (registra i break anche mentre siamo flat/in posizione)
+    spec = ls_scan(I, idx, _ls_scan_state, dt=bar_dt, vol_ratio=vr, P=LS_PARAMS)
+    if spec is None:
+        return
+    if _ls_state or news_paused:
+        return
+    now_utc_dt = datetime.datetime.now(datetime.timezone.utc)
+    if time.time() - _ls_last_entry_ts < LS_COOLDOWN_H * 3600:
+        return
+    _sl_cds = sl_cooldowns_until or {}
+    if _sl_cds.get(LS_TAG) and now_utc_dt < _sl_cds[LS_TAG]:
+        return
+    if sl_cooldown_until and now_utc_dt < sl_cooldown_until:
+        return
+    if count_open_positions() >= MAX_OPEN_ORDERS:
+        return
+    direction = spec['dir']
+    if has_position_in_direction(direction):
+        return
+
+    tick = mt5.symbol_info_tick(SYMBOL)
+    entry_est = (tick.ask if direction == 'buy' else tick.bid) if tick else I['C'][idx]
+    sl_price = spec['sl']
+    risk = abs(entry_est - sl_price)
+    if risk <= 0 or risk > LS_PARAMS['stop_max'] * (I['atr'][idx] or 1e9):
+        return
+    sgn = 1 if direction == 'buy' else -1
+    tp1_price = entry_est + sgn * risk * LS_PARAMS['tp1_r']
+    tp2_price = spec['tp2']
+    if not ((direction == 'buy' and entry_est < tp1_price <= tp2_price) or
+            (direction == 'sell' and entry_est > tp1_price >= tp2_price)):
+        tp2_price = entry_est + sgn * risk * LS_PARAMS['tp2_r']
+    sl_usd = round(risk, 2)
+    tp_usd = round(abs(tp2_price - entry_est), 2)
+
+    lot_use = LS_LOT
+    rp = None
+    rg = get_risk_guardian()
+    if rg:
+        acc_now = get_account_info()
+        rp = rg.get_order_params(
+            strategy_confidence=LS_CONFIDENCE, atr=risk, strategy_id=LS_TAG,
+            ai_score=LS_AI_SCORE_PROXY, atr_avg=I['atr_avg'][idx], adx=I['adx'][idx],
+            hour_utc=bar_dt.hour, today_pnl=pnl_today,
+            current_equity=acc_now['equity'] if acc_now else None,
+            weekly_dd_pct=weekly_dd_pct, direction=direction,
+        )
+        if rp.get('paused'):
+            log.info(f"⛔ SEGNALE S31 SOSPESO (Risk Guardian) — comp={rp.get('composite_score')}")
+            return
+        lot_use = rp['lot']
+    if news_risk_mult < 1.0:
+        lot_use = max(0.01, round(lot_use * news_risk_mult, 2))
+
+    zn = spec['zone'][2] if spec.get('zone') else '?'
+    log.info(f"★ SEGNALE S31 (H1): {direction.upper()} | retest zona conf({zn}) | 1R=${risk:.2f} | "
+             f"TP2=${tp_usd:.2f} SL=${sl_usd:.2f} | lot={lot_use}" +
+             (f" | tier={rp.get('tier_label')} comp={rp.get('composite_score')}" if rp else ""))
+    result = place_order(direction, tp_usd, sl_usd, LS_TAG, lot_size=lot_use)
+    if not result:
+        return
+    ticket = getattr(result, 'order', 0)
+    _strategy_order_tickets[LS_TAG] = (ticket, direction)
+    state.record_trade(0, now_utc_dt)
+    tick = mt5.symbol_info_tick(SYMBOL)
+    entry = (tick.ask if direction == 'buy' else tick.bid) if tick else entry_est
+    _ls_state[ticket] = {'dir': direction, 'entry': round(entry, 2), 'sl': round(entry - sgn * risk, 2),
+                         'tp1': round(entry + sgn * risk * LS_PARAMS['tp1_r'], 2),
+                         'tp2': round(entry + sgn * tp_usd, 2), 'risk': round(risk, 2),
+                         'part': False, 'booked': 0.0, 'hh': round(entry, 2), 'll': round(entry, 2)}
+    _ls_last_entry_ts = time.time()
+    _ls_save_state()
+
 # ── S30_DOW_DIP — US30 mean-reversion, blocco isolato (2° simbolo) ───────────
 def _us30_resolve_symbol():
     """Trova il simbolo US30 attivo sul broker (una volta, a startup)."""
@@ -1652,6 +1884,13 @@ def run():
         s20_rebuild_from_open()
         log.info(f"S20_FIB_CONFLUENCE attiva — M5 · sizing RiskGuardian ×{S20_LOT_MULT} · "
                  f"cooldown SL condivisi · {len(_s20_state)} posizioni in gestione")
+
+    # S31_LAYOUT_SMART (strategia reale nel roster): ripristina stato + riadotta posizioni aperte
+    if LS_ENABLED:
+        _ls_load_state()
+        ls_rebuild_from_open()
+        log.info(f"S31_LAYOUT_SMART attiva — {LS_TF} break→retest→confluenza · sizing RiskGuardian · "
+                 f"cooldown SL condivisi · conta in MAX_OPEN_ORDERS · {len(_ls_state)} posizioni in gestione")
 
     # S30_DOW_DIP — blocco isolato su 2° simbolo (US30)
     us30_ok = False
@@ -2963,6 +3202,19 @@ def run():
                                      pnl_today=pnl_today_real)
                 except Exception as _s20_err:
                     log.warning(f"[S20] errore ciclo: {_s20_err}")
+
+            # ── S31_LAYOUT_SMART — segnale H1 proprio (break→retest→confluenza) ──
+            if LS_ENABLED:
+                try:
+                    ls_manage()
+                    ls_check_entry(current_news_risk.get('paused', False), auto_trade_enabled,
+                                    weekly_dd_pct=weekly_dd_pct,
+                                    news_risk_mult=current_news_risk.get('risk_mult', 1.0),
+                                    sl_cooldowns_until=sl_cooldowns_until,
+                                    sl_cooldown_until=sl_cooldown_until,
+                                    pnl_today=pnl_today_real)
+                except Exception as _s31_err:
+                    log.warning(f"[S31] errore ciclo: {_s31_err}")
 
             # ── S30_DOW_DIP — US30 H4, blocco isolato su 2° simbolo ──
             if us30_ok:

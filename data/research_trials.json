@@ -1,5 +1,5 @@
 {
-  "total": 329,
+  "total": 1492,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -136,6 +136,46 @@
       "asset": "XAU",
       "strategy_id": "ivan_signal_backtest",
       "note": "Confidence score (DI dominance + ADX>=20 + trend EMA233) come filtro/sizing su segnali Ivan trailing - 4 varianti x 2 TF (M15/M30), soglie pre-committed - PEGGIORA il PF in tutti i casi (0.928->0.70 filtro, 0.879 sizing su M15), ipotesi respinta"
+    },
+    {
+      "ts": "2026-09-10T07:56:49Z",
+      "n_trials": 180,
+      "cumulative_after": 509,
+      "asset": "XAU",
+      "strategy_id": "SA_TLB / SB_PIVOT_REV / SC_PIVOT_BREAK",
+      "note": "Sprint layout-combo TradingView (Trendlines-with-Breaks LuxAlgo + Fib pivots + Key Levels + EMA200): 3 strategie x direz.(trend/fade/noema/breakout/rev) x TF(M15/M30/H1) x grid tp/sl. TUTTE full-period PF<1 (ceiling ~0.85 con n reale); holdout PF>1 solo su n=4-7 (rumore, DSR n/d). Nessuna promossa."
+    },
+    {
+      "ts": "2026-09-10T08:08:35Z",
+      "n_trials": 252,
+      "cumulative_after": 761,
+      "asset": "XAU",
+      "strategy_id": "SD/SE/SF + strict-TLB robustness",
+      "note": "Sprint 2-3 layout-combo: trendline break STRETTO (close>upper) trend/fade H1/H4, confluenza (SD_TLB_CONFLUENCE), pivot-bias pullback (SE), session ORB (SF), + robustness sweep strict-TLB (adx 15/18/22, no-ema, session). SE/SF/confluenza tutti full PF 0.4-0.8. Strict-TLB trend H1: unico flicker (full PF 1.2-1.6 SOLO a sl~1.5 + EMA200 + session + adx18-22) ma n=44-65, DSR non signif., knife-edge su SL, +157-261USD/24m (trascurabile). NON promossa."
+    },
+    {
+      "ts": "2026-09-10T08:39:36Z",
+      "n_trials": 45,
+      "cumulative_after": 806,
+      "asset": "XAU",
+      "strategy_id": "layout ML classifier + confluence score",
+      "note": "Sprint 4 (max-effort, skill signal-classification + walk-forward-validation + regime-detection + exit-strategies): LightGBM su 43 feature dei layout (tlb/Fib pivot/key level/EMA200/sessioni), walk-forward rolling 8-11 fold, M15/M30/H1. AUC OOS 0.516-0.526 (SOTTO il baseline 0.579 di feature_screen). Backtest con exit configurabili (BE+trail fisso/chandelier/partial/time-stop) + threshold sweep + long-only + regime-gate + confluence-score pesato: full PF 0.48-0.72 ovunque, 0/4 fold. Top feature coerenti su 3 TF: dist_pwh/dist_pwl (prior week H/L) — conferma effetto debole gia visto 2026-09-07. NESSUNA promossa."
+    },
+    {
+      "ts": "2026-09-10T09:16:35Z",
+      "n_trials": 230,
+      "cumulative_after": 1036,
+      "asset": "XAU",
+      "strategy_id": "LAYOUT_SMART break-retest-confluence",
+      "note": "Sprint 5 (max-effort, dopo feedback utente \"usate bene funzionano\"): riscritta la logica come si trada DAVVERO — break trendline LuxAlgo -> RETEST su zona di CONFLUENZA (>=2 livelli tra Fib pivot/PDH-PDL-PWH-PWL/H-L sessioni/prev-4H/EMA200/trendline) -> candela di rifiuto -> stop STRUTTURALE oltre la zona (cap 2.8xATR) -> TP1 fisso 1.5R parziale 50% -> BE -> trailing dietro la TRENDLINE -> runner alla zona dopo. Regime: solo trend pulito (EMA200 slope). Grid entry(72)+exit(60)+loosen(72)+robustness(26). H1: full PF 1.99, +516USD/22m @0.01, DD 130, 16/22 mesi+, holdout PF 1.86 (n10), live PF 1.66, walk-forward 3/4 fold+, PBO 0.33 (NON overfit), regge cost x2, buy+sell entrambi positivi, edge cresce 2024->2026. n=53 (sottile). DSR inconcludente (holdout n=10 troppo corto, deflazionato da 1006 trial). M30/M15 breakeven, H4 n=12. CANDIDATA PAPER-TEST isolato (come S20/S30), non roster principale."
+    },
+    {
+      "ts": "2026-09-10T09:27:25Z",
+      "n_trials": 456,
+      "cumulative_after": 1492,
+      "asset": "XAU",
+      "strategy_id": "LAYOUT_SMART M15/M30 + volume",
+      "note": "Sprint 5b: grid entry+exit su M30 (216) e M15 (216) + filtro volume layout XAU_H1_Volumes (24). M15 MORTO (fPF ~1.0, 0-1/4 fold; config buon-holdout hanno full pnl NEGATIVO). M30: fPF 1.28-1.38 con vol_min>=1.0 (n~79, hPF 1.95, 2/4 fold) MA PBO 0.53 -> is_overfit=True. H1 resta unico TF con edge reale (PBO 0.33)."
     }
   ]
 }

@@ -4,6 +4,7 @@ node_modules/
 *.log
 data/xauusd_*.json
 data/us30_*.json
+data/layout_ml_probs_*.json
 __pycache__/
 *.pyc
 .env*

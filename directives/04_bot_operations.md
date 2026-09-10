@@ -147,6 +147,35 @@ frontend legge `s20_paper_get` ogni 60s (naming legacy "paper" nel plumbing, dat
 su S20 può ridurre la frequenza di trading anche di H1/M30. Se questo si rivela un problema,
 valutare di reintrodurre un cooldown per-strategia dedicato invece del globale condiviso.
 
+## S31_LAYOUT_SMART — H1 break→retest→confluenza, nel roster (2026-09-10 →)
+
+Dai layout TradingView XAU_* (Trendlines with Breaks + Pivot Fibonacci + Key Levels
+SpacemanBTC + EMA200 + Sessions), codificato **come si trada davvero** — non "compra ogni
+rottura". Ricerca completa: `directives/02_strategies.md` § 2026-09-10 (≈700 trial, H1 è
+l'unico TF con edge: full PF 1.95, holdout 1.86, PBO 0.33, regge cost×2; M30 overfit PBO
+0.53, M15 morto). Integrata su richiesta esplicita utente "come strategia reale insieme
+alle altre".
+
+| aspetto | S31 |
+|---|---|
+| Loop | blocco H1 dedicato `_ls_*` in `mt5-bot.py::run()` (dopo S20). Fuori da `StrategySelector`/`STRATEGIES_CONFIG` (segnale **stateful**: break su barra A → retest su barra B). Stato macchina: `_ls_scan_state` (module global, si resetta al riavvio — un break non ancora ritestato va perso, conservativo) |
+| Segnale | `signals.ls_scan(I, i, state, dt, vol_ratio, P=LS_PARAMS)` — **stessa identica funzione del backtest** (`layout_smart.evaluate_ls_frozen`). Trend pulito (EMA200 slope ≥ 0.12·ATR su 10 barre) → break trendline stretta → retest zona di confluenza (≥2 livelli entro 0.55·ATR tra Fib pivot/PDH-PDL-PWH-PWL/H-L sessioni/prev-4H/EMA200/trendline) → candela di rifiuto (mecca ≥ 0.22·ATR) |
+| Indicatori | `layout_indicators.compute_layout_indicators()` — **source of truth condivisa** con `strategy-engine-v2.py::compute_all()`. Aggiunti a `compute_indicators()` del bot |
+| Sizing | **RiskGuardian** (`rg.get_order_params`, `strategy_confidence`=0.55, `ai_score`=55.0 proxy). Nessun `LOT_MULT`. Fallback `LS_LOT`=0.02 |
+| Gestione posizione | mini-manager `ls_manage()` via `signals.ls_manage_step`: SL strutturale hard a MT5 (1R = distanza dalla zona) + TP2 hard. A **TP1 (1.5R)** chiude 50% + SL→BE. Dopo TP1: **trailing dello SL dietro la trendline LuxAlgo** (`tlb_lower`/`tlb_upper`). `RiskGuardian.manage_positions` la salta (`'S31' in comment`) |
+| Esposizione | max 1 posizione S31 · cooldown `LS_COOLDOWN_H`=3h tra ingressi · **conta in `MAX_OPEN_ORDERS`** · `has_position_in_direction` · cooldown SL condivisi (globale + per-strategia) come S20 |
+| Filtri | sessione 7–21 UTC, no venerdì ≥16 UTC, news pause (+ `news_risk_mult`), toggle auto-trade |
+| Stato | `data/ls_live_state.json` (gitignored, ricostruito al riavvio da posizioni tag `S31`) |
+| Backtest overlay | `strategy-engine-v2.py --file …h1… --rm --layout-smart` — mostra S31 isolata + impatto portafoglio (H1: PF 1.519→1.534, P&L +$499, DD −$86) |
+
+**Per disattivare**: `LS_ENABLED = False` in `mt5-bot.py` (riga ~171). Posizioni aperte
+restano con SL/TP hard.
+
+**Gate di permanenza**: dopo 4-6 settimane live, se PF < 1.2 o WR < 40% su ≥ 15 trade →
+`LS_ENABLED=False`. n molto sottile (~2.4 trade/mese) → il verdetto arriverà lento.
+`performance_tracker.BACKTEST_BASELINES['S31_LAYOUT_SMART']` = wr 0.528 / pf 1.95; il
+self-learning può metterla in hard-block via `data/hard_blocks.json`.
+
 ## Reactivation Check — ri-test mensile strategie bloccate (2026-09-01 →)
 
 `scripts/reactivation_check.py` ri-testa a backtest (non a trade live — vedi motivazione in

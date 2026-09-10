@@ -1,5 +1,161 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-10 — Strategie da combo indicatori dei layout TradingView XAU — TUTTE respinte
+
+Richiesta utente: dai layout TradingView `XAU_M15` / `XAU_M30` / `XAU_H1_Volumes` /
+`Default` (tutti tranne `MFKK_GOLD` = già S00), costruire strategie dalle **combo degli
+indicatori presenti sui grafici** e tunarle finché profittevoli (BE + trailing sempre).
+
+I 4 layout non-MFKK condividono lo stesso toolkit discrezionale (verificato via
+`data_get_indicator` sull'istanza CDP di TradingView Desktop):
+
+| Indicatore | Parametri letti dal layout |
+|---|---|
+| Trendlines with Breaks [LuxAlgo] | swing length 14, slope calc = ATR × 1 |
+| Pivot Points Standard | type **Fibonacci**, anchor Auto (daily su M15) |
+| Key Levels SpacemanBTC IDWM v15 | PDH/PDL, PWH/PWL, session H/L |
+| Moving Average Exponential | length **200**, close (vero EMA200, non l'alias e233) |
+| Sessions [LuxAlgo] | London / NY / Tokyo / Sydney (usato solo come filtro `hour`) |
+
+**Port fedeli aggiunti a `strategy-engine-v2.py::compute_all()`** (nuovi array, zero impatto
+sulle strategie esistenti): `luxalgo_trendline_breaks()` (port dell'alertcondition
+`ta.crossover(src, upper − slope_ph·length)`), `daily_fib_pivots()` (P/R1-3/S1-3 Fibonacci +
+PDH/PDL/PWH/PWL, causale), `ema200`. 3 signal fn in `signals.py` (record storico, **non
+wired** in `STRATEGIES_CONFIG`/`PLAYBOOK`/`REGIME_PRIORITY_*`):
+
+- `signal_tlb_trend` (SA) — trendline break in direzione EMA200 + sessione + ADX gate
+- `signal_pivot_reversal` (SB) — rifiuto (wick) del livello Fib/key più vicino, regime range
+- `signal_pivot_break` (SC) — breakout di continuazione oltre un livello Fib + EMA200
+
+**Esito: 180 trial (`opt_harness.evaluate`, cost model ON, walk-forward + holdout), TUTTI
+negativi.** Full-period PF < 1.0 su **ogni** configurazione — direzione (trend / fade /
+no-EMA / breakout / reversal), TF (M15/M30/H1), grid tp/sl 1.0-3.5×ATR. Ceiling full PF
+≈ 0.85 con trade count reale (n ≥ 100). Gli unici holdout PF > 1 sono su n = 4-7 trade
+(SA_TLB_FADE H1 holdout PF 1.42 / full PF 0.52 / full pnl −180 — la solita "coda fortunata"
+già vista con S10/S09), DSR non calcolabile. 0-1 fold positivi su 4 quasi ovunque.
+
+**Sprint 2-3 (stesso giorno, "spingi più a fondo" richiesto dall'utente)** — altre 4 strutture,
+genuinamente diverse dalle prime 3, + robustness sweep:
+- `luxalgo_trendline_breaks()` ora produce anche `tlb_up_s`/`tlb_dn_s` (crossover della linea
+  al valore CORRENTE `close > upper`, senza la proiezione `−slope·length` dell'alertcondition
+  ufficiale — trigger più stretto e pulito).
+- `signal_tlb_confluence` (SD): TLB break stretto + cross di un pivot Fib concorde + EMA200 + sessione.
+- `signal_pivot_bias_pullback` (SE): bias dal pivot giornaliero, buy-the-dip su S1/EMA200 con candela di inversione.
+- `signal_session_range_break` (SF): opening-range breakout Londra + bias pivot.
+
+Esito sprint 2-3 (252 trial): **SE / SF / SD tutti full PF 0.4-0.8** (SE e SF fortemente
+negativi anche con n grande, ~600-1000 trade). **L'unico flicker**: `signal_tlb_trend` con
+`strict=True` (trigger `tlb_up_s`) trend-following su **H1**, EMA200 + sessione 7-20 + ADX
+18-22, **sl ≈ 1.5×ATR** → full PF 1.2-1.6, holdout PF 1.3-1.5. **Ma non promuovibile**:
+n = 44-65 su 24 mesi (fragile come S10), DSR non significativo, **knife-edge sullo SL**
+(sl 1.25 → full PF 0.5 catastrofico; sl 1.75 → 0.8-1.1 mediocre — un edge vero degrada
+con grazia, questo no), 1-3 fold positivi su 4, e **P&L assoluto +157÷261 $ su 24 mesi**
+a 0.01 lot (≈ $7-11/mese — sotto ogni soglia di rilevanza pratica). Ogni variante vicina
+(ADX 15, no-EMA, sessione 0-24, sessione NY-only, M30/H4) è negativa o rumore da n<20.
+
+**Sprint 4 (max-effort, richiesto: "usa le skill di trading + subagenti + tuning fino a
+renderle performanti")** — skill `signal-classification` + `walk-forward-validation` +
+`regime-detection` + `exit-strategies`. Nuova infrastruttura di ricerca (SOLO research,
+non importata da mt5-bot.py):
+- `scripts/layout_features.py` — 43 feature CAUSALI dai 4 indicatori del layout (distanze
+  in unità ATR: trendline break/stato, Fib pivot P/R1-3/S1-3, key level PDH/PDL/PWH/PWL,
+  EMA200 dist+slope, sessioni LuxAlgo, contesto di regime ADX/ATR-pct/BB-width/RSI).
+- `scripts/layout_ml.py` — LightGBM (`pip install lightgbm`), walk-forward **rolling**
+  (train ~180g / test ~30g / embargo = horizon, purge), 8-11 fold, prob OOS per barra,
+  gain + permutation importance, threshold optimization.
+- `scripts/layout_sim.py` — backtest con lifecycle di uscita **parametrizzabile** (hard
+  stop ATR → BE → trailing fisso/**Chandelier** → time-stop, parziale opz. a 1R), riusa
+  cost model / `resolve_intrabar` / `walk_forward_report` di strategy-engine-v2.py.
+  `evaluate_ml()` (soglia sulle prob) + `evaluate_confluence()` (punteggio pesato).
+
+**Esito (≈45 trial)**: **AUC OOS 0.516 (M30) / 0.516 (M15) / 0.526 (H1)** — *sotto* il
+baseline 0.579 di `feature_screen.py` con il catalogo completo: le feature specifiche di
+questi layout sono MENO informative degli indicatori generici. Backtest (threshold sweep
+0.58-0.66, long-only, short-only, regime-gate trend/range, exit chandelier/partial/time-stop,
+confluence-score pesato ADX-gated): **full PF 0.48-0.72 su OGNI combinazione, 0/4 fold
+positivi.** Gli unici holdout PF > 1 sono su n=22-27 (rumore). Feature più importanti,
+coerenti su tutti e 3 i TF (gain **e** permutation): `dist_pwh`/`dist_pwl` (distanza da
+massimo/minimo settimana precedente) — conferma l'effetto debole (Cohen's d ~0.2) già
+trovato il 2026-09-07, non abbastanza per un edge tradabile.
+
+**Sprint 5 (dopo feedback utente: "queste strategie se usate bene funzionano, usa un po'
+di intelligenza")** — cambio di impostazione: invece di mecccanizzare "compra ogni rottura",
+codificato **come si trada davvero** questo toolkit:
+
+> REGIME (solo trend pulito: EMA200 in pendenza ≥ k·ATR) → TRIGGER (rottura trendline
+> LuxAlgo stretta nel verso del trend, si **memorizza** il livello, non si entra) →
+> **RETEST** (nelle K barre il prezzo torna su una **ZONA DI CONFLUENZA**: ≥ `min_lv`
+> livelli tra Fib pivot, PDH/PDL/PWH/PWL, H/L sessioni, prev-4H, EMA200, trendline, entro
+> `band`·ATR) → ENTRY (candela di rifiuto alla zona) → STOP **strutturale** oltre la zona
+> (cap `stop_max`·ATR) → TP1 fisso 1.5R parziale 50% → BE → **trailing dietro la trendline**
+> → runner alla zona successiva. Sessione London+NY, niente venerdì pomeriggio.
+
+`scripts/layout_smart.py` — `session_levels()` aggiunto a `compute_all()` (H/L ultima
+sessione Asia/London/NY completata + prev-4H + day open, causale). `evaluate_smart()` +
+`CANDIDATE_H1`. Grid entry(72)+exit(60)+loosen(72)+robustness(26).
+
+**RISULTATO — prima config con edge reale in ≈700 trial di ricerca sul layout.**
+`CANDIDATE_H1` (H1, slope 0.12, retest≤16, min_lv 2, wick 0.22, band 0.55, trail=trendline,
+stop_max 2.8, TP1 fisso 1.5R, sessione 7-21 UTC):
+
+| metrica | valore |
+|---|---|
+| full period (22m) | **PF 1.99**, +$516 @0.01 lot, DD **$130**, WR 52.8%, 16/22 mesi+ |
+| HOLDOUT (da 2026-03-17) | PF **1.86** (n=10), +$130 |
+| finestra live (apr-lug 2026) | PF **1.66** (n=7) |
+| walk-forward | fold PF 2.03 / **0.39** / 3.69 / 2.78 — **3/4 fold+** |
+| direzioni | buy n37 WR57% +$281 · sell n16 WR44% +$235 (entrambe reali) |
+| per anno | 2024 +$30 · 2025 +$190 · **2026 +$296** (edge NON decaduto) |
+| robustezza | fPF 1.5-2.3 su ~20 perturbazioni di parametro · **PBO 0.33 (non overfit)** · regge spread×2 (fPF 1.92) · top-3 winner = 31% del gross (no dipendenza da poche trade) |
+
+**Limiti (per cui è paper-test, non roster):** n=53 in 22 mesi (~2.4/mese, sottile come
+S10) · **fold 2 negativo** (equity lumpy, 68% del tempo sotto il picco) · **DSR
+inconcludente** (holdout n=10 troppo corto per uno Sharpe, deflazionato da 1036 trial) ·
+sensibile alla sessione (7-17 crolla a fPF 1.45/hPF 0.48) · **solo H1** (M30/M15 breakeven
+fPF 0.91-0.96, H4 n=12) · $ assoluto piccolo a 0.01 lot (~$23/mese) · dati XMGlobal, la
+TV dell'utente è FPMARKETS (feed diverso).
+
+**Sprint 5b — altri layout (M15/M30) + volume, stesso trattamento (456 trial)**:
+- **M15 (layout XAU_M15)**: MORTO — fPF ~1.0, 0-1/4 fold; ogni config con "buon holdout" ha
+  full P&L negativo (coda fortunata).
+- **M30 (layout XAU_M30)**: con filtro **volume** dal layout XAU_H1_Volumes (`vol_min≥1.0`
+  sulla candela di rifiuto) fPF 1.28-1.38, hPF 1.95, n~79, 2-3/4 fold — MA **PBO 0.53
+  (`is_overfit=True`)**: la selezione tra varianti M30 è più-probabile-che-no overfit.
+- **XAU_H1_Volumes**: il filtro volume aiuta poco su H1 (fPF 1.99→2.11 ma n 53→39, hPF cala).
+- → **SOLO H1.** Filtro `vol_min` aggiunto a `layout_smart` / `signals.LS_PARAMS` (default 0).
+
+**Verdetto — INTEGRATA NEL ROSTER (2026-09-10, richiesta esplicita utente "come strategia
+reale insieme alle altre").** Percorso S20: blocco dedicato `_ls_*` in `mt5-bot.py` (H1),
+**sizing via RiskGuardian**, cooldown SL condivisi, **conta in `MAX_OPEN_ORDERS`**, fuori da
+StrategySelector (segnale stateful proprio). Lifecycle propria (SL strutturale + TP1 1.5R
+parziale + BE + trailing su trendline) — RiskGuardian non la tocca (`'S20' in comment or
+'S31' in comment` → skip). Lotto iniziale via RiskGuardian tier (fallback 0.02).
+- `scripts/layout_indicators.py` — indicatori dei layout, **source of truth condivisa**
+  engine↔bot (`compute_layout_indicators()` in `compute_all` E `compute_indicators`).
+- `signals.py::ls_scan` / `ls_manage_step` / `LS_PARAMS` — core stateful, usato da backtest
+  (`layout_smart.evaluate_ls_frozen`) E bot (`_ls_check_entry` / `_ls_manage`). Verificato
+  che riproduce la config candidata (frozen full PF 1.95 == grid harness 1.99).
+- `strategy-engine-v2.py::layout_smart_trades` + flag `--layout-smart` → overlay parallelo
+  al portafoglio H1. **Impatto portafoglio H1 adattivo+RM (walk-forward, cost model ON):
+  PF 1.519→1.534 · P&L +$499 · DD $2099→$2013 (−$86) · mesi+ 17/24 invariati · 4/4 fold.**
+  Additivo e leggermente DD-riducente (decorrelato), non danneggia nulla.
+- `risk_guardian.STRATEGY_ATR_PARAMS`, `mt5-bot.STRATEGY_PARAMS`,
+  `performance_tracker.BACKTEST_BASELINES` (wr 0.528 / pf 1.95): voci S31 aggiunte.
+
+Gate di permanenza (come S20/S30): rivedere dopo 4-6 settimane live — se PF < 1.2 o WR <
+40% su ≥ 15 trade → `LS_ENABLED=False`. n così sottile (~2.4 trade/mese) → il verdetto live
+arriverà lento. `STRATEGIES_CONFIG` invariato (i blocchi paralleli S20/S30/S31 non ci vanno,
+sono tracciati dal commento ordine via `performance_tracker`).
+
+**Lezione**: l'utente aveva ragione — la mecccanizzazione naïve ("ogni rottura, stop ATR")
+era il problema, non gli indicatori. Encodando retest + zona di confluenza + stop
+strutturale + trailing sulla trendline l'edge emerge (fPF 0.4-0.85 → 1.99). Coerente con
+la nota sui segnali Telegram: "gestisce i trade più attivamente del modello".
+
+**File**: `backtests/results/layout_smart_candidate_2026-09-10.json` (+ `smart_grid_*`),
+`layout_combos_2026-09-10.json`, `data/layout_ml_probs_*.json`. `research_trials.json`:
+329 → 1036. Infrastruttura (`layout_features/ml/sim/smart.py`, signal fn SA-SF) tenuta.
+
 ## 🆕 2026-09-07 — Backtest segnali Telegram COSÌ COME SONO (entry/SL/TP dichiarati)
 
 `scripts/telegram_signal_backtest.py` + `scripts/ivan_lot_sizing.py` — a differenza dello
@@ -536,6 +692,9 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 | `S10_OB_FVG_SCALP` | OB+FVG Scalp V3 | ATR×3.5 | ATR×1.5 | RANGING, WEAK, TREND | **M30 only** | 1.534 M30 | 49.0% |
 | `S16_GOLDEN_SQUEEZE` | Golden Squeeze V5 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.863 H1 | 51.0% |
 | `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.75 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
+| `S31_LAYOUT_SMART` | Layout Smart (break→retest→confl) | strutturale (1R zona conf.) | strutturale | trend pulito (EMA200 slope) | **H1 only** | 1.95 std / +$499 overlay | 52.8% (n=53) |
+| `S20_FIB_CONFLUENCE` | Fib Confluence V2 | strutturale (Fib) | strutturale | TREND/WEAK | **M5** (blocco isolato) | OOS PF 1.72 | ~52% |
+| `S30_DOW_DIP` | Dow Dip (Connors RSI2) | ATR×1.2 | ATR×2.6 | long-only US30 | **H4** (2° simbolo) | 1.63 / holdout 2.09 | 76% |
 | ~~`S05_MFKK_INTRADAY`~~ | ⛔ **Ritirata 2026-07-16** | — | — | era TREND (H4 only) | era H4 (marginale) | — | rimossa da `STRATEGIES_CONFIG` (strategy_selector.py) e da `REGIME_PRIORITY_H4` (strategy-engine-v2.py) — portfolio concentration study: droppando solo S05 dal roster H4, PF OOS 2.19→2.66 e DD -32% a parità di P&L. H4 era il suo unico slot vivo (H1/M30 già negativi). Codice/funzione segnale lasciati intatti in `signals.py` per eventuale re-instaurazione futura, semplicemente non più selezionabile in live. Vedi `07_self_learning_log.md` 2026-07-16. |
 
 ## Strategy Selector Agent (`strategy_selector.py`)

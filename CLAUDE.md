@@ -82,6 +82,8 @@ scripts/
   research_trials.py — registro cumulativo trial di ricerca (data/research_trials.json) — SEMPRE usarlo per num_trials in dsr_check, mai un numero a mano
   extra_indicators.py — 18 indicatori extra (Ichimoku, PSAR, MFI, ecc.); trix/choppiness_index/mfi promossi al path live (compute_all/compute_indicators), gli altri 15 restano research-only
   feature_screen.py  — ML feature screening (RandomForest + permutation importance) per generare ipotesi di nuove strategie, vedi directives/02_strategies.md
+  layout_indicators.py — indicatori dei layout TradingView XAU (Trendlines-with-Breaks LuxAlgo, Pivot Fibonacci, Key Levels SpacemanBTC, EMA200, sessioni). SOURCE OF TRUTH condivisa compute_all↔compute_indicators. Consumati da S31_LAYOUT_SMART (signals.ls_scan/ls_manage_step) e dalle signal fn research SA-SF
+  layout_smart.py    — backtest S31_LAYOUT_SMART (break→retest→confluenza, H1). evaluate_ls_frozen = config di produzione. layout_features.py/layout_ml.py/layout_sim.py = research (ML classifier + exit sim)
 
 data/             — xauusd_*.json (price history)
 backtests/        — results/ + archive/

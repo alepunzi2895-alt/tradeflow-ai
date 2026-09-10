@@ -85,6 +85,9 @@ STRATEGY_ATR_PARAMS = {
     # S20 passa il proprio risk strutturale (fib-based) come "atr" e ignora tp/sl_usd calcolati
     # qui (usa TP1 1R/TP2 2R propri) — questi mult servono solo al risk-cap 2% dentro _calc_lot.
     "S20_FIB_CONFLUENCE":   {"tp_atr": 1.0, "sl_atr": 1.0},
+    # S31 passa il proprio 1R strutturale (zona di confluenza) come "atr"; TP2 e trailing sono
+    # gestiti dal blocco _ls_* in mt5-bot.py. Questi mult solo per il risk-cap 2%.
+    "S31_LAYOUT_SMART":     {"tp_atr": 3.0, "sl_atr": 1.0},
 }
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection
@@ -517,9 +520,9 @@ class RiskGuardian:
         for pos in positions:
             if pos.magic != magic:
                 continue
-            # S20_FIB_CONFLUENCE è gestita interamente dal proprio blocco in mt5-bot.py
-            # (SL strutturale + parziale a 1R + BE). Il RiskGuardian non deve toccarla.
-            if pos.comment and 'S20' in pos.comment:
+            # S20_FIB_CONFLUENCE e S31_LAYOUT_SMART sono gestite interamente dai propri blocchi
+            # in mt5-bot.py (SL strutturale + parziale + BE + trailing). RiskGuardian non le tocca.
+            if pos.comment and ('S20' in pos.comment or 'S31' in pos.comment):
                 continue
             open_tickets.add(pos.ticket)
 

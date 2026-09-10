@@ -37,6 +37,7 @@ BACKTEST_BASELINES = {
     "S16_GOLDEN_SQUEEZE":    {"wr": 0.514, "pf": 1.50},   # H1 adattivo 51.4% · 140 trade
     "S17_CONVERGENCE_SCALP": {"wr": 0.340, "pf": 1.75},   # H4 adattivo 34.0% · 103 trade
     "S30_DOW_DIP":           {"wr": 0.760, "pf": 1.63},   # US30 H4 · harness 130 trade / holdout PF 2.09 (2026-09-03)
+    "S31_LAYOUT_SMART":      {"wr": 0.528, "pf": 1.95},   # XAU H1 · layout_smart 53 trade / holdout PF 1.86 (2026-09-10)
 }
 
 ROLLING_WINDOW      = 30    # trade recenti per WR/PF rolling

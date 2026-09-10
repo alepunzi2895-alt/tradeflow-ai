@@ -29,6 +29,7 @@ from signals import (
     signal_range_reversal as s_range_reversal,
     signal_fib_confluence as s_fib_confluence,
     fib_confluence_trade_levels,
+    ls_scan as _ls_scan, ls_manage_step as _ls_manage_step, LS_PARAMS as _LS_PARAMS,
 )
 import numpy as np
 import extra_indicators as ei
@@ -64,6 +65,8 @@ _parser.add_argument('--slippage', type=float, default=None,
     help='Override SLIP_ENTRY_USD (slippage avverso su entry)')
 _parser.add_argument('--sl-slippage', type=float, default=None,
     help='Override SLIP_SL_USD (slippage avverso extra sugli stop, gap-through)')
+_parser.add_argument('--layout-smart', action='store_true',
+    help='Aggiunge S31_LAYOUT_SMART (break→retest→confluenza, H1) come overlay parallelo al portafoglio')
 _parser.add_argument('--commission', type=float, default=None,
     help='Override COMMISSION_USD (round-trip, 0.01 lot)')
 _args, _ = _parser.parse_known_args()
@@ -461,6 +464,13 @@ def calc_fvg(o,h,l,c,std_len=100,displ_factor=2):
 
     return fvg_bull, fvg_bear
 
+# LAYOUT INDICATORS (2026-09-10) - logica condivisa in layout_indicators.py
+# Source of truth unica con mt5-bot.py::compute_indicators() (regola CLAUDE.md).
+import layout_indicators as _li
+luxalgo_trendline_breaks = _li.luxalgo_trendline_breaks
+daily_fib_pivots = _li.daily_fib_pivots
+session_levels = _li.session_levels
+
 # ── COMPUTE ALL ───────────────────────────────────────────────────────────────
 def compute_all(candles):
     n=len(candles)
@@ -549,8 +559,11 @@ def compute_all(candles):
     choppiness_v = [None if np.isnan(x) else float(x) for x in ei.choppiness_index(_Hn, _Ln, _Cn)]
     mfi_v = [None if np.isnan(x) else float(x) for x in ei.mfi(_Hn, _Ln, _Cn, _Vn)]
 
+    # Layout indicators (2026-09-10) — bundle condiviso con mt5-bot.py
+    _layout = _li.compute_layout_indicators(candles, ema)
+
     return {
-        'n':n,'H':H,'L':L,'C':C,'V':V,'O':O,
+        'n':n,'H':H,'L':L,'C':C,'V':V,'O':O,'T':[c['t'] for c in candles],
         'e13':e13,'e34':e34,'e89':e89,'e233':e233,
         'e20':e20,'e50':e50,'e100':e100,'e200':e200,
         'macd':ml,'macd_sig':sg,'macd_hist':hist_m,
@@ -568,6 +581,7 @@ def compute_all(candles):
         'fvg_bull':fvg_bull,'fvg_bear':fvg_bear,
         'cci':stk_d, # MFKK uses the smoothed stochastic of CCI
         'trix':trix_v, 'choppiness':choppiness_v, 'mfi':mfi_v,
+        **_layout,
     }
 
 # ── REGIME DETECTION ─────────────────────────────────────────────────────────
@@ -916,6 +930,54 @@ REGIME_PRIORITY_H1 = {
 
 # Fallback generico (M15 e altri TF) — invariato
 REGIME_PRIORITY = REGIME_PRIORITY_M30
+
+
+# ── S31_LAYOUT_SMART: overlay parallelo (break→retest→confluenza, H1 only) ─────
+# NON entra in REGIME_PRIORITY_* — è una strategia parallela sempre-attiva (come S20
+# nel bot): stato proprio + gestione strutturale. Stessa logica del bot: usa le
+# funzioni signals.ls_scan / ls_manage_step (nessuna duplicazione).
+def layout_smart_trades(candles, ind, P=None, cooldown_bars=3):
+    P = {**_LS_PARAMS, **(P or {})}
+    n = len(candles)
+    tlu = ind.get('tlb_upper', [None]*n); tld = ind.get('tlb_lower', [None]*n)
+    V = [c.get('v', 0) or 0 for c in candles]
+    vsma = sma(V, 20)
+    trades = []; state = {'pending': None}; pos = None; last_exit = -10**9
+    for i in range(300, n - 2):
+        av = ind['atr'][i]
+        if pos is not None:
+            cp, ek = _ls_manage_step(pos, candles[i]['h'], candles[i]['l'], candles[i]['c'],
+                                     tld[i], tlu[i], av or 0.0, P)
+            if cp is None and (i - pos['ebar']) >= 48:
+                cp, ek = candles[i]['c'], 'maxbars'
+            if cp is not None:
+                d = pos['dir']
+                move = (cp - pos['entry']) if d == 'buy' else (pos['entry'] - cp)
+                rem = 0.5 if pos['part'] else 1.0
+                pnl = pos['booked'] + rem * move - trade_cost(ek == 'sl')
+                trades.append({'date': pos['date'], 'hour': pos['hour'], 'dir': d, 'entry': pos['entry'],
+                               'outcome': 'win' if pnl > 0 else 'loss', 'pnl': round(pnl, 2),
+                               'strategy': 'S31_LAYOUT_SMART', 'tier': 'PARALLEL', 'exit': ek})
+                pos = None; last_exit = i
+            continue
+        if i - last_exit < cooldown_bars or not av:
+            continue
+        dt = datetime.datetime.utcfromtimestamp(candles[i]['t'])
+        vr = (V[i] / vsma[i]) if (P['vol_min'] > 0 and vsma[i]) else None
+        spec = _ls_scan(ind, i, state, dt=dt, vol_ratio=vr, P=P)
+        if spec is None:
+            continue
+        entry = candles[i + 1]['o']; d = spec['dir']; sgn = 1 if d == 'buy' else -1
+        sl = spec['sl']; risk = abs(entry - sl)
+        if risk <= 0 or risk > P['stop_max'] * av:
+            continue
+        tp1 = entry + sgn * risk * P['tp1_r']; tp2 = spec['tp2']
+        if not ((d == 'buy' and entry < tp1 <= tp2) or (d == 'sell' and entry > tp1 >= tp2)):
+            tp2 = entry + sgn * risk * P['tp2_r']
+        pos = {'dir': d, 'entry': entry, 'sl': sl, 'tp1': tp1, 'tp2': tp2, 'risk': risk,
+               'part': False, 'booked': 0.0, 'hh': entry, 'll': entry, 'ebar': i + 1,
+               'date': dt.strftime('%Y-%m-%d'), 'hour': dt.hour}
+    return trades
 
 
 # ── S20_FIB_CONFLUENCE: simulazione dedicata con SL/TP sui livelli Fib ─────────
@@ -1539,6 +1601,21 @@ def main():
         print(f"  Trade/giorno:    {srm['tr_day']}")
         print(f"  Mesi positivi:   {srm['months']}")
         print(f"  Max Drawdown:    ${srm['dd']}")
+
+        # ── S31_LAYOUT_SMART overlay parallelo (--layout-smart, solo H1) ──
+        if _args.layout_smart:
+            if tf != 'H1':
+                print(f"\n  [S31_LAYOUT_SMART] saltato: overlay definito solo su H1 (tf attuale {tf})")
+            else:
+                ls_tr = layout_smart_trades(candles, ind)
+                s_ls = stats(ls_tr)
+                base_srm = dict(srm)
+                rm_trades = sorted(rm_trades + ls_tr, key=lambda t: t['date'] + f"{t.get('hour',0):02d}")
+                srm = stats(rm_trades)
+                print(f"\n  ── S31_LAYOUT_SMART (overlay parallelo) ──")
+                print(f"    isolata:  n={s_ls['n']} WR={s_ls['wr']}% PF={s_ls['pf']} P&L ${s_ls['pnl']} DD ${s_ls['dd']} mesi+ {s_ls['months']}")
+                print(f"    portfolio SENZA S31: PF {base_srm['pf']} | P&L ${base_srm['pnl']} | DD ${base_srm['dd']}")
+                print(f"    portfolio CON   S31: PF {srm['pf']} | P&L ${srm['pnl']} | DD ${srm['dd']}")
 
         by_rm = defaultdict(list)
         for t in rm_trades: by_rm[t['strategy']].append(t)

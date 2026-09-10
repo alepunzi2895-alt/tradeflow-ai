@@ -34,6 +34,8 @@ from signals import (
     signal_fib_confluence, fib_confluence_trade_levels,
     signal_dow_dip, DOW_DIP_TP_ATR, DOW_DIP_SL_ATR, DOW_DIP_MAX_BARS,
     ls_scan, ls_manage_step, ls_status, LS_PARAMS,
+    s32_status, s33_status, s34_status,
+    S32_PARAMS, S33_PARAMS, S34_PARAMS,
 )
 import numpy as np
 import extra_indicators as ei
@@ -194,6 +196,25 @@ _ls_scan_state: dict = {'pending': None}     # stato della state-machine di ingr
 _ls_last_bar = None
 _ls_last_entry_ts = 0.0
 _ls_status: dict = {}                        # snapshot setup per la UI (dashboard), aggiornato ogni barra H1
+
+# ── S32/S33/S34 — score dei 3 layout TradingView rimanenti (2026-09-10) ───────
+# XAU_M15 / XAU_M30 / XAU_H1_Volumes. Il backtest NON ha trovato un edge meccanico
+# durevole (S32 PF<1 su 4 TF; S33 PBO 1.00; S34 PBO 0.93 — vedi layout_s3x.py).
+# => SOLO SEGNALE per la dashboard (supporto discrezionale). Il bot NON apre ordini.
+# Ogni barra chiusa calcola s3?_status() sul TF del layout e la POSTa (strat_live_push).
+LAYOUT_SCORE_ENABLED = True
+# 'tf' = timeframe su cui si calcola lo score = quello a cui l'utente guarda quel layout
+# su TradingView (XAU_M15 è su chart M5, XAU_M30 su M30, XAU_H1_Volumes su H1).
+LAYOUT_SCORE_SPECS = {
+    'S32': {'tf': 'M5',  'fn': s32_status, 'P': S32_PARAMS,
+            'label': 'layout XAU_M15 · Order-Flow / liquidity sweep · score su M5'},
+    'S33': {'tf': 'M30', 'fn': s33_status, 'P': S33_PARAMS,
+            'label': 'layout XAU_M30 · Trend + Momentum / Alligator · score su M30'},
+    'S34': {'tf': 'H1',  'fn': s34_status, 'P': S34_PARAMS,
+            'label': 'layout XAU_H1_Volumes · Volume Auction / VA edge · score su H1'},
+}
+_layout_score_last: dict = {}                # {key: last_bar_t}
+_layout_score_snap: dict = {}               # {key: status dict}
 
 # Se sei su VPS Standalone, usa http://localhost:3000
 VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
@@ -1836,6 +1857,48 @@ def ls_push_stats(trades):
     except Exception as e:
         log.debug(f"[S31] push stats: {e}")
 
+def layout_scores_push(trades=None):
+    """S32/S33/S34 — calcola s3?_status() sul TF di ogni layout e la POSTa (key=S32/33/34).
+    SOLO SEGNALE: nessun ordine, nessuna gestione posizione. Serve la card
+    'SCORE LAYOUT XAU' nella dashboard (supporto discrezionale)."""
+    if not LAYOUT_SCORE_ENABLED or not SYNC_ENABLED or not VERCEL_URL:
+        return
+    for key, spec in LAYOUT_SCORE_SPECS.items():
+        try:
+            candles = get_candles_tf(spec['tf'], 480)
+            if not candles or len(candles) < 340:
+                continue
+            bar_t = candles[-2]['t']
+            if _layout_score_last.get(key) == bar_t:
+                continue
+            _layout_score_last[key] = bar_t
+            I = compute_indicators(candles)
+            idx = len(candles) - 2
+            st = spec['fn'](I, idx, {}, in_position=False, P=spec['P'])
+            st['bar_utc'] = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            st['price'] = round(I['C'][idx], 2)
+            _layout_score_snap[key] = st
+            # paper-tracking dei trade reali eventualmente marcati con questa key (se un giorno si abilita)
+            rows = [t for t in (trades or []) if str(t.get('strategy', '')).startswith(key)]
+            ov = None
+            if rows:
+                wins = [r for r in rows if r['profit'] > 0]
+                gl = abs(sum(r['profit'] for r in rows if r['profit'] <= 0)) or 1e-9
+                ov = {'n': len(rows), 'wr': round(100 * len(wins) / len(rows), 1),
+                      'pf': round(sum(r['profit'] for r in wins) / gl, 3),
+                      'pnl': round(sum(r['profit'] for r in rows), 2)}
+            summary = {'mode': 'signal_only', 'config': spec['label'], 'tf': spec['tf'],
+                       'setup': st, 'overall': ov, 'n_open': 0}
+            req = urllib.request.Request(
+                f"{VERCEL_URL}/api/db",
+                data=json.dumps({'action': 'strat_live_push', 'secret': MT5_SECRET,
+                                 'key': key, 'summary': summary}).encode(),
+                headers={'Content-Type': 'application/json'}, method='POST')
+            urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
+        except Exception as e:
+            log.debug(f"[{key}] layout score push: {e}")
+
+
 def sync_to_vercel(acc, positions, trades, bot_status):
     """Invia lo stato corrente alla UI su Vercel"""
     if not SYNC_ENABLED or not VERCEL_URL: return
@@ -2274,6 +2337,8 @@ def run():
                     ls_push_stats(trades_data)
                 if US30_ENABLED:
                     us30_push_stats(trades_data)
+                if LAYOUT_SCORE_ENABLED:
+                    layout_scores_push(trades_data)
                 last_sync_time = now_ts
 
             # ── News Guardian: aggiorna rischio ogni 60s (era 15min — bug timezone fix 2026-04-28) ──

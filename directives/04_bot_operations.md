@@ -187,6 +187,21 @@ restano con SL/TP hard.
 `performance_tracker.BACKTEST_BASELINES['S31_LAYOUT_SMART']` = wr 0.528 / pf 1.95; il
 self-learning può metterla in hard-block via `data/hard_blocks.json`.
 
+## S32/S33/S34 — score dei layout XAU_M15 / XAU_M30 / XAU_H1_Volumes (2026-09-10 →)
+
+**SOLO SEGNALE per la dashboard, il bot NON apre ordini.** Ricerca `layout_s3x.py`:
+nessuna ha un edge meccanico durevole (S32 PF<1 su 4 TF; S33 PBO 1.00; S34 PBO 0.93 —
+S31 shippato con 0.33). Restano perché l'utente le usa in modo **discrezionale** sui
+grafici TradingView e vuole lo stato del toolkit in tempo reale.
+
+| aspetto | S32/S33/S34 |
+|---|---|
+| Config | `LAYOUT_SCORE_ENABLED=True`, `LAYOUT_SCORE_SPECS` (key → tf, `s3?_status`, params) in `mt5-bot.py` |
+| Loop | `layout_scores_push(trades)` nel sync loop (accanto a `ls_push_stats`): ogni barra chiusa del TF (M5 per S32, H1 per S33/S34) calcola `s3?_status()` e POSTa `strat_live_push` key `S32`/`S33`/`S34` |
+| Ordini | **nessuno.** Nessuna voce in `STRATEGY_PARAMS` / `STRATEGY_ATR_PARAMS` / `STRATEGIES_CONFIG`. RiskGuardian non le conosce |
+| UI | **Dashboard**: card `#layout-scores-card` "SCORE LAYOUT XAU" — 3 righe (bias · fase setup · score 0-100 · nota). **Tab Strategie**: card con badge `🔬 SOLO SCORE` + `researchNote` |
+| Se emerge un edge live | riaprire `layout_s3x.py`, NON promuovere sul backtest (PBO le boccia) |
+
 ## Reactivation Check — ri-test mensile strategie bloccate (2026-09-01 →)
 
 `scripts/reactivation_check.py` ri-testa a backtest (non a trade live — vedi motivazione in

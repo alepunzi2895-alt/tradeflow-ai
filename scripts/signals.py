@@ -1393,3 +1393,561 @@ def ls_status(ind, i, state, in_position=False, P=None):
     if trend:
         out['phase'] = 'watching'; out['score'] = 30
     return out
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S32/S33/S34 — strategie dai layout TradingView XAU_M15 / XAU_M30 / XAU_H1_Volumes
+# (2026-09-10). Stessa filosofia di S31: NON meccanizzare gli indicatori ("compra
+# quando l'oscillatore incrocia"), ma codificare COME quel toolkit viene tradato.
+# Ogni strategia:
+#   bias()        -> direzione/regime consentito (filtro istituzionale del layout)
+#   scan()        -> entry_spec {dir,sl,tp1,tp2,risk,zone,tag} o None (next-bar-open)
+#   manage_step() -> (close_price|None, exit_kind) via _lf_manage_step condiviso
+#   status()      -> snapshot per la dashboard (score 0-100, bias, livelli)
+# Uscite: SEMPRE TP1 parziale -> BE -> trailing strutturale -> runner a TP2
+# (vincolo utente). Backtest: layout_s3x.py. Bot: blocco generico LAYOUT_STRATS.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _lf_manage_step(pos, jh, jl, jc, trail_buy, trail_sell, atr0, P, hard_exit=False):
+    """Un passo di gestione (per barra) condiviso da S32/S33/S34. Muta `pos` in place.
+    pos = {'dir','entry','sl','tp1','tp2','risk','part'(bool),'booked','hh','ll'}
+      trail_buy  = livello candidato di trailing SL se dir=='buy'  (o None)
+      trail_sell = livello candidato di trailing SL se dir=='sell' (o None)
+      hard_exit  = True -> chiudi a mercato (jc) ora (es. Supertrend flip / mouth close)
+    Ritorna (close_price|None, exit_kind). Priorità: hard SL > hard_exit > TP2.
+      - a TP1 (tp1_r·R): chiude tp1_frac, SL -> BE (± be_off·ATR)
+      - dopo TP1: trailing dietro trail_* (mai allentato)."""
+    d = pos['dir']; entry = pos['entry']; R = pos['risk']
+    is_buy = d == 'buy'
+    frac = P.get('tp1_frac', 0.5)
+    be_off = P.get('be_off', 0.05) * (atr0 or 0.0)
+    pos['hh'] = max(pos['hh'], jh); pos['ll'] = min(pos['ll'], jl)
+
+    tp1_hit = (jh >= pos['tp1']) if is_buy else (jl <= pos['tp1'])
+    if not pos['part'] and tp1_hit:
+        m1 = (pos['tp1'] - entry) if is_buy else (entry - pos['tp1'])
+        pos['booked'] += frac * m1
+        pos['part'] = True
+        be = (entry + be_off) if is_buy else (entry - be_off)
+        pos['sl'] = max(pos['sl'], be) if is_buy else min(pos['sl'], be)
+
+    if pos['part']:
+        cand = trail_buy if is_buy else trail_sell
+        if cand is None or cand != cand:
+            cand = (jc - R) if is_buy else (jc + R)      # fallback giveback 1R
+        pos['sl'] = max(pos['sl'], cand) if is_buy else min(pos['sl'], cand)
+
+    hit_sl = (jl <= pos['sl']) if is_buy else (jh >= pos['sl'])
+    hit_tp2 = (jh >= pos['tp2']) if is_buy else (jl <= pos['tp2'])
+    if hit_sl:
+        return pos['sl'], ('sl' if not pos['part'] else 'trail')
+    if hard_exit:
+        return jc, ('signal' if not pos['part'] else 'signal_trail')
+    if hit_tp2:
+        return pos['tp2'], 'tp2'
+    return None, None
+
+
+def _lf_tps(entry, sl, d, atr, P, fwd_levels=None):
+    """TP1 = tp1_r·R fisso; TP2 = prossimo livello strutturale (fwd_levels) o tp2_r·R.
+    Garantisce ordine entry<tp1<=tp2 (buy) / entry>tp1>=tp2 (sell)."""
+    sgn = 1 if d == 'buy' else -1
+    risk = abs(entry - sl)
+    tp1 = entry + sgn * risk * P['tp1_r']
+    tp2 = entry + sgn * risk * P['tp2_r']
+    if fwd_levels:
+        cand = [x for x in fwd_levels if x is not None and x == x
+                and ((x > tp1) if d == 'buy' else (x < tp1))]
+        if cand:
+            tp2 = min(cand) if d == 'buy' else max(cand)
+    if not ((d == 'buy' and entry < tp1 <= tp2) or (d == 'sell' and entry > tp1 >= tp2)):
+        tp2 = entry + sgn * risk * P['tp2_r']
+    return tp1, tp2, risk
+
+
+def _lf_session_ok(dt, P):
+    if dt is None:
+        return True
+    s0, s1 = P.get('session', (0, 24))
+    if not (s0 <= dt.hour < s1):
+        return False
+    if P.get('no_friday_pm', True) and dt.weekday() == 4 and dt.hour >= 16:
+        return False
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# S32_ORDERFLOW_SCALP — layout XAU_M15 (M5/M15)
+#   BB(20,2) · ICT Institutional Order Flow (fadi) · EMA 20/50/100/200 · Order
+#   Block Finder · OBV.
+#   Come si trada DAVVERO l'order-flow ICT (non "compra in un OB"): si aspetta una
+#   LIQUIDITY SWEEP — il prezzo caccia gli stop sotto/sopra un estremo di swing
+#   (mecca oltre il minimo/massimo delle ultime K barre) e RIENTRA (close dal lato
+#   giusto). Con il ribbon EMA a favore (o almeno EMA200) e OBV che conferma
+#   l'assorbimento, si entra sul rientro. Stop oltre lo sweep. TP1 = BB media /
+#   swing (parziale) -> BE -> trailing dietro EMA20 -> runner.
+#   Ricerca: layout_s3x.py. Solo London+NY.
+# ─────────────────────────────────────────────────────────────────────────────
+S32_PARAMS = dict(
+    sweep_lb=12,                                     # estremo di swing = min/max ultime K barre (esclusa i)
+    sweep_pen=0.08,                                  # penetrazione minima oltre l'estremo (·ATR)
+    reclaim_max=1.5,                                  # rientro: close entro reclaim_max·ATR dall'estremo, dal lato giusto
+    require_ribbon=False,                            # True: pretende stack EMA completo; False: solo EMA200
+    ribbon_slope_bars=8,
+    obv_confirm=True, obv_slope_bars=3,
+    stop_buf=0.25, stop_max=2.6, min_risk_atr=0.20,
+    tp1_r=1.3, tp2_r=2.8, tp1_frac=0.5, be_off=0.05,
+    session=(7, 21), no_friday_pm=True, cooldown_bars=4,
+)
+
+
+def _s32_ribbon(ind, i, P):
+    """'up'/'down'/None — bias del ribbon EMA. Se require_ribbon: stack 20>50>100>200
+    completo; altrimenti solo prezzo vs EMA200 + EMA200 in pendenza."""
+    e20 = _get(ind, 'e20'); e50 = _get(ind, 'e50'); e100 = _get(ind, 'e100')
+    e200 = _get(ind, 'e200', 'e233', 'ema200')
+    if not e200 or i < P['ribbon_slope_bars'] or e200[i] is None:
+        return None
+    px = ind['C'][i]
+    e2p = e200[i - P['ribbon_slope_bars']]
+    slope_up = e2p is not None and e200[i] > e2p
+    if P.get('require_ribbon'):
+        if not all((e20, e50, e100)) or None in (e20[i], e50[i], e100[i]):
+            return None
+        if e20[i] > e50[i] > e100[i] > e200[i] and px > e20[i]:
+            return 'up'
+        if e20[i] < e50[i] < e100[i] < e200[i] and px < e20[i]:
+            return 'down'
+        return None
+    if px > e200[i] and slope_up:
+        return 'up'
+    if px < e200[i] and not slope_up:
+        return 'down'
+    return None
+
+
+def _s32_obv_ok(ind, i, d, P):
+    if not P.get('obv_confirm', True):
+        return True
+    ov = _get(ind, 'obv')
+    lb = P['obv_slope_bars']
+    if not ov or i < lb or ov[i] is None or ov[i - lb] is None:
+        return True
+    return (ov[i] > ov[i - lb]) if d == 'buy' else (ov[i] < ov[i - lb])
+
+
+def s32_bias(ind, i, P=None):
+    return _s32_ribbon(ind, i, P or S32_PARAMS)
+
+
+def s32_scan(ind, i, state, dt=None, P=None):
+    P = P or S32_PARAMS
+    C = ind['C']; H = ind['H']; L = ind['L']; O = ind['O']
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or atr <= 0 or i < 260:
+        return None
+    if not _lf_session_ok(dt, P):
+        return None
+    d = _s32_ribbon(ind, i, P)
+    if d is None:
+        return None
+    lb = P['sweep_lb']
+    prior_lo = min(L[i - lb:i]); prior_hi = max(H[i - lb:i])
+    c = C[i]; o = O[i]; hi = H[i]; lo = L[i]
+    if d == 'up':
+        swept = lo < prior_lo - P['sweep_pen'] * atr
+        reclaimed = c > prior_lo and c > o and (c - prior_lo) <= P['reclaim_max'] * atr
+        if not (swept and reclaimed):
+            return None
+        dd = 'buy'; sl = lo - P['stop_buf'] * atr
+    else:
+        swept = hi > prior_hi + P['sweep_pen'] * atr
+        reclaimed = c < prior_hi and c < o and (prior_hi - c) <= P['reclaim_max'] * atr
+        if not (swept and reclaimed):
+            return None
+        dd = 'sell'; sl = hi + P['stop_buf'] * atr
+    if not _s32_obv_ok(ind, i, dd, P):
+        return None
+    risk = abs(c - sl)
+    if risk > P['stop_max'] * atr or risk < P['min_risk_atr'] * atr:
+        return None
+    bb_mid = _get(ind, 'bb_mid'); bb_up = _get(ind, 'bb_up'); bb_lo = _get(ind, 'bb_lo', 'bb_dn')
+    fwd = []
+    if bb_mid and bb_mid[i] is not None:
+        fwd.append(bb_mid[i])
+    fwd.append(prior_hi if dd == 'buy' else prior_lo)
+    if dd == 'buy' and bb_up and bb_up[i] is not None:
+        fwd.append(bb_up[i])
+    if dd == 'sell' and bb_lo and bb_lo[i] is not None:
+        fwd.append(bb_lo[i])
+    tp1, tp2, risk = _lf_tps(c, sl, dd, atr, P, fwd_levels=fwd)
+    return {'dir': dd, 'sl': sl, 'tp1': tp1, 'tp2': tp2, 'risk': risk,
+            'zone': 'sweep', 'tag': 'S32_ORDERFLOW_SCALP'}
+
+
+def s32_manage_step(pos, jh, jl, jc, e20_i, atr0, P=None):
+    P = P or S32_PARAMS
+    tb = ts = None
+    if e20_i is not None and e20_i == e20_i:
+        tb = e20_i - 0.10 * (atr0 or 0.0)
+        ts = e20_i + 0.10 * (atr0 or 0.0)
+    return _lf_manage_step(pos, jh, jl, jc, tb, ts, atr0, P)
+
+
+def s32_status(ind, i, state, in_position=False, P=None):
+    P = P or S32_PARAMS
+    out = {'phase': 'flat', 'bias': None, 'zone': None, 'score': 0, 'note': ''}
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or i < 260:
+        return out
+    d = _s32_ribbon(ind, i, P)
+    out['bias'] = {'up': 'buy', 'down': 'sell'}.get(d)
+    if in_position:
+        out['phase'] = 'in_position'; out['score'] = 100
+        return out
+    if d is None:
+        out['note'] = 'bias EMA non definito'
+        return out
+    C = ind['C']; H = ind['H']; L = ind['L']
+    lb = P['sweep_lb']
+    prior_lo = min(L[i - lb:i]); prior_hi = max(H[i - lb:i])
+    if d == 'up':
+        dist = (C[i] - prior_lo) / atr
+        near = dist <= 1.2
+        swept = L[i] < prior_lo
+    else:
+        dist = (prior_hi - C[i]) / atr
+        near = dist <= 1.2
+        swept = H[i] > prior_hi
+    if swept:
+        out['phase'] = 'sweep'; out['score'] = 78
+        out['note'] = f'liquidity sweep {"lows" if d == "up" else "highs"} · attesa rientro'
+    elif near:
+        out['phase'] = 'armed'; out['score'] = 55
+        out['note'] = f'prezzo vicino al livello di liquidità ({dist:.1f} ATR)'
+    else:
+        out['phase'] = 'watching'; out['score'] = 30
+        out['note'] = f'bias {out["bias"]} · lontano dai livelli di liquidità'
+    return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# S33_TREND_MOMENTUM — layout XAU_M30 (M30)
+#   Supertrend(10,3) · Williams Alligator(13/8/5) · OBV MACD · Ultimate RSI · Momentum.
+#   Come si trada: si opera SOLO col Supertrend; si entra quando l'Alligator si
+#   "sveglia" (lips separata da teeth/jaw nel verso, prezzo oltre le 3 linee) e il
+#   trio momentum conferma (>=2 di: OBV-MACD dir, Ultimate RSI vs 50, Momentum
+#   segno); ingresso su pullback alla lips. Stop = Supertrend (o teeth). Runner:
+#   TP1 1.5R parziale -> BE -> trailing dietro Supertrend -> exit su flip
+#   Supertrend o chiusura bocca Alligator (lips ricrossa teeth).
+# ─────────────────────────────────────────────────────────────────────────────
+S33_PARAMS = dict(
+    mouth_min=0.28,                                 # separazione lips/teeth >= k·ATR (bocca aperta)
+    pullback_atr=1.2,                               # |close - lips| <= k·ATR (entry vicino alla lips)
+    mom_needed=3,                                   # quante conferme del trio momentum (OBV-MACD / uRSI / Momentum)
+    adx_min=26,                                     # trend-momentum: solo in TREND (ADX >= k). None per disattivare
+    ursi_mid=50.0,
+    stop_mode='supertrend', stop_buf=0.20, stop_max=3.2, min_risk_atr=0.30,
+    tp1_r=1.5, tp2_r=3.5, tp1_frac=0.5, be_off=0.05,
+    session=(7, 21), no_friday_pm=True, cooldown_bars=3,
+)
+
+
+def _s33_dir(ind, i):
+    """Supertrend: engine 'st' -> 1=bearish(prezzo sotto), -1=bullish(prezzo sopra)."""
+    st = _get(ind, 'st')
+    if not st or st[i] is None:
+        return None
+    return 'buy' if st[i] == -1 else 'sell'
+
+
+def _s33_mouth(ind, i, d, P):
+    jaw = _get(ind, 'jaw'); teeth = _get(ind, 'teeth'); lips = _get(ind, 'lips')
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not all((jaw, teeth, lips)) or None in (jaw[i], teeth[i], lips[i]) or not atr:
+        return False
+    sep = P['mouth_min'] * atr
+    if d == 'buy':
+        return lips[i] - teeth[i] >= sep and teeth[i] - jaw[i] >= 0 and ind['C'][i] > lips[i]
+    return teeth[i] - lips[i] >= sep and jaw[i] - teeth[i] >= 0 and ind['C'][i] < lips[i]
+
+
+def _s33_mom_count(ind, i, d):
+    n = 0
+    oc = _get(ind, 'obv_oc', 'obv_macd_oc')
+    if oc and oc[i] is not None:
+        n += 1 if ((oc[i] == 1) if d == 'buy' else (oc[i] == -1)) else 0
+    ursi = _get(ind, 'ursi'); usig = _get(ind, 'ursi_sig')
+    if ursi and ursi[i] is not None:
+        up = ursi[i] > 50.0 and (usig[i] is None or ursi[i] >= usig[i])
+        n += 1 if (up if d == 'buy' else (not up)) else 0
+    mom = _get(ind, 'lmom', 'mom')
+    if mom and mom[i] is not None:
+        n += 1 if ((mom[i] > 0) if d == 'buy' else (mom[i] < 0)) else 0
+    return n
+
+
+def s33_bias(ind, i, P=None):
+    d = _s33_dir(ind, i)
+    if d and _s33_mouth(ind, i, d, P or S33_PARAMS):
+        return 'up' if d == 'buy' else 'down'
+    return None
+
+
+def s33_scan(ind, i, state, dt=None, P=None):
+    P = P or S33_PARAMS
+    C = ind['C']; H = ind['H']; L = ind['L']
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or atr <= 0 or i < 260:
+        return None
+    if not _lf_session_ok(dt, P):
+        return None
+    d = _s33_dir(ind, i)
+    if d is None or not _s33_mouth(ind, i, d, P):
+        return None
+    if P.get('adx_min'):
+        ax = _get(ind, 'adx')
+        if not ax or ax[i] is None or ax[i] < P['adx_min']:
+            return None
+    if _s33_mom_count(ind, i, d) < P['mom_needed']:
+        return None
+    lips = _get(ind, 'lips'); teeth = _get(ind, 'teeth')
+    if not lips or lips[i] is None:
+        return None
+    if abs(C[i] - lips[i]) > P['pullback_atr'] * atr:      # entra solo vicino alla lips
+        return None
+    st = _get(ind, 'st_level') or _get(ind, 'st')          # engine espone solo dir; usa teeth/swing
+    # stop strutturale: teeth (o swing recente) + buffer
+    if d == 'buy':
+        sl = min(teeth[i] if teeth[i] is not None else L[i], min(L[max(0, i - 4):i + 1])) - P['stop_buf'] * atr
+    else:
+        sl = max(teeth[i] if teeth[i] is not None else H[i], max(H[max(0, i - 4):i + 1])) + P['stop_buf'] * atr
+    risk = abs(C[i] - sl)
+    if risk > P['stop_max'] * atr or risk < P['min_risk_atr'] * atr:
+        return None
+    tp1, tp2, risk = _lf_tps(C[i], sl, d, atr, P)
+    return {'dir': d, 'sl': sl, 'tp1': tp1, 'tp2': tp2, 'risk': risk,
+            'zone': 'alligator', 'tag': 'S33_TREND_MOMENTUM'}
+
+
+def s33_manage_step(pos, jh, jl, jc, ind_i, atr0, P=None):
+    """ind_i = dict con st(dir), jaw/teeth/lips alla barra corrente (per trailing + hard exit)."""
+    P = P or S33_PARAMS
+    d = pos['dir']
+    teeth = ind_i.get('teeth'); lips = ind_i.get('lips'); st = ind_i.get('st')
+    tb = ts = None
+    ref = teeth if teeth is not None else lips
+    if ref is not None and ref == ref:
+        tb = ref - 0.15 * (atr0 or 0.0)
+        ts = ref + 0.15 * (atr0 or 0.0)
+    # hard exit: Supertrend flip contro la posizione, o bocca che si chiude (lips ricrossa teeth)
+    hard = False
+    if st is not None:
+        hard = (st == 1) if d == 'buy' else (st == -1)
+    if not hard and teeth is not None and lips is not None:
+        hard = (lips < teeth) if d == 'buy' else (lips > teeth)
+    return _lf_manage_step(pos, jh, jl, jc, tb, ts, atr0, P, hard_exit=hard)
+
+
+def s33_status(ind, i, state, in_position=False, P=None):
+    P = P or S33_PARAMS
+    out = {'phase': 'flat', 'bias': None, 'zone': None, 'score': 0, 'note': ''}
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or i < 260:
+        return out
+    d = _s33_dir(ind, i)
+    out['bias'] = d
+    if in_position:
+        out['phase'] = 'in_position'; out['score'] = 100
+        return out
+    if d is None:
+        return out
+    ax = _get(ind, 'adx')
+    axv = ax[i] if (ax and ax[i] is not None) else None
+    mouth = _s33_mouth(ind, i, d, P)
+    mc = _s33_mom_count(ind, i, d)
+    if P.get('adx_min') and axv is not None and axv < P['adx_min']:
+        out['phase'] = 'wrong_regime'; out['score'] = 15
+        out['note'] = (f'Supertrend {d} · ADX {axv:.0f} < {P["adx_min"]} (serve TREND) · '
+                       f'bocca {"aperta" if mouth else "chiusa"} · momentum {mc}/3')
+        return out
+    if mouth and mc >= P['mom_needed']:
+        lips = _get(ind, 'lips')
+        near = lips and lips[i] is not None and abs(ind['C'][i] - lips[i]) <= P['pullback_atr'] * atr
+        out['phase'] = 'armed' if near else 'trend_on'
+        out['score'] = 85 if near else 65
+        out['note'] = f'Supertrend {d} · bocca aperta · momentum {mc}/3' + ('' if near else ' · attesa pullback lips')
+    elif mouth:
+        out['phase'] = 'watching'; out['score'] = 45
+        out['note'] = f'bocca aperta ma momentum {mc}/3'
+    else:
+        out['phase'] = 'watching'; out['score'] = 25
+        out['note'] = f'Supertrend {d} · Alligator addormentato'
+    return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# S34_VOLUME_AUCTION — layout XAU_H1_Volumes (H1)
+#   Volume Footprint · Visible Range VP · Session VP · Cumulative Delta Volume ·
+#   Normalized Volume.
+#   Come si trada (auction market theory): il prezzo si estende al bordo della
+#   value area (VAH/VAL del profilo rolling o di sessione), mostra RIFIUTO (mecca
+#   + chiusura rientrata in VA), il CVD DIVERGE / gira e il volume normalizzato è
+#   ELEVATO (rvol >= k). Si fa fade verso il POC. TP1 = POC (parziale) -> BE ->
+#   trailing dietro swing -> runner al bordo opposto della VA. Solo London+NY.
+# ─────────────────────────────────────────────────────────────────────────────
+S34_PARAMS = dict(
+    edge_tol=0.35,                                  # |close - VA edge| <= k·ATR per "al bordo"
+    reject_wick=0.22, rvol_min=1.6,                 # rifiuto su volume normalizzato ELEVATO (spike)
+    cvd_div_bars=6,                                 # finestra per la divergenza CVD
+    use_session_profile=True,                       # True: session VP developing; False: rolling VRVP
+    min_va_width_atr=1.2,                           # VA troppo stretta -> niente edge
+    adx_max=22,                                     # auction mean-reversion: solo in RANGE (ADX <= k). None per disattivare
+    stop_buf=0.25, stop_max=2.8, min_risk_atr=0.30,
+    tp1_r=1.4, tp2_r=3.0, tp1_frac=0.5, be_off=0.05,
+    session=(7, 21), no_friday_pm=True, cooldown_bars=3,
+)
+
+
+def _s34_profile(ind, i, P):
+    """-> (poc, vah, val) del profilo scelto. Se il profilo di sessione IN CORSO non
+    è pronto (inizio sessione / fuori sessione), fallback all'ultima sessione completa
+    (psvp) e poi al rolling VRVP."""
+    def at(k):
+        a = _get(ind, k)
+        return a[i] if (a is not None and i < len(a)) else None
+    if P['use_session_profile']:
+        poc, vah, val = at('svp_poc'), at('svp_vah'), at('svp_val')
+        if None in (poc, vah, val):
+            poc, vah, val = at('psvp_poc'), at('psvp_vah'), at('psvp_val')
+    else:
+        poc, vah, val = at('vp_poc'), at('vp_vah'), at('vp_val')
+    if None in (poc, vah, val):
+        poc, vah, val = at('vp_poc'), at('vp_vah'), at('vp_val')
+    return poc, vah, val
+
+
+def _s34_cvd_div(ind, i, d, P):
+    """Divergenza CVD sulla finestra: buy -> prezzo fa un minimo <= min recente ma CVD no
+    (assorbimento); sell -> speculare sui massimi. Fallback: segno di cvd_ema contro il move."""
+    cvd = _get(ind, 'cvd'); ce = _get(ind, 'cvd_ema')
+    lb = P['cvd_div_bars']
+    C = ind['C']
+    if not cvd or i < lb or cvd[i] is None:
+        return False
+    if d == 'buy':
+        px_low = min(C[i - lb:i + 1]); made_low = C[i] <= px_low + 1e-9
+        cvd_low = min(x for x in cvd[i - lb:i + 1] if x is not None)
+        absorb = made_low and cvd[i] > cvd_low
+        turn = ce and ce[i] is not None and ce[i] > 0
+        return bool(absorb or turn)
+    else:
+        px_hi = max(C[i - lb:i + 1]); made_hi = C[i] >= px_hi - 1e-9
+        cvd_hi = max(x for x in cvd[i - lb:i + 1] if x is not None)
+        absorb = made_hi and cvd[i] < cvd_hi
+        turn = ce and ce[i] is not None and ce[i] < 0
+        return bool(absorb or turn)
+
+
+def s34_bias(ind, i, P=None):
+    P = P or S34_PARAMS
+    poc, vah, val = _s34_profile(ind, i, P)
+    c = ind['C'][i]
+    if None in (poc, vah, val):
+        return None
+    if c >= vah:
+        return 'down'          # sopra la VA -> bias fade short verso POC
+    if c <= val:
+        return 'up'            # sotto la VA -> bias fade long verso POC
+    return None
+
+
+def s34_scan(ind, i, state, dt=None, P=None):
+    P = P or S34_PARAMS
+    C = ind['C']; H = ind['H']; L = ind['L']; O = ind['O']
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or atr <= 0 or i < 320:
+        return None
+    if not _lf_session_ok(dt, P):
+        return None
+    poc, vah, val = _s34_profile(ind, i, P)
+    if None in (poc, vah, val) or (vah - val) < P['min_va_width_atr'] * atr:
+        return None
+    if P.get('adx_max'):
+        ax = _get(ind, 'adx')
+        if not ax or ax[i] is None or ax[i] > P['adx_max']:
+            return None
+    rvol = _get(ind, 'rvol')
+    if not rvol or rvol[i] is None or rvol[i] < P['rvol_min']:
+        return None
+    c = C[i]; o = O[i]; hi = H[i]; lo = L[i]
+    tol = P['edge_tol'] * atr
+    # long fade a VAL, short fade a VAH
+    if lo <= val + tol and c > val:
+        d = 'buy'; edge = val; wick = min(c, o) - lo
+        reject = c > o and wick >= P['reject_wick'] * atr
+    elif hi >= vah - tol and c < vah:
+        d = 'sell'; edge = vah; wick = hi - max(c, o)
+        reject = c < o and wick >= P['reject_wick'] * atr
+    else:
+        return None
+    if not reject or not _s34_cvd_div(ind, i, d, P):
+        return None
+    if d == 'buy':
+        sl = min(lo, edge) - P['stop_buf'] * atr
+    else:
+        sl = max(hi, edge) + P['stop_buf'] * atr
+    risk = abs(c - sl)
+    if risk > P['stop_max'] * atr or risk < P['min_risk_atr'] * atr:
+        return None
+    far = vah if d == 'buy' else val
+    tp1, tp2, risk = _lf_tps(c, sl, d, atr, P, fwd_levels=[poc, far])
+    return {'dir': d, 'sl': sl, 'tp1': tp1, 'tp2': tp2, 'risk': risk,
+            'zone': ('VAL' if d == 'buy' else 'VAH'), 'tag': 'S34_VOLUME_AUCTION'}
+
+
+def s34_manage_step(pos, jh, jl, jc, swing_low, swing_high, atr0, P=None):
+    P = P or S34_PARAMS
+    tb = (swing_low - 0.15 * (atr0 or 0.0)) if swing_low is not None else None
+    ts = (swing_high + 0.15 * (atr0 or 0.0)) if swing_high is not None else None
+    return _lf_manage_step(pos, jh, jl, jc, tb, ts, atr0, P)
+
+
+def s34_status(ind, i, state, in_position=False, P=None):
+    P = P or S34_PARAMS
+    out = {'phase': 'flat', 'bias': None, 'zone': None, 'score': 0, 'note': ''}
+    atr = ind['atr'][i] if (ind.get('atr') and ind['atr'][i]) else None
+    if not atr or i < 320:
+        return out
+    poc, vah, val = _s34_profile(ind, i, P)
+    if in_position:
+        out['phase'] = 'in_position'; out['score'] = 100
+        return out
+    if None in (poc, vah, val):
+        out['note'] = 'profilo volume non pronto'
+        return out
+    ax = _get(ind, 'adx')
+    axv = ax[i] if (ax and ax[i] is not None) else None
+    if P.get('adx_max') and axv is not None and axv > P['adx_max']:
+        out['phase'] = 'wrong_regime'; out['score'] = 15
+        out['note'] = f'ADX {axv:.0f} > {P["adx_max"]} (auction MR solo in RANGE)'
+        return out
+    c = ind['C'][i]; tol = P['edge_tol'] * atr
+    rvol = _get(ind, 'rvol'); rv = rvol[i] if (rvol and rvol[i] is not None) else 0.0
+    if c <= val + tol:
+        d = 'buy'; out['bias'] = 'buy'; out['zone'] = 'VAL'
+    elif c >= vah - tol:
+        d = 'sell'; out['bias'] = 'sell'; out['zone'] = 'VAH'
+    else:
+        out['phase'] = 'inside_va'; out['score'] = 20
+        out['note'] = f'prezzo dentro la VA (POC {poc:.1f})'
+        return out
+    div = _s34_cvd_div(ind, i, d, P)
+    vol_ok = rv >= P['rvol_min']
+    if div and vol_ok:
+        out['phase'] = 'armed'; out['score'] = 85
+        out['note'] = f'{out["zone"]} · rifiuto + CVD div + rvol {rv:.2f}'
+    else:
+        out['phase'] = 'at_edge'; out['score'] = 45
+        out['note'] = f'{out["zone"]} · manca ' + (' '.join(x for x, ok in (('CVD-div', div), ('rvol', vol_ok)) if not ok))
+    return out

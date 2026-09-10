@@ -105,6 +105,19 @@ const SE = {
         best_regime: 'US30 · uptrend (close>EMA50&EMA233) + RSI(2)<15 + regime guard · long-only · holdout PF 2.09 (4/4 fold WF) · LIVE isolata 2026-09-03',
         eq: [9.5,14.4,-6.1,-60.6,45.0,171.2,278.1,303.9,300.7,421.6,344.0,412.8,482.9,502.4,556.5,610.4,641.9,692.5,803.7]
       } },
+    // ── Layout TradingView XAU_M15 / XAU_M30 / XAU_H1_Volumes · SOLO SCORE (2026-09-10) ──
+    // Ricerca: scripts/layout_s3x.py. Nessuno ha un edge meccanico durevole:
+    //   S32 PF<1 su 4 TF (2 modelli) · S33 PBO 1.00 · S34 PBO 0.93 (S31 shippato con 0.33).
+    // Alimentano la card "SCORE LAYOUT XAU" in dashboard = supporto discrezionale. Bot: nessun ordine.
+    'S32_ORDERFLOW_SCALP': { label: 'Order-Flow Scalp [M5]', pf: null, wr: 'N/A', signalOnly: true,
+      researchNote: 'Layout XAU_M15 (BB + ICT Order Flow + EMA ribbon + Order Block + OBV) · modello liquidity-sweep → rientro. Backtest: nessun edge su M5/M15/M30/H1 (PF < 1). Score in dashboard calcolato su M5 (TF del layout).',
+      stats: { best_regime: 'liquidity sweep di uno swing + rientro nel verso del bias EMA200 · London+NY' } },
+    'S33_TREND_MOMENTUM': { label: 'Trend + Momentum [M30]', pf: 1.72, wr: '45.8%', signalOnly: true,
+      researchNote: 'Layout XAU_M30 (Supertrend + Williams Alligator + OBV-MACD + Ultimate RSI + Momentum) · Alligator che si sveglia col trio momentum, ADX≥26. Backtest su H1: superficie buona (full PF 1.72, 4/4 fold+) ma PBO 1.00 → overfit. Score in dashboard su M30 (TF del layout).',
+      stats: { best_regime: 'Supertrend + bocca Alligator aperta + ≥3 conferme momentum + ADX≥26 · pullback alla lips · PBO 1.00 (max overfit) — NON tradata' } },
+    'S34_VOLUME_AUCTION': { label: 'Volume Auction [H1]', pf: 2.30, wr: '48.6%', signalOnly: true,
+      researchNote: 'Layout XAU_H1_Volumes (Volume Footprint + VRVP + Session VP + Cumulative Delta + Normalized Volume) · fade ai bordi della value area con rifiuto + divergenza CVD + rvol≥1.6, ADX≤22. n=37 (1.5/mese), PBO 0.93 → overfit. Score in dashboard su H1.',
+      stats: { best_regime: 'rifiuto a VAH/VAL del Session Volume Profile + CVD divergente + volume normalizzato ≥1.6 + ADX≤22 · fade verso il POC · PBO 0.93 — NON tradata' } },
   },
   // ── REGIME PRIORITY (allineata a REGIME_PRIORITY_H1 del backtester) ──
   regimePriority: {

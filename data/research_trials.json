@@ -1,5 +1,5 @@
 {
-  "total": 1492,
+  "total": 1687,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -176,6 +176,14 @@
       "asset": "XAU",
       "strategy_id": "LAYOUT_SMART M15/M30 + volume",
       "note": "Sprint 5b: grid entry+exit su M30 (216) e M15 (216) + filtro volume layout XAU_H1_Volumes (24). M15 MORTO (fPF ~1.0, 0-1/4 fold; config buon-holdout hanno full pnl NEGATIVO). M30: fPF 1.28-1.38 con vol_min>=1.0 (n~79, hPF 1.95, 2/4 fold) MA PBO 0.53 -> is_overfit=True. H1 resta unico TF con edge reale (PBO 0.33)."
+    },
+    {
+      "ts": "2026-09-10T15:23:08Z",
+      "n_trials": 195,
+      "cumulative_after": 1687,
+      "asset": "layout strategie S32/S33/S34 (XAU_M15/M30/H1_Volumes): design 2 modelli S32 + grid TF/param + gate regime ADX su S33/S34",
+      "strategy_id": "",
+      "note": ""
     }
   ]
 }

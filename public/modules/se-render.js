@@ -524,16 +524,24 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'ADX/DI spread≥15 + MACD vs signal crossover · TREND_DOWN M15 (bot) / H1 (UI)'
         : id==='S13_STRUC_BREAK'
         ? 'Breakout max/min 40 barre + retest immediato · RANGE H1 · Setup strutturale'
+        : id==='S32_ORDERFLOW_SCALP'
+        ? 'Layout XAU_M15 (Bollinger + ICT Institutional Order Flow + EMA 20/50/100/200 + Order Block Finder + OBV) · liquidity sweep di uno swing → rientro nel verso del bias EMA200 · SOLO SCORE (nessun edge meccanico nel backtest)'
+        : id==='S33_TREND_MOMENTUM'
+        ? 'Layout XAU_M30 (Supertrend + Williams Alligator + OBV MACD + Ultimate RSI LuxAlgo + Momentum) · Alligator che si sveglia nel verso del Supertrend + trio momentum + ADX≥26 · SOLO SCORE (PBO 1.00 = overfit)'
+        : id==='S34_VOLUME_AUCTION'
+        ? 'Layout XAU_H1_Volumes (Volume Footprint + Visible Range / Session Volume Profile + Cumulative Delta + Normalized Volume) · fade ai bordi della value area con rifiuto + CVD divergente + volume alto, ADX≤22 · SOLO SCORE (PBO 0.93 = overfit)'
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       const pl = s.paperLive || s.rosterLive || null;
       const plClosed = pl && pl.overall ? pl.overall : null;
       const isLT = !!s.liveTest;
-      const isRosterLive = !s.liveTest && !!s.rosterLive;   // S31: strategia reale nel roster, mostra P&L live isolato
+      const isSignalOnly = !!s.signalOnly;   // S32/S33/S34: solo score in dashboard, il bot non apre ordini
+      const isRosterLive = !s.liveTest && !s.signalOnly && !!s.rosterLive;   // S31: strategia reale nel roster, mostra P&L live isolato
       return `
-      <div style="background:var(--bg2); border:1px solid ${isLT?'#c8a96e55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden">
+      <div style="background:var(--bg2); border:1px solid ${isLT?'#c8a96e55':isSignalOnly?'#5a4a7a55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden${isSignalOnly?';opacity:.82':''}">
         ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
         ${isLT ? `<div style="position:absolute;top:0;right:0;background:#c8a96e;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🧪 LIVE ${s.liveTestLot||'0.03'}</div>` : ''}
         ${isRosterLive ? `<div style="position:absolute;top:0;right:0;background:var(--green);color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">📡 LIVE · ROSTER</div>` : ''}
+        ${isSignalOnly ? `<div style="position:absolute;top:0;right:0;background:#7a5cba;color:#fff;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🔬 SOLO SCORE</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isLT?'#c8a96e':isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:5px;align-items:center;font-size:10px">
@@ -556,6 +564,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
           ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
           ` : `<div style="font-size:8px;color:var(--dim)">📡 ${s.liveTestEmptyNote||'nessun trade S20 ancora — la strategia apre solo in London+NY, no-lunedì, ~5-6/mese'}</div>`}
+        </div>
+        ` : ''}
+        ${isSignalOnly ? `
+        <div style="background:#15101f;border:1px solid #7a5cba40;border-radius:5px;padding:6px 8px;margin-bottom:5px">
+          <div style="font-size:8px;color:#b79ce6;font-weight:700;margin-bottom:2px">🔬 RICERCA — solo score in dashboard, il bot non apre ordini</div>
+          <div style="font-size:8px;color:var(--dim);line-height:1.45">${s.researchNote||'Backtest senza edge meccanico durevole.'}</div>
         </div>
         ` : ''}
         ${isRosterLive ? `
@@ -583,7 +597,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
         </div>
         ` : ''}
-        ${st.pnl_24m==null ? `
+        ${isSignalOnly ? '' : st.pnl_24m==null ? `
         <div style="background:#1a1600;border:1px solid #c8a96e40;border-radius:5px;padding:6px 8px;margin-bottom:4px">
           <div style="font-size:8px;color:#c8a96e;font-weight:700;margin-bottom:2px">⏳ BACKTEST PENDENTE</div>
           <div style="font-size:7px;color:var(--dim);line-height:1.5">
@@ -618,9 +632,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         </div>
         `}
         <div style="margin-top:4px;font-size:8px;color:var(--dim);display:flex;gap:8px">
-          <span>~${st.trades_12m||'?'} trade/anno</span>
-          <span>Target: TP ${s.tp} · SL ${s.sl}</span>
-          <span style="margin-left:auto;color:var(--dim)">Best: ${st.best_regime||'?'}</span>
+          ${isSignalOnly ? '' : `<span>~${st.trades_12m||'?'} trade/anno</span><span>Target: TP ${s.tp} · SL ${s.sl}</span>`}
+          <span style="margin-left:auto;color:var(--dim)">${isSignalOnly?'':'Best: '}${st.best_regime||'?'}</span>
         </div>
       </div>`;
     }).join('')}

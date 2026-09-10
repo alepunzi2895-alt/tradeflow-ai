@@ -1,5 +1,53 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-10 (sera) — Re-ispezione layout TradingView + S32/S33/S34 (solo score)
+
+**CORREZIONE** alla sezione sotto: i 5 layout TradingView **NON condividono lo stesso
+toolkit**. La lettura precedente (`data_get_indicator` su cache) era stale — i layout sono
+stati rieditati dall'utente il 2026-09-08÷10. Inventario reale (verificato caricando il
+widget di ogni layout via `window.location.assign` sul target CDP):
+
+| Layout | TF | Indicatori sul grafico | Strategia |
+|---|---|---|---|
+| **MFKK_GOLD** | H1 | Gold Watch Evans 4.0 · Smart Money Tool · CCI Stochastic · MACD · ADX/DI v4 | **S00_MFKK** (live) |
+| **Default** | M15 | Sessions LuxAlgo · Trendlines w/ Breaks LuxAlgo · Pivot Points Standard · Key Levels SpacemanBTC · EMA200 | **S31_LAYOUT_SMART** (live, H1) |
+| **XAU_M15** | M5 | Bollinger Bands · ICT Institutional Order Flow (fadi) · EMA 20/50/100/200 · Order Block Finder · OBV | **S32_ORDERFLOW_SCALP** — solo score |
+| **XAU_M30** | M30 | Supertrend · Williams Alligator · OBV MACD · Ultimate RSI LuxAlgo · Momentum | **S33_TREND_MOMENTUM** — solo score |
+| **XAU_H1_Volumes** | H1 | Volume Footprint (Leviathan) · Visible Range VP · Session VP · Cumulative Delta Volume · Normalized Volume | **S34_VOLUME_AUCTION** — solo score |
+
+Cioè **S31 è la strategia del layout `Default`** (non di un XAU_*), e restavano **3 layout
+davvero scoperti**: XAU_M15, XAU_M30, XAU_H1_Volumes.
+
+**Nuovi indicatori** in `layout_indicators.py` (bundle condiviso engine↔bot):
+`ultimate_rsi()` (LuxAlgo, RMA, 0-100), `cvd_proxy()` (Cumulative Delta da OHLCV
+close-in-range, reset giornaliero), `rolling_volume_profile()` + `session_volume_profile()`
+(POC/VAH/VAL, value area 70%, developing + ultima sessione), `rel_volume()` (normalized
+volume su media 20), `momentum_roc()`.
+
+**Signal-core** in `signals.py` (`s32/s33/s34_scan`/`_manage_step`/`_status`, exit condiviso
+`_lf_manage_step` = TP1 parziale → BE → trailing strutturale → runner, come S31).
+Backtest: `scripts/layout_s3x.py` (`evaluate_s3x`, gira il codice di produzione).
+
+**Esito (~195 trial, num_trials cumulativo 1687) — NESSUNA promuovibile:**
+
+| Strat | Config migliore | Full | Fold+ | PBO | Verdetto |
+|---|---|---|---|---|---|
+| **S32** ORDERFLOW_SCALP | 2 modelli (pullback-OB/FVG, liquidity-sweep), 4 TF | PF **< 1** ovunque | 0-1/4 | — | nessun edge meccanico |
+| **S33** TREND_MOMENTUM | H1, Alligator sveglio + trio momentum + ADX≥26 | PF 1.72, +$1343, hold PF 1.59 | 4/4 | **1.00** | **overfit** (il gate ADX era curve-fit) |
+| **S34** VOLUME_AUCTION | H1, fade VA-edge + CVD div + rvol≥1.6 + ADX≤22 | PF 2.30, +$399, hold PF 5.5 | 3/4 | **0.93** | **overfit** · n=37 (1.5/mese) |
+
+Riferimento: **S31 shippato con PBO 0.33**. S32/33/34 stanno a 0.93-1.00. Coerente col
+dead-end da 1500 trial (sotto) e con `07_self_learning_log.md` ("edge decaduto, NON tuning").
+
+**→ Le 3 restano come SCORE in dashboard** (card "SCORE LAYOUT XAU", `strat_live_push`
+key S32/S33/S34 dal bot ogni barra chiusa via `layout_scores_push()`). Mostrano bias +
+regime + fase setup di ogni toolkit = **supporto discrezionale**. Il bot **non apre ordini**.
+Tab Strategie: card con badge `🔬 SOLO SCORE`. Roster live invariato: **S00 + S31** (+ S20/S30).
+
+File: `scripts/layout_s3x.py`, `backtests/results/` (n/a — verdetto negativo), `research_trials.json` 1492→1687.
+
+---
+
 ## 🆕 2026-09-10 — Strategie da combo indicatori dei layout TradingView XAU — TUTTE respinte
 
 Richiesta utente: dai layout TradingView `XAU_M15` / `XAU_M30` / `XAU_H1_Volumes` /
@@ -695,6 +743,14 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 | `S31_LAYOUT_SMART` | Layout Smart (break→retest→confl) | strutturale (1R zona conf.) | strutturale | trend pulito (EMA200 slope) | **H1 only** | 1.95 std / +$499 overlay | 52.8% (n=53) |
 | `S20_FIB_CONFLUENCE` | Fib Confluence V2 | strutturale (Fib) | strutturale | TREND/WEAK | **M5** (blocco proprio, sizing RiskGuardian ×2) | OOS PF 1.72 | ~52% |
 | `S30_DOW_DIP` | Dow Dip (Connors RSI2) | ATR×1.2 | ATR×2.6 | long-only US30 | **H4** (2° simbolo US30Cash) | 1.63 / holdout 2.09 | 76% |
+| `S32_ORDERFLOW_SCALP` | Order-Flow (XAU_M15) | — | — | — | — (solo score) | — | **NON tradata** — PBO ∞, no edge |
+| `S33_TREND_MOMENTUM` | Trend+Momentum (XAU_M30) | — | — | — | — (solo score) | — | **NON tradata** — PBO 1.00 |
+| `S34_VOLUME_AUCTION` | Volume Auction (XAU_H1_Volumes) | — | — | — | — (solo score) | — | **NON tradata** — PBO 0.93 |
+
+> **2026-09-10 (S32/S33/S34)** — solo **score in dashboard** (card "SCORE LAYOUT XAU"),
+> `layout_scores_push()` nel bot ogni barra chiusa. Nessun ordine, nessuna voce in
+> `STRATEGY_PARAMS`/`STRATEGY_ATR_PARAMS`/`STRATEGIES_CONFIG`. Se un giorno un edge emerge
+> live → riaprire la ricerca (`layout_s3x.py`), non promuovere sul backtest (PBO le boccia).
 
 > **2026-09-10** — S20 e S30 **non sono più "live test"**: erano già production nella logica
 > del bot (S20 integrata 2026-09-01, S30 live 2026-09-03), ora anche nell'etichetta UI. Card

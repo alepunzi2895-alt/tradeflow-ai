@@ -193,6 +193,8 @@ async function loadSlowData(){
 
   // Layout Smart (S31) — stato setup + P&L live dal bot
   loadLayoutSmart();
+  // Score degli altri 3 layout TradingView (S32/S33/S34) — solo segnale
+  loadLayoutScores();
 }
 
 async function loadLayoutSmart(){
@@ -271,6 +273,75 @@ function renderLayoutSmart(d){
   if(t && (su?.bar_utc || d.synced_at)){
     const dt = new Date(su?.bar_utc || d.synced_at);
     t.textContent = 'barra ' + dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }
+}
+
+// ── Score degli altri 3 layout TradingView (S32/S33/S34) — solo segnale, no ordini ──
+const LAYOUT_SCORE_META = {
+  S32: { layout:'XAU_M15', tf:'M5',  name:'Order-Flow · liquidity sweep' },
+  S33: { layout:'XAU_M30', tf:'M30', name:'Trend + Momentum · Alligator' },
+  S34: { layout:'XAU_H1_Volumes', tf:'H1', name:'Volume Auction · VA edge' },
+};
+const LAYOUT_SCORE_PHASE = {
+  in_position:  { txt:'IN POSIZIONE',      col:'var(--green)' },
+  armed:        { txt:'SETUP ARMATO',       col:'var(--green)' },
+  sweep:        { txt:'LIQUIDITY SWEEP',    col:'var(--yellow)' },
+  at_zone:      { txt:'PREZZO ALLA ZONA',   col:'var(--yellow)' },
+  at_edge:      { txt:'AL BORDO VALUE AREA',col:'var(--yellow)' },
+  trend_on:     { txt:'TREND ATTIVO',       col:'var(--blue)' },
+  watching:     { txt:'IN ATTESA',          col:'var(--blue)' },
+  inside_va:    { txt:'DENTRO LA VALUE AREA',col:'var(--dim)' },
+  wrong_regime: { txt:'REGIME NON ADATTO',  col:'var(--dim)' },
+  flat:         { txt:'NESSUN SETUP',       col:'var(--dim)' },
+};
+
+async function loadLayoutScores(){
+  const card = document.getElementById('layout-scores-card');
+  if(!card) return;
+  const keys = Object.keys(LAYOUT_SCORE_META);
+  let any = false, lastSync = null;
+  const rows = [];
+  for(const k of keys){
+    let d = null;
+    try{
+      const r = await fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'strat_live_get', key:k }) });
+      const j = await r.json();
+      if(j && j.ok && j.data) d = j.data;
+    }catch(e){ /* silenzioso */ }
+    const meta = LAYOUT_SCORE_META[k];
+    const su = d && d.setup ? d.setup : null;
+    if(su) any = true;
+    if(d && d.synced_at) lastSync = d.synced_at;
+    const score = su ? (su.score||0) : 0;
+    const ph = LAYOUT_SCORE_PHASE[su?.phase || 'flat'] || LAYOUT_SCORE_PHASE.flat;
+    const bias = su?.bias ? (su.bias==='buy'?'<span style="color:var(--green)">▲ BUY</span>':'<span style="color:var(--red)">▼ SELL</span>') : '<span style="color:var(--dim)">—</span>';
+    const ov = d && d.overall ? d.overall : null;
+    rows.push(`
+      <div style="padding:7px 0;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px">
+          <b style="color:var(--fg)">${meta.layout}</b>
+          <span style="color:var(--dim);font-size:8px">${meta.tf}</span>
+          <span style="margin-left:auto">${bias}</span>
+          <span style="color:${ph.col};font-weight:600;font-size:9px">${ph.txt}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+          <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${score}%;background:${ph.col};transition:width .4s"></div>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:${ph.col};min-width:22px;text-align:right">${su?score:'—'}</span>
+        </div>
+        <div style="font-size:8.5px;color:var(--dim);margin-top:2px">${meta.name}${su?.note?` · ${su.note}`:''}</div>
+        ${ov && ov.n ? `<div style="font-size:8px;color:#666;margin-top:1px">paper: ${ov.n} chiusi · PF ${ov.pf} · P&L ${ov.pnl>=0?'+':''}$${ov.pnl}</div>` : ''}
+      </div>`);
+  }
+  if(!any){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('lsc-rows').innerHTML = rows.join('');
+  const t = document.getElementById('lsc-time');
+  if(t && lastSync){
+    const dt = new Date(lastSync);
+    t.textContent = dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   }
 }
 

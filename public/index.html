@@ -278,6 +278,20 @@
           <div id="ls-live" style="margin-top:6px;font-size:9px;color:var(--dim)"></div>
         </div>
 
+        <!-- Score degli altri 3 layout TradingView (S32/S33/S34) — segnale discrezionale, NON auto-tradato -->
+        <div class="mfkk-card" id="layout-scores-card" style="display:none">
+          <div class="mfkk-header">
+            <div class="mfkk-title">SCORE LAYOUT XAU · TradingView</div>
+            <div id="lsc-time" style="font-size:9px;color:var(--dim);font-family:monospace"></div>
+          </div>
+          <div style="font-size:9px;color:var(--dim);margin:4px 0 8px;line-height:1.5">
+            Stato in tempo reale del toolkit di ogni layout (bias · regime · fase setup). Il backtest
+            non ha trovato un edge meccanico durevole (PBO&nbsp;&gt;&nbsp;0.9) → <b style="color:var(--yellow)">supporto discrezionale</b>,
+            il bot non apre ordini. Roster live = solo S00 (MFKK) + S31 (Layout Smart).
+          </div>
+          <div id="lsc-rows"></div>
+        </div>
+
         <!-- Economic Calendar -->
         <div class="cal-card" id="cal-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">

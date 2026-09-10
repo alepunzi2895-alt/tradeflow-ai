@@ -199,7 +199,8 @@ grafici TradingView e vuole lo stato del toolkit in tempo reale.
 | Config | `LAYOUT_SCORE_ENABLED=True`, `LAYOUT_SCORE_SPECS` (key → tf, `s3?_status`, params) in `mt5-bot.py` |
 | Loop | `layout_scores_push(trades)` nel sync loop (accanto a `ls_push_stats`): ogni barra chiusa del TF (M5 per S32, H1 per S33/S34) calcola `s3?_status()` e POSTa `strat_live_push` key `S32`/`S33`/`S34` |
 | Ordini | **nessuno.** Nessuna voce in `STRATEGY_PARAMS` / `STRATEGY_ATR_PARAMS` / `STRATEGIES_CONFIG`. RiskGuardian non le conosce |
-| UI | **Dashboard**: card `#layout-scores-card` "SCORE LAYOUT XAU" — 3 righe (bias · fase setup · score 0-100 · nota). **Tab Strategie**: card con badge `🔬 SOLO SCORE` + `researchNote` |
+| UI | **Dashboard**: `#layout-strategy-cards` — 4 card `mfkk-card` (S31/S32/S33/S34), una per strategia, look come "MFKK Strategy Score": ring (confidence 0-100 o score setup) + bias/fase + **righe indicatori** (`layout_confidence.indicator_readout` — value + barra bull/bear + score −100..+100 + stato) + chip fattori confidence + footer (P&L live per S31, "solo score" per le altre). `loadLayoutStrategies()` in `dashboard.js`. **Tab Strategie**: card badge `🔬 SOLO SCORE` + `researchNote` |
+| confidence / readout | `_layout_confidence_live()` in `mt5-bot.py`: ms BOS/CHoCH + bias HTF + swing + `setup_confidence()` + `indicator_readout()`. Chiamato per S31 (in `ls_check_entry`) e S32/S33/S34 (in `layout_scores_push`). Il confidence **non predice l'esito** (test: Spearman ≈ 0) — è un readout di contesto |
 | Se emerge un edge live | riaprire `layout_s3x.py`, NON promuovere sul backtest (PBO le boccia) |
 
 ## Reactivation Check — ri-test mensile strategie bloccate (2026-09-01 →)

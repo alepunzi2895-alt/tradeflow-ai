@@ -189,13 +189,18 @@ Da esporre come:
 
 | # | Gap | Dove | Priorità |
 |---|---|---|---|
-| G1 | **Market structure a swing** (HH/HL/LH/LL) + **BOS** come feature di regime | `market_structure.py` nuovo → `detect_regime` / `strategy_selector` | alta (fondamento del corso) |
-| G2 | **MTF bias**: filtrare le entry H1 con il trend H4 (EMA200/struttura) | S31 (`ls_scan`), S16 | media |
-| G3 | **Pattern candela reale** (hammer/star thirds-rule, engulfing) alla zona invece del check mecca | `signals.ls_scan` | media |
-| G3b | **Conferma oscillatore** (RSI/Stoch estremo) alla zona di confluenza — completa la "ricetta ad alta probabilità" | `signals.ls_scan` | media |
-| G4 | **Conteggio tocchi** del livello (non solo n° di livelli nella zona) per pesarne la forza | `ls_confluence_zones` | bassa |
-| G5 | **Overlap London+NY 13–16 UTC** come boost di size/confidence | RiskGuardian / selector | bassa |
+| ~~G1~~ | ✅ **FATTO 2026-09-10** — `scripts/market_structure.py`: swing HH/HL/LH/LL + **BOS** (continuazione) + **CHoCH** (inversione), causale. Usato in `layout_confidence.py` (fattore struttura del confidence score S31-S34). **Ancora da fare**: integrarlo in `detect_regime` / `strategy_selector` come feature di regime ("TREND_UP confermato da BOS" vs "CHoCH recente → cautela") | `detect_regime` / `strategy_selector` | media (il grosso è fatto) |
+| G2 | **MTF bias** (H4 EMA200) | 🔶 in `layout_confidence.py` (fattore `mtf_bias`, score S31-S34). Da portare come **gate** vero in `ls_scan` | media |
+| G3 | **Pattern candela reale** (hammer/star thirds-rule, engulfing) | 🔶 in `layout_confidence._hammer` / `_engulf` (fattore `candle`). Da usare in `ls_scan` al posto del check mecca | media |
+| G3b | **Conferma oscillatore** (RSI/Stoch estremo) alla zona | 🔶 in `layout_confidence.py` (fattore `oscillator`, solo reversal). Da portare come gate in `ls_scan` | media |
+| G4 | **Conteggio tocchi** del livello | `ls_confluence_zones` | bassa |
+| G5 | **Overlap London+NY 13–16 UTC** come boost di size/confidence | 🔶 in `layout_confidence.py` (fattore `session` +7). Da portare in RiskGuardian per le altre strategie | bassa |
 | G6 | Distinguere RANGE-accumulazione da RANGE-distribuzione (Wyckoff) | regime | bassa |
+
+> **2026-09-10** — G1 fatto (`market_structure.py`), G2/G3/G3b/G5 implementati come **fattori
+> del confidence score** in `layout_confidence.py` (test S32/S33/S34 col sistema completo —
+> vedi `02_strategies.md`). Il confidence NON ha reso profittevoli S32/S33/S34 (PBO resta
+> 0.80-1.00) ma i mattoni sono ora riusabili per S31/S16.
 
 Ognuno va validato con `opt_harness.py` (walk-forward + DSR + PBO) prima di toccare il live —
 stesso rigore del resto del programma. Registrare i trial in `research_trials.py`.

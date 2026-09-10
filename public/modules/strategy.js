@@ -110,14 +110,14 @@ const SE = {
     //   S32 PF<1 su 4 TF (2 modelli) · S33 PBO 1.00 · S34 PBO 0.93 (S31 shippato con 0.33).
     // Alimentano la card "SCORE LAYOUT XAU" in dashboard = supporto discrezionale. Bot: nessun ordine.
     'S32_ORDERFLOW_SCALP': { label: 'Order-Flow Scalp [M5]', pf: null, wr: 'N/A', signalOnly: true,
-      researchNote: 'Layout XAU_M15 (BB + ICT Order Flow + EMA ribbon + Order Block + OBV) · modello liquidity-sweep → rientro. Backtest: nessun edge su M5/M15/M30/H1 (PF < 1). Score in dashboard calcolato su M5 (TF del layout).',
+      researchNote: 'Layout XAU_M15 (BB + ICT Order Flow + EMA ribbon + Order Block + OBV) · modello liquidity-sweep → rientro. Backtest nudo: PF < 1 su M5/M15/M30/H1. Col sistema completo (confidence + circuit breaker): PF 0.62, nessun effetto. Confidence score in dashboard su M5.',
       stats: { best_regime: 'liquidity sweep di uno swing + rientro nel verso del bias EMA200 · London+NY' } },
     'S33_TREND_MOMENTUM': { label: 'Trend + Momentum [M30]', pf: 1.72, wr: '45.8%', signalOnly: true,
-      researchNote: 'Layout XAU_M30 (Supertrend + Williams Alligator + OBV-MACD + Ultimate RSI + Momentum) · Alligator che si sveglia col trio momentum, ADX≥26. Backtest su H1: superficie buona (full PF 1.72, 4/4 fold+) ma PBO 1.00 → overfit. Score in dashboard su M30 (TF del layout).',
-      stats: { best_regime: 'Supertrend + bocca Alligator aperta + ≥3 conferme momentum + ADX≥26 · pullback alla lips · PBO 1.00 (max overfit) — NON tradata' } },
+      researchNote: 'Layout XAU_M30 (Supertrend + Williams Alligator + OBV-MACD + Ultimate RSI + Momentum). Nudo su H1: full PF 1.72, 4/4 fold+, ma PBO 1.00. Col confidence score + circuit breaker (fattori PDF): PBO 1.00→0.80, holdout 1.58→2.06 — meglio ma resta overfit (knife-edge sul gate). Confidence score in dashboard su M30.',
+      stats: { best_regime: 'Supertrend + bocca Alligator aperta + ≥3 conferme momentum + ADX≥26 · pullback alla lips · anche col sistema completo PBO 0.80 — NON tradata' } },
     'S34_VOLUME_AUCTION': { label: 'Volume Auction [H1]', pf: 2.30, wr: '48.6%', signalOnly: true,
-      researchNote: 'Layout XAU_H1_Volumes (Volume Footprint + VRVP + Session VP + Cumulative Delta + Normalized Volume) · fade ai bordi della value area con rifiuto + divergenza CVD + rvol≥1.6, ADX≤22. n=37 (1.5/mese), PBO 0.93 → overfit. Score in dashboard su H1.',
-      stats: { best_regime: 'rifiuto a VAH/VAL del Session Volume Profile + CVD divergente + volume normalizzato ≥1.6 + ADX≤22 · fade verso il POC · PBO 0.93 — NON tradata' } },
+      researchNote: 'Layout XAU_H1_Volumes (Volume Footprint + VRVP + Session VP + Cumulative Delta + Normalized Volume) · fade VA-edge + CVD div + rvol≥1.6, ADX≤22. Nudo n=37 PBO 0.93. Col sistema completo il gate RIMUOVE vincitori (n 37→24, holdout 5.5→1.7) → è rumore. Confidence score in dashboard su H1.',
+      stats: { best_regime: 'rifiuto a VAH/VAL del Session Volume Profile + CVD divergente + volume ≥1.6 + ADX≤22 · fade verso il POC · PBO 0.93, il sistema non aiuta — NON tradata' } },
   },
   // ── REGIME PRIORITY (allineata a REGIME_PRIORITY_H1 del backtester) ──
   regimePriority: {

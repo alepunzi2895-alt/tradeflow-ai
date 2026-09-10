@@ -85,7 +85,9 @@ scripts/
   feature_screen.py  — ML feature screening (RandomForest + permutation importance) per generare ipotesi di nuove strategie, vedi directives/02_strategies.md
   layout_indicators.py — indicatori dei 5 layout TradingView XAU. SOURCE OF TRUTH condivisa compute_all↔compute_indicators. Default→S31 (Trendlines-with-Breaks LuxAlgo, Pivot Fibonacci, Key Levels SpacemanBTC, EMA200, sessioni); XAU_M30→S33 (Ultimate RSI LuxAlgo, Momentum); XAU_H1_Volumes→S34 (CVD proxy, Volume Profile POC/VAH/VAL rolling+sessione, Normalized Volume)
   layout_smart.py    — backtest S31_LAYOUT_SMART (break→retest→confluenza, H1). evaluate_ls_frozen = config di produzione. layout_features.py/layout_ml.py/layout_sim.py = research (ML classifier + exit sim)
-  layout_s3x.py      — backtest S32/S33/S34 (score dei layout XAU_M15/M30/H1_Volumes). evaluate_s3x gira signals.s3?_scan/_manage_step. VERDETTO: nessuna promuovibile (PBO 0.93-1.00) → solo score in dashboard, il bot non apre ordini
+  layout_s3x.py      — backtest S32/S33/S34 (score dei layout XAU_M15/M30/H1_Volumes). evaluate_s3x gira signals.s3?_scan/_manage_step. `system={}` = test col sistema completo (confidence + circuit breaker + sizing). VERDETTO: nessuna promuovibile (PBO 0.80-1.00 anche col sistema) → solo confidence score in dashboard, il bot non apre ordini
+  market_structure.py — swing HH/HL/LH/LL + BOS (continuazione) / CHoCH (inversione), causale. Gap G1 di directives/10_trading_education.md
+  layout_confidence.py — confidence 0-100 per setup dai fattori del curriculum ECABS (MTF bias, BOS/CHoCH, oscillatore, premium/discount, sessione, candela, regime, news-proxy). Pesi FISSI non tunati. Usato da mt5-bot._layout_confidence_live (dashboard) e layout_s3x (test)
 
 data/             — xauusd_*.json (price history)
 backtests/        — results/ + archive/

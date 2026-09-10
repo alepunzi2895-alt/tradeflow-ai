@@ -1,5 +1,5 @@
 {
-  "total": 1687,
+  "total": 1729,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -182,6 +182,14 @@
       "n_trials": 195,
       "cumulative_after": 1687,
       "asset": "layout strategie S32/S33/S34 (XAU_M15/M30/H1_Volumes): design 2 modelli S32 + grid TF/param + gate regime ADX su S33/S34",
+      "strategy_id": "",
+      "note": ""
+    },
+    {
+      "ts": "2026-09-10T15:47:46Z",
+      "n_trials": 42,
+      "cumulative_after": 1729,
+      "asset": "S32/S33/S34 full-stack test: confidence score (fattori PDF: MTF + BOS/CHoCH + oscillatore + premium/discount + sessione + candela + news-proxy) + circuit breaker + weekly-DD + sizing. S33 H1 PBO 1.00->0.80 (migliora ma resta overfit, knife-edge sul gate), S32/S34 invariate morte.",
       "strategy_id": "",
       "note": ""
     }

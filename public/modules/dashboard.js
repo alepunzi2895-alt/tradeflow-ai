@@ -278,9 +278,17 @@ function renderLayoutSmart(d){
 
 // ── Score degli altri 3 layout TradingView (S32/S33/S34) — solo segnale, no ordini ──
 const LAYOUT_SCORE_META = {
-  S32: { layout:'XAU_M15', tf:'M5',  name:'Order-Flow · liquidity sweep' },
-  S33: { layout:'XAU_M30', tf:'M30', name:'Trend + Momentum · Alligator' },
-  S34: { layout:'XAU_H1_Volumes', tf:'H1', name:'Volume Auction · VA edge' },
+  S32: { layout:'XAU_M15', tf:'M5',  name:'Order-Flow · liquidity sweep',
+         inds:'Bollinger · ICT Order Flow · EMA 20/50/100/200 · Order Block Finder · OBV' },
+  S33: { layout:'XAU_M30', tf:'M30', name:'Trend + Momentum · Alligator',
+         inds:'Supertrend · Williams Alligator · OBV MACD · Ultimate RSI · Momentum' },
+  S34: { layout:'XAU_H1_Volumes', tf:'H1', name:'Volume Auction · VA edge',
+         inds:'Volume Footprint · Range/Session Volume Profile · Cumulative Delta · Normalized Volume' },
+};
+const CONF_FACTOR_LBL = {
+  strat_quality:'confluenza setup', mtf_bias:'bias HTF (H4)', structure:'struttura BOS/CHoCH',
+  oscillator:'oscillatore alla zona', premium_disc:'premium/discount', session:'sessione',
+  candle:'candela', regime_fit:'regime ADX', news_vol:'volatilità/news',
 };
 const LAYOUT_SCORE_PHASE = {
   in_position:  { txt:'IN POSIZIONE',      col:'var(--green)' },
@@ -313,25 +321,37 @@ async function loadLayoutScores(){
     const su = d && d.setup ? d.setup : null;
     if(su) any = true;
     if(d && d.synced_at) lastSync = d.synced_at;
-    const score = su ? (su.score||0) : 0;
     const ph = LAYOUT_SCORE_PHASE[su?.phase || 'flat'] || LAYOUT_SCORE_PHASE.flat;
+    // headline = confidence score (multi-fattore); fallback allo score grezzo del setup
+    const conf = (su && su.confidence!=null) ? su.confidence : null;
+    const score = conf!=null ? conf : (su ? (su.score||0) : 0);
+    const confCol = conf==null ? ph.col : (conf>=75?'var(--green)':conf>=58?'var(--yellow)':'var(--red)');
     const bias = su?.bias ? (su.bias==='buy'?'<span style="color:var(--green)">▲ BUY</span>':'<span style="color:var(--red)">▼ SELL</span>') : '<span style="color:var(--dim)">—</span>';
     const ov = d && d.overall ? d.overall : null;
+    // breakdown fattori confidence (chip ± ordinati per |peso|)
+    const fac = su && su.conf_factors ? su.conf_factors : null;
+    const facChips = fac ? Object.entries(fac).filter(([,v])=>Math.abs(v)>=0.5)
+      .sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,5).map(([kk,v])=>
+        `<span style="font-size:7.5px;padding:1px 4px;border-radius:3px;background:${v>0?'#0d2818':'#2a1010'};color:${v>0?'var(--green)':'var(--red)'}">${CONF_FACTOR_LBL[kk]||kk} ${v>0?'+':''}${v}</span>`
+      ).join(' ') : '';
     rows.push(`
-      <div style="padding:7px 0;border-top:1px solid var(--border)">
+      <div style="padding:8px 0;border-top:1px solid var(--border)">
         <div style="display:flex;align-items:center;gap:6px;font-size:10px">
           <b style="color:var(--fg)">${meta.layout}</b>
           <span style="color:var(--dim);font-size:8px">${meta.tf}</span>
           <span style="margin-left:auto">${bias}</span>
           <span style="color:${ph.col};font-weight:600;font-size:9px">${ph.txt}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+        <div style="font-size:7.5px;color:#666;margin-top:1px">${meta.name} — ${meta.inds}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <span style="font-size:8px;color:var(--dim);min-width:58px">${conf!=null?'confidence':'score setup'}</span>
           <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${score}%;background:${ph.col};transition:width .4s"></div>
+            <div style="height:100%;width:${score}%;background:${confCol};transition:width .4s"></div>
           </div>
-          <span style="font-size:10px;font-weight:700;color:${ph.col};min-width:22px;text-align:right">${su?score:'—'}</span>
+          <span style="font-size:11px;font-weight:800;color:${confCol};min-width:24px;text-align:right">${su?Math.round(score):'—'}</span>
         </div>
-        <div style="font-size:8.5px;color:var(--dim);margin-top:2px">${meta.name}${su?.note?` · ${su.note}`:''}</div>
+        ${facChips ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${facChips}</div>` : ''}
+        ${su?.note ? `<div style="font-size:8px;color:var(--dim);margin-top:3px">${su.note}</div>` : ''}
         ${ov && ov.n ? `<div style="font-size:8px;color:#666;margin-top:1px">paper: ${ov.n} chiusi · PF ${ov.pf} · P&L ${ov.pnl>=0?'+':''}$${ov.pnl}</div>` : ''}
       </div>`);
   }

@@ -40,6 +40,12 @@ from signals import (
 import numpy as np
 import extra_indicators as ei
 import layout_indicators
+try:
+    import market_structure as _mstruct
+    import layout_confidence as _lconf
+except Exception:
+    _mstruct = None
+    _lconf = None
 
 # ── RISK MANAGER (legacy, kept for backward compat) ───────────────────────────
 try:
@@ -207,10 +213,16 @@ LAYOUT_SCORE_ENABLED = True
 # su TradingView (XAU_M15 è su chart M5, XAU_M30 su M30, XAU_H1_Volumes su H1).
 LAYOUT_SCORE_SPECS = {
     'S32': {'tf': 'M5',  'fn': s32_status, 'P': S32_PARAMS,
+            'layout': 'XAU_M15', 'name': 'Order-Flow · liquidity sweep',
+            'indicators': 'Bollinger · ICT Institutional Order Flow · EMA 20/50/100/200 · Order Block Finder · OBV',
             'label': 'layout XAU_M15 · Order-Flow / liquidity sweep · score su M5'},
     'S33': {'tf': 'M30', 'fn': s33_status, 'P': S33_PARAMS,
+            'layout': 'XAU_M30', 'name': 'Trend + Momentum · Alligator',
+            'indicators': 'Supertrend · Williams Alligator · OBV MACD · Ultimate RSI [LuxAlgo] · Momentum',
             'label': 'layout XAU_M30 · Trend + Momentum / Alligator · score su M30'},
     'S34': {'tf': 'H1',  'fn': s34_status, 'P': S34_PARAMS,
+            'layout': 'XAU_H1_Volumes', 'name': 'Volume Auction · VA edge',
+            'indicators': 'Volume Footprint · Visible Range VP · Session VP · Cumulative Delta Volume · Normalized Volume',
             'label': 'layout XAU_H1_Volumes · Volume Auction / VA edge · score su H1'},
 }
 _layout_score_last: dict = {}                # {key: last_bar_t}
@@ -1857,10 +1869,62 @@ def ls_push_stats(trades):
     except Exception as e:
         log.debug(f"[S31] push stats: {e}")
 
+_HTF_OF = {'M5': 'H1', 'M15': 'H1', 'M30': 'H4', 'H1': 'H4', 'H4': 'H4'}
+
+
+def _layout_confidence_live(I, idx, d, key, tf):
+    """Confidence score (0-100) del setup corrente per la card dashboard. Fattori dal
+    curriculum ECABS (layout_confidence.setup_confidence). Ritorna (score, factors) o (None,{})."""
+    if _lconf is None or d not in ('buy', 'sell'):
+        return None, {}
+    try:
+        ms = None
+        if _mstruct is not None:
+            cndl = [{'h': I['H'][j], 'l': I['L'][j], 'c': I['C'][j]} for j in range(len(I['C']))]
+            ms = _mstruct.structure_arrays(cndl, wing=3)
+        # bias HTF: direzione EMA200 sul TF superiore
+        hbias = None
+        try:
+            hc = get_candles_tf(_HTF_OF.get(tf, 'H4'), 260)
+            if hc and len(hc) > 210:
+                he = ema([x['c'] for x in hc], 200)
+                k = len(hc) - 2
+                if he[k] is not None and he[k - 6] is not None:
+                    up = hc[k]['c'] > he[k] and he[k] > he[k - 6]
+                    dn = hc[k]['c'] < he[k] and he[k] < he[k - 6]
+                    hbias = [0] * len(I['C'])
+                    hbias[idx] = 1 if up else (-1 if dn else 0)
+        except Exception:
+            pass
+        # swing hi/lo per premium/discount
+        try:
+            from telegram_key_levels import swing_points
+            sh, sl = swing_points(np.array(I['H'], float), np.array(I['L'], float), wing=3)
+        except Exception:
+            sh = sl = None
+        sfn = {'S32': s32_status, 'S33': s33_status, 'S34': s34_status}.get(key)
+        pmap = {'S32': S32_PARAMS, 'S33': S33_PARAMS, 'S34': S34_PARAMS}
+        ssc = None
+        if sfn:
+            try:
+                ssc = sfn(I, idx, {}, in_position=False, P=pmap[key]).get('score')
+            except Exception:
+                pass
+        I['_hour'] = datetime.datetime.fromtimestamp(I['T'][idx] if I.get('T') else 0,
+                                                     tz=datetime.timezone.utc).hour if I.get('T') else None
+        sc, fac = _lconf.setup_confidence(I, idx, d, key, ms=ms, htf_bias=hbias,
+                                          status_score=ssc, swing_hi=sh, swing_lo=sl)
+        I.pop('_hour', None)
+        return round(sc, 1), {k2: round(v, 1) for k2, v in fac.items()}
+    except Exception as e:
+        log.debug(f"[{key}] confidence: {e}")
+        return None, {}
+
+
 def layout_scores_push(trades=None):
-    """S32/S33/S34 — calcola s3?_status() sul TF di ogni layout e la POSTa (key=S32/33/34).
-    SOLO SEGNALE: nessun ordine, nessuna gestione posizione. Serve la card
-    'SCORE LAYOUT XAU' nella dashboard (supporto discrezionale)."""
+    """S32/S33/S34 — calcola s3?_status() + confidence sul TF di ogni layout e li POSTa
+    (key=S32/33/34). SOLO SEGNALE: nessun ordine. Serve la card 'SCORE LAYOUT XAU'
+    (supporto discrezionale — vedi layout_s3x.py: nessun edge meccanico durevole)."""
     if not LAYOUT_SCORE_ENABLED or not SYNC_ENABLED or not VERCEL_URL:
         return
     for key, spec in LAYOUT_SCORE_SPECS.items():
@@ -1873,10 +1937,14 @@ def layout_scores_push(trades=None):
                 continue
             _layout_score_last[key] = bar_t
             I = compute_indicators(candles)
+            I['T'] = [c['t'] for c in candles]
             idx = len(candles) - 2
             st = spec['fn'](I, idx, {}, in_position=False, P=spec['P'])
             st['bar_utc'] = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             st['price'] = round(I['C'][idx], 2)
+            conf, factors = _layout_confidence_live(I, idx, st.get('bias'), key, spec['tf'])
+            st['confidence'] = conf
+            st['conf_factors'] = factors
             _layout_score_snap[key] = st
             # paper-tracking dei trade reali eventualmente marcati con questa key (se un giorno si abilita)
             rows = [t for t in (trades or []) if str(t.get('strategy', '')).startswith(key)]
@@ -1888,6 +1956,8 @@ def layout_scores_push(trades=None):
                       'pf': round(sum(r['profit'] for r in wins) / gl, 3),
                       'pnl': round(sum(r['profit'] for r in rows), 2)}
             summary = {'mode': 'signal_only', 'config': spec['label'], 'tf': spec['tf'],
+                       'layout': spec.get('layout'), 'name': spec.get('name'),
+                       'indicators': spec.get('indicators'),
                        'setup': st, 'overall': ov, 'n_open': 0}
             req = urllib.request.Request(
                 f"{VERCEL_URL}/api/db",

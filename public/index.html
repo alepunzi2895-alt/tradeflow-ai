@@ -278,16 +278,18 @@
           <div id="ls-live" style="margin-top:6px;font-size:9px;color:var(--dim)"></div>
         </div>
 
-        <!-- Score degli altri 3 layout TradingView (S32/S33/S34) — segnale discrezionale, NON auto-tradato -->
+        <!-- Confidence score dei 3 layout TradingView (S32/S33/S34) — segnale discrezionale, NON auto-tradato -->
         <div class="mfkk-card" id="layout-scores-card" style="display:none">
           <div class="mfkk-header">
-            <div class="mfkk-title">SCORE LAYOUT XAU · TradingView</div>
+            <div class="mfkk-title">CONFIDENCE LAYOUT XAU · TradingView</div>
             <div id="lsc-time" style="font-size:9px;color:var(--dim);font-family:monospace"></div>
           </div>
           <div style="font-size:9px;color:var(--dim);margin:4px 0 8px;line-height:1.5">
-            Stato in tempo reale del toolkit di ogni layout (bias · regime · fase setup). Il backtest
-            non ha trovato un edge meccanico durevole (PBO&nbsp;&gt;&nbsp;0.9) → <b style="color:var(--yellow)">supporto discrezionale</b>,
-            il bot non apre ordini. Roster live = solo S00 (MFKK) + S31 (Layout Smart).
+            Confidence score (0-100) del setup di ogni layout — fattori dal curriculum ECABS:
+            bias multi-timeframe, struttura BOS/CHoCH, oscillatore alla zona, premium/discount,
+            sessione, candela, regime, news. Backtest col sistema completo: <b style="color:var(--yellow)">nessun edge
+            meccanico durevole</b> (S33 PBO 1.00&rarr;0.80, S32/S34 morte) → supporto discrezionale, il bot
+            non apre ordini. Roster live = solo S00 (MFKK) + S31 (Layout Smart).
           </div>
           <div id="lsc-rows"></div>
         </div>

@@ -39,12 +39,37 @@ Backtest: `scripts/layout_s3x.py` (`evaluate_s3x`, gira il codice di produzione)
 Riferimento: **S31 shippato con PBO 0.33**. S32/33/34 stanno a 0.93-1.00. Coerente col
 dead-end da 1500 trial (sotto) e con `07_self_learning_log.md` ("edge decaduto, NON tuning").
 
-**→ Le 3 restano come SCORE in dashboard** (card "SCORE LAYOUT XAU", `strat_live_push`
-key S32/S33/S34 dal bot ogni barra chiusa via `layout_scores_push()`). Mostrano bias +
-regime + fase setup di ogni toolkit = **supporto discrezionale**. Il bot **non apre ordini**.
-Tab Strategie: card con badge `🔬 SOLO SCORE`. Roster live invariato: **S00 + S31** (+ S20/S30).
+**TEST 2 (stesso giorno, richiesta utente: "usa l'intelligenza — confidence score, news,
+RiskGuardian, info dai PDF")** — `evaluate_s3x(system={})`:
 
-File: `scripts/layout_s3x.py`, `backtests/results/` (n/a — verdetto negativo), `research_trials.json` 1492→1687.
+Nuova infra (sottoprodotti tenuti perché utili altrove):
+- **`scripts/market_structure.py`** — swing HH/HL/LH/LL + **BOS** (continuazione) / **CHoCH**
+  (inversione), causale. È il **gap G1** di `10_trading_education.md` (priorità ALTA).
+- **`scripts/layout_confidence.py`** — confidence 0-100 per setup da **fattori FISSI del
+  curriculum ECABS** (NON tunati): MTF bias (H4 EMA200) · struttura BOS/CHoCH · oscillatore
+  estremo alla zona · premium/discount vs swing · sessione (overlap 13-16 UTC) · candela
+  reale (regola dei terzi) · regime ADX · proxy-news (spike ATR — nessun dataset news
+  storico, solo 21 eventi in `news_calendar_cache.json`). → gate (skip < 58) + sizing per
+  tier + circuit breaker (4 SL → stop 48 barre) + weekly-DD cap.
+
+| Strat | nudo | + sistema completo | PBO | Verdetto |
+|---|---|---|---|---|
+| **S32** M5 | PF 0.60 | PF 0.62 | — | invariata, morta |
+| **S33** H1 | PF 1.72 / PBO 1.00 | PF 1.71 · holdout 1.58→**2.06** · per-anno meno concentrato | **1.00→0.80** | meglio ma **knife-edge sul gate** (58 ok, 62→2026 negativo), DSR p 5.7e-45 @1729 trial |
+| **S34** H1 | PF 2.30 / PBO 0.93 | PF 2.06 · n 37→24 · holdout 5.5→1.7 · fold 3→2/4 | 0.93 | il gate **rimuove vincitori** → è rumore |
+
+**Il sistema intelligente NON le rende profittevoli.** Sharpa S33 al margine (unica con un
+battito) ma niente supera la barra di validazione.
+
+**→ Le 3 restano come CONFIDENCE SCORE in dashboard** (card "CONFIDENCE LAYOUT XAU",
+`strat_live_push` key S32/S33/S34 via `layout_scores_push()` ogni barra chiusa —
+`_layout_confidence_live()` calcola il confidence + breakdown fattori). Mostrano indicatori
+del layout + confidence 0-100 + chip dei fattori = **supporto discrezionale**. Il bot
+**non apre ordini**. Tab Strategie: card badge `🔬 SOLO SCORE`. Roster live invariato:
+**S00 + S31** (+ S20/S30).
+
+File: `scripts/layout_s3x.py` / `market_structure.py` / `layout_confidence.py`,
+`research_trials.json` 1492→1729.
 
 ---
 

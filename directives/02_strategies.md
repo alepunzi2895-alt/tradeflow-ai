@@ -693,8 +693,15 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 | `S16_GOLDEN_SQUEEZE` | Golden Squeeze V5 | ATR×3.5 | ATR×2.0 | TREND | **H1** | 1.863 H1 | 51.0% |
 | `S17_CONVERGENCE_SCALP` | Convergence Scalp V2 | ATR×4.0 | ATR×1.75 | VOLATILE, TREND | **H4** | 1.993 H4 | 34.3% |
 | `S31_LAYOUT_SMART` | Layout Smart (break→retest→confl) | strutturale (1R zona conf.) | strutturale | trend pulito (EMA200 slope) | **H1 only** | 1.95 std / +$499 overlay | 52.8% (n=53) |
-| `S20_FIB_CONFLUENCE` | Fib Confluence V2 | strutturale (Fib) | strutturale | TREND/WEAK | **M5** (blocco isolato) | OOS PF 1.72 | ~52% |
-| `S30_DOW_DIP` | Dow Dip (Connors RSI2) | ATR×1.2 | ATR×2.6 | long-only US30 | **H4** (2° simbolo) | 1.63 / holdout 2.09 | 76% |
+| `S20_FIB_CONFLUENCE` | Fib Confluence V2 | strutturale (Fib) | strutturale | TREND/WEAK | **M5** (blocco proprio, sizing RiskGuardian ×2) | OOS PF 1.72 | ~52% |
+| `S30_DOW_DIP` | Dow Dip (Connors RSI2) | ATR×1.2 | ATR×2.6 | long-only US30 | **H4** (2° simbolo US30Cash) | 1.63 / holdout 2.09 | 76% |
+
+> **2026-09-10** — S20 e S30 **non sono più "live test"**: erano già production nella logica
+> del bot (S20 integrata 2026-09-01, S30 live 2026-09-03), ora anche nell'etichetta UI. Card
+> tab Strategie normale + badge `📡 LIVE · ROSTER` + P&L live isolato via `strat_live_push`
+> (`s20_push_stats` / `us30_push_stats` / `ls_push_stats`). "Blocco proprio" / "2° simbolo"
+> restano necessità architetturali (lifecycle specifica, asset diverso), non limiti di test.
+> Gate di permanenza self-learning attivo per tutte (`hard_blocks.json` + `performance_tracker`).
 | ~~`S05_MFKK_INTRADAY`~~ | ⛔ **Ritirata 2026-07-16** | — | — | era TREND (H4 only) | era H4 (marginale) | — | rimossa da `STRATEGIES_CONFIG` (strategy_selector.py) e da `REGIME_PRIORITY_H4` (strategy-engine-v2.py) — portfolio concentration study: droppando solo S05 dal roster H4, PF OOS 2.19→2.66 e DD -32% a parità di P&L. H4 era il suo unico slot vivo (H1/M30 già negativi). Codice/funzione segnale lasciati intatti in `signals.py` per eventuale re-instaurazione futura, semplicemente non più selezionabile in live. Vedi `07_self_learning_log.md` 2026-07-16. |
 
 ## Strategy Selector Agent (`strategy_selector.py`)

@@ -66,10 +66,11 @@ const SE = {
         maxdd: 159.7, maxdd_pct: '89.6%', trades_12m: 92, best_regime: 'RANGE/WEAK · M30 (bot) · BB exhaustion+RSI/WPR · ADX<22 · DD alto relativo al P&L — fragile',
         eq: [28.4,50.3,72.3,113.6,110.4,124.2,178.2,95.9,35.2,108.5,107.7,67.1,51.5]
       } },
-    // ── Integrata nel flusso normale dal 2026-09-01: sizing RiskGuardian (composite/tier/compounding ×2) ──
+    // ── Strategia REALE nel roster dal 2026-09-01 (sizing RiskGuardian ×2, cooldown SL condivisi, MAX_OPEN_ORDERS) ──
     'S20_FIB_CONFLUENCE': { label: 'Fib Confluence [M5]', pf: 1.54, wr: '52.3%', tp: '1R parz. + 2R runner', sl: 'strut. ≥1.5×ATR',
-      liveTest: true, liveTestLot: '0.03',
-      liveTestNote: 'LIVE TEST — lotto fisso 0.03 · isolata dal roster (no Strategy Selector / compounding)',
+      rosterLive: null,   // riempito da strat_live_get {key:'S20'} (fallback: s20_paper_get)
+      rosterNote: 'M5 · sizing RiskGuardian ×2 · cooldown SL condivisi · conta in MAX_OPEN_ORDERS · London+NY, no-lunedì',
+      rosterEmptyNote: 'nessun trade S20 ancora — London+NY, no-lunedì, ~5-6/mese',
       stats: {
         pnl_1m: 19.3, td_1m: 0.15, pnl_6m: 145.4, td_6m: 0.25,
         pnl_12m: 166.4, td_12m: 0.28, pnl_24m: 176.9, td_24m: 0.29,
@@ -83,6 +84,7 @@ const SE = {
     // stats @0.01 lot · 22 mesi · cost model ON · eq = curva equità mensile cumulata
     'S31_LAYOUT_SMART': { label: 'Layout Smart [H1]', pf: 1.95, wr: '52.8%', tp: '1.5R parz. + zona conf.', sl: 'strut. (zona) ≤2.8×ATR',
       rosterLive: null,   // riempito da strat_live_get {key:'S31'}
+      rosterEmptyNote: 'nessun trade S31 ancora — apre solo su retest a zona di confluenza in trend pulito, ~2-3/mese',
       stats: {
         pnl_1m: -11.3, td_1m: 0.07, pnl_6m: 129.7, td_6m: 0.06,
         pnl_12m: 536.1, td_12m: 0.08, pnl_24m: 515.7, td_24m: 0.07,
@@ -93,9 +95,9 @@ const SE = {
     // ── US30 · mean-reversion azionaria (Connors RSI(2)) · blocco isolato su 2° simbolo dal 2026-09-03 ──
     // P&L in $ al lotto live 0.10 (US30Cash: 1 pt indice ≈ $0.10 @ 0.10 lot). Ricerca: scripts/us30_harness.py
     'S30_DOW_DIP': { label: 'Dow Dip [H4] · US30', pf: 1.63, wr: '76.2%', tp: 'ATR×1.2', sl: 'ATR×2.6',
-      liveTest: true, liveTestLot: '0.10',
-      liveTestNote: 'LIVE TEST — US30Cash H4 · lotto fisso 0.10 · isolata (no Strategy Selector / RiskGuardian / compounding) · SL/TP hard su MT5',
-      liveTestEmptyNote: 'nessun segnale ancora — long-only, apre solo su RSI(2) oversold in uptrend, ~5-6/mese',
+      rosterLive: null,   // riempito da strat_live_get {key:'S30'}
+      rosterNote: 'US30Cash H4 · 2° simbolo (fuori da Strategy Selector XAU / MAX_OPEN_ORDERS GOLD) · lotto vol-min broker · SL/TP hard su MT5',
+      rosterEmptyNote: 'nessun segnale S30 ancora — long-only, apre solo su RSI(2) oversold in uptrend, ~5-6/mese',
       stats: {
         pnl_1m: 111.2, td_1m: 0.29, pnl_6m: 320.8, td_6m: 0.28,
         pnl_12m: 525.6, td_12m: 0.32, pnl_24m: 803.7, td_24m: 0.33,
@@ -335,19 +337,22 @@ async function seRefresh() {
     }
   }
 
-  // S20 paper trading: leggi il riepilogo dal tracker ogni 60s → card nel tab Strategie
-  if (nowTs - (window._s20PaperFetch||0) > 60000) {
-    window._s20PaperFetch = nowTs;
+  // Riepilogo live per-strategia (blocchi con lifecycle propria): S20 / S30 / S31 · ogni 60s
+  if (nowTs - (window._stratLiveFetch||0) > 60000) {
+    window._stratLiveFetch = nowTs;
+    const pull = (key, id) => fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'strat_live_get', key }) })
+      .then(r=>r.json())
+      .then(j=>{ if (j && j.ok && SE.strategies[id]) SE.strategies[id].rosterLive = j.data || SE.strategies[id].rosterLive || null; })
+      .catch(()=>{});
+    pull('S31', 'S31_LAYOUT_SMART');
+    pull('S30', 'S30_DOW_DIP');
+    pull('S20', 'S20_FIB_CONFLUENCE');
+    // fallback S20: il vecchio path s20_paper_get finché il bot non pusha anche su strat_live
     fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'s20_paper_get' }) })
       .then(r=>r.json())
-      .then(j=>{ if (j && j.ok && SE.strategies.S20_FIB_CONFLUENCE) SE.strategies.S20_FIB_CONFLUENCE.paperLive = j.data || null; })
-      .catch(()=>{});
-    // S31_LAYOUT_SMART: riepilogo live dal roster (stessa cadenza)
-    fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'strat_live_get', key:'S31' }) })
-      .then(r=>r.json())
-      .then(j=>{ if (j && j.ok && SE.strategies.S31_LAYOUT_SMART) SE.strategies.S31_LAYOUT_SMART.rosterLive = j.data || null; })
+      .then(j=>{ if (j && j.ok && j.data && SE.strategies.S20_FIB_CONFLUENCE && !SE.strategies.S20_FIB_CONFLUENCE.rosterLive) SE.strategies.S20_FIB_CONFLUENCE.rosterLive = j.data; })
       .catch(()=>{});
   }
 

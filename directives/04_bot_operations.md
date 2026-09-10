@@ -98,7 +98,17 @@ Il `bot_status` pushato ogni 20s include ora:
 | 10019 | No money | Margine insufficiente — ridurre LOT_SIZE |
 | 10021 | No prices | Mercato chiuso o connessione assente |
 
-## S30_DOW_DIP — US30, blocco isolato su 2° simbolo (2026-09-03 →)
+> **2026-09-10 — S20 / S30 / S31 sono strategie REALI nel roster, non "live test".** Nel tab
+> Strategie appaiono come card normali con badge `📡 LIVE · ROSTER` e P&L live isolato:
+> il bot aggrega i loro trade reali (`s20_push_stats` / `us30_push_stats` / `ls_push_stats`,
+> filtro per prefisso commento `S20`/`S30`/`S31` su `get_recent_trades_data`) e li POSTa via
+> l'action generica `strat_live_push {key}` (letta ogni 60s da `strat_live_get`; S20 mantiene
+> anche `s20_paper_push` per retro-compat). Le specificità architetturali (S20/S31 mini-manager
+> proprio, S30 su `US30Cash`) restano — sono necessità tecniche, non limiti di test.
+> Dashboard: card "LAYOUT SMART SCORE" mostra anche lo stato setup su XAU_M30/XAU_M15
+> (monitorati, **non tradati** — ricerca: solo H1 ha edge).
+
+## S30_DOW_DIP — US30, 2° simbolo (2026-09-03 →)
 
 Prima strategia su un asset diverso da XAU. Mean-reversion azionaria (Connors RSI(2), long-only, H4) — vedi `02_strategies.md`. **Completamente isolata** dal flusso XAU:
 

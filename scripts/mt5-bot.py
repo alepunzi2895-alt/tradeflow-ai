@@ -1341,12 +1341,25 @@ def ls_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
 
     # la state-machine va SEMPRE avanzata (registra i break anche mentre siamo flat/in posizione)
     spec = ls_scan(I, idx, _ls_scan_state, dt=bar_dt, vol_ratio=vr, P=LS_PARAMS)
-    # snapshot setup per la dashboard (read-only)
+    # snapshot setup per la dashboard (read-only) — H1 (tradato) + M30/M15 (solo monitor)
     try:
         global _ls_status
         _ls_status = ls_status(I, idx, _ls_scan_state, in_position=bool(_ls_state), P=LS_PARAMS)
         _ls_status['bar_utc'] = bar_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         _ls_status['price'] = round(I['C'][idx], 2)
+        others = {}
+        for _tf in ('M30', 'M15'):
+            try:
+                _c = get_candles_tf(_tf, 400)
+                if _c and len(_c) >= 320:
+                    _I = compute_indicators(_c)
+                    _j = len(_c) - 2
+                    _s = ls_status(_I, _j, {'pending': None}, in_position=False, P=LS_PARAMS)
+                    others[_tf] = {'phase': _s['phase'], 'trend': _s['trend'],
+                                   'nearest_zone': _s['nearest_zone']}
+            except Exception:
+                pass
+        _ls_status['other_tf'] = others   # M30/M15 NON tradati (ricerca: solo H1 ha edge)
     except Exception as _e:
         log.debug(f"[S31] status: {_e}")
     if spec is None:
@@ -1738,14 +1751,50 @@ def s20_push_stats(trades):
                     'resolution': r.get('close_reason', ''), 'pnl': r['profit']}
                    for r in sorted(s20, key=lambda x: x['time'])[-8:]],
     }
+    for _action in ({'action': 's20_paper_push', 'secret': MT5_SECRET, 'summary': summary},
+                    {'action': 'strat_live_push', 'secret': MT5_SECRET, 'key': 'S20', 'summary': summary}):
+        try:
+            req = urllib.request.Request(
+                f"{VERCEL_URL}/api/db", data=json.dumps(_action).encode(),
+                headers={'Content-Type': 'application/json'}, method='POST')
+            urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
+        except Exception as e:
+            log.debug(f"[S20] push stats ({_action['action']}): {e}")
+
+
+def us30_push_stats(trades):
+    """Aggrega i trade S30_DOW_DIP reali (US30) e li POSTa per la card nel tab Strategie."""
+    if not SYNC_ENABLED or not VERCEL_URL:
+        return
+    rows = [t for t in (trades or []) if str(t.get('strategy', '')).startswith('S30')]
+    def agg(rr):
+        if not rr:
+            return None
+        n = len(rr); wins = [r for r in rr if r['profit'] > 0]
+        gw = sum(r['profit'] for r in wins)
+        gl = abs(sum(r['profit'] for r in rr if r['profit'] <= 0)) or 1e-9
+        return {'n': n, 'wr': round(100 * len(wins) / n, 1), 'pf': round(gw / gl, 3),
+                'pnl': round(sum(r['profit'] for r in rr), 2)}
+    cum = 0.0; eq = []
+    for r in sorted(rows, key=lambda x: x['time']):
+        cum += r['profit']; eq.append({'t': r['time'][:10], 'cum': round(cum, 2)})
+    summary = {
+        'mode': 'live', 'lot': str(US30_LOT),
+        'config': 'US30Cash H4 · Connors RSI(2) mean-reversion long-only · SL/TP hard · time-stop 18 barre',
+        'n_total': len(rows), 'n_open': len(_us30_state),
+        'overall': agg(rows), 'buy': agg([r for r in rows if r['direction'] == 'buy']),
+        'sell': agg([r for r in rows if r['direction'] == 'sell']),
+        'equity': eq[-60:],
+    }
     try:
         req = urllib.request.Request(
             f"{VERCEL_URL}/api/db",
-            data=json.dumps({'action': 's20_paper_push', 'secret': MT5_SECRET, 'summary': summary}).encode(),
+            data=json.dumps({'action': 'strat_live_push', 'secret': MT5_SECRET,
+                             'key': 'S30', 'summary': summary}).encode(),
             headers={'Content-Type': 'application/json'}, method='POST')
         urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
     except Exception as e:
-        log.debug(f"[S20] push stats: {e}")
+        log.debug(f"[S30] push stats: {e}")
 
 def ls_push_stats(trades):
     """Aggrega i trade S31_LAYOUT_SMART reali e li POSTa per la card nel tab Strategie
@@ -2223,6 +2272,8 @@ def run():
                     s20_push_stats(trades_data)
                 if LS_ENABLED:
                     ls_push_stats(trades_data)
+                if US30_ENABLED:
+                    us30_push_stats(trades_data)
                 last_sync_time = now_ts
 
             # ── News Guardian: aggiorna rischio ogni 60s (era 15min — bug timezone fix 2026-04-28) ──

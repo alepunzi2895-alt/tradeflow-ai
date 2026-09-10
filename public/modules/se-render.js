@@ -570,7 +570,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
             ${pl.n_open?`<span style="color:#c8a96e">${pl.n_open} aperta</span>`:''}
           </div>
           ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
-          ` : `<div style="font-size:8px;color:var(--dim)">📡 nessun trade S31 ancora — apre solo su retest a zona di confluenza in trend pulito, ~2-3/mese</div>`}
+          ` : `<div style="font-size:8px;color:var(--dim)">📡 ${s.rosterEmptyNote || 'nessun trade ancora — strategia selettiva, pochi ingressi al mese'}</div>`}
+          ${s.rosterNote?`<div style="font-size:7px;color:var(--dim);margin-top:3px">${s.rosterNote}</div>`:''}
         </div>
         ` : ''}
         ${st.eq && st.eq.length>1 ? `

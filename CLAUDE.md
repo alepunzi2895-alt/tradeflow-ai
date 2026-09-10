@@ -40,6 +40,7 @@ python scripts/install_git_hooks.py
 | Self-learning log (bug storici e fix) | `directives/07_self_learning_log.md` |
 | DOM rules, Vercel constraints, JS gotcha | `directives/08_dev_rules.md` |
 | AI review agents (diagnosi anomalie, pre-commit review) | `directives/09_ai_review_agents.md` |
+| Curriculum di trading (ECABS Basic+Intermediate) + gap vs app | `directives/10_trading_education.md` |
 
 ## Regole Critiche (leggere prima di ogni modifica)
 

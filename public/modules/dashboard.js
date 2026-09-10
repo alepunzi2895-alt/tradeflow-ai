@@ -241,11 +241,24 @@ function renderLayoutSmart(d){
 
   const det = document.getElementById('ls-detail');
   const nz = su?.nearest_zone;
+  const PHASE_SHORT = { in_position:'in posizione', break_pending:'break — attendo retest', watching:'trend pulito', flat:'nessun setup' };
+  const otherRows = su?.other_tf ? Object.entries(su.other_tf).map(([tf,o])=>{
+    const oz = o.nearest_zone;
+    return `<div style="display:flex;gap:6px;font-size:9px;color:var(--dim)">
+      <b style="color:var(--fg);min-width:34px">${tf}</b>
+      <span>${PHASE_SHORT[o.phase]||o.phase}</span>
+      ${o.trend?`<span style="color:${o.trend==='up'?'var(--green)':'var(--red)'}">${o.trend==='up'?'▲':'▼'}</span>`:''}
+      ${oz?`<span>· zona ${oz.center} (${oz.n_levels}L)</span>`:''}
+      <span style="margin-left:auto;color:#666">monitor</span>
+    </div>`;
+  }).join('') : '';
   det.innerHTML = [
     su?.trend ? `Trend EMA200: <b style="color:${su.trend==='up'?'var(--green)':'var(--red)'}">${su.trend==='up'?'RIALZO':'RIBASSO'}</b>` : `Trend EMA200: <b style="color:var(--dim)">piatto</b>`,
     nz ? `Zona di confluenza più vicina: <b>${nz.center}</b> (${nz.n_levels} livelli, ${nz.dist_atr>0?'+':''}${nz.dist_atr} ATR)` : `Nessuna zona di confluenza vicina`,
     su?.price ? `<span style="color:var(--dim)">prezzo bot: ${su.price}</span>` : '',
-  ].filter(Boolean).map(x=>`<div>${x}</div>`).join('');
+  ].filter(Boolean).map(x=>`<div>${x}</div>`).join('')
+    + (otherRows ? `<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">
+        <div style="font-size:8px;color:var(--dim);margin-bottom:2px">Altri layout (XAU_M30 / XAU_M15) — monitorati, non tradati (ricerca: solo H1 ha edge)</div>${otherRows}</div>` : '');
 
   const live = document.getElementById('ls-live');
   if(ov){

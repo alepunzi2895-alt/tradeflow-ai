@@ -255,45 +255,8 @@
           <div id="mfkk-entry-plan" style="display:none;margin-top:8px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:7px"></div>
         </div>
 
-        <!-- Layout Smart Score (S31) — stato setup dal bot (break→retest→confluenza) -->
-        <div class="mfkk-card" id="ls-card" style="display:none">
-          <div class="mfkk-header">
-            <div class="mfkk-title" id="ls-title">LAYOUT SMART SCORE · XAU/USD H1</div>
-            <div id="ls-time" style="font-size:9px;color:var(--dim);font-family:monospace"></div>
-          </div>
-          <div class="mfkk-score-wrap" style="margin-top:6px">
-            <div class="mfkk-ring">
-              <svg width="64" height="64" viewBox="0 0 64 64">
-                <circle cx="32" cy="32" r="26" fill="none" stroke="#2a2a2a" stroke-width="6"/>
-                <circle id="ls-circle" cx="32" cy="32" r="26" fill="none" stroke="#555" stroke-width="6" stroke-dasharray="163.4" stroke-dashoffset="163.4" stroke-linecap="round" transform="rotate(-90 32 32)"/>
-              </svg>
-              <div class="mfkk-num" id="ls-num">—</div>
-            </div>
-            <div class="mfkk-signal">
-              <div class="mfkk-bias" id="ls-bias">In attesa del bot</div>
-              <div class="mfkk-desc" id="ls-desc">Il punteggio arriva dal bot MT5 ad ogni barra H1 chiusa</div>
-            </div>
-          </div>
-          <div id="ls-detail" style="margin-top:7px;font-size:10px;line-height:1.6;color:var(--fg)"></div>
-          <div id="ls-live" style="margin-top:6px;font-size:9px;color:var(--dim)"></div>
-        </div>
-
-        <!-- Confidence score dei 3 layout TradingView (S32/S33/S34) — segnale discrezionale, NON auto-tradato -->
-        <div class="mfkk-card" id="layout-scores-card" style="display:none">
-          <div class="mfkk-header">
-            <div class="mfkk-title">CONFIDENCE LAYOUT XAU · TradingView</div>
-            <div id="lsc-time" style="font-size:9px;color:var(--dim);font-family:monospace"></div>
-          </div>
-          <div style="font-size:9px;color:var(--dim);margin:4px 0 8px;line-height:1.5">
-            Quali fattori del curriculum ECABS sono allineati <b>adesso</b> su ogni layout —
-            bias multi-timeframe, struttura BOS/CHoCH, oscillatore, premium/discount, sessione,
-            candela, regime, news. Contesto per il trading <b>discrezionale</b>.
-            <b style="color:var(--yellow)">Il numero NON predice l'esito</b>: backtest su ~3000 setup →
-            correlazione confidence↔P&amp;L ≈ 0 (Spearman −0.02..+0.02). Il bot non apre ordini.
-            Roster live = solo S00 (MFKK) + S31 (Layout Smart).
-          </div>
-          <div id="lsc-rows"></div>
-        </div>
+        <!-- Score dei 4 layout TradingView (S31/S32/S33/S34) — card "stile MFKK", una per strategia -->
+        <div id="layout-strategy-cards"></div>
 
         <!-- Economic Calendar -->
         <div class="cal-card" id="cal-card">

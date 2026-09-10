@@ -191,179 +191,118 @@ async function loadSlowData(){
     updateCalendar([]);
   });
 
-  // Layout Smart (S31) — stato setup + P&L live dal bot
-  loadLayoutSmart();
-  // Score degli altri 3 layout TradingView (S32/S33/S34) — solo segnale
-  loadLayoutScores();
+  // Card "stile MFKK" dei 4 layout TradingView (S31 + S32/S33/S34)
+  loadLayoutStrategies();
 }
 
-async function loadLayoutSmart(){
-  const card = document.getElementById('ls-card');
-  if(!card) return;
-  try{
-    const r = await fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'strat_live_get', key:'S31' }) });
-    const j = await r.json();
-    if(!j || !j.ok || !j.data){ card.style.display='none'; return; }
-    renderLayoutSmart(j.data);
-  }catch(e){ /* silenzioso */ }
-}
-
-function renderLayoutSmart(d){
-  const card = document.getElementById('ls-card');
-  if(!card) return;
-  const su = d.setup || null;
-  const ov = d.overall || null;
-  // niente dato utile → nascondi
-  if(!su && !ov){ card.style.display='none'; return; }
-  card.style.display='';
-
-  const score = su ? (su.score||0) : 0;
-  const PHASE = {
-    in_position:  { txt:'IN POSIZIONE', col:'var(--green)' },
-    break_pending:{ txt:'BREAK — ATTENDO RETEST', col:'var(--yellow)' },
-    watching:     { txt:'TREND PULITO — nessun break', col:'var(--blue)' },
-    flat:         { txt:'NESSUN SETUP', col:'var(--dim)' },
-  };
-  const ph = PHASE[su?.phase || 'flat'] || PHASE.flat;
-
-  const circ = document.getElementById('ls-circle');
-  const C = 163.4;
-  if(circ){ circ.style.strokeDashoffset = String(C - C*(score/100)); circ.setAttribute('stroke', ph.col); }
-  document.getElementById('ls-num').textContent = su ? score : '—';
-  document.getElementById('ls-bias').textContent = ph.txt;
-  document.getElementById('ls-bias').style.color = ph.col;
-
-  const dirTxt = su?.pending_dir ? (su.pending_dir==='buy'?'▲ BUY':'▼ SELL') : (su?.trend ? (su.trend==='up'?'trend ▲':'trend ▼') : '—');
-  document.getElementById('ls-desc').textContent = su?.phase==='break_pending'
-    ? `${dirTxt} · attesa da ${su.bars_waiting} barre · scade tra ${su.bars_left}`
-    : su?.phase==='watching' ? `${dirTxt} · in attesa di una rottura di trendline`
-    : su?.phase==='in_position' ? 'posizione aperta — gestione: TP1 1.5R parz. + trailing sulla trendline'
-    : 'trend non abbastanza pulito (EMA200 piatta) — la strategia sta ferma';
-
-  const det = document.getElementById('ls-detail');
-  const nz = su?.nearest_zone;
-  const PHASE_SHORT = { in_position:'in posizione', break_pending:'break — attendo retest', watching:'trend pulito', flat:'nessun setup' };
-  const otherRows = su?.other_tf ? Object.entries(su.other_tf).map(([tf,o])=>{
-    const oz = o.nearest_zone;
-    return `<div style="display:flex;gap:6px;font-size:9px;color:var(--dim)">
-      <b style="color:var(--fg);min-width:34px">${tf}</b>
-      <span>${PHASE_SHORT[o.phase]||o.phase}</span>
-      ${o.trend?`<span style="color:${o.trend==='up'?'var(--green)':'var(--red)'}">${o.trend==='up'?'▲':'▼'}</span>`:''}
-      ${oz?`<span>· zona ${oz.center} (${oz.n_levels}L)</span>`:''}
-      <span style="margin-left:auto;color:#666">monitor</span>
-    </div>`;
-  }).join('') : '';
-  det.innerHTML = [
-    su?.trend ? `Trend EMA200: <b style="color:${su.trend==='up'?'var(--green)':'var(--red)'}">${su.trend==='up'?'RIALZO':'RIBASSO'}</b>` : `Trend EMA200: <b style="color:var(--dim)">piatto</b>`,
-    nz ? `Zona di confluenza più vicina: <b>${nz.center}</b> (${nz.n_levels} livelli, ${nz.dist_atr>0?'+':''}${nz.dist_atr} ATR)` : `Nessuna zona di confluenza vicina`,
-    su?.price ? `<span style="color:var(--dim)">prezzo bot: ${su.price}</span>` : '',
-  ].filter(Boolean).map(x=>`<div>${x}</div>`).join('')
-    + (otherRows ? `<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">
-        <div style="font-size:8px;color:var(--dim);margin-bottom:2px">Altri layout (XAU_M30 / XAU_M15) — monitorati, non tradati (ricerca: solo H1 ha edge)</div>${otherRows}</div>` : '');
-
-  const live = document.getElementById('ls-live');
-  if(ov){
-    live.innerHTML = `Live nel roster: <b>${ov.n}</b> chiusi · WR <b style="color:var(--blue)">${ov.wr}%</b> · PF <b style="color:${ov.pf>=1?'var(--green)':'var(--red)'}">${ov.pf}</b> · P&L <b style="color:${ov.pnl>=0?'var(--green)':'var(--red)'}">${ov.pnl>=0?'+':''}$${ov.pnl}</b>${d.n_open?` · <span style="color:var(--yellow)">${d.n_open} aperta</span>`:''}`;
-  } else {
-    live.textContent = 'Nessun trade S31 ancora — apre solo su retest a zona di confluenza (~2-3/mese)';
-  }
-
-  const t = document.getElementById('ls-time');
-  if(t && (su?.bar_utc || d.synced_at)){
-    const dt = new Date(su?.bar_utc || d.synced_at);
-    t.textContent = 'barra ' + dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  }
-}
-
-// ── Score degli altri 3 layout TradingView (S32/S33/S34) — solo segnale, no ordini ──
-const LAYOUT_SCORE_META = {
-  S32: { layout:'XAU_M15', tf:'M5',  name:'Order-Flow · liquidity sweep',
+// ── 4 card layout TradingView (una per strategia, look come MFKK Strategy Score) ──
+const LAYOUT_STRATS = {
+  S31: { layout:'Default', tf:'H1', live:true, name:'Layout Smart · break→retest→confluenza',
+         inds:'Trendlines w/Breaks · Pivot Fibonacci · Key Levels SpacemanBTC · EMA200 · Sessions' },
+  S32: { layout:'XAU_M15', tf:'M5', name:'Order-Flow · liquidity sweep',
          inds:'Bollinger · ICT Order Flow · EMA 20/50/100/200 · Order Block Finder · OBV' },
   S33: { layout:'XAU_M30', tf:'M30', name:'Trend + Momentum · Alligator',
          inds:'Supertrend · Williams Alligator · OBV MACD · Ultimate RSI · Momentum' },
   S34: { layout:'XAU_H1_Volumes', tf:'H1', name:'Volume Auction · VA edge',
          inds:'Volume Footprint · Range/Session Volume Profile · Cumulative Delta · Normalized Volume' },
 };
+const LSTRAT_PHASE = {
+  in_position:  { txt:'IN POSIZIONE',            col:'var(--green)' },
+  armed:        { txt:'SETUP ARMATO',            col:'var(--green)' },
+  sweep:        { txt:'LIQUIDITY SWEEP',         col:'var(--yellow)' },
+  at_zone:      { txt:'PREZZO ALLA ZONA',        col:'var(--yellow)' },
+  at_edge:      { txt:'AL BORDO VALUE AREA',     col:'var(--yellow)' },
+  break_pending:{ txt:'BREAK — ATTENDO RETEST', col:'var(--yellow)' },
+  trend_on:     { txt:'TREND ATTIVO',            col:'var(--blue)' },
+  watching:     { txt:'IN ATTESA',               col:'var(--blue)' },
+  inside_va:    { txt:'DENTRO LA VALUE AREA',     col:'var(--dim)' },
+  wrong_regime: { txt:'REGIME NON ADATTO',        col:'var(--dim)' },
+  flat:         { txt:'NESSUN SETUP',             col:'var(--dim)' },
+};
 const CONF_FACTOR_LBL = {
-  strat_quality:'confluenza setup', mtf_bias:'bias HTF (H4)', structure:'struttura BOS/CHoCH',
-  oscillator:'oscillatore alla zona', premium_disc:'premium/discount', session:'sessione',
+  strat_quality:'confluenza setup', mtf_bias:'bias HTF', structure:'struttura BOS/CHoCH',
+  oscillator:'oscillatore', premium_disc:'premium/discount', session:'sessione',
   candle:'candela', regime_fit:'regime ADX', news_vol:'volatilità/news',
 };
-const LAYOUT_SCORE_PHASE = {
-  in_position:  { txt:'IN POSIZIONE',      col:'var(--green)' },
-  armed:        { txt:'SETUP ARMATO',       col:'var(--green)' },
-  sweep:        { txt:'LIQUIDITY SWEEP',    col:'var(--yellow)' },
-  at_zone:      { txt:'PREZZO ALLA ZONA',   col:'var(--yellow)' },
-  at_edge:      { txt:'AL BORDO VALUE AREA',col:'var(--yellow)' },
-  trend_on:     { txt:'TREND ATTIVO',       col:'var(--blue)' },
-  watching:     { txt:'IN ATTESA',          col:'var(--blue)' },
-  inside_va:    { txt:'DENTRO LA VALUE AREA',col:'var(--dim)' },
-  wrong_regime: { txt:'REGIME NON ADATTO',  col:'var(--dim)' },
-  flat:         { txt:'NESSUN SETUP',       col:'var(--dim)' },
-};
 
-async function loadLayoutScores(){
-  const card = document.getElementById('layout-scores-card');
-  if(!card) return;
-  const keys = Object.keys(LAYOUT_SCORE_META);
-  let any = false, lastSync = null;
-  const rows = [];
-  for(const k of keys){
+function _lsBarCol(s){ return s>=25?'var(--green)':s<=-25?'var(--red)':'var(--dim)'; }
+
+async function loadLayoutStrategies(){
+  const host = document.getElementById('layout-strategy-cards');
+  if(!host) return;
+  const parts = [];
+  for(const key of Object.keys(LAYOUT_STRATS)){
     let d = null;
     try{
       const r = await fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'strat_live_get', key:k }) });
+        body: JSON.stringify({ action:'strat_live_get', key }) });
       const j = await r.json();
       if(j && j.ok && j.data) d = j.data;
     }catch(e){ /* silenzioso */ }
-    const meta = LAYOUT_SCORE_META[k];
-    const su = d && d.setup ? d.setup : null;
-    if(su) any = true;
-    if(d && d.synced_at) lastSync = d.synced_at;
-    const ph = LAYOUT_SCORE_PHASE[su?.phase || 'flat'] || LAYOUT_SCORE_PHASE.flat;
-    // headline = confidence score (multi-fattore); fallback allo score grezzo del setup
-    const conf = (su && su.confidence!=null) ? su.confidence : null;
-    const score = conf!=null ? conf : (su ? (su.score||0) : 0);
-    const confCol = conf==null ? ph.col : (conf>=75?'var(--green)':conf>=58?'var(--yellow)':'var(--red)');
-    const bias = su?.bias ? (su.bias==='buy'?'<span style="color:var(--green)">▲ BUY</span>':'<span style="color:var(--red)">▼ SELL</span>') : '<span style="color:var(--dim)">—</span>';
-    const ov = d && d.overall ? d.overall : null;
-    // breakdown fattori confidence (chip ± ordinati per |peso|)
-    const fac = su && su.conf_factors ? su.conf_factors : null;
-    const facChips = fac ? Object.entries(fac).filter(([,v])=>Math.abs(v)>=0.5)
-      .sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,5).map(([kk,v])=>
-        `<span style="font-size:7.5px;padding:1px 4px;border-radius:3px;background:${v>0?'#0d2818':'#2a1010'};color:${v>0?'var(--green)':'var(--red)'}">${CONF_FACTOR_LBL[kk]||kk} ${v>0?'+':''}${v}</span>`
-      ).join(' ') : '';
-    rows.push(`
-      <div style="padding:8px 0;border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:6px;font-size:10px">
-          <b style="color:var(--fg)">${meta.layout}</b>
-          <span style="color:var(--dim);font-size:8px">${meta.tf}</span>
-          <span style="margin-left:auto">${bias}</span>
-          <span style="color:${ph.col};font-weight:600;font-size:9px">${ph.txt}</span>
-        </div>
-        <div style="font-size:7.5px;color:#666;margin-top:1px">${meta.name} — ${meta.inds}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-          <span style="font-size:8px;color:var(--dim);min-width:58px">${conf!=null?'fattori allineati':'score setup'}</span>
-          <div style="flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${score}%;background:${confCol};transition:width .4s"></div>
-          </div>
-          <span style="font-size:11px;font-weight:800;color:${confCol};min-width:24px;text-align:right">${su?Math.round(score):'—'}</span>
-        </div>
-        ${facChips ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${facChips}</div>` : ''}
-        ${su?.note ? `<div style="font-size:8px;color:var(--dim);margin-top:3px">${su.note}</div>` : ''}
-        ${ov && ov.n ? `<div style="font-size:8px;color:#666;margin-top:1px">paper: ${ov.n} chiusi · PF ${ov.pf} · P&L ${ov.pnl>=0?'+':''}$${ov.pnl}</div>` : ''}
-      </div>`);
+    parts.push(renderLayoutStratCard(key, d));
   }
-  if(!any){ card.style.display='none'; return; }
-  card.style.display='';
-  document.getElementById('lsc-rows').innerHTML = rows.join('');
-  const t = document.getElementById('lsc-time');
-  if(t && lastSync){
-    const dt = new Date(lastSync);
-    t.textContent = dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  }
+  host.innerHTML = parts.filter(Boolean).join('');
 }
+
+function renderLayoutStratCard(key, d){
+  const meta = LAYOUT_STRATS[key];
+  const su = (d && d.setup) ? d.setup : null;
+  if(!d && !su) return '';
+  const ph = LSTRAT_PHASE[(su && su.phase) || 'flat'] || LSTRAT_PHASE.flat;
+  const conf = (su && su.confidence!=null) ? su.confidence : null;
+  const ringVal = conf!=null ? conf : (su ? (su.score||0) : 0);
+  const ringCol = conf==null ? ph.col
+    : (conf>=75?'var(--green)':conf>=58?'var(--yellow)':conf>=42?'var(--dim)':'var(--red)');
+  const CIRC = 163.4;
+  const bias = (su && (su.bias || su.pending_dir)) || (su && su.trend==='up'?'buy':(su && su.trend==='down'?'sell':null));
+  const biasTxt = bias==='buy'?'<span style="color:var(--green)">▲ BUY</span>'
+    : bias==='sell'?'<span style="color:var(--red)">▼ SELL</span>'
+    : '<span style="color:var(--dim)">—</span>';
+  const ro = (su && su.readout) ? su.readout : {};
+  const rows = Object.entries(ro).map(function(e){
+    const lbl=e[0], r=e[1];
+    const s = r.score||0, w = Math.min(100, Math.abs(s)), col = _lsBarCol(s);
+    return '<div class="mfkk-row" style="padding:6px 9px"><div style="flex:1;min-width:0">'
+      + '<div style="display:flex;align-items:center;gap:6px">'
+      + '<div class="mfkk-lbl" style="width:auto;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</div>'
+      + '<div style="font-size:9.5px;font-family:monospace;color:var(--fg);white-space:nowrap">'+(r.value||'')+'</div>'
+      + '<div class="mfkk-bar-wrap"><div class="mfkk-bar-track"><div class="mfkk-bar-fill" style="width:'+w+'%;background:'+col+'"></div></div>'
+      + '<div class="mfkk-pct" style="color:'+col+'">'+(s>0?'+':'')+s+'</div></div>'
+      + '</div><div class="mfkk-hint">'+(r.state||'')+'</div></div></div>';
+  }).join('');
+  const fac = (su && su.conf_factors) ? su.conf_factors : null;
+  const chips = fac ? Object.entries(fac).filter(function(e){return Math.abs(e[1])>=0.5;})
+    .sort(function(a,b){return Math.abs(b[1])-Math.abs(a[1]);}).slice(0,6)
+    .map(function(e){ const k=e[0],v=e[1];
+      return '<span style="font-size:7.5px;padding:1px 5px;border-radius:3px;background:'+(v>0?'#0d2818':'#2a1010')+';color:'+(v>0?'var(--green)':'var(--red)')+'">'+(CONF_FACTOR_LBL[k]||k)+' '+(v>0?'+':'')+v+'</span>';
+    }).join(' ') : '';
+  const ov = (d && d.overall) ? d.overall : null;
+  let footer;
+  if(meta.live){
+    footer = (ov && ov.n)
+      ? '<div style="font-size:9px;color:var(--dim);margin-top:8px">📡 LIVE roster · <b>'+ov.n+'</b> chiusi · WR <b style="color:var(--blue)">'+ov.wr+'%</b> · PF <b style="color:'+(ov.pf>=1?'var(--green)':'var(--red)')+'">'+ov.pf+'</b> · P&L <b style="color:'+(ov.pnl>=0?'var(--green)':'var(--red)')+'">'+(ov.pnl>=0?'+':'')+'$'+ov.pnl+'</b>'+(d.n_open?' · <span style="color:var(--yellow)">'+d.n_open+' aperta</span>':'')+'</div>'
+      : '<div style="font-size:9px;color:var(--dim);margin-top:8px">📡 LIVE nel roster · nessun trade ancora (~2-3/mese)</div>';
+  } else {
+    footer = '<div style="font-size:8px;color:#8a6fc4;margin-top:8px">🔬 solo score — il bot non apre ordini (backtest: nessun edge meccanico, confidence non predittiva)</div>';
+  }
+  const ts = (su && su.bar_utc) || (d && d.synced_at);
+  const tstr = ts ? new Date(ts).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  return '<div class="mfkk-card">'
+    + '<div class="mfkk-header"><div class="mfkk-title">'+meta.layout.toUpperCase()+' · '+key+' <span style="color:var(--dim);font-weight:400">'+meta.tf+'</span></div>'
+    + '<div style="font-size:9px;color:var(--dim);font-family:monospace">'+tstr+'</div></div>'
+    + '<div style="font-size:8px;color:#666;margin:-4px 0 9px;line-height:1.4">'+meta.name+' — '+meta.inds+'</div>'
+    + '<div class="mfkk-score-wrap" style="margin-bottom:10px"><div class="mfkk-ring">'
+    + '<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#1e222a" stroke-width="6"/>'
+    + '<circle cx="32" cy="32" r="26" fill="none" stroke="'+ringCol+'" stroke-width="6" stroke-dasharray="163.4" stroke-dashoffset="'+(CIRC - CIRC*(ringVal/100))+'" stroke-linecap="round"/></svg>'
+    + '<div class="mfkk-num">'+(su?Math.round(ringVal):'—')+'</div></div>'
+    + '<div class="mfkk-signal"><div class="mfkk-bias" style="color:'+ph.col+'">'+biasTxt+' · '+ph.txt+'</div>'
+    + '<div class="mfkk-desc">'+(conf!=null?'fattori allineati 0-100 (NON predice l’esito)':'score del setup')+(su && su.note?' — '+su.note:'')+'</div></div></div>'
+    + (rows ? '<div class="mfkk-inputs">'+rows+'</div>' : '<div style="font-size:9px;color:var(--dim)">In attesa del bot MT5 (readout ad ogni barra '+meta.tf+' chiusa)</div>')
+    + (chips ? '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:9px">'+chips+'</div>' : '')
+    + footer
+    + '</div>';
+}
+
 
 function updatePriceStrip(prices){
   const active = window.activeAsset || 'XAU';

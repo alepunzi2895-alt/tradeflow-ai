@@ -1380,6 +1380,15 @@ def ls_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
         _ls_status = ls_status(I, idx, _ls_scan_state, in_position=bool(_ls_state), P=LS_PARAMS)
         _ls_status['bar_utc'] = bar_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         _ls_status['price'] = round(I['C'][idx], 2)
+        # readout per-indicatore + confidence per la card "stile MFKK" in dashboard
+        try:
+            _bias = 'buy' if _ls_status.get('trend') == 'up' else 'sell' if _ls_status.get('trend') == 'down' else _ls_status.get('pending_dir')
+            _c31, _f31, _r31 = _layout_confidence_live(I, idx, _bias, 'S31', LS_TF, bar_hour=bar_dt.hour)
+            _ls_status['confidence'] = _c31
+            _ls_status['conf_factors'] = _f31
+            _ls_status['readout'] = _r31
+        except Exception as _e2:
+            log.debug(f"[S31] readout: {_e2}")
         others = {}
         for _tf in ('M30', 'M15'):
             try:
@@ -1872,11 +1881,13 @@ def ls_push_stats(trades):
 _HTF_OF = {'M5': 'H1', 'M15': 'H1', 'M30': 'H4', 'H1': 'H4', 'H4': 'H4'}
 
 
-def _layout_confidence_live(I, idx, d, key, tf):
-    """Confidence score (0-100) del setup corrente per la card dashboard. Fattori dal
-    curriculum ECABS (layout_confidence.setup_confidence). Ritorna (score, factors) o (None,{})."""
-    if _lconf is None or d not in ('buy', 'sell'):
-        return None, {}
+def _layout_confidence_live(I, idx, d, key, tf, bar_hour=None):
+    """Confidence score (0-100) + breakdown fattori + readout per-indicatore del layout,
+    per la card dashboard "stile MFKK". Fattori/indicatori dal curriculum ECABS
+    (layout_confidence.py). Ritorna (score|None, factors, readout).
+    NB: muta temporaneamente I['_hour'] e lo rimuove prima di uscire."""
+    if _lconf is None:
+        return None, {}, {}
     try:
         ms = None
         if _mstruct is not None:
@@ -1910,15 +1921,21 @@ def _layout_confidence_live(I, idx, d, key, tf):
                 ssc = sfn(I, idx, {}, in_position=False, P=pmap[key]).get('score')
             except Exception:
                 pass
-        I['_hour'] = datetime.datetime.fromtimestamp(I['T'][idx] if I.get('T') else 0,
-                                                     tz=datetime.timezone.utc).hour if I.get('T') else None
-        sc, fac = _lconf.setup_confidence(I, idx, d, key, ms=ms, htf_bias=hbias,
-                                          status_score=ssc, swing_hi=sh, swing_lo=sl)
-        I.pop('_hour', None)
-        return round(sc, 1), {k2: round(v, 1) for k2, v in fac.items()}
+        I['_hour'] = bar_hour
+        sc = fac = None
+        try:
+            if d in ('buy', 'sell'):
+                sc, fac = _lconf.setup_confidence(I, idx, d, key, ms=ms, htf_bias=hbias,
+                                                  status_score=ssc, swing_hi=sh, swing_lo=sl)
+            readout = _lconf.indicator_readout(I, idx, key, ms=ms)
+        finally:
+            I.pop('_hour', None)
+        return (round(sc, 1) if sc is not None else None,
+                {k2: round(v, 1) for k2, v in fac.items()} if fac else {},
+                readout)
     except Exception as e:
         log.debug(f"[{key}] confidence: {e}")
-        return None, {}
+        return None, {}, {}
 
 
 def layout_scores_push(trades=None):
@@ -1937,14 +1954,15 @@ def layout_scores_push(trades=None):
                 continue
             _layout_score_last[key] = bar_t
             I = compute_indicators(candles)
-            I['T'] = [c['t'] for c in candles]
             idx = len(candles) - 2
+            _bar_hour = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc).hour
             st = spec['fn'](I, idx, {}, in_position=False, P=spec['P'])
             st['bar_utc'] = datetime.datetime.fromtimestamp(bar_t, tz=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             st['price'] = round(I['C'][idx], 2)
-            conf, factors = _layout_confidence_live(I, idx, st.get('bias'), key, spec['tf'])
+            conf, factors, readout = _layout_confidence_live(I, idx, st.get('bias'), key, spec['tf'], bar_hour=_bar_hour)
             st['confidence'] = conf
             st['conf_factors'] = factors
+            st['readout'] = readout
             _layout_score_snap[key] = st
             # paper-tracking dei trade reali eventualmente marcati con questa key (se un giorno si abilita)
             rows = [t for t in (trades or []) if str(t.get('strategy', '')).startswith(key)]

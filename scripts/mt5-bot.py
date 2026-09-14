@@ -378,6 +378,13 @@ def ema(src, p):
     for i in range(1,len(src)): v=src[i]*k+v*(1-k); o.append(v)
     return o
 
+def smma(src, p):
+    """Smoothed MA (Wilder) — usata da Alligator. Identica a strategy-engine-v2.py::smma()."""
+    o=[None]*(p-1)
+    init=sum(src[:p])/p; o.append(init); v=init
+    for x in src[p:]: v=(v*(p-1)+x)/p; o.append(v)
+    return o
+
 def sma(src, p):
     o=[None]*(p-1)
     for i in range(p-1,len(src)):
@@ -598,10 +605,12 @@ def supertrend(H, L, C, p=10, m=3.0):
     return dir_  # 1=bearish, -1=bullish
 
 def alligator(H, L, p1=13, p2=8, p3=5):
+    """Williams Alligator — SMMA di HL/2 (identica a strategy-engine-v2.py::alligator(),
+    fix 2026-09-14: era EMA, divergeva dal backtest che usa SMMA -> live/backtest mismatch)."""
     med = [(H[i]+L[i])/2 for i in range(len(H))]
-    jaw = ema(med, p1)
-    teeth = ema(med, p2)
-    lips = ema(med, p3)
+    jaw = smma(med, p1)
+    teeth = smma(med, p2)
+    lips = smma(med, p3)
     return jaw, teeth, lips
 
 def stoch_rsi(src, rsi_p=14, stoch_p=14, k_p=3, d_p=3):

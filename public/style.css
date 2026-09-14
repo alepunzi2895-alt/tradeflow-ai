@@ -571,9 +571,20 @@ a:hover { text-decoration: underline; }
   }
 
   .price-strip,
-  #tv-chart-wrapper { grid-column: 1 / -1; }
+  #tv-chart-wrapper,
+  #layout-strategy-cards { grid-column: 1 / -1; }
 
   .conf-card, .sent-card, .mfkk-card, .cal-card { margin-bottom: 0; }
+
+  /* ── Card dei 4 layout TradingView: griglia propria a 2 colonne invece di
+     tutte impilate in una singola colonna del grid esterno ── */
+  #layout-strategy-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+    row-gap: 14px;
+    align-items: start;
+  }
 }
 
 /* ═══════════════════════════════════════════════
@@ -686,9 +697,20 @@ a:hover { text-decoration: underline; }
   }
 
   .price-strip,
-  #tv-chart-wrapper { grid-column: 1 / -1; }
+  #tv-chart-wrapper,
+  #layout-strategy-cards { grid-column: 1 / -1; }
 
   .conf-card, .sent-card, .mfkk-card, .cal-card { margin-bottom: 0; }
+
+  /* ── Card dei 4 layout TradingView: griglia propria a 2 colonne invece di
+     tutte impilate in una singola colonna del grid esterno ── */
+  #layout-strategy-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+    row-gap: 14px;
+    align-items: start;
+  }
 
   /* ── AI Confidence Score: driver su 2 colonne invece di lista stretta ── */
   .conf-factors {

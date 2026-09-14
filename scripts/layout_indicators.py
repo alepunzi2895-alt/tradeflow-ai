@@ -229,38 +229,39 @@ def _ema_list(src, p):
 
 
 def ultimate_rsi(src, length=14, smooth=14):
-    """Ultimate RSI [LuxAlgo] — porta fedele (smoType1=RMA, smoType2=EMA).
+    """Ultimate RSI [LuxAlgo] — porta fedele al Pine reale (verificata bar-per-bar contro
+    TradingView Desktop live, 2026-09-14: match a 3 decimali). smoType1='SMA' (config
+    effettiva sul layout XAU_M30, il default script sarebbe 'RMA'), smoType2='EMA'.
         upper = highest(src,length); lower = lowest(src,length); r = upper-lower
-        d = src-src[1];  diff = r > r[1] ? r : |d|
-        num = rma(d, length)            (segnato)
-        den = rma(diff, length)         (non segnato)
-        arsi = 50*num/den + 50          (oscillatore 0..100, ~50 neutro, come RSI)
+        d = src-src[1]
+        diff = upper>upper[1] ? r : (lower<lower[1] ? -r : d)     -- SEGNATO (non |d|!)
+        num = sma(diff, length); den = sma(|diff|, length)
+        arsi = num/den*50 + 50
         signal = ema(arsi, smooth)
     Ritorna (arsi, signal). Causale."""
     n = len(src)
     arsi = [None] * n
     if n < length + 2:
         return arsi, [None] * n
-    num_acc = den_acc = None
-    r_prev = None
-    for i in range(n):
-        if i < length:
-            continue
+    upper = [None] * n; lower = [None] * n
+    for i in range(length - 1, n):
         win = src[i - length + 1:i + 1]
-        upper = max(win); lower = min(win)
-        r = upper - lower
-        d = src[i] - src[i - 1]
-        if r_prev is not None and r > r_prev:
-            diff = r
+        upper[i] = max(win); lower[i] = min(win)
+    diff = [0.0] * n
+    for i in range(length, n):
+        r = upper[i] - lower[i]
+        if upper[i] > upper[i - 1]:
+            diff[i] = r
+        elif lower[i] < lower[i - 1]:
+            diff[i] = -r
         else:
-            diff = abs(d)
-        if num_acc is None:
-            num_acc = d; den_acc = diff
-        else:
-            num_acc = (num_acc * (length - 1) + d) / length
-            den_acc = (den_acc * (length - 1) + diff) / length
-        arsi[i] = (50.0 * num_acc / den_acc + 50.0) if den_acc else 50.0
-        r_prev = r
+            diff[i] = src[i] - src[i - 1]
+    num_acc = den_acc = None
+    for i in range(length, n):
+        window = diff[i - length + 1:i + 1]
+        num_acc = sum(window) / length
+        den_acc = sum(abs(x) for x in window) / length
+        arsi[i] = (num_acc / den_acc * 50.0 + 50.0) if den_acc else 50.0
     sig = _ema_list([x if x is not None else 50.0 for x in arsi], smooth)
     sig = [None if arsi[i] is None else sig[i] for i in range(n)]
     return arsi, sig

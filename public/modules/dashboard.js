@@ -227,6 +227,68 @@ const CONF_FACTOR_LBL = {
 
 function _lsBarCol(s){ return s>=25?'var(--green)':s<=-25?'var(--red)':'var(--dim)'; }
 
+function _escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ── Spiegazioni indicatori delle 4 card layout (stesso tooltip della card MFKK) ──
+const LAYOUT_INDICATOR_DEFS = {
+  'Trendlines w/ Breaks': { title: 'Trendlines with Breaks [LuxAlgo]',
+    meaning: 'Traccia le trendline sui pivot di prezzo (swing high/low) e segnala quando il prezzo le rompe. Una rottura seguita da un ritorno (retest) sulla trendline è il trigger d’ingresso di S31.' },
+  'Pivot Fibonacci': { title: 'Pivot Points Standard (Fibonacci)',
+    meaning: 'Livelli pivot giornalieri calcolati con i rapporti di Fibonacci (P, R1-R3, S1-S3). Prezzo sopra il pivot centrale (P) favorisce i long, sotto favorisce i short.' },
+  'Key Levels': { title: 'Key Levels SpacemanBTC IDWM',
+    meaning: 'Massimi/minimi del giorno e della settimana precedente (PDH/PDL/PWH/PWL) e delle sessioni London/NY — zone dove il prezzo tende a reagire per liquidità accumulata.' },
+  'EMA 200': { title: 'EMA 200',
+    meaning: 'Media mobile esponenziale a 200 periodi. Prezzo sopra con pendenza positiva = trend rialzista strutturale; sotto con pendenza negativa = trend ribassista.' },
+  'Sessione': { title: 'Sessione di Trading',
+    meaning: 'La sovrapposizione London+NY (13-16 UTC) concentra la maggior liquidità. Fuori da London/NY il movimento è spesso rumore, non trend.' },
+  'Bollinger Bands': { title: 'Bollinger Bands',
+    meaning: 'Bande di volatilità attorno a una media mobile. %B misura dove si trova il prezzo tra banda inferiore (0) e superiore (1) — vicino ai bordi indica ipercomprato/ipervenduto locale.' },
+  'ICT Order Flow': { title: 'ICT Institutional Order Flow',
+    meaning: 'Rileva la struttura di mercato (BOS = continuazione, CHoCH = inversione) secondo la metodologia ICT — usata per capire se il trend istituzionale è ancora in corso.' },
+  'EMA 20/50/100/200': { title: 'EMA 20/50/100/200 Ribbon',
+    meaning: 'Quattro medie mobili esponenziali impilate. Quando sono tutte in ordine crescente (o decrescente) il trend è pulito e allineato su più orizzonti temporali.' },
+  'Order Block Finder': { title: 'Order Block Finder',
+    meaning: 'Individua le candele "order block" — zone dove si presume sia entrato smart money — usate come aree di interesse per pullback/reazione.' },
+  'OBV': { title: 'On Balance Volume',
+    meaning: 'Volume cumulato con segno in base alla direzione del prezzo. La pendenza di OBV confema (o smentisce) la forza del movimento di prezzo.' },
+  'Supertrend': { title: 'Supertrend',
+    meaning: 'Indicatore trend-following basato su ATR: il prezzo sopra la banda = rialzista, sotto = ribassista. Cambia lato solo quando il trend inverte davvero.' },
+  'Williams Alligator': { title: 'Williams Alligator',
+    meaning: 'Tre medie smussate (Jaw/Teeth/Lips). "Bocca aperta" e ordinata indica trend in corso; bocca chiusa/intrecciata indica mercato laterale ("l’alligatore dorme").' },
+  'OBV MACD': { title: 'OBV MACD',
+    meaning: 'MACD calcolato sul volume cumulato (OBV) invece che sul prezzo — misura se la pressione di acquisto/vendita sta accelerando o esaurendosi.' },
+  'Ultimate RSI': { title: 'Ultimate RSI [LuxAlgo]',
+    meaning: 'Versione più reattiva dell’RSI classico: durante un trend forte e persistente (nuovi massimi/minimi continui) raggiunge valori estremi molto più rapidamente dell’RSI classico.' },
+  'Momentum': { title: 'Momentum',
+    meaning: 'Differenza tra il prezzo attuale e quello di N barre fa. Positivo e crescente = accelerazione rialzista, negativo e crescente in valore assoluto = accelerazione ribassista.' },
+  'Volume Footprint (delta)': { title: 'Volume Footprint (Delta)',
+    meaning: 'Differenza tra volume a mercato lato compratore e venditore sulla singola barra. Delta negativo = pressione di vendita dominante, positivo = pressione di acquisto.' },
+  'Visible Range VP': { title: 'Visible Range Volume Profile',
+    meaning: 'Distribuzione del volume sui prezzi visibili a schermo. Il POC è il prezzo con più volume scambiato; la Value Area (VAH-VAL) contiene il 70% del volume — il prezzo tende a tornarci.' },
+  'Session VP': { title: 'Session Volume Profile',
+    meaning: 'Come il Visible Range VP, ma calcolato sulla sessione di trading corrente. Il POC di sessione è spesso un magnete di prezzo intraday.' },
+  'Cumulative Delta': { title: 'Cumulative Delta Volume (CVD)',
+    meaning: 'Somma progressiva del delta volume nel tempo. Una pendenza CVD in divergenza col prezzo (prezzo su, CVD giù) segnala un movimento non confermato dal volume reale.' },
+  'Normalized Volume': { title: 'Normalized Volume',
+    meaning: 'Volume della barra corrente relativo alla sua media recente (1.0x = normale). Valori sopra 1.6x indicano uno spike di attività — spesso agli estremi di un movimento.' },
+};
+
+function showLayoutIndicatorInfo(label, r){
+  const def = LAYOUT_INDICATOR_DEFS[label];
+  const titleEl = document.getElementById('info-title');
+  const meaningEl = document.getElementById('info-meaning');
+  const statusEl = document.getElementById('info-status');
+  if(!titleEl || !meaningEl || !statusEl) return;
+  titleEl.innerHTML = '<span>📊</span> ' + (def ? def.title : label);
+  meaningEl.textContent = def ? def.meaning : 'Indicatore del layout TradingView.';
+  const s = r && r.score != null ? r.score : 0;
+  statusEl.innerHTML = '<b>Stato attuale:</b> ' + (r && r.state ? r.state : '—')
+    + (r && r.value ? ' — ' + r.value : '')
+    + '<br><b>Score confluenza:</b> ' + (s > 0 ? '+' : '') + s + '/100';
+  document.getElementById('info-overlay').style.display = 'flex';
+}
+window.showLayoutIndicatorInfo = showLayoutIndicatorInfo;
+
 async function loadLayoutStrategies(){
   const host = document.getElementById('layout-strategy-cards');
   if(!host) return;
@@ -242,6 +304,18 @@ async function loadLayoutStrategies(){
     parts.push(renderLayoutStratCard(key, d));
   }
   host.innerHTML = parts.filter(Boolean).join('');
+  if(!host._lsRowsWired){
+    host._lsRowsWired = true;
+    host.addEventListener('click', function(e){
+      const row = e.target.closest('.lsrow');
+      if(!row) return;
+      showLayoutIndicatorInfo(row.getAttribute('data-ind'), {
+        score: parseFloat(row.getAttribute('data-score')) || 0,
+        state: row.getAttribute('data-state') || '',
+        value: row.getAttribute('data-value') || '',
+      });
+    });
+  }
 }
 
 function renderLayoutStratCard(key, d){
@@ -262,7 +336,7 @@ function renderLayoutStratCard(key, d){
   const rows = Object.entries(ro).map(function(e){
     const lbl=e[0], r=e[1];
     const s = r.score||0, w = Math.min(100, Math.abs(s)), col = _lsBarCol(s);
-    return '<div class="mfkk-row" style="padding:6px 9px"><div style="flex:1;min-width:0">'
+    return '<div class="mfkk-row lsrow" data-ind="'+_escAttr(lbl)+'" data-score="'+s+'" data-state="'+_escAttr(r.state||'')+'" data-value="'+_escAttr(r.value||'')+'" style="padding:6px 9px;cursor:pointer"><div style="flex:1;min-width:0">'
       + '<div style="display:flex;align-items:center;gap:6px">'
       + '<div class="mfkk-lbl" style="width:auto;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</div>'
       + '<div style="font-size:9.5px;font-family:monospace;color:var(--fg);white-space:nowrap">'+(r.value||'')+'</div>'
@@ -291,6 +365,10 @@ function renderLayoutStratCard(key, d){
     + '<div class="mfkk-header"><div class="mfkk-title">'+meta.layout.toUpperCase()+' · '+key+' <span style="color:var(--dim);font-weight:400">'+meta.tf+'</span></div>'
     + '<div style="font-size:9px;color:var(--dim);font-family:monospace">'+tstr+'</div></div>'
     + '<div style="font-size:8px;color:#666;margin:-4px 0 9px;line-height:1.4">'+meta.name+' — '+meta.inds+'</div>'
+    + '<div class="mfkk-dir-btns" style="margin-bottom:10px">'
+    + '<div class="mfkk-dir'+(bias==='buy'?' on-buy':'')+'" style="cursor:default">▲ BUY</div>'
+    + '<div class="mfkk-dir'+(bias==='sell'?' on-sell':'')+'" style="cursor:default">▼ SELL</div>'
+    + '</div>'
     + '<div class="mfkk-score-wrap" style="margin-bottom:10px"><div class="mfkk-ring">'
     + '<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#1e222a" stroke-width="6"/>'
     + '<circle cx="32" cy="32" r="26" fill="none" stroke="'+ringCol+'" stroke-width="6" stroke-dasharray="163.4" stroke-dashoffset="'+(CIRC - CIRC*(ringVal/100))+'" stroke-linecap="round"/></svg>'

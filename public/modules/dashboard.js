@@ -104,7 +104,7 @@ async function loadSentimentOnly(){
     const res = await fetch('/api/myfxbook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'outlook', symbol: assetStr })
+      body: JSON.stringify({ action: 'outlook', symbol: assetStr, session: mfxSession?.session || '' })
     });
     
     if(!res.ok) return;

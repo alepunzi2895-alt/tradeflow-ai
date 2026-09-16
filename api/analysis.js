@@ -119,24 +119,38 @@ export default async function handler(req, res) {
     // ── SENTIMENT ──
     if (type === "sentiment") {
       const mfxSession = req.query.session || "";
+      // Prima era hardcoded a XAUUSD — ignorava l'asset attivo (XAU/XAG/US30) selezionato in UI.
+      const symbol = (req.query.symbol || "XAUUSD").toUpperCase();
       let sentimentData = null;
+      let source = 'myfxbook';
       try {
-        const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${mfxSession}&symbols=XAUUSD`;
+        const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${mfxSession}&symbols=${encodeURIComponent(symbol)}`;
         const r = await fetchT(mfxUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
         if (r.ok) {
           const d = await r.json();
-          const sym = d.symbols?.find(s => s.name === "XAUUSD" || s.name === "GOLD");
+          const sym = d.symbols?.find(s => s.name === symbol || s.name === "GOLD");
           if (sym) sentimentData = buildSentiment(parseFloat(sym.longPercentage), parseFloat(sym.shortPercentage));
         }
       } catch(e) {}
 
       if (!sentimentData) {
-        const q = await yahooQuote('GC=F');
-        const lp = q ? (q.change < 0 ? 62 : 45) : 50; 
+        // Fallback sintetico basato sul segno della variazione — niente GC=F (futures ≠ spot, vedi CLAUDE.md).
+        const YAHOO_FALLBACK = { XAUUSD: 'XAUUSD=X', XAGUSD: 'XAGUSD=X', US30USD: '^DJI' };
+        const q = await yahooQuote(YAHOO_FALLBACK[symbol] || 'XAUUSD=X');
+        const lp = q ? (q.change < 0 ? 62 : 45) : 50;
         sentimentData = buildSentiment(lp, 100-lp);
         sentimentData.synthetic = true;
+        source = 'simulation';
       }
-      return res.status(200).json({ ok:true, xauusd: sentimentData, timestamp: new Date().toISOString() });
+      // Shape allineata a quella già usata da api/myfxbook.js (action:'outlook') e attesa dal client
+      // (dashboard.js::loadSlowData legge sd.outlook.symbols) — prima la chiave era 'xauusd' e il
+      // client non la trovava mai, quindi il ramo "server" non scattava mai.
+      return res.status(200).json({
+        ok: true,
+        outlook: { symbols: [{ name: symbol, longPercentage: sentimentData.longPct, shortPercentage: sentimentData.shortPct }] },
+        source,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // ── CALENDAR ──

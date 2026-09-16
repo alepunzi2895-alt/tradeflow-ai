@@ -58,12 +58,18 @@ async function mfxLogin(){
 }
 function mfxLogout(){mfxSession=null;S.set(K.mfx,null); window.dbSaveUserData && window.dbSaveUserData('mfx', null); renderMyfx();}
 
+function mfxShowExpired(wrap, msg){
+  wrap.innerHTML=`<div style="color:#ff8a80;font-size:12px;background:#160c0c;border:1px solid #ff475722;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${msg||'Sessione MyFxBook scaduta.'}</div>
+    <button onclick="mfxLogout()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--g);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Riconnetti (reinserisci email/password)</button>`;
+}
+
 async function loadMyfxAccounts(){
   const wrap=document.getElementById('mfx-accounts');if(!wrap)return;
   wrap.innerHTML='<div style="color:var(--dim);font-size:12px;padding:8px 0">⏳ Caricamento...</div>';
   try{
     const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'accounts',session:mfxSession.session})});
     const d=await r.json();
+    if(d.error){mfxShowExpired(wrap, d.message); return;}
     if(!d.accounts?.length){wrap.innerHTML='<div style="color:var(--dim);font-size:12px">Nessun account trovato</div>';return;}
     wrap.innerHTML='<div style="color:var(--g);font-size:10px;font-weight:700;margin-bottom:8px;letter-spacing:.07em">ACCOUNT</div>'+
       d.accounts.map(a=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:7px">
@@ -86,12 +92,28 @@ async function analyzeMfxAccount(accountId){
   try{
     const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'history',session:mfxSession.session,accountId})});
     const d=await r.json();
-    const trades=(d.history||[]).filter(t=>t.symbol&&t.type&&!['deposit','withdrawal','credit','balance'].includes((t.type||'').toLowerCase())).slice(0,30);
-    const sum=trades.map(t=>`${t.openTime}|${t.type}|${t.symbol}|open:${t.openPrice} close:${t.closePrice}|lots:${t.size}|P&L:${t.profit}$`).join('\n');
+    if(d.error){
+      if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}
+      mfxShowExpired(wrap, d.message);
+      return;
+    }
+    // MyFxBook restituisce il campo 'action' ("Buy"/"Sell"), non 'type' — vedi anche importMfxToJournal()
+    const SKIP_TYPES=['deposit','withdrawal','credit','balance','bonus','rebate','commission'];
+    const trades=(d.history||[]).filter(t=>{
+      const act=String(t.action||t.type||'').toLowerCase();
+      return t.symbol && act && !SKIP_TYPES.some(s=>act.includes(s));
+    }).slice(0,30);
+    if(!trades.length){
+      if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}
+      wrap.insertAdjacentHTML('beforeend', `<div style="color:var(--dim);font-size:12px;margin-top:8px">Nessun trade reale trovato nello storico MyFxBook di questo account.</div>`);
+      return;
+    }
+    const sum=trades.map(t=>`${t.openTime||t.open_time||''}|${(t.action||t.type||'').toUpperCase()}|${t.symbol}|open:${t.openPrice??t.open_price} close:${t.closePrice??t.close_price}|lots:${t.size??t.lots??t.volume}|P&L:${t.profit}$`).join('\n');
     const reply=await api([{role:'user',content:`Analizza storico MyFxBook (solo trade reali):\n${sum}\n\nStatistiche, pattern errori, confronto con strategia (TP1 ${P.tp1}R, TP2 ${P.tp2}R), 3 azioni concrete, Score Disciplina X/10.`}],
       `Sei TradeFlow AI Coach. Italiano. Profilo: ${P.name}.`);
     const box=document.createElement('div');box.className='aib';box.style.marginTop='10px';
     box.innerHTML='<div class="ait">🧠 ANALISI MYFXBOOK</div>';
     box.appendChild(md(reply));wrap.appendChild(box);autoLearn(reply);
-  }catch(e){if(btn){btn.textContent='🧠 Analizza Errori AI';btn.disabled=false;}alert('Errore: '+e.message);}
+    if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}
+  }catch(e){if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}alert('Errore: '+e.message);}
 }

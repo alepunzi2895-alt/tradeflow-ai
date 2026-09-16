@@ -237,6 +237,7 @@ html, body {
   display: flex; flex-direction: column; gap: 16px;
   overflow-y: auto;
 }
+.turn { display: flex; flex-direction: column; gap: 16px; }
 .bw { position: relative; display: flex; flex-direction: column; gap: 6px; animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1); }
 .bw.u { align-items: flex-end; }
 .bw.b { align-items: flex-start; }

@@ -4,7 +4,12 @@
 const cm=document.getElementById('chat-msgs');
 let history=S.get(K.chat,[]);
 
-function addBubble(role,content,dataUrl){
+// Ogni domanda+risposta vive in un "turno" che viene inserito in cima a #chat-msgs,
+// così la conversazione più recente appare per prima (stile storico, non serve scrollare).
+function startTurn(){const t=document.createElement('div');t.className='turn';cm.prepend(t);cm.scrollTop=0;return t;}
+
+function addBubble(role,content,dataUrl,parent){
+  const target=parent||startTurn();
   const w=document.createElement('div');w.className=`bw ${role==='user'?'u':'b'}`;
   w.dataset.role=role; w.dataset.content=content||'';
 
@@ -12,7 +17,9 @@ function addBubble(role,content,dataUrl){
   const del=document.createElement('button');del.className='msg-del';del.textContent='×';del.title='Elimina';
   del.onclick=()=>{
     w.remove();
-    history=Array.from(cm.querySelectorAll('.bw')).map(el=>({role:el.dataset.role,content:el.dataset.content||''}));
+    if(!target.children.length) target.remove();
+    // Il DOM è ordinato dal più recente al più vecchio: invertire per ricostruire lo storico cronologico
+    history=Array.from(cm.querySelectorAll('.bw')).reverse().map(el=>({role:el.dataset.role,content:el.dataset.content||''}));
     S.set(K.chat,history.slice(-50));
     window.dbSaveUserData&&window.dbSaveUserData('chat',history.slice(-50));
   };
@@ -42,11 +49,21 @@ function addBubble(role,content,dataUrl){
       b.appendChild(badge);
     }
   }
-  w.appendChild(b);cm.appendChild(w);cm.scrollTop=cm.scrollHeight;
+  w.appendChild(b);target.appendChild(w);cm.scrollTop=0;
 }
 
-function showDots(){const d=document.createElement('div');d.className='dots';d.id='dots';d.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>';cm.appendChild(d);cm.scrollTop=cm.scrollHeight;}
+function showDots(parent){const d=document.createElement('div');d.className='dots';d.id='dots';d.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>';(parent||cm).appendChild(d);cm.scrollTop=0;}
 function hideDots(){document.getElementById('dots')?.remove();}
+
+// Ricostruisce la lista messaggi raggruppandoli per turno (domanda + risposta), dal più vecchio al più recente:
+// ogni volta che parte un nuovo turno viene messo in cima, così alla fine il più recente resta in alto.
+function renderHistoryMessages(msgs){
+  let turn=null;
+  (msgs||[]).forEach(m=>{
+    if(m.role==='user'||!turn) turn=startTurn();
+    addBubble(m.role,m.content||'',null,turn);
+  });
+}
 
 async function send(){
   if(loading)return;
@@ -54,7 +71,8 @@ async function send(){
   const text=inp.value.trim()||(pendingImg?'Analizza questo screenshot. Setup, manipulation score, azioni operative se MT5, coach psicologico.':'');
   if(!text&&!pendingImg)return;
   const curImg=pendingImg;pendingImg=null;inp.value='';inp.style.height='38px';clearImg();
-  addBubble('user',text,curImg?.dataUrl||null);
+  const turn=startTurn();
+  addBubble('user',text,curImg?.dataUrl||null,turn);
   history.push({role:'user',content:text});
   const recent=history.slice(-6);
   const apiMsgs=recent.map((m,i)=>{
@@ -65,15 +83,15 @@ async function send(){
     }
     return{role:'assistant',content:m.content||'continua'};
   });
-  loading=true;document.getElementById('bsend').disabled=true;showDots();
+  loading=true;document.getElementById('bsend').disabled=true;showDots(turn);
   try{
     const reply=await api(apiMsgs);
-    hideDots();addBubble('assistant',reply);
+    hideDots();addBubble('assistant',reply,null,turn);
     history.push({role:'assistant',content:reply});
     S.set(K.chat,history.slice(-50).map(m=>({role:m.role,content:m.content})));
     window.dbSaveUserData && window.dbSaveUserData('chat', history.slice(-50).map(m=>({role:m.role,content:m.content})));
     autoLearn(reply);
-  }catch(e){hideDots();addBubble('assistant',`⚠️ ${e.message}`);}
+  }catch(e){hideDots();addBubble('assistant',`⚠️ ${e.message}`,null,turn);}
   loading=false;document.getElementById('bsend').disabled=false;
 }
 

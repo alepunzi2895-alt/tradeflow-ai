@@ -214,10 +214,10 @@ try{updateConfidence({},{});}catch(e){}
 
 // Restore chat history
 if(history.length>0){
-  history.forEach(m=>addBubble(m.role,m.content||''));
-  addBubble('assistant','_Sessione ripristinata — '+history.length+' messaggi precedenti._');
+  renderHistoryMessages(history);
+  addBubble('assistant','_Sessione ripristinata — '+history.length+' messaggi precedenti._',null,startTurn());
 }else{
-  addBubble('assistant','**TradeFlow AI — Online** 🚀\n\n**Dashboard:** prezzi live, DXY correlation, confidence score, calendario economico, sentiment retail.\n\n**Analisi:** screenshot TradingView/MT5, manipulation score, coach psicologico integrato.\n\n**Journal:** import CSV, screenshot storico, MyFxBook.\n\nPremi 📷 per analizzare un grafico.');
+  addBubble('assistant','**TradeFlow AI — Online** 🚀\n\n**Dashboard:** prezzi live, DXY correlation, confidence score, calendario economico, sentiment retail.\n\n**Analisi:** screenshot TradingView/MT5, manipulation score, coach psicologico integrato.\n\n**Journal:** import CSV, screenshot storico, MyFxBook.\n\nPremi 📷 per analizzare un grafico.',null,startTurn());
 }
 
 // Prevent browser scroll restoration
@@ -323,8 +323,8 @@ if(!window.sessionToken) {
     // Re-render chat if cloud returned history that wasn't in localStorage
     if(history.length > 0 && cm.children.length <= 1) {
       cm.innerHTML = '';
-      history.forEach(m => addBubble(m.role, m.content || ''));
-      addBubble('assistant', '_Sessione ripristinata — ' + history.length + ' messaggi precedenti._');
+      renderHistoryMessages(history);
+      addBubble('assistant', '_Sessione ripristinata — ' + history.length + ' messaggi precedenti._', null, startTurn());
     }
   });
 }

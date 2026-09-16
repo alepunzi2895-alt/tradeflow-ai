@@ -1,3 +1,14 @@
+// ── FILTRO STORICO TRADE — listener delegato ──────────────────────────────────
+// I bottoni OGGI/7G/30G/TUTTO/CUSTOM vengono ricreati da zero ad ogni rebuild di
+// seRender() (ogni 1s): un onclick inline sul bottone può perdere il click se il
+// rebuild capita a cavallo tra mousedown e mouseup. Il listener va quindi su
+// document (mai ricreato), non sul bottone effimero.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.se-tf-btn');
+  if (!btn) return;
+  window._seTradeFilter = btn.dataset.tf;
+});
+
 // ── EQUITY SPARKLINE ─────────────────────────────────────────────────────────
 // Mini-chart SVG inline (no JS state, sopravvive al rebuild di seRender() ogni 1s).
 // points: array di P&L cumulativo (es. mensile) dal backtest della strategia.
@@ -333,7 +344,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const filtered=_filterTrades(history);
   const fBtns=[['today','OGGI'],['week','7G'],['month','30G'],['all','TUTTO'],['custom','CUSTOM']].map(([k,lbl])=>{
     const active=window._seTradeFilter===k;
-    return `<button onclick="window._seTradeFilter='${k}'" style="padding:2px 7px;font-size:8px;border-radius:4px;border:1px solid ${active?'var(--green)':'var(--border2)'};background:${active?'#00e67615':'transparent'};color:${active?'var(--green)':'var(--dim)'};cursor:pointer">${lbl}</button>`;
+    return `<button class="se-tf-btn" data-tf="${k}" style="padding:2px 7px;font-size:8px;border-radius:4px;border:1px solid ${active?'var(--green)':'var(--border2)'};background:${active?'#00e67615':'transparent'};color:${active?'var(--green)':'var(--dim)'};cursor:pointer">${lbl}</button>`;
   }).join('');
   const customInputs=window._seTradeFilter==='custom'?`
     <div style="display:flex;gap:4px;margin-top:4px;align-items:center">
@@ -432,14 +443,14 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="font-size:10px;font-weight:800;color:#c8a96e">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
         <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:8px">
-        <span style="color:var(--dim)">Sistema DD:</span>
+      <div style="display:flex;align-items:center;gap:6px;font-size:8px" title="Max drawdown storico da backtest (24 mesi) del roster attivo — non è il DD live del conto, i circuit breaker live sono separati (daily/weekly/consecutive losses)">
+        <span style="color:var(--dim)">Max DD backtest (24m):</span>
         <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
           <div style="width:${Math.min(portfolioDdPct/DD_BUDGET*100,100).toFixed(0)}%;height:100%;background:${ddColor};border-radius:2px"></div>
         </div>
         <span style="font-weight:700;color:${ddColor}">${portfolioDdPct}%</span>
-        <span style="color:var(--dim)">/ ${DD_BUDGET}% budget</span>
-        <span style="color:${ddColor};font-weight:700">${portfolioDdPct<=DD_BUDGET?'✓ OK':'⚠ OVER'}</span>
+        <span style="color:var(--dim)">/ ${DD_BUDGET}% target</span>
+        <span style="color:${ddColor};font-weight:700">${portfolioDdPct<=DD_BUDGET?'✓ OK':'⚠ sopra target'}</span>
       </div>
     </div>
 

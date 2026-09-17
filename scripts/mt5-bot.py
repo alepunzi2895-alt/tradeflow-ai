@@ -144,7 +144,9 @@ CHECK_SEC    = 10            # polling ogni 10 secondi
 # Gestione posizione resta un mini-manager proprio (SL strutturale + TP hard 2R; a TP1/1R
 # chiude S20_PARTIAL_LOT e sposta lo SL del residuo a BE) — non generica RiskGuardian,
 # perché l'edge backtestato (OOS PF 1.72) dipende da questa lifecycle specifica.
-S20_ENABLED     = True
+S20_ENABLED     = False    # 2026-09-17: holdout 24m PF 0.867 < 1.2 (soglia decisa in origine, vedi
+                           # sotto/directives/02_strategies.md) — disattivata, non riattivare senza
+                           # un nuovo giro di conferma sul WR live reale
 S20_LOT         = 0.03      # fallback se RiskGuardian non disponibile
 S20_LOT_MULT    = 2.0       # unica eccezione RiskGuardian per S20: lotto finale ×2
 S20_CONFIDENCE  = 0.55      # strategy_confidence proxy — OOS PF 1.72/WR~52%, edge debole ma reale

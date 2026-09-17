@@ -69,6 +69,29 @@ utili per capire se l'etichetta regime è sensata ma non equivalenti a "come si 
 il bot live". Prima di correggere `optimal_regimes` di S09/S10/S17 servirebbe un secondo
 giro con `opt_harness.is_promotable()`/DSR per confermare che il cambio non è rumore.
 
+**🆕 Azione 2026-09-17 (stesso giorno, richiesta esplicita utente "disabilita quelle non
+profittevoli")**: sulla base dei numeri sopra, disattivate:
+- **S10_OB_FVG_SCALP** → aggiunta a `data/hard_blocks.json` (full PF 0.829, campione minuscolo
+  22 trade/24 mesi, zero trade nei suoi optimal_regimes coded).
+- **S16_GOLDEN_SQUEEZE** → aggiunta a `data/hard_blocks.json` (full PF 1.428 storicamente
+  solida, ma holdout PF 0.691 su n=43 — stesso pattern full-buono/holdout-cattivo che aveva
+  preceduto S00/S18; scelta dell'utente di bloccarla per coerenza col criterio già in uso,
+  in attesa di conferma dal WR live prima di un'eventuale riattivazione).
+- **S20_FIB_CONFLUENCE** → `S20_ENABLED=False` in `mt5-bot.py` (holdout PF 0.867 < 1.2, la
+  soglia di disattivazione era già stata dichiarata in anticipo dal team — non è una nuova
+  regola inventata ora).
+
+**Non toccate**: S00_MFKK/S18_RANGE_REVERSAL già bloccate (nessun cambio). S17/S31/S30 restano
+live (profittevoli sia su full che su holdout). S09_MFKK_SCALPING era **già** hard-bloccata dal
+2026-07-16 — nessuna azione necessaria (corretto un errore di lettura del file fatto a caldo
+durante la discussione: inizialmente si era detto per errore che non fosse ancora bloccata).
+
+**Serve azione manuale**: `S20_ENABLED=False` è una costante Python — richiede **pull + restart
+del bot** sulla VPS/macchina che lo esegue per avere effetto (come sempre per modifiche a
+`mt5-bot.py`). Il blocco di S10/S16 via `hard_blocks.json` invece è già letto ad ogni ciclo da
+`is_hard_blocked()` (nessun caching) — ha effetto dalla prossima candela dopo il `git pull`,
+stesso comportamento già verificato per S00/S09/S18.
+
 **Scoperto en passant**: `scripts/backtest_combined.py` è uno script "backtest combinato"
 PRE-ESISTENTE ma stale — duplica per intero la logica di indicatori/segnali (viola la
 regola CLAUDE.md "mai duplicare logica"), usa un roster vecchio (`S05_V3_Sell_Exhaust`,

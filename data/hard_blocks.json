@@ -12,6 +12,14 @@
     "S18_RANGE_REVERSAL": {
       "since": "2026-09-01",
       "reason": "WR live 14.3% (6 SL su 7 trade), PF 0.07. Ri-test 2026-09-01 negativo su ogni finestra (M30 standalone PF 0.63, H4 PF 0.20)."
+    },
+    "S10_OB_FVG_SCALP": {
+      "since": "2026-09-17",
+      "reason": "Re-backtest 24 mesi (portfolio_backtest.py): full PF 0.829 su appena 22 trade in 2 anni, holdout n=5 non significativo. Validazione regime: zero trade osservati nei suoi optimal_regimes codificati (RANGING/VOLATILE) — spara quasi solo in TREND_UP/DOWN, mai nel regime per cui è configurata. Vedi directives/02_strategies.md 2026-09-17."
+    },
+    "S16_GOLDEN_SQUEEZE": {
+      "since": "2026-09-17",
+      "reason": "Re-backtest 24 mesi: full PF 1.428 (storicamente solida) ma holdout recente PF 0.691 su n=43 (campione non piccolo) — stesso pattern di decadimento full-buono/holdout-cattivo che aveva preceduto il blocco di S00/S18. Decisione utente: bloccare per coerenza col criterio già applicato, in attesa di conferma dal WR live reale prima di un'eventuale riattivazione. Vedi directives/02_strategies.md 2026-09-17."
     }
   }
 }

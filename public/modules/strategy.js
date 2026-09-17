@@ -299,7 +299,12 @@ async function seRefresh() {
 
   let pending=[];
   if(!isExtreme&&inSession){
-    const priority=SE.regimePriority[seRegime]||['S00_MFKK'];
+    // Esclude le strategie hard-bloccate (BLOCKED_STRATEGIES, se-render.js) dallo scan segnali:
+    // regimePriority è una lista statica per-regime che non sa nulla dei blocchi live, altrimenti
+    // questo pannello "guida umana" mostrerebbe setup potenziali per strategie che il bot non
+    // traderebbe mai (vedi directives/06_known_issues.md 2026-09-17).
+    const _blocked = typeof BLOCKED_STRATEGIES!=='undefined' ? BLOCKED_STRATEGIES : [];
+    const priority=(SE.regimePriority[seRegime]||['S00_MFKK']).filter(n=>!_blocked.includes(n));
     const maxSig = SE.maxSignals[seRegime] || 2;
     for(const name of priority){
       if(pending.length >= maxSig) break;

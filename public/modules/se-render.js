@@ -168,7 +168,10 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:3px">REGIME DI MERCATO</div>
       <div style="font-size:16px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
       <div style="font-size:9px;color:${rm.col};margin-top:4px">
-        Strategie attive: ${(SE.regimePriority[seRegime]||['S00_MFKK']).map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ')}
+        Strategie attive: ${(() => {
+          const live = (SE.regimePriority[seRegime]||['S00_MFKK']).filter(n=>!BLOCKED_STRATEGIES.includes(n));
+          return live.length ? live.map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ') : '<b>nessuna</b> (tutte bloccate per questo regime)';
+        })()}
       </div>
     </div>
     <div style="text-align:right">

@@ -1197,3 +1197,46 @@ async function loadCotData(){
     }
   } catch(e){ console.log('COT:', e.message); }
 }
+
+// ── ANALIZZA GRAFICO (Dashboard → screenshot → tab Analisi) ─────────────
+// Il grafico è un iframe TradingView cross-origin: JS non può leggerne i pixel via canvas
+// (CORS taint). getDisplayMedia cattura invece il compositing reale dello schermo/tab a livello
+// del browser, bypassando quel limite — richiede un permesso nativo dell'utente ad ogni utilizzo.
+async function captureChartScreenshot(){
+  if(!navigator.mediaDevices?.getDisplayMedia){
+    throw new Error('Il browser non supporta la cattura schermo (es. Safari iOS). Prova da desktop.');
+  }
+  const stream=await navigator.mediaDevices.getDisplayMedia({video:{cursor:'never'},audio:false});
+  try{
+    const video=document.createElement('video');
+    video.srcObject=stream;
+    video.muted=true;
+    await video.play();
+    // Un paio di frame di margine per far stabilizzare il video prima della cattura
+    await new Promise(res=>requestAnimationFrame(res));
+    await new Promise(res=>requestAnimationFrame(res));
+    const canvas=document.createElement('canvas');
+    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+    canvas.getContext('2d').drawImage(video,0,0);
+    const dataUrl=canvas.toDataURL('image/jpeg',0.85);
+    return {dataUrl,b64:dataUrl.split(',')[1],type:'image/jpeg'};
+  }finally{
+    stream.getTracks().forEach(t=>t.stop());
+  }
+}
+
+document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=>{
+  const btn=document.getElementById('btn-chart-analyze');
+  const oldTxt=btn.textContent;btn.textContent='⏳...';btn.disabled=true;
+  try{
+    const img=await captureChartScreenshot();
+    setImg(img);
+    const asset=window.activeAsset||'XAU';
+    document.getElementById('minput').value=`Analizza questo grafico ${asset}/USD live: struttura, setup, confluenze, manipulation score 1-10, entry/SL/TP1/TP2 se c'è un setup valido.`;
+    switchTab('analysis');
+    await send();
+  }catch(e){
+    if(e.name!=='NotAllowedError') alert('Errore cattura schermo: '+e.message);
+  }
+  btn.textContent=oldTxt;btn.disabled=false;
+});

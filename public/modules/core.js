@@ -81,7 +81,13 @@ async function syncStateFromCloud() {
         const payload = JSON.parse(row.payload);
         if (row.doc_type === 'chat') { history = payload; S.set(K.chat, history); }
         if (row.doc_type === 'kb') { kb = payload; S.set(K.kb, kb); }
-        if (row.doc_type === 'mfx') { mfxSession = payload; S.set(K.mfx, mfxSession); }
+        if (row.doc_type === 'mfx') {
+          // Il payload cloud non contiene mai la password (mai inviata al nostro DB) —
+          // se il device ha già una password locale salvata per l'auto-relogin, la preserviamo.
+          const localPass = S.get(K.mfx, null)?.pass;
+          mfxSession = payload ? { ...payload, pass: payload.pass || localPass } : payload;
+          S.set(K.mfx, mfxSession);
+        }
         if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
         if (row.doc_type === 'mem') { tradeMemory = payload; S.set(K.mem, tradeMemory); }
       } catch(e) { console.error('Sync error parsing', row.doc_type, e); }

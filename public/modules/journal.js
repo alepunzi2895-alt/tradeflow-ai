@@ -168,13 +168,22 @@ async function coachSingleTrade(entry){
   }catch(e){return null;}
 }
 
-function saveAnalysisMemory(){
-  const aic=document.getElementById('aic');
-  if(!aic||!aic.textContent)return;
-  const entry={date:new Date().toISOString(),text:aic.textContent.slice(0,600)};
+// Salva un testo di analisi nella memoria operatività (usata come contesto nelle analisi successive,
+// vedi memCtx in buildSys()/btn-analyze/analyzeMfxAccount). Silenziosa: nessun alert, pensata per essere
+// chiamata in automatico oltre che dal bottone manuale "💾 Salva in memoria".
+function pushAnalysisMemory(text){
+  if(!text)return;
+  const entry={date:new Date().toISOString(),text:String(text).slice(0,600)};
   analysisMemory.entries=[entry,...(analysisMemory.entries||[])].slice(0,20);
   S.set(K.amem,analysisMemory);
   window.dbSaveUserData&&window.dbSaveUserData('amem',analysisMemory);
+  updateMemoryInfo();
+}
+
+function saveAnalysisMemory(){
+  const aic=document.getElementById('aic');
+  if(!aic||!aic.textContent)return;
+  pushAnalysisMemory(aic.textContent);
   alert('✅ Analisi salvata nella memoria operatività.');
 }
 
@@ -204,9 +213,12 @@ async function importMfxToJournal(accountId){
   const btn=document.querySelector(`[onclick="importMfxToJournal('${accountId}')"]`);
   if(btn){btn.textContent='⏳ Importazione...';btn.disabled=true;}
   try{
-    const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'history',session:mfxSession.session,accountId})});
-    const d=await r.json();
+    const d=await mfxApiCall('history',{accountId});
+    if(d.error){
+      alert('❌ '+(d.message||'Sessione MyFxBook scaduta. Riconnettiti dal tab MFX.'));
+      if(btn){btn.textContent='📥 Importa Trade al Journal';btn.disabled=false;}
+      return;
+    }
     if(!d.history?.length)throw new Error('Nessun trade trovato');
     // Debug: log raw history to understand structure
     const rawSample=d.history?.[0];
@@ -227,10 +239,19 @@ async function importMfxToJournal(accountId){
 
     console.log('MFX real trades after filter:', realTrades.length);
 
+    // L'import deve riflettere SOLO i trade di questo account MyFxBook: qualunque trade importato
+    // in precedenza (da questo o da un altro account collegato) viene svuotato prima di reimportare,
+    // altrimenti si accumulano doppioni/trade di account diversi nel Journal.
+    const staleCount=entries.filter(e=>e.source==='myfxbook').length;
+    entries=entries.filter(e=>e.source!=='myfxbook');
+
     if(!realTrades.length){
-      // Show all available data to debug
+      S.set(K.j,entries);
+      const wins=entries.filter(x=>x.result==='WIN').length;
+      P.winRate=entries.length?Math.round(wins/entries.length*100):null;S.set(K.p,P);
+      renderJournal();updateHdr();
       const types=[...new Set((d.history||[]).map(t=>String(t.action||t.type||'unknown')))];
-      alert('Nessun trade trovato. Tipi trovati: '+types.slice(0,10).join(', ')+'. Controlla la console per dettagli.');
+      alert(`Nessun trade reale trovato su questo account MyFxBook (tipi presenti: ${types.slice(0,10).join(', ')||'nessuno'}).`+(staleCount?` I ${staleCount} trade MyFxBook precedenti sono stati rimossi dal Journal.`:''));
       if(btn){btn.textContent='📥 Importa Trade al Journal';btn.disabled=false;}
       return;
     }
@@ -278,7 +299,8 @@ async function importMfxToJournal(accountId){
         emo:'Neutro',
         err:'Nessuno',
         notes:`${sym} ${lots}lot | E:${entryPrice} → C:${closePrice} | RR:${rr.toFixed(2)}`,
-        source:'myfxbook'
+        source:'myfxbook',
+        mfxAccountId:accountId
       });
       imported++;
     }
@@ -289,10 +311,15 @@ async function importMfxToJournal(accountId){
       // Update win rate
       const wins=entries.filter(x=>x.result==='WIN').length;
       if(entries.length>0){P.winRate=Math.round(wins/entries.length*100);S.set(K.p,P);}
-      alert('✅ '+imported+' trade importati nel Journal da MyFxBook!');
+      alert('✅ '+imported+' trade importati nel Journal da MyFxBook!'+(staleCount?` (${staleCount} vecchi trade MyFxBook sostituiti)`:''));
       switchTab('journal');
       renderJournal();
     }else{
+      // Anche a 0 nuovi importati, i vecchi trade MyFxBook rimossi sopra vanno comunque persistiti
+      S.set(K.j,entries);
+      const wins=entries.filter(x=>x.result==='WIN').length;
+      P.winRate=entries.length?Math.round(wins/entries.length*100):null;S.set(K.p,P);
+      renderJournal();updateHdr();
       alert('Tutti i '+realTrades.length+' trade sono già presenti nel Journal (controllo per data+direzione+prezzo).');
     }
   }catch(e){alert('Errore importazione: '+e.message);}
@@ -306,9 +333,9 @@ document.getElementById('btn-analyze').onclick=async()=>{
     const mem=analysisMemory.entries?.slice(0,3).map(e=>`[${e.date?.slice(0,10)}] ${e.text}`).join('\n')||'';
     const memCtx=mem?`\nMEMORIA ANALISI PRECEDENTE:\n${mem}`:'';
     const sum=entries.slice(0,25).map(e=>`${e.date}|${e.dir}|E:${e.entry} SL:${e.sl}|${e.result||'?'}|${e.pnl}$|${e.emo}|${e.err}`).join('\n');
-    const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nStatistiche, aree di sviluppo (non errori), 3 azioni concrete, Score Disciplina X/10.`}],
-      `Sei TradeFlow AI Coach. Italiano. Tono costruttivo. Aree noto sviluppo: ${P.errors.join(',')}.`);
-    showAiResult(reply);autoLearn(reply);
+    const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nUsa SOLO i numeri riportati sopra. Statistiche, aree di sviluppo (non errori) con evidenza numerica, 3 azioni concrete e specifiche da applicare da subito, Score Disciplina X/10 motivato.`}],
+      `Sei TradeFlow AI Coach. Italiano. Tono costruttivo ma diretto. Aree noto sviluppo: ${P.errors.join(',')}.`);
+    showAiResult(reply);autoLearn(reply);pushAnalysisMemory(reply);
   }catch(e){alert('Errore: '+e.message);}
   btn.textContent='🧠 Analisi';btn.disabled=false;
 };

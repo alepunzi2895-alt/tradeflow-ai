@@ -1,3 +1,38 @@
+// ── STRATEGIE BLOCCATE ─────────────────────────────────────────────────────────
+// Sincronizzato a mano con data/hard_blocks.json + S20_ENABLED in mt5-bot.py (nessuna API
+// espone questi dati al frontend, vedi directives/06_known_issues.md 2026-09-17). Aggiornare
+// qui quando cambia lo stato di blocco lato bot.
+const BLOCKED_INFO = {
+  S00_MFKK: { since:'2026-07-16', reason:'WR live 13.3% contro un baseline atteso del 49.4% — il segnale funzionava nel backtest storico ma dal vivo perdeva quasi 4 trade su 5. Confermato morto dallo sprint di re-ottimizzazione del 2026-09-02 (holdout PF 0.47).' },
+  S09_MFKK_SCALPING: { since:'2026-07-16', reason:'WR live 11.8% contro un baseline atteso del 36.0%, PF live 0.10. Nessuna combinazione di parametri testata nello sprint 2026-09-02 è tornata sopra un PF full-period di ~0.75.' },
+  S18_RANGE_REVERSAL: { since:'2026-09-01', reason:'WR live 14.3% (6 stop-loss su 7 trade), PF 0.07. Ri-testata su ogni finestra il 2026-09-01: negativa ovunque (M30 standalone PF 0.63, H4 PF 0.20).' },
+  S10_OB_FVG_SCALP: { since:'2026-09-17', reason:'Re-backtest a 24 mesi: PF 0.83 su appena 22 trade in due anni (frequenza troppo bassa per fidarsi). In più non spara mai nei regimi di mercato per cui è configurata (RANGING/VOLATILE) — opera sempre fuori dalla sua condizione ideale.' },
+  S16_GOLDEN_SQUEEZE: { since:'2026-09-17', reason:'Storicamente solida (PF 1.43 sui 24 mesi), ma il periodo più recente (ultimo 20%, 43 trade) è sceso a PF 0.69 — lo stesso segnale di decadimento che aveva preceduto il blocco di S00 e S18. Bloccata per prudenza in attesa di conferma dal WR live reale.' },
+  S20_FIB_CONFLUENCE: { since:'2026-09-17', reason:'Il periodo più recente ha un PF di 0.87, sotto la soglia (1.2) già decisa in anticipo per questa strategia quando fu messa in produzione a lotto ridotto.' },
+};
+const BLOCKED_STRATEGIES = Object.keys(BLOCKED_INFO);
+
+function renderBlockedSheet(){
+  const body = document.getElementById('blockedsheet-body');
+  if(!body) return;
+  body.innerHTML = BLOCKED_STRATEGIES.map(id=>{
+    const name = (typeof SE!=='undefined' && SE.strategies?.[id]?.label) || id;
+    const info = BLOCKED_INFO[id];
+    return `<div style="background:var(--card);border:1px solid #ff475722;border-radius:10px;padding:12px 13px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="font-size:12.5px;font-weight:700;color:var(--text)">${name}</span>
+        <span style="font-size:9.5px;color:var(--dim)">dal ${info.since}</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--dim);line-height:1.55">${info.reason}</div>
+    </div>`;
+  }).join('');
+}
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('[data-action="open-blocked"]')) return;
+  renderBlockedSheet();
+  openOvl('blockedsheet');
+});
+
 // ── FILTRO STORICO TRADE — listener delegato ──────────────────────────────────
 // I bottoni OGGI/7G/30G/TUTTO/CUSTOM vengono ricreati da zero ad ogni rebuild di
 // seRender() (ogni 1s): un onclick inline sul bottone può perdere il click se il
@@ -397,13 +432,9 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     'UNKNOWN':    {strategy:'S18_RANGE_REVERSAL',  others:['S10_OB_FVG_SCALP','S16_GOLDEN_SQUEEZE'], tf:'M30/H4'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
-  // Strategie disattivate a livello di esecuzione live (data/hard_blocks.json + S20_ENABLED
-  // in mt5-bot.py). PLAYBOOK_UI sopra è una lista statica per-regime che non consulta lo
-  // stato di blocco reale (mismatch noto, vedi directives/06_known_issues.md) — qui la card
-  // viene corretta per non mostrare "✓ ATTIVA" su una strategia bloccata. Aggiornare a mano
-  // quando cambia data/hard_blocks.json o un flag *_ENABLED lato bot.
-  const BLOCKED_STRATEGIES = ['S00_MFKK','S09_MFKK_SCALPING','S10_OB_FVG_SCALP',
-                              'S16_GOLDEN_SQUEEZE','S18_RANGE_REVERSAL','S20_FIB_CONFLUENCE'];
+  // BLOCKED_STRATEGIES/BLOCKED_INFO sono definite a livello di modulo (inizio file) — qui si
+  // usa solo per correggere "isActive": PLAYBOOK_UI sopra è statico per-regime e non consulta
+  // lo stato di blocco reale (mismatch noto, vedi directives/06_known_issues.md).
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];
   const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
@@ -500,6 +531,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <span>STRATEGIE DEL SISTEMA</span>
     <span style="flex:1;height:1px;background:var(--border)"></span>
   </div>
+  <button data-action="open-blocked" style="width:100%;margin-bottom:10px;background:rgba(255,71,87,0.08);border:1px solid #ff475733;border-radius:8px;padding:8px 10px;color:#ff8a80;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">⛔ Strategie bloccate (${BLOCKED_STRATEGIES.length})</button>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
       const isBlocked   = BLOCKED_STRATEGIES.includes(id);

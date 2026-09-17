@@ -1226,17 +1226,26 @@ async function captureChartScreenshot(){
 }
 
 document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=>{
+  console.log('[chart-analyze] click');
   const btn=document.getElementById('btn-chart-analyze');
-  const oldTxt=btn.textContent;btn.textContent='⏳...';btn.disabled=true;
+  const oldTxt=btn.textContent;btn.textContent='⏳ Scegli la finestra/tab da condividere...';btn.disabled=true;
   try{
     const img=await captureChartScreenshot();
+    console.log('[chart-analyze] screenshot catturato, dimensione b64:', img?.b64?.length);
     setImg(img);
     const asset=window.activeAsset||'XAU';
     document.getElementById('minput').value=`Analizza questo grafico ${asset}/USD live: struttura, setup, confluenze, manipulation score 1-10, entry/SL/TP1/TP2 se c'è un setup valido.`;
     switchTab('analysis');
     await send();
   }catch(e){
-    if(e.name!=='NotAllowedError') alert('Errore cattura schermo: '+e.message);
+    console.error('[chart-analyze] errore:', e.name, e.message);
+    // NotAllowedError scatta sia se l'utente annulla il popup di condivisione, sia se il permesso
+    // è bloccato dal browser — mostriamo comunque un feedback minimo, mai il silenzio totale.
+    if(e.name==='NotAllowedError'){
+      console.log('[chart-analyze] permesso di condivisione schermo negato o popup annullato dall\'utente.');
+    }else{
+      alert('Errore cattura schermo: '+e.message);
+    }
   }
   btn.textContent=oldTxt;btn.disabled=false;
 });

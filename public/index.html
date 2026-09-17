@@ -287,8 +287,9 @@
 
         <!-- TradingView Chart Widget -->
         <div id="tv-chart-wrapper" style="margin-bottom:20px; border-radius:12px; overflow:hidden; border:1px solid var(--border)">
-          <div style="display:flex;justify-content:flex-end;padding:8px 8px 0;background:var(--card)">
-            <button id="btn-chart-analyze" style="background:linear-gradient(135deg,var(--g),var(--g2));border:none;border-radius:7px;padding:7px 12px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📷 Analizza Grafico</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card)">
+            <span style="font-size:11px;color:var(--dim);font-weight:600">📊 Grafico Live</span>
+            <button id="btn-chart-analyze" style="background:linear-gradient(135deg,var(--g),var(--g2));border:none;border-radius:7px;padding:7px 12px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">📷 Analizza Grafico</button>
           </div>
           <div class="tradingview-widget-container" style="height:calc(100vh - 140px); min-height:500px">
             <div id="tv-chart-widget" style="height:100%"></div>

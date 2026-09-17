@@ -91,7 +91,11 @@ async function mfxApiCall(action, extra={}, _retried=false){
 }
 
 function mfxShowExpired(wrap, msg){
-  wrap.innerHTML=`<div style="color:#ff8a80;font-size:12px;background:#160c0c;border:1px solid #ff475722;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${msg||'Sessione MyFxBook scaduta.'}</div>
+  const hasSavedPass=!!mfxSession?.pass;
+  const hint=hasSavedPass
+    ? 'Il rinnovo automatico ha provato e non è riuscito (password salvata probabilmente cambiata su MyFxBook).'
+    : 'Questa connessione risale a prima del rinnovo automatico: riconnettiti una volta sola, da qui in poi le scadenze si risolveranno da sole.';
+  wrap.innerHTML=`<div style="color:#ff8a80;font-size:12px;background:#160c0c;border:1px solid #ff475722;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${msg||'Sessione MyFxBook scaduta.'}<br><span style="color:var(--dim);font-weight:400">${hint}</span></div>
     <button onclick="mfxLogout()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--g);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Riconnetti (reinserisci email/password)</button>`;
 }
 

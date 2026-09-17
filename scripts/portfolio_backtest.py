@@ -115,6 +115,39 @@ def run_isolated(active_only=False):
     return out
 
 
+def evaluate_one(strategy_id):
+    """Ri-backtesta UNA sola strategia (qualunque, condivisa o isolata) — usato dal worker
+    on-demand (scripts/backtest_worker.py) per il bottone 'Lancia backtest' della dashboard.
+    Ritorna lo stesso shape di run_shared_pool()/run_isolated() per quella singola chiave,
+    più l'equity curve pronta per il frontend. Nessuna logica duplicata: stessa evaluate()
+    per-strategia usata dal run completo."""
+    if strategy_id in SHARED_POOL:
+        tf, fn = SHARED_POOL[strategy_id]
+        ev = OH.evaluate(strategy_id, fn, tf=tf)
+    elif strategy_id == 'S20_FIB_CONFLUENCE':
+        tf = 'M5'
+        ev = OH.evaluate(strategy_id, SIG.signal_fib_confluence, tf=tf)
+    elif strategy_id == 'S31_LAYOUT_SMART':
+        import layout_smart as LS
+        tf = 'H1'
+        ev = LS.evaluate_ls_frozen(tf=tf)
+    elif strategy_id == 'S30_DOW_DIP':
+        import us30_harness as U30
+        from us30_strategies import dow_dip_d1, REGISTRY as U30_REGISTRY
+        spec = next(s for s in U30_REGISTRY if s['name'] == 'dow_dip_d1')
+        tf = 'H4'
+        ev = U30.evaluate(strategy_id, tf, dow_dip_d1, **spec['params'])
+    else:
+        raise ValueError(f"strategy_id sconosciuto: {strategy_id}")
+
+    return {
+        'strategy_id': strategy_id, 'tf': tf,
+        'full': ev['full'], 'holdout': ev['holdout'], 'holdout_start': ev['holdout_start'],
+        'n_trades': len(ev['trades']),
+        'equity_curve': OH.SE2.equity_curve(ev['trades']),
+    }
+
+
 # ── COMBINED PORTFOLIO SIMULATION ────────────────────────────────────────────
 def simulate_shared_pool_concurrency(shared):
     """Simula la reale contesa per MAX_OPEN_ORDERS tra i trade del pool condiviso:
@@ -224,7 +257,14 @@ def main():
     ap.add_argument('--active-only', action='store_true',
                      help='Salta le strategie disattivate (DISABLED_NOW) — riflette il roster live attuale')
     ap.add_argument('--out', default=None)
+    ap.add_argument('--push', action='store_true',
+                     help='POSTa il report completo (full + solo attive derivate dallo stesso run) su Turso via '
+                          '/api/db backtest_report_push, per il pannello Report Backtest nel tab Strategie. '
+                          'Incompatibile con --active-only (richiede il run completo per derivare entrambe le viste).')
     args = ap.parse_args()
+    if args.push and args.active_only:
+        print("--push richiede il run completo: rimuovi --active-only (la vista attiva viene derivata comunque).")
+        sys.exit(1)
     out_default = 'portfolio_active_2026-09-17.json' if args.active_only else 'portfolio_2026-09-17.json'
     out_path = args.out or os.path.join(HERE, '..', 'backtests', 'results', out_default)
 
@@ -293,10 +333,45 @@ def main():
         'regime_validation': regime_report,
         'equity_curves': equity_curves,
     }
+
+    # ── Vista "solo attive" derivata dallo STESSO run (no re-backtest) ──────────
+    # Solo quando si è girato il roster completo: filtra i trade delle strategie in
+    # DISABLED_NOW dai medesimi risultati già calcolati sopra, invece di rilanciare
+    # opt_harness.evaluate() una seconda volta (--active-only fa quello, per un check
+    # rapido isolato; qui serve avere ENTRAMBE le viste da un solo run per il pannello
+    # Report Backtest nel tab Strategie, vedi public/modules/backtest-report.js).
+    if not args.active_only:
+        shared_active = {k: v for k, v in shared.items() if k not in DISABLED_NOW}
+        isolated_active = {k: v for k, v in isolated.items() if k not in DISABLED_NOW}
+        admitted_a, blocked_a = simulate_shared_pool_concurrency(shared_active)
+        all_combined_a = list(admitted_a)
+        for sid, data in isolated_active.items():
+            for t in data['ev']['trades']:
+                tt = dict(t); tt['strategy'] = sid
+                all_combined_a.append(tt)
+        cs_active = combined_stats(all_combined_a)
+        output['disabled'] = sorted(DISABLED_NOW)
+        output['concurrency_active'] = {'n_admitted': len(admitted_a), 'n_blocked': len(blocked_a)}
+        output['active_combined_stats'] = cs_active
+        if cs_active:
+            print("\n" + "=" * 70)
+            print("PERFORMANCE SOLO ATTIVE (derivata, stesso run)")
+            print("=" * 70)
+            print(f"  Trade totali : {cs_active['n_trades']}  WR {cs_active['wr']}%  PF {cs_active['pf']}")
+            print(f"  P&L totale   : {cs_active['total_pnl']:+.1f}   Max DD: {cs_active['max_dd']:.1f}")
+
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2, default=str)
     print(f"\nSalvato: {out_path}")
+
+    if args.push:
+        from vercel_push import push
+        try:
+            push('backtest_report_push', {'report': output}, timeout=25)
+            print("Pushato su Turso (backtest_report_push).")
+        except Exception as e:
+            print(f"Push a Turso fallito (non bloccante, il file locale è comunque salvato): {e}")
 
 
 if __name__ == '__main__':

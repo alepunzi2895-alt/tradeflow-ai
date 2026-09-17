@@ -224,6 +224,34 @@ def run_backtests(tfs: list, dry_run: bool = False) -> dict:
     return results
 
 
+def run_portfolio_report(dry_run: bool = False) -> bool:
+    """Re-backtest completo del roster + push del report su Turso (scripts/portfolio_backtest.py
+    --push), per il pannello 'Report Backtest' nel tab Strategie della dashboard (2026-09-17).
+    ~3 min (S00 H1 1266 trade + S20 M5 99999 candele sono i run più pesanti). Non bloccante:
+    un fallimento qui non deve far fallire il resto della manutenzione giornaliera."""
+    script = os.path.join(_SCRIPT_DIR, 'portfolio_backtest.py')
+    if dry_run:
+        log.info("[portfolio] dry-run — salto il push")
+        return True
+    try:
+        proc = subprocess.run(
+            [sys.executable, '-X', 'utf8', script, '--push'],
+            cwd=_ROOT_DIR, capture_output=True, text=True,
+            encoding='utf-8', errors='replace', timeout=900,
+        )
+        if proc.returncode == 0:
+            log.info("[portfolio] report pushato su Turso OK")
+            return True
+        log.warning(f"[portfolio] ERRORE (returncode={proc.returncode}):\n{proc.stderr[-500:]}")
+        return False
+    except subprocess.TimeoutExpired:
+        log.warning("[portfolio] TIMEOUT (>900s)")
+        return False
+    except Exception as e:
+        log.error(f"[portfolio] eccezione: {e}")
+        return False
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 3 — Parse risultati backtest
 # ─────────────────────────────────────────────────────────────────────────────
@@ -852,6 +880,8 @@ def main():
     ap.add_argument('--skip-backtest', action='store_true', help='Salta backtest')
     ap.add_argument('--skip-ai-review', action='store_true',
                     help='Salta la diagnosi AI (Step 5) — nessuna chiamata API')
+    ap.add_argument('--skip-portfolio-report', action='store_true',
+                    help='Salta il re-backtest completo + push dashboard (scripts/portfolio_backtest.py --push)')
     ap.add_argument('--tfs', type=str, default='M5,M15,M30,H1,H4',
                     help='TimeFrame da processare (default: M5,M15,M30,H1,H4)')
     ap.add_argument('--dry-run', action='store_true', help='Nessuna scrittura su disco')
@@ -897,6 +927,13 @@ def main():
     else:
         log.info("[2/6] Backtest adattivo per TF...")
         bt_res = run_backtests(tfs, dry_run=dry_run)
+
+    # Step 2b — Report portfolio completo (roster + combinata + regime) → dashboard
+    if args.skip_portfolio_report:
+        log.info("[2b] Report portfolio saltato")
+    else:
+        log.info("[2b] Report portfolio completo (~3 min) + push dashboard...")
+        run_portfolio_report(dry_run=dry_run)
 
     # Step 3 — Parse + Drift
     log.info("[3/6] Parsing risultati + drift analysis...")

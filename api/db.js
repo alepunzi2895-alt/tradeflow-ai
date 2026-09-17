@@ -326,6 +326,140 @@ async function stratLiveGet(db, body) {
   return { ok: true, data: JSON.parse(r.rows[0].payload), updated_at: r.rows[0].updated_at };
 }
 
+// ── BACKTEST REPORT (periodico, giornaliero da daily_maintenance.py) ────────
+// scripts/portfolio_backtest.py gira una volta al giorno e POSTa qui l'intero report
+// (equity curve, full/holdout per strategia, validazione regime) — stessa forma dei file
+// backtests/results/portfolio*.json. La UI lo legge senza auth per il pannello "Report
+// Backtest" nel tab Strategie (vedi public/modules/backtest-report.js).
+async function backtestReportPush(db, body) {
+  const { secret, report } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  const payload = JSON.stringify({ ...(report || {}), synced_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('backtest-report', 'backtest-report', 'backtest_report', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true };
+}
+
+async function backtestReportGet(db) {
+  const r = await db.execute({ sql: "SELECT payload, updated_at FROM user_data WHERE user_id='backtest-report' AND doc_type='backtest_report'", args: [] });
+  if (!r.rows.length) return { ok: true, data: null };
+  return { ok: true, data: JSON.parse(r.rows[0].payload), updated_at: r.rows[0].updated_at };
+}
+
+// ── BACKTEST ON-DEMAND (coda comando verso scripts/backtest_worker.py) ──────
+// Stesso pattern one-slot di mt5_command_push/get: la UI mette in coda UNA richiesta di
+// backtest per una strategia, il worker (in esecuzione sul PC dell'utente, separato dal
+// bot live per non rallentarlo) la consuma, gira il backtest e posta il risultato tramite
+// backtest_result_push, keyed per strategy_id così più richieste non si sovrascrivono.
+async function backtestCmdPush(db, body) {
+  const { strategy_id } = body;
+  if (!strategy_id) throw new Error("strategy_id required");
+  const payload = JSON.stringify({ strategy_id, requested_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES ('backtest-cmd', 'backtest-worker', 'backtest_cmd', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [payload],
+  });
+  return { ok: true };
+}
+
+async function backtestCmdGet(db, body) {
+  const { secret } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  const result = await db.execute({ sql: "SELECT payload FROM user_data WHERE user_id='backtest-worker' AND doc_type='backtest_cmd'", args: [] });
+  if (!result.rows.length || !result.rows[0].payload) return { ok: true, command: null };
+  const command = JSON.parse(result.rows[0].payload);
+  await db.execute({ sql: "UPDATE user_data SET payload=NULL WHERE user_id='backtest-worker' AND doc_type='backtest_cmd'", args: [] });
+  return { ok: true, command };
+}
+
+async function backtestResultPush(db, body) {
+  const { secret, strategy_id, result } = body;
+  const expected = process.env.MT5_BOT_SECRET || "tradeflow-mt5-secret";
+  if (secret !== expected) throw new Error("Unauthorized");
+  if (!strategy_id) throw new Error("strategy_id required");
+  const uid = `backtest-result-${strategy_id}`;
+  const payload = JSON.stringify({ ...(result || {}), strategy_id, synced_at: new Date().toISOString() });
+  await db.execute({
+    sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at)
+          VALUES (?, ?, 'backtest_result', ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, doc_type) DO UPDATE SET payload=excluded.payload, updated_at=CURRENT_TIMESTAMP`,
+    args: [uid, uid, payload],
+  });
+  return { ok: true };
+}
+
+async function backtestResultGet(db, body) {
+  const { strategy_id } = body;
+  if (!strategy_id) throw new Error("strategy_id required");
+  const uid = `backtest-result-${strategy_id}`;
+  const r = await db.execute({ sql: "SELECT payload, updated_at FROM user_data WHERE user_id=? AND doc_type='backtest_result'", args: [uid] });
+  if (!r.rows.length) return { ok: true, data: null };
+  return { ok: true, data: JSON.parse(r.rows[0].payload), updated_at: r.rows[0].updated_at };
+}
+
+// ── HARD BLOCKS (toggle attiva/blocca dalla UI → commit vero su GitHub) ─────
+// data/hard_blocks.json resta la fonte di verità git-tracked (letta da
+// strategy_selector.is_hard_blocked(), invariato) — qui la UI può proporre un commit
+// invece di richiedere una modifica manuale. Richiede login (JWT) perché tocca
+// trading live con soldi veri; il bot legge comunque il file solo al prossimo
+// git pull + restart, stesso comportamento di una modifica fatta a mano.
+async function verifyAuthToken(token) {
+  if (!token) throw new Error("Login richiesto");
+  const jwt = await import("jsonwebtoken");
+  const _jwt = jwt.default || jwt;
+  try {
+    return _jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    throw new Error("Sessione non valida o scaduta — rifai il login");
+  }
+}
+
+const HARD_BLOCKS_FILE = "data/hard_blocks.json";
+
+async function hardBlocksLoad() {
+  const r = await fetchT(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${HARD_BLOCKS_FILE}`, { headers: { "Authorization": `Bearer ${GITHUB_TOKEN}`, "Accept": "application/vnd.github+json", "User-Agent": "TradeFlowHub" } });
+  const d = await r.json();
+  const content = JSON.parse(Buffer.from(d.content, "base64").toString("utf-8"));
+  return { ok: true, blocked: content.blocked || {}, sha: d.sha };
+}
+
+async function hardBlocksToggle(db, body) {
+  const { token, strategy_id, action, reason } = body;
+  const user = await verifyAuthToken(token);
+  if (!strategy_id) throw new Error("strategy_id required");
+  if (!["block", "unblock"].includes(action)) throw new Error("action deve essere 'block' o 'unblock'");
+
+  const current = await hardBlocksLoad();
+  const blocked = { ...current.blocked };
+  if (action === "block") {
+    if (!reason) throw new Error("reason required per bloccare una strategia");
+    blocked[strategy_id] = { since: new Date().toISOString().slice(0, 10), reason: `${reason} (bloccata dalla dashboard da ${user.email || user.id})` };
+  } else {
+    delete blocked[strategy_id];
+  }
+
+  const content = {
+    _comment: "Strategie disabilitate a livello di ESECUZIONE LIVE. File git-tracked, editabile a mano, da scripts/reactivation_check.py o dalla dashboard (toggle autenticato). Letto da strategy_selector.is_hard_blocked() (primo check in mt5-bot.quality_gate). NON viene mai toccato da PerformanceTracker.",
+    blocked,
+  };
+  const message = `${action === "block" ? "Blocca" : "Sblocca"} ${strategy_id} (dashboard, ${user.email || user.id})`;
+  const r = await fetchT(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${HARD_BLOCKS_FILE}`, {
+    method: "PUT",
+    headers: { "Authorization": `Bearer ${GITHUB_TOKEN}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "TradeFlowHub" },
+    body: JSON.stringify({ message, content: Buffer.from(JSON.stringify(content, null, 2)).toString("base64"), sha: current.sha }),
+  });
+  if (!r.ok) throw new Error("Scrittura su GitHub fallita — riprova (probabile conflitto di versione, ricarica e riprova)");
+  return { ok: true, blocked };
+}
+
 async function adminReset(db, body) {
   const { email, password } = body;
   if (!email || !password) throw new Error("email and pass required");
@@ -352,6 +486,14 @@ const ACTIONS = {
   s20_paper_get:    (db)       => s20PaperGet(db),
   strat_live_push:  (db, body) => stratLivePush(db, body),
   strat_live_get:   (db, body) => stratLiveGet(db, body),
+  backtest_report_push: (db, body) => backtestReportPush(db, body),
+  backtest_report_get:  (db)       => backtestReportGet(db),
+  backtest_cmd_push:    (db, body) => backtestCmdPush(db, body),
+  backtest_cmd_get:     (db, body) => backtestCmdGet(db, body),
+  backtest_result_push: (db, body) => backtestResultPush(db, body),
+  backtest_result_get:  (db, body) => backtestResultGet(db, body),
+  hard_blocks_load:     ()         => hardBlocksLoad(),
+  hard_blocks_toggle:   (db, body) => hardBlocksToggle(db, body),
 };
 
 export default async function handler(req, res) {

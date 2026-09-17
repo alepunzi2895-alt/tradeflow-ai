@@ -86,6 +86,27 @@ live (profittevoli sia su full che su holdout). S09_MFKK_SCALPING era **già** h
 2026-07-16 — nessuna azione necessaria (corretto un errore di lettura del file fatto a caldo
 durante la discussione: inizialmente si era detto per errore che non fosse ancora bloccata).
 
+**🆕 Verifica 2026-09-17 (stesso giorno) — la disattivazione migliora davvero la performance
+combinata**: rilanciato `portfolio_backtest.py --active-only` (nuovo flag, salta le strategie
+in `DISABLED_NOW` invece di backtestarle e scartarle — molto più veloce, salta anche i due
+run più costosi S00 H1/S20 M5) per confrontare roster completo vs solo attive (S17+S31+S30):
+
+| Metrica | Roster completo (9) | Solo attive (3) | Δ |
+|---|---|---|---|
+| Trade ammessi | 1280 | 281 | -78% |
+| Win Rate | 39.2% | **60.1%** | +21pp |
+| Profit Factor | 1.249 | **1.611** | +0.36 |
+| P&L totale (24m) | +6328.6 | **+9452.3** | +3123.7 |
+| Max Drawdown | 1560.9 | **1408.4** | -152.5 |
+
+Migliora su ogni metrica, non solo sul P&L: **meno trade ma di qualità nettamente migliore**.
+Il salto di P&L (non solo la sottrazione dei trade in perdita) viene soprattutto da S17, che
+ora vede ammessi 98/102 trade invece di 85/102 (prima ne perdeva alcuni per contesa
+`MAX_OPEN_ORDERS` con le strategie ora disattivate). Risultato completo:
+`backtests/results/portfolio_active_2026-09-17.json`. Dashboard aggiornata con toggle
+"solo attive" vs "roster completo (storico)" e pannello di confronto:
+https://claude.ai/artifact/4EpGQ5XJcZJKG2rvPADWx7
+
 **Serve azione manuale**: `S20_ENABLED=False` è una costante Python — richiede **pull + restart
 del bot** sulla VPS/macchina che lo esegue per avere effetto (come sempre per modifiche a
 `mt5-bot.py`). Il blocco di S10/S16 via `hard_blocks.json` invece è già letto ad ogni ciclo da

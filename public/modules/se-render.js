@@ -397,6 +397,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     'UNKNOWN':    {strategy:'S18_RANGE_REVERSAL',  others:['S10_OB_FVG_SCALP','S16_GOLDEN_SQUEEZE'], tf:'M30/H4'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
+  // Strategie disattivate a livello di esecuzione live (data/hard_blocks.json + S20_ENABLED
+  // in mt5-bot.py). PLAYBOOK_UI sopra è una lista statica per-regime che non consulta lo
+  // stato di blocco reale (mismatch noto, vedi directives/06_known_issues.md) — qui la card
+  // viene corretta per non mostrare "✓ ATTIVA" su una strategia bloccata. Aggiornare a mano
+  // quando cambia data/hard_blocks.json o un flag *_ENABLED lato bot.
+  const BLOCKED_STRATEGIES = ['S00_MFKK','S09_MFKK_SCALPING','S10_OB_FVG_SCALP',
+                              'S16_GOLDEN_SQUEEZE','S18_RANGE_REVERSAL','S20_FIB_CONFLUENCE'];
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];
   const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
@@ -495,7 +502,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
-      const isActive    = activeList.includes(id);
+      const isBlocked   = BLOCKED_STRATEGIES.includes(id);
+      const isActive    = activeList.includes(id) && !isBlocked;
       const isPrimary   = isActive;   // tutte le attive ottengono badge ✓ ATTIVA
       const isSecondary = false;      // rimosso: non più gerarchia primaria/secondaria
       const st = s.stats || {};
@@ -548,11 +556,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       const isSignalOnly = !!s.signalOnly;   // S32/S33/S34: solo score in dashboard, il bot non apre ordini
       const isRosterLive = !s.liveTest && !s.signalOnly && !!s.rosterLive;   // S31: strategia reale nel roster, mostra P&L live isolato
       return `
-      <div style="background:var(--bg2); border:1px solid ${isLT?'#c8a96e55':isSignalOnly?'#5a4a7a55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden${isSignalOnly?';opacity:.82':''}">
-        ${isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
+      <div style="background:var(--bg2); border:1px solid ${isBlocked?'#ff475755':isLT?'#c8a96e55':isSignalOnly?'#5a4a7a55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden${isSignalOnly||isBlocked?';opacity:.7':''}">
+        ${isBlocked ? `<div style="position:absolute;top:0;right:0;background:#ff4757;color:#fff;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">⛔ BLOCCATA</div>`
+        : isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
         ${isLT ? `<div style="position:absolute;top:0;right:0;background:#c8a96e;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🧪 LIVE ${s.liveTestLot||'0.03'}</div>` : ''}
         ${isRosterLive ? `<div style="position:absolute;top:0;right:0;background:var(--green);color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">📡 LIVE · ROSTER</div>` : ''}
-        ${isSignalOnly ? `<div style="position:absolute;top:0;right:0;background:#7a5cba;color:#fff;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🔬 SOLO SCORE</div>` : ''}
+        ${!isBlocked && isSignalOnly ? `<div style="position:absolute;top:0;right:0;background:#7a5cba;color:#fff;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🔬 SOLO SCORE</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <span style="font-size:11px;font-weight:700;color:${isLT?'#c8a96e':isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:5px;align-items:center;font-size:10px">

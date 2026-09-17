@@ -44,6 +44,12 @@ from strategy_selector import STRATEGIES_CONFIG, detect_regime_extended, _REGIME
 
 MAX_OPEN_ORDERS = 2  # scripts/mt5-bot.py
 
+# Stato live al 2026-09-17 dopo il giro di disattivazioni (data/hard_blocks.json +
+# S20_ENABLED=False in mt5-bot.py) — usato solo da --active-only, non tocca is_hard_blocked()
+# reale (fonte di verità resta data/hard_blocks.json / mt5-bot.py).
+DISABLED_NOW = {'S00_MFKK', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP',
+                'S16_GOLDEN_SQUEEZE', 'S18_RANGE_REVERSAL', 'S20_FIB_CONFLUENCE'}
+
 # Strategia → (tf live, funzione segnale) per il pool condiviso XAU (StrategySelector,
 # soggetto a MAX_OPEN_ORDERS). TF = best_tf storico in STRATEGIES_CONFIG.
 SHARED_POOL = {
@@ -60,10 +66,14 @@ def _cfg_by_id(sid):
     return next(c for c in STRATEGIES_CONFIG if c['id'] == sid)
 
 
-def run_shared_pool():
-    """Ri-backtesta i 6 membri del pool condiviso XAU al loro TF live."""
+def run_shared_pool(active_only=False):
+    """Ri-backtesta i membri del pool condiviso XAU al loro TF live.
+    active_only=True salta le strategie disattivate (DISABLED_NOW) invece di backtestarle
+    e scartarle dopo — più veloce e riflette lo stato live attuale."""
     out = {}
     for sid, (tf, fn) in SHARED_POOL.items():
+        if active_only and sid in DISABLED_NOW:
+            continue
         print(f"[shared] {sid} @ {tf} ...", flush=True)
         ev = OH.evaluate(sid, fn, tf=tf)
         out[sid] = {'tf': tf, 'ev': ev}
@@ -72,16 +82,17 @@ def run_shared_pool():
     return out
 
 
-def run_isolated():
-    """Ri-backtesta i 3 blocchi isolati (non contano in MAX_OPEN_ORDERS)."""
+def run_isolated(active_only=False):
+    """Ri-backtesta i blocchi isolati (non contano in MAX_OPEN_ORDERS)."""
     out = {}
 
     # S20_FIB_CONFLUENCE — via run_one esistente (branch dedicato sim_fib_confluence)
-    print("[isolated] S20_FIB_CONFLUENCE @ M5 ...", flush=True)
-    ev20 = OH.evaluate('S20_FIB_CONFLUENCE', SIG.signal_fib_confluence, tf='M5')
-    out['S20_FIB_CONFLUENCE'] = {'tf': 'M5', 'ev': ev20}
-    print(f"  full   : {OH.fmt(ev20['full'])}")
-    print(f"  HOLDOUT: {OH.fmt(ev20['holdout'])}  (da {ev20['holdout_start']})")
+    if not (active_only and 'S20_FIB_CONFLUENCE' in DISABLED_NOW):
+        print("[isolated] S20_FIB_CONFLUENCE @ M5 ...", flush=True)
+        ev20 = OH.evaluate('S20_FIB_CONFLUENCE', SIG.signal_fib_confluence, tf='M5')
+        out['S20_FIB_CONFLUENCE'] = {'tf': 'M5', 'ev': ev20}
+        print(f"  full   : {OH.fmt(ev20['full'])}")
+        print(f"  HOLDOUT: {OH.fmt(ev20['holdout'])}  (da {ev20['holdout_start']})")
 
     # S31_LAYOUT_SMART — via layout_smart.evaluate_ls_frozen (config produzione)
     print("[isolated] S31_LAYOUT_SMART @ H1 ...", flush=True)
@@ -210,16 +221,19 @@ def validate_regime_matching(shared):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--out', default=os.path.join(HERE, '..', 'backtests', 'results',
-                                                   'portfolio_2026-09-17.json'))
+    ap.add_argument('--active-only', action='store_true',
+                     help='Salta le strategie disattivate (DISABLED_NOW) — riflette il roster live attuale')
+    ap.add_argument('--out', default=None)
     args = ap.parse_args()
+    out_default = 'portfolio_active_2026-09-17.json' if args.active_only else 'portfolio_2026-09-17.json'
+    out_path = args.out or os.path.join(HERE, '..', 'backtests', 'results', out_default)
 
     print("=" * 70)
-    print("RE-BACKTEST COMPLETO ROSTER LIVE — 2026-09-17")
+    print("RE-BACKTEST ROSTER LIVE — 2026-09-17" + (" (SOLO STRATEGIE ATTIVE)" if args.active_only else ""))
     print("=" * 70)
 
-    shared = run_shared_pool()
-    isolated = run_isolated()
+    shared = run_shared_pool(active_only=args.active_only)
+    isolated = run_isolated(active_only=args.active_only)
 
     print("\n" + "=" * 70)
     print("SIMULAZIONE CONCORRENZA POOL CONDIVISO (MAX_OPEN_ORDERS=2)")
@@ -279,10 +293,10 @@ def main():
         'regime_validation': regime_report,
         'equity_curves': equity_curves,
     }
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    with open(args.out, 'w', encoding='utf-8') as f:
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2, default=str)
-    print(f"\nSalvato: {args.out}")
+    print(f"\nSalvato: {out_path}")
 
 
 if __name__ == '__main__':

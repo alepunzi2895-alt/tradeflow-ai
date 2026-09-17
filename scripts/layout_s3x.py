@@ -450,6 +450,7 @@ def confidence_edge_test(strat, tf=None, bins=5):
 if __name__ == '__main__':
     import warnings; warnings.filterwarnings('ignore')
     import opt_harness as OH
+    from research_trials import total_trials
     args = [a.upper() for a in sys.argv[1:]]
     if args and args[0] == 'EDGE':
         for s in (['S32', 'S33', 'S34'] if len(args) < 2 else [args[1]]):
@@ -457,7 +458,8 @@ if __name__ == '__main__':
         sys.exit(0)
     combos = ([(args[0], args[1] if len(args) > 1 else SPECS[args[0]]['tf'])]
               if args else [(s, SPECS[s]['tf']) for s in SPECS])
+    _n_trials = total_trials()  # registro cumulativo — mai un numero a mano (regola CLAUDE.md)
     for strat, tf in combos:
-        OH.print_eval(f"{strat} {tf} · NUDO", evaluate_s3x(strat, tf), num_trials=1)
+        OH.print_eval(f"{strat} {tf} · NUDO", evaluate_s3x(strat, tf), num_trials=_n_trials)
         OH.print_eval(f"{strat} {tf} · FULL STACK (confidence + news-proxy + circuit breaker + sizing)",
-                      evaluate_s3x(strat, tf, system={}), num_trials=1)
+                      evaluate_s3x(strat, tf, system={}), num_trials=_n_trials)

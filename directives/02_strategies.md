@@ -828,6 +828,17 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 > `STRATEGY_PARAMS`/`STRATEGY_ATR_PARAMS`/`STRATEGIES_CONFIG`. Se un giorno un edge emerge
 > live → riaprire la ricerca (`layout_s3x.py`), non promuovere sul backtest (PBO le boccia).
 
+> **🆕 2026-09-17 — Fix audit skill walk-forward-validation**: il `__main__` di
+> `layout_s3x.py` passava `num_trials=1` fisso a `OH.print_eval()`, contro la regola di
+> `research_trials.py`/CLAUDE.md ("sempre usare `total_trials()`, mai un numero a mano").
+> Al momento del fix il registro cumulativo era a **1735** trial — con `num_trials=1` la
+> formula del DSR usa `expected_max_sr=0.0` (caso più permissivo, nessuna correzione
+> multiple-testing), quindi il DSR stampato da questo script era artificialmente ottimistico.
+> Non ha cambiato il verdetto PBO sopra (che non dipende da `num_trials` ed è già corretto),
+> ma il DSR mostrato per S32/S33/S34 fino ad oggi era un numero sbagliato. Fix: import
+> `research_trials.total_trials()` al posto del letterale `1` in entrambe le chiamate
+> (NUDO + FULL STACK).
+
 > **2026-09-10** — S20 e S30 **non sono più "live test"**: erano già production nella logica
 > del bot (S20 integrata 2026-09-01, S30 live 2026-09-03), ora anche nell'etichetta UI. Card
 > tab Strategie normale + badge `📡 LIVE · ROSTER` + P&L live isolato via `strat_live_push`

@@ -534,7 +534,10 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <span>STRATEGIE DEL SISTEMA</span>
     <span style="flex:1;height:1px;background:var(--border)"></span>
   </div>
-  <button data-action="open-blocked" style="width:100%;margin-bottom:10px;background:rgba(255,71,87,0.08);border:1px solid #ff475733;border-radius:8px;padding:8px 10px;color:#ff8a80;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">⛔ Strategie bloccate (${BLOCKED_STRATEGIES.length})</button>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <button data-action="open-backtest-report" style="flex:1;background:rgba(200,169,110,0.1);border:1px solid var(--g)33;border-radius:8px;padding:8px 10px;color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">📊 Report Backtest</button>
+    <button data-action="open-blocked" style="flex:1;background:rgba(255,71,87,0.08);border:1px solid #ff475733;border-radius:8px;padding:8px 10px;color:#ff8a80;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">⛔ Bloccate (${BLOCKED_STRATEGIES.length})</button>
+  </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).map(([id, s]) => {
       const isBlocked   = BLOCKED_STRATEGIES.includes(id);

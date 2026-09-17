@@ -175,10 +175,11 @@ document.querySelectorAll('.tb').forEach(btn=>btn.onclick=()=>switchTab(btn.data
 // ── OVERLAYS ────────────────────────────────────────────
 function openOvl(id){document.getElementById(id).classList.add('on');}
 function closeOvl(id){document.getElementById(id).classList.remove('on');}
-['imgsheet','csvsheet','scrsheet','profsheet','blockedsheet'].forEach(id=>{
+['imgsheet','csvsheet','scrsheet','profsheet','blockedsheet','brsheet'].forEach(id=>{
   document.getElementById(id).onclick=e=>{if(e.target===document.getElementById(id))closeOvl(id);};
 });
 document.getElementById('btn-blockedc').onclick=()=>closeOvl('blockedsheet');
+document.getElementById('btn-brc').onclick=()=>closeOvl('brsheet');
 
 // ── EVENTS ──────────────────────────────────────────────
 // Safe button wiring - never crash if element missing

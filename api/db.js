@@ -432,14 +432,18 @@ async function hardBlocksLoad() {
 }
 
 async function hardBlocksToggle(db, body) {
-  const { token, strategy_id, action, reason } = body;
+  // NB: il campo dispatcher di livello superiore si chiama anche lui "action"
+  // (action:"hard_blocks_toggle") — per questo il verbo block/unblock qui è "mode",
+  // mai "action", altrimenti nello stesso oggetto JSON l'ultima chiave sovrascrive
+  // la prima e il dispatcher riceve "block"/"unblock" invece di "hard_blocks_toggle".
+  const { token, strategy_id, mode, reason } = body;
   const user = await verifyAuthToken(token);
   if (!strategy_id) throw new Error("strategy_id required");
-  if (!["block", "unblock"].includes(action)) throw new Error("action deve essere 'block' o 'unblock'");
+  if (!["block", "unblock"].includes(mode)) throw new Error("mode deve essere 'block' o 'unblock'");
 
   const current = await hardBlocksLoad();
   const blocked = { ...current.blocked };
-  if (action === "block") {
+  if (mode === "block") {
     if (!reason) throw new Error("reason required per bloccare una strategia");
     blocked[strategy_id] = { since: new Date().toISOString().slice(0, 10), reason: `${reason} (bloccata dalla dashboard da ${user.email || user.id})` };
   } else {
@@ -450,7 +454,7 @@ async function hardBlocksToggle(db, body) {
     _comment: "Strategie disabilitate a livello di ESECUZIONE LIVE. File git-tracked, editabile a mano, da scripts/reactivation_check.py o dalla dashboard (toggle autenticato). Letto da strategy_selector.is_hard_blocked() (primo check in mt5-bot.quality_gate). NON viene mai toccato da PerformanceTracker.",
     blocked,
   };
-  const message = `${action === "block" ? "Blocca" : "Sblocca"} ${strategy_id} (dashboard, ${user.email || user.id})`;
+  const message = `${mode === "block" ? "Blocca" : "Sblocca"} ${strategy_id} (dashboard, ${user.email || user.id})`;
   const r = await fetchT(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${HARD_BLOCKS_FILE}`, {
     method: "PUT",
     headers: { "Authorization": `Bearer ${GITHUB_TOKEN}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "TradeFlowHub" },

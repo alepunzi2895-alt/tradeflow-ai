@@ -137,12 +137,13 @@ def run(tf, horizon=None, k_neutral=0.3, lgb_overrides=None, quiet=False):
         Xf, yf, _ = last_fold
         mv = np.isfinite(yf)
         if mv.sum() > 30:
-            mdl = lgb.LGBMClassifier(**params)
-            tr = np.arange(0, n)
-            m = np.isfinite(X).all(1) & np.isfinite(y)
-            mdl.fit(X[m][:-test_sz] if m.sum() > test_sz else X[m], y[m][:-test_sz] if m.sum() > test_sz else y[m])
+            # Riusa il modello GIA' addestrato dell'ultimo fold walk-forward (train purgato/
+            # embargato, vedi loop sopra) invece di rifittarne uno ad-hoc su uno slice per
+            # posizione (X[m][:-test_sz]) che non rispettava purge/embargo e poteva sovrapporsi
+            # temporalmente a Xf/yf — leakage nella sola permutation importance, non nell'AUC/PF
+            # OOS del loop principale (audit skill signal-classification 2026-09-17).
             try:
-                pi = permutation_importance(mdl, Xf[mv], yf[mv], n_repeats=8, random_state=0, scoring='roc_auc')
+                pi = permutation_importance(model, Xf[mv], yf[mv], n_repeats=8, random_state=0, scoring='roc_auc')
                 perm_top = sorted(zip(names, pi.importances_mean), key=lambda x: -x[1])[:12]
             except Exception as e:
                 perm_top = [('perm_failed', 0.0)]

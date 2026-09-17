@@ -178,7 +178,12 @@ def screen(asset: str, tf: str, horizon: int, atr_mult: float = 0.5, holdout_fra
         return None
 
     split = int(n * (1 - holdout_frac))
-    train, hold = df.iloc[:split], df.iloc[split:]
+    # Purge: il label a riga i guarda `horizon` barre avanti (build_labels), quindi le
+    # ultime `horizon` righe di train hanno un label che sconfina nell'holdout — stesso
+    # fix già presente in layout_ml.py per il walk-forward (audit skill signal-classification
+    # 2026-09-17, vedi directives/02_strategies.md). Senza questo purge l'AUC holdout è
+    # leggermente ottimistica.
+    train, hold = df.iloc[:max(0, split - horizon)], df.iloc[split:]
     Xtr, ytr = train.drop(columns='__y__'), train['__y__']
     Xho, yho = hold.drop(columns='__y__'), hold['__y__']
 

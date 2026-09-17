@@ -839,6 +839,22 @@ H4 già rigenerato **senza S05_MFKK_INTRADAY** (ritirata lo stesso giorno, vedi 
 > `research_trials.total_trials()` al posto del letterale `1` in entrambe le chiamate
 > (NUDO + FULL STACK).
 
+> **🆕 2026-09-17 — Audit skill signal-classification su layout_ml.py / feature_screen.py**:
+> due bug di data leakage trovati confrontando la pipeline ML esistente con la skill.
+> (1) `scripts/feature_screen.py::screen()` faceva uno split 80/20 cronologico senza purge:
+> `build_labels()` guarda `horizon` barre avanti, quindi le ultime `horizon` righe di train
+> avevano un label che sconfinava nell'holdout — AUC holdout leggermente ottimistica. Fix:
+> `train = df.iloc[:split-horizon]` invece di `df.iloc[:split]` (stesso principio già
+> applicato in `layout_ml.py`, qui mancava). (2) `layout_ml.py::run()` — il walk-forward
+> principale fa correttamente purge (`tr[:-horizon]`) + embargo ad ogni fold (AUC/PF OOS
+> riportati sono puliti), ma il modello usato SOLO per la permutation importance (`perm_top`)
+> veniva rifittato ad-hoc su `X[m][:-test_sz]` (slice per posizione sull'array filtrato per
+> NaN, non per indice temporale) — senza purge né embargo, potenzialmente sovrapposto a
+> `Xf/yf` (il fold di test usato per valutarlo). Leakage isolato al ranking delle feature in
+> `perm_top`, non ha mai toccato le metriche di trading (`auc_oos`/`gross_pf_*`). Fix: riusa
+> il modello già fittato dell'ultimo fold walk-forward (`model`, già purgato/embargato)
+> invece di rifittarne uno nuovo — più corretto e più semplice.
+
 > **2026-09-10** — S20 e S30 **non sono più "live test"**: erano già production nella logica
 > del bot (S20 integrata 2026-09-01, S30 live 2026-09-03), ora anche nell'etichetta UI. Card
 > tab Strategie normale + badge `📡 LIVE · ROSTER` + P&L live isolato via `strat_live_push`

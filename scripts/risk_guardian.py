@@ -633,7 +633,7 @@ class RiskGuardian:
                             self._pos_state.pop(ticket, None)
                             continue
 
-            # ── 4. REGIME SHIFT OVERRIDE ──────────────────────────────────
+            # ── 5. REGIME SHIFT OVERRIDE ──────────────────────────────────
             if current_regime and ps.get("entry_regime"):
                 entry_regime_canonical = _canonical_regime(ps["entry_regime"])
                 curr_regime_canonical  = _canonical_regime(current_regime)

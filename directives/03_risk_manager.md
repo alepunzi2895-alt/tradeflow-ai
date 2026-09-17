@@ -113,7 +113,7 @@ lot = base_lot × tier.lot_multiplier × min(sqrt(equity / initial_equity), 3.0)
 ## Position Management (`manage_positions()` — ogni 10s)
 
 1. **Break-Even**: quando profit ≥ `be_trigger` → SL a entry+0.02
-2. **Trailing Stop**: dopo BE, quando profit ≥ `trailing_activation` (BE+10%) → trail di `ts_step` ATR
+2. **Trailing Stop**: dopo BE, quando profit ≥ `trailing_activation` (BE+5%) → trail di `ts_step` ATR
 3. **Partial Close**: quando il prezzo tocca un key level target (da KeyLevelsAgent) → chiude 50% del volume residuo
 4. **Early Exit**: se BE attivo ma trade stalled oltre `1.5 × expected_duration` con profit < `early_exit_threshold`
 5. **Regime Shift Override**: chiude posizione se il regime attuale è ostile alla strategia di entrata (solo se già a BE o in profitto)
@@ -320,3 +320,30 @@ python scripts/daily_maintenance.py --skip-fetch          # salta download MT5
 python scripts/daily_maintenance.py --tfs M30,H1          # solo TF specifici
 python scripts/daily_maintenance.py --dry-run             # nessuna scrittura
 ```
+
+## 🆕 2026-09-17 — Audit skill exit-strategies su risk_guardian.py
+
+Confronto tra BE/trailing/partial-close/early-exit di `RiskGuardian.manage_positions()` e le
+tecniche della skill `exit-strategies`. Due fix di doc/cosmetica (comportamento live invariato):
+
+1. Questo file diceva "trailing_activation (BE+10%)" — il codice (`risk_guardian.py`,
+   `get_order_params()`) usa `tier["be_trigger"] + 0.05`, cioè **BE+5%**. Corretto sopra.
+2. `manage_positions()` aveva due sezioni numerate entrambe "4." nei commenti (Early Exit e
+   Regime Shift Override) — la seconda rinominata "5." per chiarezza di lettura.
+
+Trovato ma **non toccato** (richiede validazione backtest prima di cambiare comportamento live):
+- **Trail distance congelata all'ATR d'ingresso**: `ts_step` si calcola una volta al momento del
+  segnale (`atr_al_segnale * 0.3`) e resta fisso per tutta la vita del trade — non si adatta se
+  la volatilità cambia dopo l'ingresso. La skill raccomanda un trail ATR-adattivo stile
+  Chandelier Exit (`highest_high(lookback) - ATR_corrente × mult`), che si allarga/stringe con
+  la volatilità reale nel momento del trail, non quella d'ingresso. Rilevante soprattutto per
+  strategie a durata attesa lunga (S17 H4, 240min) dove l'ATR può cambiare parecchio nel
+  frattempo. Proposta: ricalcolare `ts_step` da un ATR aggiornato ad ogni giro di
+  `manage_positions()` invece che congelarlo a `register_position()` — da testare via
+  `opt_harness.py` su holdout prima di toccare `manage_positions()` reale (stesso principio del
+  Hurst/CUSUM in `02_strategies.md`: non cambiare exit logic su un conto live alla cieca).
+- **Buffer di breakeven fisso a $0.02** (`be_sl = entry ± 0.02`): se lo spread+commissione reale
+  del broker XAUUSD supera $0.02, un trade "a breakeven" chiuderebbe comunque in leggera perdita
+  netta. Non verificato — nessun dato di spread reale disponibile in questa sessione. Da
+  controllare guardando il P&L effettivo di un trade chiuso per BE nello storico MT5 (dovrebbe
+  essere ~0, non sistematicamente negativo di qualche $ oltre le commissioni note).

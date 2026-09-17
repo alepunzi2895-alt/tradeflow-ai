@@ -1,6 +1,81 @@
 # TradeFlow AI — Strategie Attive
 
-## 🆕 2026-09-10 (sera) — Re-ispezione layout TradingView + S32/S33/S34 (solo score)
+## 🆕 2026-09-17 — Re-backtest completo del roster + performance combinata + validazione regime
+
+Richiesta utente: ri-backtestare tutte le strategie, tracciare equity curve a 24 mesi,
+ricalcolare la performance della combinazione di tutte le strategie sullo stesso conto,
+validare lo StrategySelector sui 24 mesi. Nuovo script `scripts/portfolio_backtest.py`
+(nessuna logica duplicata — riusa `opt_harness.evaluate()`/`run_one()` per il pool
+condiviso XAU, `layout_smart.evaluate_ls_frozen()` per S31, `us30_harness.evaluate()` +
+`us30_strategies.dow_dip_d1` per S30, `detect_regime_extended()` per il regime). Risultati
+completi in `backtests/results/portfolio_2026-09-17.json` + dashboard interattiva (equity
+curve, small-multiples per strategia, tabella regime).
+
+**Per strategia (full 24m / holdout ultimo 20%):**
+
+| Strategia | TF | Full PF | Holdout PF | n (full) |
+|---|---|---|---|---|
+| S00_MFKK | H1 | 0.700 | 0.502 | 1266 |
+| S09_MFKK_SCALPING | M30 | 0.587 | 1.201 | 109 |
+| S10_OB_FVG_SCALP | M30 | 0.829 | 121.8* | 22 |
+| S16_GOLDEN_SQUEEZE | H1 | 1.428 | **0.691** | 223 |
+| S17_CONVERGENCE_SCALP | H4 | 1.381 | 1.315 | 102 |
+| S18_RANGE_REVERSAL | M30 | 0.442 | 0.277 | 217 |
+| S20_FIB_CONFLUENCE | M5 | 1.722 | **0.867** | 106 |
+| S31_LAYOUT_SMART | H1 | 1.953 | 1.860 | 53 |
+| S30_DOW_DIP (US30) | H4 | 1.627 | 2.085 | 130 |
+
+\* S10 holdout n=5 — non statisticamente significativo, ignorare il PF.
+
+**Novità rispetto ai numeri già noti**: S16 e S20, finora considerati "sani" nel roster,
+mostrano PF holdout sotto 1 (0.69 e 0.87) — decadimento recente non ancora riflesso nei
+commenti storici di `STRATEGIES_CONFIG`/`STRATEGY_ATR_PARAMS`. Da monitorare, nessuna
+azione presa (un solo holdout non basta per un nuovo hard-block, serve conferma su più
+finestre — vedi metodologia `opt_harness.py`).
+
+**Concorrenza pool condiviso (S00/S09/S10/S16/S17/S18, `MAX_OPEN_ORDERS=2`)**: su 1939
+segnali generati in 24 mesi, solo **991 ammessi (51%) — 948 scartati per pool pieno**.
+Quasi metà dei segnali del pool condiviso non arriva mai a diventare un trade reale per
+contesa slot, indipendentemente dalla qualità del segnale stesso.
+
+**Performance combinata (tutte le strategie, stesso conto, trade ammessi)**: 1280 trade,
+WR 39.2%, **PF 1.249**, P&L +6328.6, Max DD 1560.9. Trainata quasi interamente da
+S30_DOW_DIP (+8036.5 — attenzione: asset US30, unità punti indice, non direttamente
+sommabile in $ ai P&L XAU senza convertire per il valore punto reale del lotto) e
+S17 (+676.8); S00 (-2327.7) e S18 (-612.2) sono i principali freni — entrambe già
+hard-bloccate, quindi il numero combinato "reale" (esclusi i due hard-block) sarebbe
+sensibilmente migliore.
+
+**Validazione regime (`detect_regime_extended` al momento di ogni ingresso reale, standalone
+signal — non passa da StrategySelector, misura dove il segnale grezzo di ciascuna strategia
+spara davvero, non il gating dello score):**
+- **S09_MFKK_SCALPING** e **S10_OB_FVG_SCALP**: **zero trade osservati** nei rispettivi regimi
+  "primari" codificati (`VOLATILE` per S09, `RANGING`+`VOLATILE` per S10) in 24 mesi — i loro
+  segnali sparano quasi solo in TREND_UP/TREND_DOWN/WEAK, mai in quello per cui sono
+  "ottimizzati" sulla carta. `optimal_regimes` per queste due sembra non riflettere il
+  comportamento reale del segnale.
+- **S17_CONVERGENCE_SCALP**: performa bene anche in **WEAK** (n=28, PF 1.46, pnl +258.9) —
+  regime non incluso nei suoi `optimal_regimes` (`VOLATILE, TREND_UP, TREND_DOWN`) — e
+  **zero trade in VOLATILE**, il suo regime coded principale.
+- **S00_MFKK, S16_GOLDEN_SQUEEZE, S18_RANGE_REVERSAL**: tutti i regimi osservati sono già
+  nei rispettivi `optimal_regimes` — nessun mismatch di classificazione. S00/S18 restano
+  comunque negativi in OGNI regime (conferma "edge decaduto", non un problema di matching
+  regime — coerente con l'hard-block già attivo). S16 positivo in tutti (ma vedi nota
+  holdout sopra).
+
+**Non applicato**: nessuna modifica a `optimal_regimes`/`STRATEGIES_CONFIG` — sono numeri
+di uno standalone backtest via `run_one()` (bypassa il gating reale di StrategySelector),
+utili per capire se l'etichetta regime è sensata ma non equivalenti a "come si comporta
+il bot live". Prima di correggere `optimal_regimes` di S09/S10/S17 servirebbe un secondo
+giro con `opt_harness.is_promotable()`/DSR per confermare che il cambio non è rumore.
+
+**Scoperto en passant**: `scripts/backtest_combined.py` è uno script "backtest combinato"
+PRE-ESISTENTE ma stale — duplica per intero la logica di indicatori/segnali (viola la
+regola CLAUDE.md "mai duplicare logica"), usa un roster vecchio (`S05_V3_Sell_Exhaust`,
+`S01_EXHAUSTION`, `S13_STRUC_BREAK` — nessuno di questi esiste più in `STRATEGIES_CONFIG`)
+e un `REGIME_MULTI_STRATEGIES` non aggiornato. Non è stato toccato né usato per questo
+lavoro (si è scritto `portfolio_backtest.py` da zero riusando solo codice vivo) — da
+valutare se rimuoverlo per evitare confusione futura (chiedere conferma prima di cancellare).
 
 **CORREZIONE** alla sezione sotto: i 5 layout TradingView **NON condividono lo stesso
 toolkit**. La lettura precedente (`data_get_indicator` su cache) era stale — i layout sono

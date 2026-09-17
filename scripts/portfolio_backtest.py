@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+TradeFlow AI — Re-backtest completo del roster live (2026-09-17)
+═══════════════════════════════════════════════════════════════════════════════
+Richiesta utente: (1) ri-backtestare tutte le strategie, (2) tracciare equity curve
++ performance fino a 24 mesi per ciascuna, (3) validare lo StrategySelector attuale
+(regime → strategia) sui 24 mesi, (4) ricalcolare la performance combinata di TUTTE
+le strategie sullo stesso conto.
+
+Nessuna logica duplicata (regola CLAUDE.md) — riusa SOLO:
+  - opt_harness.evaluate() / strategy-engine-v2.run_one() per il pool condiviso XAU
+    (S00/S09/S10/S16/S17/S18, MAX_OPEN_ORDERS=2 come in mt5-bot.py)
+  - layout_smart.evaluate_ls_frozen() per S31_LAYOUT_SMART (isolata, H1)
+  - us30_harness.evaluate() + us30_strategies.dow_dip_d1 per S30_DOW_DIP (isolata, US30 H4)
+  - strategy_selector.detect_regime_extended() per la validazione regime
+
+NB: S32/S33/S34 esclusi — sono "solo score" (nessun ordine, vedi 02_strategies.md),
+    non hanno un trade set da backtestare in questo senso. S20_FIB_CONFLUENCE incluso
+    (isolata, via run_one esistente).
+
+USO:
+    python scripts/portfolio_backtest.py
+    python scripts/portfolio_backtest.py --out backtests/results/portfolio_2026-09-17.json
+"""
+import argparse
+import json
+import os
+import sys
+import datetime
+
+# Console Windows (cp1252) va in UnicodeEncodeError su emoji/simboli — stesso fix già
+# applicato altrove nel progetto per gli script lanciati come subprocess (vedi
+# daily_maintenance.py / 06_known_issues.md 2026-09-01).
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+import numpy as np
+import opt_harness as OH
+import signals as SIG
+from strategy_selector import STRATEGIES_CONFIG, detect_regime_extended, _REGIME_ALIAS
+
+MAX_OPEN_ORDERS = 2  # scripts/mt5-bot.py
+
+# Strategia → (tf live, funzione segnale) per il pool condiviso XAU (StrategySelector,
+# soggetto a MAX_OPEN_ORDERS). TF = best_tf storico in STRATEGIES_CONFIG.
+SHARED_POOL = {
+    'S00_MFKK':              ('H1',  SIG.signal_mfkk_score),
+    'S09_MFKK_SCALPING':     ('M30', SIG.signal_mfkk_scalping),
+    'S10_OB_FVG_SCALP':      ('M30', SIG.signal_ob_fvg_scalp),
+    'S16_GOLDEN_SQUEEZE':    ('H1',  SIG.signal_golden_squeeze),
+    'S17_CONVERGENCE_SCALP': ('H4',  SIG.signal_convergence_scalp),
+    'S18_RANGE_REVERSAL':    ('M30', SIG.signal_range_reversal),
+}
+
+
+def _cfg_by_id(sid):
+    return next(c for c in STRATEGIES_CONFIG if c['id'] == sid)
+
+
+def run_shared_pool():
+    """Ri-backtesta i 6 membri del pool condiviso XAU al loro TF live."""
+    out = {}
+    for sid, (tf, fn) in SHARED_POOL.items():
+        print(f"[shared] {sid} @ {tf} ...", flush=True)
+        ev = OH.evaluate(sid, fn, tf=tf)
+        out[sid] = {'tf': tf, 'ev': ev}
+        print(f"  full   : {OH.fmt(ev['full'])}")
+        print(f"  HOLDOUT: {OH.fmt(ev['holdout'])}  (da {ev['holdout_start']})")
+    return out
+
+
+def run_isolated():
+    """Ri-backtesta i 3 blocchi isolati (non contano in MAX_OPEN_ORDERS)."""
+    out = {}
+
+    # S20_FIB_CONFLUENCE — via run_one esistente (branch dedicato sim_fib_confluence)
+    print("[isolated] S20_FIB_CONFLUENCE @ M5 ...", flush=True)
+    ev20 = OH.evaluate('S20_FIB_CONFLUENCE', SIG.signal_fib_confluence, tf='M5')
+    out['S20_FIB_CONFLUENCE'] = {'tf': 'M5', 'ev': ev20}
+    print(f"  full   : {OH.fmt(ev20['full'])}")
+    print(f"  HOLDOUT: {OH.fmt(ev20['holdout'])}  (da {ev20['holdout_start']})")
+
+    # S31_LAYOUT_SMART — via layout_smart.evaluate_ls_frozen (config produzione)
+    print("[isolated] S31_LAYOUT_SMART @ H1 ...", flush=True)
+    import layout_smart as LS
+    ev31 = LS.evaluate_ls_frozen(tf='H1')
+    out['S31_LAYOUT_SMART'] = {'tf': 'H1', 'ev': ev31}
+    print(f"  full   : {OH.fmt(ev31['full'])}")
+    print(f"  HOLDOUT: {OH.fmt(ev31['holdout'])}  (da {ev31['holdout_start']})")
+
+    # S30_DOW_DIP — via us30_harness.evaluate + us30_strategies.dow_dip_d1 (config REGISTRY)
+    print("[isolated] S30_DOW_DIP @ H4 (US30) ...", flush=True)
+    import us30_harness as U30
+    from us30_strategies import dow_dip_d1, REGISTRY as U30_REGISTRY
+    spec = next(s for s in U30_REGISTRY if s['name'] == 'dow_dip_d1')
+    ev30 = U30.evaluate('S30_DOW_DIP', 'H4', dow_dip_d1, **spec['params'])
+    out['S30_DOW_DIP'] = {'tf': 'H4', 'ev': ev30}
+    print(f"  full   : {OH.fmt(ev30['full'])}")
+    print(f"  HOLDOUT: {OH.fmt(ev30['holdout'])}  (da {ev30['holdout_start']})")
+
+    return out
+
+
+# ── COMBINED PORTFOLIO SIMULATION ────────────────────────────────────────────
+def simulate_shared_pool_concurrency(shared):
+    """Simula la reale contesa per MAX_OPEN_ORDERS tra i trade del pool condiviso:
+    ordina per entry_ts, ammette solo se < MAX_OPEN_ORDERS posizioni aperte in quel
+    momento (le posizioni si liberano al loro exit_ts) — i segnali in eccesso vengono
+    scartati esattamente come farebbe mt5-bot.py::quality_gate() dal vivo."""
+    all_trades = []
+    for sid, data in shared.items():
+        for t in data['ev']['trades']:
+            if 'entry_ts' not in t:
+                continue  # S20 passa da qui solo se richiamato per errore — non è il caso
+            tt = dict(t)
+            tt['strategy'] = sid
+            all_trades.append(tt)
+    all_trades.sort(key=lambda t: t['entry_ts'])
+
+    open_until = []  # lista di exit_ts delle posizioni correntemente aperte
+    admitted, blocked = [], []
+    for t in all_trades:
+        open_until = [e for e in open_until if e > t['entry_ts']]
+        if len(open_until) < MAX_OPEN_ORDERS:
+            open_until.append(t['exit_ts'])
+            admitted.append(t)
+        else:
+            blocked.append(t)
+    return admitted, blocked
+
+
+def daily_pnl(trades, date_key=lambda t: t['date']):
+    by_day = {}
+    for t in trades:
+        by_day[date_key(t)] = by_day.get(date_key(t), 0.0) + t['pnl']
+    return by_day
+
+
+def combined_stats(all_admitted_trades):
+    """Stats aggregate stile backtest_combined.py, ma su dati reali del roster attuale."""
+    if not all_admitted_trades:
+        return {}
+    trades = sorted(all_admitted_trades, key=lambda t: t['date'])
+    wins = [t for t in trades if t['pnl'] > 0]
+    losses = [t for t in trades if t['pnl'] <= 0]
+    gw = sum(t['pnl'] for t in wins)
+    gl = abs(sum(t['pnl'] for t in losses)) or 1e-9
+    cum = 0.0; peak = 0.0; dd = 0.0; curve = []
+    for t in trades:
+        cum += t['pnl']
+        peak = max(peak, cum)
+        dd = max(dd, peak - cum)
+        curve.append({'date': t['date'], 'cum_pnl': round(cum, 2)})
+    last_day = trades[-1]['date']
+
+    def _cut(months):
+        cutoff = (datetime.date.fromisoformat(last_day) - datetime.timedelta(days=30 * months)).isoformat()
+        sub = [t for t in trades if t['date'] >= cutoff]
+        return round(sum(t['pnl'] for t in sub), 2), len(sub)
+
+    by_strat = {}
+    for t in trades:
+        by_strat.setdefault(t['strategy'], []).append(t)
+
+    pnl_1m, n_1m = _cut(1); pnl_6m, n_6m = _cut(6); pnl_12m, n_12m = _cut(12); pnl_24m, n_24m = _cut(24)
+    return {
+        'n_trades': len(trades), 'wr': round(100 * len(wins) / len(trades), 1),
+        'pf': round(gw / gl, 3), 'total_pnl': round(cum, 2), 'max_dd': round(dd, 2),
+        'pnl_1m': pnl_1m, 'n_1m': n_1m, 'pnl_6m': pnl_6m, 'n_6m': n_6m,
+        'pnl_12m': pnl_12m, 'n_12m': n_12m, 'pnl_24m': pnl_24m, 'n_24m': n_24m,
+        'by_strategy': {k: {
+            'n': len(v), 'pnl': round(sum(t['pnl'] for t in v), 2),
+            'wr': round(100 * sum(1 for t in v if t['pnl'] > 0) / len(v), 1),
+        } for k, v in by_strat.items()},
+        'equity_curve': curve,
+    }
+
+
+# ── REGIME VALIDATION ────────────────────────────────────────────────────────
+def validate_regime_matching(shared):
+    """Per ogni strategia del pool condiviso: regime al momento dell'ingresso di ogni
+    trade reale (via detect_regime_extended sullo stesso ind/tf del backtest) → PF/WR
+    per regime canonico, confrontato con optimal_regimes già codificato in STRATEGIES_CONFIG."""
+    report = {}
+    for sid, data in shared.items():
+        tf = data['tf']
+        candles, ind = OH._data_for(tf)
+        cfg = _cfg_by_id(sid)
+        by_regime = {}
+        for t in data['ev']['trades']:
+            idx = t.get('entry_idx')
+            if idx is None:
+                continue
+            reg = detect_regime_extended(ind, idx)
+            canon = _REGIME_ALIAS.get(reg['type'], 'WEAK')
+            by_regime.setdefault(canon, []).append(t['pnl'])
+        regime_stats = {}
+        for reg, pnls in by_regime.items():
+            wins = [p for p in pnls if p > 0]; losses = [p for p in pnls if p <= 0]
+            gw = sum(wins); gl = abs(sum(losses)) or 1e-9
+            regime_stats[reg] = {'n': len(pnls), 'pf': round(gw / gl, 3),
+                                  'wr': round(100 * len(wins) / len(pnls), 1) if pnls else 0,
+                                  'pnl': round(sum(pnls), 2)}
+        report[sid] = {'optimal_regimes_coded': cfg['optimal_regimes'], 'observed': regime_stats}
+    return report
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--out', default=os.path.join(HERE, '..', 'backtests', 'results',
+                                                   'portfolio_2026-09-17.json'))
+    args = ap.parse_args()
+
+    print("=" * 70)
+    print("RE-BACKTEST COMPLETO ROSTER LIVE — 2026-09-17")
+    print("=" * 70)
+
+    shared = run_shared_pool()
+    isolated = run_isolated()
+
+    print("\n" + "=" * 70)
+    print("SIMULAZIONE CONCORRENZA POOL CONDIVISO (MAX_OPEN_ORDERS=2)")
+    print("=" * 70)
+    admitted, blocked = simulate_shared_pool_concurrency(shared)
+    print(f"  Trade generati dal pool condiviso : {sum(len(d['ev']['trades']) for d in shared.values())}")
+    print(f"  Ammessi (slot disponibile)        : {len(admitted)}")
+    print(f"  Scartati (MAX_OPEN_ORDERS pieno)  : {len(blocked)}")
+
+    all_combined = list(admitted)
+    for sid, data in isolated.items():
+        for t in data['ev']['trades']:
+            tt = dict(t); tt['strategy'] = sid
+            all_combined.append(tt)
+
+    print("\n" + "=" * 70)
+    print("PERFORMANCE COMBINATA — TUTTE LE STRATEGIE, STESSO CONTO")
+    print("=" * 70)
+    cs = combined_stats(all_combined)
+    if cs:
+        print(f"  Trade totali : {cs['n_trades']}  WR {cs['wr']}%  PF {cs['pf']}")
+        print(f"  P&L totale   : {cs['total_pnl']:+.1f}   Max DD: {cs['max_dd']:.1f}")
+        print(f"  1m : {cs['pnl_1m']:+.1f} ({cs['n_1m']} tr)   6m : {cs['pnl_6m']:+.1f} ({cs['n_6m']} tr)")
+        print(f"  12m: {cs['pnl_12m']:+.1f} ({cs['n_12m']} tr)  24m: {cs['pnl_24m']:+.1f} ({cs['n_24m']} tr)")
+        print("\n  Per strategia:")
+        for k, v in sorted(cs['by_strategy'].items(), key=lambda x: -x[1]['pnl']):
+            print(f"    {k:24s} n={v['n']:4d}  WR={v['wr']:5.1f}%  P&L={v['pnl']:+9.1f}")
+
+    print("\n" + "=" * 70)
+    print("VALIDAZIONE REGIME (StrategySelector) SUI TRADE REALI")
+    print("=" * 70)
+    regime_report = validate_regime_matching(shared)
+    for sid, rep in regime_report.items():
+        print(f"\n  {sid}  (optimal_regimes codificati: {rep['optimal_regimes_coded']})")
+        for reg, s in sorted(rep['observed'].items(), key=lambda x: -x[1]['pnl']):
+            flag = '✓' if reg in rep['optimal_regimes_coded'] else '⚠ NON in optimal_regimes'
+            print(f"    {reg:10s} n={s['n']:4d}  PF={s['pf']:6.3f}  WR={s['wr']:5.1f}%  "
+                  f"pnl={s['pnl']:+9.1f}  {flag}")
+
+    # ── Individual equity curves (24 mesi, tutte le TF hanno storia sufficiente) ──
+    equity_curves = {}
+    for sid, data in {**shared, **isolated}.items():
+        ec = OH.SE2.equity_curve(data['ev']['trades'])
+        equity_curves[sid] = ec
+
+    output = {
+        'generated_at': datetime.datetime.utcnow().isoformat(),
+        'max_open_orders': MAX_OPEN_ORDERS,
+        'shared_pool': {sid: {'tf': d['tf'], 'full': d['ev']['full'], 'holdout': d['ev']['holdout'],
+                               'holdout_start': d['ev']['holdout_start'], 'n_trades': len(d['ev']['trades'])}
+                        for sid, d in shared.items()},
+        'isolated': {sid: {'tf': d['tf'], 'full': d['ev']['full'], 'holdout': d['ev']['holdout'],
+                            'holdout_start': d['ev']['holdout_start'], 'n_trades': len(d['ev']['trades'])}
+                     for sid, d in isolated.items()},
+        'concurrency': {'n_admitted': len(admitted), 'n_blocked': len(blocked)},
+        'combined_stats': cs,
+        'regime_validation': regime_report,
+        'equity_curves': equity_curves,
+    }
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    with open(args.out, 'w', encoding='utf-8') as f:
+        json.dump(output, f, indent=2, default=str)
+    print(f"\nSalvato: {args.out}")
+
+
+if __name__ == '__main__':
+    main()

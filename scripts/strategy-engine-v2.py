@@ -1157,8 +1157,14 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD, tp_mult=None,
         pnl = (close_price - entry) if sig=='buy' else (entry - close_price)
         pnl -= trade_cost(exit_kind == 'sl')
         outcome = 'win' if pnl > 0 else 'loss'
+        # entry_idx/exit_idx (+ i tempi derivati) servono a chi deve simulare la concorrenza
+        # reale delle posizioni (es. portfolio_backtest.py, MAX_OPEN_ORDERS) — j è l'indice
+        # dell'ultima barra vista nel loop di risoluzione sopra (break su TP/SL).
         trades.append({'date':day,'hour':hour,'dir':sig,'entry':entry,
-                        'outcome':outcome,'pnl':round(pnl,2),'strategy':name})
+                        'outcome':outcome,'pnl':round(pnl,2),'strategy':name,
+                        'entry_idx':i,'exit_idx':j,
+                        'entry_ts':candles[i+1]['t'] if ENTRY_NEXT_OPEN else ts,
+                        'exit_ts':candles[j]['t']})
         day_n[day]+=1; day_h[day]=hour
     return trades
 

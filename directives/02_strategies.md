@@ -553,6 +553,41 @@ usare `opt_harness.py` per testare se pesare `_score_strategy()` con hurst/regim
 migliora PF/DD sull'holdout rispetto al roster attuale, con soglie calibrate su XAU/US30
 invece di quelle generiche.
 
+## 🆕 2026-09-17 — Audit skill regime-detection su strategy_selector.py
+
+Confronto tra `detect_regime_extended()`/`_score_strategy()` e le tecniche della skill
+`regime-detection`. Due bug di chiarezza/logica fixati (**comportamento live invariato**,
+verificato con sanity check ADX 5→35, stesso output type/strength prima e dopo):
+
+1. **Ramo dead-code in `detect_regime_extended()`**: la cascata if/elif aveva sia
+   `elif adx >= 18: ... WEAK` sia, più sotto, `elif adx < 20: ... RANGING` seguito da un
+   `else: ... WEAK`. Per arrivare al ramo `adx < 20` bisogna aver già scartato `adx >= 18`,
+   quindi `adx < 20` era **sempre vero** e l'`else` finale era irraggiungibile — qualunque
+   `adx < 18` con ATR normale finiva comunque su RANGING, mai sul fallback WEAK che il codice
+   sembrava prevedere. Sistemato collassando l'ultimo `elif` ridondante in un `else` diretto,
+   nessun cambio di soglie/output (sanity check con adx 5/10/17/17.9 → RANGING invariato,
+   18/19/25 → WEAK invariato, 30/35 → TREND invariato).
+2. **`atr_percentile` non è un vero percentile statistico**: è il rapporto ATR-corrente /
+   media-30-barre rimappato linearmente su bound fissi [0.5,2.0]x → [0,1], non un rank contro
+   una finestra storica (come nella skill, `rolling(lookback).rank(pct=True)`). Non cambiato
+   il calcolo — `min_atr_percentile=0.60` di S17 (config sopra) è calibrato in backtest su
+   QUESTA esatta formula via `opt_harness.py` — solo aggiunto un commento esplicito per non
+   confondere un futuro rework con l'assunzione sbagliata di un vero rolling-rank.
+
+Trovati ma **non toccati** (richiedono decisioni/validazione, non semplici fix):
+- Hurst/CUSUM restano solo metadata mai consumati da nessuna parte del repo (confermato
+  0 riferimenti in `mt5-bot.py`), 10 giorni dopo l'introduzione — costo CPU trascurabile ma
+  zero beneficio finché non si fa il passo di validazione già descritto sopra.
+- Nessuna dimensione volume nel regime (la skill la raccomanda come conferma di qualità
+  trend/range); il progetto calcola già CVD/Volume Profile altrove (`layout_indicators.py`)
+  ma non entra in `detect_regime_extended()`.
+- `_best_tf()` sceglie il TF da backtest storici fissi (`pf*wr` più alto), non in base al
+  regime corrente — il regime pesa solo su quale strategia, mai su quale TF per quella strategia.
+
+Questi tre punti non sono stati wired nello score live: la stessa nota del 2026-09-07 sopra
+si applica — cambiare `_score_strategy()` alla cieca su un conto reale senza backtest è
+esattamente il tipo di rischio che questo file chiede di evitare.
+
 ## 🔬 2026-09-03 — Ricerca strategia US30 (in corso, nessuna live)
 
 Asset `US30Cash` (vedi `01_data_sources.md`). Harness dedicato, separato dal roster XAU:

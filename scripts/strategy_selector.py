@@ -220,12 +220,21 @@ def detect_regime_extended(I: dict, i: int) -> dict:
     if adx is None:
         return {"type": "UNKNOWN", "strength": 0.3, "atr_percentile": 0.5}
 
-    # ATR percentile vs 30-bar rolling average
+    # NB: "atr_percentile" è un nome storico fuorviante — NON è un vero percentile statistico
+    # (rank contro una finestra storica, es. skill regime-detection: atr.rolling(lookback).rank(pct=True)).
+    # È solo il rapporto ATR-corrente/media-30-barre rimappato linearmente su bound fissi [0.5, 2.0]x → [0,1].
+    # Non tenerlo: min_atr_percentile=0.60 di S17 (sopra) è calibrato in backtest su QUESTA esatta
+    # formula (stesso codice usato da opt_harness.py) — se in futuro si passa a un vero rolling-rank,
+    # quella soglia va ricalibrata via backtest, non solo rinominata.
     atr_ratio = (atr_v / atr_avg) if (atr_v and atr_avg and atr_avg > 0) else 1.0
-    # Map ratio [0.5, 2.0] → [0.0, 1.0]
     atr_percentile = min(max((atr_ratio - 0.5) / 1.5, 0.0), 1.0)
 
     # Determine regime type
+    # NB: qui sotto adx < 18 è garantito da quando si arriva al ramo ATR-volatile (il ramo
+    # `adx >= 18` sopra ha già consumato tutto il resto) — quindi un eventuale `elif adx < 20`
+    # sarebbe sempre vero e un `else` finale sarebbe dead code irraggiungibile. Reso esplicito
+    # con `else` diretto invece di un elif ridondante (bug scoperto in audit 2026-09-17,
+    # comportamento invariato: prima finiva comunque sempre su RANGING per adx<18+ATR normale).
     if atr_v and atr_avg and atr_v > 3.0 * atr_avg:
         regime_type = "VOLATILE"
         strength = 0.9
@@ -239,13 +248,11 @@ def detect_regime_extended(I: dict, i: int) -> dict:
     elif atr_v and atr_avg and atr_v > 1.4 * atr_avg:
         regime_type = "VOLATILE"
         strength = min(0.3 + (atr_ratio - 1.4) / 1.5, 0.9)
-    elif adx < 20:
+    else:
+        # adx < 18 garantito qui (vedi nota sopra) → sempre RANGING, mai un fallback WEAK separato
         regime_type = "RANGING"
         # Low ADX = stronger ranging
         strength = 0.5 + (20 - adx) / 40
-    else:
-        regime_type = "WEAK"
-        strength = 0.3
 
     # Hurst/CUSUM: metadata aggiuntiva, non usata da _score_strategy() (vedi nota sopra).
     # Hurst va calcolato sui LOG-RETURN, non sui prezzi grezzi: su un livello prezzo con

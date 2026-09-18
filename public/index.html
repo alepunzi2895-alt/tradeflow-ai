@@ -12,7 +12,7 @@
 
 <!-- TradingView Widget -->
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-  <link rel="stylesheet" href="/style.css?v=desk2">
+  <link rel="stylesheet" href="/style.css?v=space3">
 </head>
 <body>
 <!-- AUTHENTICATION OVERLAY -->
@@ -28,7 +28,7 @@
           </linearGradient>
         </defs>
       </svg>
-      <div style="font-size:20px;font-weight:700;color:#E8ECF7;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px">TradeFlow <span style="color:#E5BD6C">AI</span></div>
+      <div style="font-size:20px;font-weight:700;color:#E8ECF7;font-family:'Outfit',sans-serif;letter-spacing:-.5px">TradeFlow <span style="color:#E5BD6C">AI</span></div>
     </div>
 
     <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border2)">
@@ -103,21 +103,21 @@
         <!-- Orbite strategie: nucleo = miglior PF del roster live, pianeti = resto del roster -->
         <div class="orbit-hero" id="orbit-hero">
           <div class="orbit-top">
-            <div class="orbit-eyebrow">NUCLEO · <span id="orbit-nucleus-name">—</span></div>
+            <div class="orbit-eyebrow">MIGLIOR PF STORICO · <span id="orbit-nucleus-name">—</span></div>
             <div class="orbit-eq-row">
               <div>
                 <div class="orbit-eq-lbl">Equity conto</div>
                 <div class="orbit-eq-val" id="orbit-equity">—</div>
                 <div class="orbit-eq-sub" id="orbit-equity-sub"></div>
               </div>
-              <div class="orbit-stat"><span class="orbit-stat-lbl">P&amp;L 12m (backtest)</span><span class="orbit-stat-val" id="orbit-pnl12">—</span></div>
-              <div class="orbit-stat"><span class="orbit-stat-lbl">Strategie attive</span><span class="orbit-stat-val" id="orbit-count">—</span></div>
+              <div class="orbit-stat"><span class="orbit-stat-lbl">Somma P&amp;L · backtest 12m</span><span class="orbit-stat-val" id="orbit-pnl12">—</span></div>
+              <div class="orbit-stat"><span class="orbit-stat-lbl">Strategie abilitate</span><span class="orbit-stat-val" id="orbit-count">—</span></div>
             </div>
           </div>
-          <div class="nb-stage-wrap" id="orbit-stage"></div>
+          <div class="nb-stage-wrap" id="orbit-stage"></div><p class="roster-note" id="orbit-roster-note"></p>
           <div class="nb-panels">
             <div class="nb-panel nb-panel--pad nb-stack" id="orbit-curve-panel">
-              <div class="nb-lbl">Curva equity (12m)</div>
+              <div class="nb-lbl">Equity storica · backtest</div>
               <div id="orbit-curve"></div>
             </div>
             <div class="nb-panel nb-panel--pad nb-stack">
@@ -395,7 +395,7 @@
     <!-- ── KNOWLEDGE ── -->
     <div class="tp" id="tp-kb">
       <div class="kp">
-        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'JetBrains Mono',monospace">🧠 KNOWLEDGE BASE</div>
+        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Outfit',sans-serif">🧠 KNOWLEDGE BASE</div>
         <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Carica la tua strategia, articoli, regole. TradeFlow AI li usa come contesto permanente in ogni analisi.</div>
         <div class="sdrop" id="kb-drop"><div class="sdropico">📂</div><div class="sdrop-t">Carica uno o più documenti</div><div class="sdrop-s">PDF · PNG · JPG · TXT · MD — selezione multipla</div></div>
         <input type="file" id="kb-file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md" style="display:none" multiple>
@@ -595,31 +595,34 @@
   </div>
 
   <!-- Core utilities (storage, API, compression) -->
-  <script src="/modules/core.js?v=desk2"></script>
+  <script src="/modules/core.js?v=space3"></script>
   <!-- Dashboard: prices, confidence, sentiment, macro -->
-  <script src="/modules/dashboard.js?v=desk2"></script>
+  <script src="/modules/dashboard.js?v=space3"></script>
   <!-- Chat: AI analysis, image upload -->
-  <script src="/modules/chat.js?v=desk2"></script>
+  <script src="/modules/chat.js?v=space3"></script>
   <!-- Journal: trade log, coaching, reports -->
-  <script src="/modules/journal.js?v=desk2"></script>
+  <script src="/modules/journal.js?v=space3"></script>
   <!-- MyFxBook: account sync, import -->
-  <script src="/modules/myfxbook.js?v=desk2"></script>
+  <script src="/modules/myfxbook.js?v=space3"></script>
   <!-- Knowledge Base: upload, search -->
-  <script src="/modules/kb.js?v=desk2"></script>
+  <script src="/modules/kb.js?v=space3"></script>
   <!-- MFKK: strategy score, indicators -->
-  <script src="/modules/mfkk.js?v=desk2"></script>
+  <script src="/modules/mfkk.js?v=space3"></script>
   <!-- Strategy Engine: indicator helpers + signal functions -->
-  <script src="/modules/se-signals.js?v=desk2"></script>
+  <script src="/modules/se-signals.js?v=space3"></script>
   <!-- Strategy Engine: SE config, seRefresh(), main loop -->
-  <script src="/modules/strategy.js?v=desk2"></script>
+  <script src="/modules/strategy.js?v=space3"></script>
   <!-- Strategy Engine: seRender(), seToast(), initStrategyEngine() -->
-  <script src="/modules/se-render.js?v=desk2"></script>
+  <script src="/modules/se-render.js?v=space3"></script>
   <!-- Report Backtest: equity curve, confronto attive/roster, lancia backtest, toggle blocco -->
-  <script src="/modules/backtest-report.js?v=desk2"></script>
+  <script src="/modules/backtest-report.js?v=space3"></script>
   <!-- The Hive: nebulosa del roster strategie + knowledge base (usa brData/SE/kb, carica dopo) -->
-  <script src="/modules/hive.js?v=desk2"></script>
-  <script src="/modules/workspace-ui.js?v=desk2"></script>
+  <script src="/modules/hive.js?v=space3"></script>
+  <script src="/modules/workspace-ui.js?v=space3"></script>
   <!-- App: init, tabs, overlays, profile -->
-  <script src="/app.js?v=desk2"></script>
+  <script src="/modules/lab-engine.js?v=space3"></script>
+  <script src="/modules/laboratory.js?v=space3"></script>
+  <script src="/modules/market-watch.js?v=space3"></script>
+  <script src="/app.js?v=space3"></script>
 </body>
 </html>

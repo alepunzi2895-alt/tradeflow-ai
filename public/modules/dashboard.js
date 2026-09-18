@@ -39,9 +39,9 @@ function orbitTier(pf){
   if(pf >= 1.3) return {color:'var(--nb-cyan)', hex:'#6FA8FF', name:'BUONA'};
   return {color:'var(--nb-violet)', hex:'#B79CFF', name:'MARGINALE'};
 }
-function orbitFmtEur(n){
+function orbitFmtEur(n, currency='USD'){
   if(typeof n !== 'number' || !isFinite(n)) return '—';
-  return '€ ' + n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return (currency ? currency+' ' : '') + n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 const ORBIT_TEX = ['nb-tex--gas','nb-tex--ocean','nb-tex--ice','nb-tex--lava'];
 
@@ -87,7 +87,7 @@ function renderOrbitDetail(entry){
   const tier = orbitTier(entry.pf);
   el.innerHTML = `
     <div class="nb-lbl">Strategia selezionata</div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;margin-top:3px">${entry.label.replace(/\s*⛔.*$/,'')}</div>
+    <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;margin-top:3px">${entry.label.replace(/\s*⛔.*$/,'')}</div>
     <div style="font-size:11px;color:var(--nb-muted);margin-top:2px">PF ${entry.pf.toFixed(2)} · WR ${entry.wr||'—'} · <span style="color:${tier.color}">${tier.name}</span></div>
     <div class="nb-metrics" style="margin-top:8px">
       <div class="nb-metric"><span class="nb-metric__k">P&amp;L 12m</span><span class="nb-metric__v" style="color:${(st.pnl_12m||0)>=0?'var(--nb-up)':'var(--nb-down)'}">${orbitFmtEur(st.pnl_12m)}</span></div>
@@ -131,14 +131,21 @@ function renderOrbitHero(){
   const acc = _orbitMt5?.account || null;
   const eqEl = document.getElementById('orbit-equity');
   const eqSubEl = document.getElementById('orbit-equity-sub');
-  if(eqEl) eqEl.textContent = acc?.equity ? orbitFmtEur(acc.equity) : '—';
+  if(eqEl) eqEl.textContent = acc?.equity ? orbitFmtEur(acc.equity,acc.currency||'') : '—';
   if(eqSubEl) eqSubEl.textContent = acc?.equity ? 'conto MT5 live' : 'bot MT5 non connesso';
 
   const pnl12 = roster.reduce((s,r) => s + (r.stats?.pnl_12m || 0), 0);
   const pnlEl = document.getElementById('orbit-pnl12');
   if(pnlEl){ pnlEl.textContent = orbitFmtEur(pnl12); pnlEl.style.color = pnl12>=0 ? 'var(--nb-up)' : 'var(--nb-down)'; }
   const countEl = document.getElementById('orbit-count');
-  if(countEl) countEl.textContent = roster.length;
+  if(countEl) countEl.textContent = roster.length + ' / ' + Object.keys(SE.strategies).length;
+  const configured=Object.entries(SE.strategies);
+  const retired=configured.filter(([,s])=>/RITIRATA/i.test(s.label||'')).length;
+  const research=configured.filter(([,s])=>s.signalOnly).length;
+  const disabled=BLOCKED_STRATEGIES.includes('S20_FIB_CONFLUENCE')?1:0;
+  const blocked=configured.filter(([id,s])=>!s.signalOnly&&!/RITIRATA/i.test(s.label||'')&&id!=='S20_FIB_CONFLUENCE'&&BLOCKED_STRATEGIES.includes(id)).length;
+  const rosterNote=document.getElementById('orbit-roster-note');
+  if(rosterNote)rosterNote.textContent=`${roster.length} abilitate · ${blocked} bloccate · ${disabled} disabilitate · ${retired} ritirate · ${research} in ricerca. Configurazione del roster; il bot seleziona gli ingressi in base al regime.`;
   const nucName = document.getElementById('orbit-nucleus-name');
   if(nucName) nucName.textContent = nucleus.label.replace(/\s*⛔.*$/,'');
 
@@ -162,42 +169,22 @@ function renderOrbitHero(){
   // Palcoscenico pianeta + lune (CSS puro, solo desktop — vedi style.css nb-stage-wrap)
   const stageEl = document.getElementById('orbit-stage');
   if(stageEl){
-    const moonCls = ['nb-moon--a','nb-moon--b','nb-moon--c'], moonSz = [30,42,34];
-    const moons = roster.filter(r=>r.key!==nucleus.key).slice(0,3);
-    const moonsHtml = moons.map((r,i) => {
-      const tier = orbitTier(r.pf);
-      const tex = ORBIT_TEX[(i+1) % ORBIT_TEX.length];
-      const sz = moonSz[i];
-      return `<div class="nb-moon ${moonCls[i]}" style="width:${sz}px;height:${sz}px">
-        <div class="nb-planet nb-planet--inline" data-orbit-key="${r.key}" style="width:${sz}px;height:${sz}px;box-shadow:0 0 18px ${tier.hex}70;cursor:pointer">
-          <div class="nb-tex ${tex} nb-tex--quick"></div><div class="nb-shade"></div>
-        </div>
-        <span class="nb-moon__label" style="color:${tier.hex}">${r.label.split(' ')[0]}</span>
-      </div>`;
-    }).join('');
-    const nucTier = orbitTier(nucleus.pf);
-    stageEl.innerHTML = `
-      <svg class="nb-stage__orbits" width="600" height="430" viewBox="0 0 600 430" fill="none">
-        <ellipse cx="300" cy="215" rx="215" ry="58" stroke="rgba(232,193,115,.2)" stroke-width="1"/>
-        <ellipse cx="300" cy="215" rx="262" ry="86" stroke="rgba(232,193,115,.16)" stroke-width="1" stroke-dasharray="2 6"/>
-        <ellipse cx="300" cy="215" rx="290" ry="128" stroke="rgba(232,193,115,.12)" stroke-width="1"/>
-      </svg>
-      <div class="nb-halo" style="left:120px;top:35px;width:360px;height:360px;z-index:1;background:radial-gradient(circle, ${nucTier.hex}38 0%, ${nucTier.hex}10 42%, transparent 68%)"></div>
-      <div class="nb-ring" style="left:65px;top:155px;width:470px;height:120px;z-index:2"></div>
-      <div class="nb-planet" data-orbit-key="${nucleus.key}" style="left:185px;top:100px;width:230px;height:230px;z-index:3;cursor:pointer;box-shadow:0 0 60px ${nucTier.hex}40, -12px -12px 40px rgba(229,189,108,.08)">
-        <div class="nb-tex nb-tex--gas" style="--spin:90s"></div><div class="nb-shade"></div>
-      </div>
-      <div class="nb-ring nb-ring--front" style="left:65px;top:155px;width:470px;height:120px;z-index:4"></div>
-      <svg class="nb-stage__orbits nb-stage__orbits--front" width="600" height="430" viewBox="0 0 600 430" fill="none">
-        <ellipse cx="300" cy="215" rx="215" ry="58" stroke="rgba(232,193,115,.28)" stroke-width="1"/>
-        <ellipse cx="300" cy="215" rx="262" ry="86" stroke="rgba(232,193,115,.2)" stroke-width="1" stroke-dasharray="2 6"/>
-      </svg>
-      ${moonsHtml}
-      <div class="nb-panel nb-hud-chip nb-hud-chip--tr">
-        <span class="nb-lbl">Nucleo · ${nucleus.label.split(' ')[0]}</span>
-        <span style="font-size:13px">PF ${nucleus.pf.toFixed(2)} · WR ${nucleus.wr||'—'}</span>
-      </div>
-    `;
+    stageEl.innerHTML = `<svg class="saturn-scene" viewBox="0 0 600 300" role="img" aria-label="Saturno, panorama delle strategie">
+      <defs>
+        <radialGradient id="saturn-light" cx="30%" cy="24%" r="80%"><stop stop-color="#f7e6bc"/><stop offset=".42" stop-color="#bb9b6a"/><stop offset=".78" stop-color="#534535"/><stop offset="1" stop-color="#151b26"/></radialGradient>
+        <linearGradient id="saturn-ring"><stop stop-color="#c5a778" stop-opacity=".12"/><stop offset=".45" stop-color="#ebd5a5" stop-opacity=".8"/><stop offset="1" stop-color="#7e8aa3" stop-opacity=".25"/></linearGradient>
+        <radialGradient id="saturn-glow"><stop stop-color="#b6955d" stop-opacity=".15"/><stop offset="1" stop-color="#b6955d" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="300" cy="150" rx="240" ry="145" fill="url(#saturn-glow)"/>
+      <g transform="rotate(-18 300 150)">
+        <ellipse cx="300" cy="150" rx="246" ry="71" fill="none" stroke="#8499ba" stroke-opacity=".14" stroke-dasharray="2 8"/>
+        <ellipse cx="300" cy="150" rx="179" ry="49" fill="none" stroke="url(#saturn-ring)" stroke-width="22"/>
+        <circle cx="300" cy="150" r="77" fill="url(#saturn-light)"/>
+        <path d="M 121 150 A 179 49 0 0 0 479 150" fill="none" stroke="url(#saturn-ring)" stroke-width="22"/>
+        <path d="M 112 150 A 188 53 0 0 0 488 150" fill="none" stroke="#eed7a4" stroke-opacity=".4"/>
+        <circle cx="88" cy="115" r="5" fill="#a2b8d4"/><circle cx="492" cy="193" r="9" fill="#8295ab"/>
+      </g>
+    </svg>`;
   }
 
   renderOrbitDetail(sel);
@@ -285,100 +272,39 @@ async function loadPrices(){
 }
 
 // Sentiment-only refresh — uses server-side proxy to avoid CORS
+let sentimentBusy = false;
 async function loadSentimentOnly(){
-  try{
-    const assetStr = `${window.activeAsset||'XAU'}USD`;
-    const res = await fetch('/api/myfxbook', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'outlook', symbol: assetStr, session: mfxSession?.session || '' })
-    });
-    
-    if(!res.ok) return;
-    const json = await res.json();
-    if(json.ok && json.outlook){
-      const d = json.outlook;
-      const sym = d.symbols?.find(s=>s.name===assetStr) || d.symbols?.[0];
-      if(sym?.longPercentage != null){
-        const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
-        const sent = {
-          longPct: lp, shortPct: sp,
-          signal: lp > 60 ? 'RETAIL_LONG_HEAVY' : sp > 60 ? 'RETAIL_SHORT_HEAVY' : 'MIXED',
-          contrarian: lp > 65 ? 'BEARISH_BIAS' : sp > 65 ? 'BULLISH_BIAS' : 'NEUTRAL',
-          note: lp > 65 ? '⚠️ Retail '+Math.round(lp)+'% long — smart money SHORT' :
-                sp > 65 ? '⚠️ Retail '+Math.round(sp)+'% short — squeeze possibile' : ''
-        };
-        dashContext.sentiment = sent;
-        updateSentiment(sent, 'myfxbook_proxy');
-        if(marketData) updateConfidence(marketData, sent);
-      }
+  if(sentimentBusy) return;
+  sentimentBusy=true;
+  const asset=window.activeAsset||'XAU';
+  const symbol=asset==='US30'?'US30':asset+'USD';
+  try {
+    const session=mfxSession?.session||'';
+    const sd=await fetchJSON('/api/market?type=sentiment&symbol='+encodeURIComponent(symbol)+'&session='+encodeURIComponent(session),9000);
+    if(asset!==(window.activeAsset||'XAU'))return;
+    const sym=sd?.outlook?.symbols?.find(s=>s.name===symbol);
+    const lp=Number(sym?.longPercentage),sp=Number(sym?.shortPercentage);
+    if(sd?.ok && sym && Number.isFinite(lp) && Number.isFinite(sp) && !sd.synthetic){
+      const sent={longPct:lp,shortPct:sp,signal:lp>60?'RETAIL_LONG_HEAVY':sp>60?'RETAIL_SHORT_HEAVY':'MIXED',contrarian:lp>65?'BEARISH_BIAS':sp>65?'BULLISH_BIAS':'NEUTRAL',note:''};
+      dashContext.sentiment=sent;updateSentiment(sent,sd.source);
+      if(marketData)updateConfidence(marketData,sent);
+    }else{
+      dashContext.sentiment=null;updateSentiment(null);
+      document.getElementById('sent-source').textContent=sd?.error||'Fonte non disponibile';
     }
-  }catch(e){console.log('Sentiment Proxy Error:', e.message);}
+  }finally{sentimentBusy=false;}
 }
-
-// Slow refresh: sentiment + calendar (called every 30s)
 async function loadSlowData(){
-  const assetStr = `${window.activeAsset || 'XAU'}USD`;
-  const mfxSess = mfxSession?.session ? '&session='+encodeURIComponent(mfxSession.session) : '';
-  fetchJSON('/api/market?type=sentiment&symbol=' + assetStr + mfxSess, 6000).then(async sd => {
-    if(sd?.ok && sd.outlook && sd.outlook.symbols){
-      // Support dual-asset simulation response
-      const sym = sd.outlook.symbols.find(s => s.name === assetStr) || sd.outlook.symbols[0];
-      if(sym && sym.longPercentage != null){
-        const lp = parseFloat(sym.longPercentage), sp = parseFloat(sym.shortPercentage);
-        const sent = {
-          longPct: lp, shortPct: sp,
-          synthetic: sd.source === 'simulation',
-          signal: lp > 60 ? 'RETAIL_LONG_HEAVY' : sp > 60 ? 'RETAIL_SHORT_HEAVY' : 'MIXED',
-          contrarian: lp > 65 ? 'BEARISH_BIAS' : sp > 65 ? 'BULLISH_BIAS' : 'NEUTRAL',
-          note: lp > 65 ? '⚠️ Retail ' + Math.round(lp) + '% long — smart money SHORT' :
-                sp > 65 ? '⚠️ Retail ' + Math.round(sp) + '% short — squeeze possibile' : ''
-        };
-        dashContext.sentiment = sent;
-        updateSentiment(sent, sd.source || 'myfxbook_proxy');
-        if(marketData) updateConfidence(marketData, sent);
-      }
-    } else {
-      // Server blocked — fetch MyFxBook directly from browser (no CORS issue)
-      try{
-        const assetStr = `${window.activeAsset||'XAU'}USD`;
-        const r=await fetch(`https://www.myfxbook.com/api/get-community-outlook.json?session=&symbols=${assetStr}`,{
-          headers:{'Accept':'application/json'}
-        });
-        if(r.ok){
-          const d=await r.json();
-          const sym=d.symbols?.find(s=>s.name===assetStr)||d.symbols?.[0];
-          if(sym?.longPercentage!=null){
-            const lp=parseFloat(sym.longPercentage), sp=parseFloat(sym.shortPercentage);
-            const sent={
-              longPct:lp, shortPct:sp,
-              signal:lp>60?'RETAIL_LONG_HEAVY':sp>60?'RETAIL_SHORT_HEAVY':'MIXED',
-              contrarian:lp>65?'BEARISH_BIAS':sp>65?'BULLISH_BIAS':'NEUTRAL',
-              note:lp>65?'⚠️ Retail '+Math.round(lp)+'% long — smart money SHORT':
-                   sp>65?'⚠️ Retail '+Math.round(sp)+'% short — squeeze possibile':''
-            };
-            dashContext.sentiment=sent;
-            updateSentiment(sent,'myfxbook_direct');
-            if(marketData)updateConfidence(marketData,sent);
-          }
-        }
-      }catch(e){console.log('Direct sentiment failed:',e.message);}
-    }
-  });
-  // Economic Calendar — uses robust server-side proxy
-  fetchJSON('/api/market?type=calendar', 7000).then(cd => {
-    if(cd?.ok && cd.events){
-      dashContext.calendar = cd.events;
-      updateCalendar(cd.events);
-    } else {
-      updateCalendar([]);
-    }
-  }).catch(e => {
-    console.log('Calendar Error:', e.message);
-    updateCalendar([]);
-  });
-
-  // Card "stile MFKK" dei 4 layout TradingView (S31 + S32/S33/S34)
+  loadSentimentOnly();
+  const cd=await fetchJSON('/api/market?type=calendar',9000);
+  if(cd?.ok && Array.isArray(cd.events)){
+    dashContext.calendar=cd.events;updateCalendar(cd.events);
+    if(cd.stale)document.getElementById('cal-events').insertAdjacentHTML('afterbegin','<p class="data-note">Ultimi dati disponibili · fonte temporaneamente offline</p>');
+  }else{
+    document.getElementById('cal-next').style.display='none';
+    if(window._cdInterval)clearInterval(window._cdInterval);
+    document.getElementById('cal-events').textContent='Calendario non disponibile. Nuovo tentativo al prossimo aggiornamento.';
+  }
   loadLayoutStrategies();
 }
 
@@ -1267,6 +1193,8 @@ function updateCalendar(events){
     .filter(e=>e.impact==='High'&&new Date(e.time)>now)
     .sort((a,b)=>new Date(a.time)-new Date(b.time));
   
+  document.getElementById('cal-next').style.display='none';
+  if(window._cdInterval)clearInterval(window._cdInterval);
   if(upcoming.length){
     const next=upcoming[0];
     const nextEl=document.getElementById('cal-next');

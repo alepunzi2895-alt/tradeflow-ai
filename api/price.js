@@ -61,9 +61,11 @@ export default async function handler(req, res) {
     }
 
     // GC=F / YM=F (futures) accettati come fallback SOLO per candles/indicatori tecnici
-    const symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F']
+    let symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F']
                   : (asset === 'US30' || asset === 'DJI') ? ['YM=F', '^DJI']
                   : ['XAUUSD=X', 'GC=F'];
+    if(req.query.strict === '1')symbols=[asset==='XAG'?'XAGUSD=X':asset==='US30'?'^DJI':'XAUUSD=X'];
+    const candleDeadline=Date.now()+7500;
     // Try query1 + query2, v8 + v7 for each symbol to maximise availability
     const yahooHosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
     const yahooVers  = ['v8', 'v7'];
@@ -76,9 +78,10 @@ export default async function handler(req, res) {
     for (const sym of symbols) {
       for (const host of yahooHosts) {
         for (const ver of yahooVers) {
+          if(Date.now()>=candleDeadline)break;
           try {
             const url = `https://${host}/${ver}/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&range=${range}`;
-            const r = await fetchT(url, { headers: yahooHeaders }, 7000);
+            const r = await fetchT(url, { headers: yahooHeaders }, Math.max(1,Math.min(2500,candleDeadline-Date.now())));
             if (!r.ok) continue;
             const d = await r.json();
             const candles = parseYahooChart(d);

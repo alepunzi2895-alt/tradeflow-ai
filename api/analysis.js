@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
   async function yahooQuote(symbol) {
     try {
-      const r = await fetchT(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`, { headers: { "User-Agent": "Mozilla/5.0" } });
+      const r = await fetchT(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`, { headers: { "User-Agent": "Mozilla/5.0" } }, 3500);
       const d = await r.json();
       const meta = d?.chart?.result?.[0]?.meta;
       if (!meta) return null;
@@ -73,15 +73,16 @@ export default async function handler(req, res) {
       let prices = {};
       let tvSource = false;
       try {
-        const r = await fetchT('https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify(scannerBody), headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const r = await fetchT('https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify(scannerBody), headers: { 'User-Agent': 'Mozilla/5.0', 'Content-Type':'application/json' } }, 3500);
         if (r.ok) {
           const d = await r.json();
           d.data?.forEach(item => {
             const key = TICKER_KEY[item.s];
             if (!key || prices[key]) return;
             const [val, chg, hi, lo] = item.d;
-            const dp = DEC3.has(key) ? 3 : 2;
-            prices[key] = { price: val.toFixed(dp), change: chg.toFixed(2), high: hi?.toFixed(dp), low: lo?.toFixed(dp), _source: item.s };
+            if(!Number.isFinite(val))return;
+            const dp = /USD$/.test(key) && key!=='US30' ? 5 : DEC3.has(key) ? 3 : 2;
+            prices[key] = { price: val.toFixed(dp), change: Number.isFinite(chg)?chg.toFixed(2):null, high: hi?.toFixed(dp), low: lo?.toFixed(dp), _source: item.s };
           });
           tvSource = true;
         }
@@ -93,11 +94,13 @@ export default async function handler(req, res) {
         {k:'GBPUSD', s:'GBPUSD=X'}, {k:'OIL', s:'CL=F'}, {k:'XAG', s:'XAGUSD=X'}, {k:'US10Y', s:'^TNX'}
       ].filter(g => !prices[g.k]);
       
-      for (const gap of gaps) {
+      await Promise.allSettled(gaps.map(async gap => {
         const q = await yahooQuote(gap.s);
-        if (q) prices[gap.k] = { price: q.price.toFixed(2), change: q.change.toFixed(2), high: q.high?.toFixed(2), low: q.low?.toFixed(2), _source: 'yahoo' };
-      }
+        const dp=/^(EURUSD|GBPUSD)$/.test(gap.k)?5:2;
+        if (q && Number.isFinite(q.price)) prices[gap.k] = { price: q.price.toFixed(dp), change: q.change.toFixed(2), high: q.high?.toFixed(dp), low: q.low?.toFixed(dp), _source: 'Yahoo · '+gap.s };
+      }));
 
+      if(!Object.keys(prices).length)return res.status(503).json({ok:false,error:'Quotazioni non disponibili'});
       // Calculations
       if (prices.US10Y) {
         const yc = +prices.US10Y.change;
@@ -124,23 +127,17 @@ export default async function handler(req, res) {
       let sentimentData = null;
       let source = 'myfxbook';
       try {
-        const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${mfxSession}&symbols=${encodeURIComponent(symbol)}`;
-        const r = await fetchT(mfxUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+        const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${encodeURIComponent(mfxSession)}&symbols=${encodeURIComponent(symbol)}`;
+        const r = await fetchT(mfxUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, 3500);
         if (r.ok) {
           const d = await r.json();
-          const sym = d.symbols?.find(s => s.name === symbol || s.name === "GOLD");
+          const sym = d.symbols?.find(s => s.name === symbol || (symbol === "XAUUSD" && s.name === "GOLD"));
           if (sym) sentimentData = buildSentiment(parseFloat(sym.longPercentage), parseFloat(sym.shortPercentage));
         }
       } catch(e) {}
 
-      if (!sentimentData) {
-        // Fallback sintetico basato sul segno della variazione — niente GC=F (futures ≠ spot, vedi CLAUDE.md).
-        const YAHOO_FALLBACK = { XAUUSD: 'XAUUSD=X', XAGUSD: 'XAGUSD=X', US30USD: '^DJI' };
-        const q = await yahooQuote(YAHOO_FALLBACK[symbol] || 'XAUUSD=X');
-        const lp = q ? (q.change < 0 ? 62 : 45) : 50;
-        sentimentData = buildSentiment(lp, 100-lp);
-        sentimentData.synthetic = true;
-        source = 'simulation';
+      if (!sentimentData || !Number.isFinite(sentimentData.longPct) || !Number.isFinite(sentimentData.shortPct)) {
+        return res.status(200).json({ok:false, error: mfxSession ? 'Sentiment non disponibile per questo simbolo o sessione scaduta' : 'Collega MyFxBook per il sentiment retail', source:'myfxbook'});
       }
       // Shape allineata a quella già usata da api/myfxbook.js (action:'outlook') e attesa dal client
       // (dashboard.js::loadSlowData legge sd.outlook.symbols) — prima la chiave era 'xauusd' e il
@@ -155,6 +152,7 @@ export default async function handler(req, res) {
 
     // ── CALENDAR ──
     if (type === "calendar") {
+      res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
       // Cache-hit: risparmia la fetch esterna (vedi CAL_CACHE_TTL_MS in cima al file).
       if (calCache && (Date.now() - calCacheTs) < CAL_CACHE_TTL_MS) {
         return res.status(200).json({ ok:true, events: calCache, cached: true, timestamp: new Date().toISOString() });
@@ -170,7 +168,7 @@ export default async function handler(req, res) {
       // restava vuota — vedi directives/07_self_learning_log.md 2026-07-09).
       const CAL_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
       let raw = null;
-      for (let attempt = 0; attempt < 2 && !raw; attempt++) {
+      for (let attempt = 0; attempt < 1 && !raw; attempt++) {
         if (attempt > 0) await new Promise(r => setTimeout(r, 900));
         try {
           const r = await fetchT(CAL_URL, { headers:{"User-Agent":"Mozilla/5.0"} }, 5000);
@@ -184,15 +182,21 @@ export default async function handler(req, res) {
           const country = (e.currency || e.country || "").toUpperCase();
           return ["USD","EUR","GBP","JPY","AUD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
         });
-        events = important.slice(0, 15).map(e => ({
+        events = important.map(e => ({
           id: e.id || Math.random().toString(36).substr(2, 9),
-          time: e.date || e.time || new Date().toISOString(),
+          time: String(e.date || e.time || '').replace(/^(\d{2})-(\d{2})-(\d{4})(T.*)$/, '$3-$1-$2$4'),
           currency: e.currency || e.country || "USD",
           event: e.event || e.title || "Economic Event",
-          impact: e.impact || "High"
+          impact: e.impact || "High", forecast:e.forecast ?? "", previous:e.previous ?? "", actual:e.actual ?? ""
         }));
       }
 
+      if (!Array.isArray(raw)) {
+        if(calCache) return res.status(200).json({ok:true,events:calCache,stale:true,timestamp:new Date(calCacheTs).toISOString()});
+        res.setHeader('Cache-Control','no-store');
+        return res.status(503).json({ok:false,error:'Calendario temporaneamente non disponibile'});
+      }
+      events=events.filter(e=>Number.isFinite(Date.parse(e.time))).sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
       // Cache sempre il risultato — anche vuoto, ma solo per pochi secondi (non i 5 min
       // pieni) così un blip transitorio non "congela" la card vuota a lungo, mentre un
       // fetch riuscito viene servito dalla cache per la TTL intera.
@@ -215,26 +219,24 @@ export default async function handler(req, res) {
 
   // ── BRANCH: INDICATORS ────────────────────────────────────────────────────
   if (type === 'indicators') {
-    const tvTicker = asset === 'XAG' ? 'OANDA:XAGUSD' : 'OANDA:XAUUSD';
+    const tvTicker = asset === 'XAG' ? 'OANDA:XAGUSD' : asset === 'US30' ? 'OANDA:US30USD' : 'OANDA:XAUUSD';
     const resolution = tf === '1d' ? '' : '|60';
     
     // Initialize defaults to prevent frontend display issues (invisible headers)
     const response = { 
       ok: true, timeframe: tf, timestamp: new Date().toISOString(),
-      adx: { adx: 22.5, di_plus: 21.0, di_minus: 19.5, trending: true }, // realistic initial values
-      cci: { value: 50.0, zone: 'neutral' },
-      macd: { macd: 0, signal: 0, histogram: 0, cross: 'none' }
+      adx: null, cci: null, macd: null
     };
 
     // 1. MACD from TV Scanner
     try {
-      const body = { symbols: { tickers: [tvTicker], query: { types: [] } }, columns: ['close'+resolution, 'MACD.macd'+resolution, 'MACD.signal'+resolution, 'MACD.hist'+resolution] };
-      const r = await fetchT('https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify(body) });
+      const body = { symbols: { tickers: [tvTicker], query: { types: [] } }, columns: ['close'+resolution, 'MACD.macd'+resolution, 'MACD.signal'+resolution] };
+      const r = await fetchT('https://scanner.tradingview.com/global/scan', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }, 3500);
       const d = await r.json();
       const item = d.data?.[0]?.d;
-      if (item) {
+      if (item && Number.isFinite(item[1]) && Number.isFinite(item[2])) {
         response.last_close = item[0];
-        response.macd = { macd: +item[1].toFixed(4), signal: +item[2].toFixed(4), histogram: +item[3].toFixed(4), cross: item[1] > item[2] ? 'above':'below' };
+        response.macd = { macd: +item[1].toFixed(4), signal: +item[2].toFixed(4), histogram: +(item[1]-item[2]).toFixed(4), cross: item[1] > item[2] ? 'above':'below' };
       }
     } catch(e) {}
 
@@ -242,9 +244,10 @@ export default async function handler(req, res) {
     let candles = [];
     try {
       // Use GC=F/SI=F for better H1 coverage on Yahoo
-      const yahooSym = asset === 'XAG' ? 'SI=F' : 'GC=F';
+      const yahooSym = asset === 'XAG' ? 'SI=F' : asset === 'US30' ? '^DJI' : 'GC=F';
+      response.candle_source='Yahoo · '+yahooSym;
       const url = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=${tf==='1d'?'1d':'1h'}&range=60d`;
-      const cr = await fetchT(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      const cr = await fetchT(url, { headers: { "User-Agent": "Mozilla/5.0" } }, 3500);
       const cd = await cr.json();
       const rs = cd?.chart?.result?.[0];
       if (rs?.timestamp) {
@@ -287,9 +290,9 @@ export default async function handler(req, res) {
             let sum=0;for(let j=0;j<ADX_P;j++)sum+=(DX[i-j]||0);
             ADX[i]=sum/ADX_P;
           }
-          adx = ADX[n-1] || 20;
-          diP = DIP[n-1] || 20;
-          diM = DIM[n-1] || 20;
+          adx = ADX[n-1] ?? 0;
+          diP = DIP[n-1] ?? 0;
+          diM = DIM[n-1] ?? 0;
         }
       } catch(e) {}
       response.adx = { adx: +adx.toFixed(2), di_plus: +diP.toFixed(1), di_minus: +diM.toFixed(1), trending: adx > 20 };
@@ -337,6 +340,7 @@ export default async function handler(req, res) {
       } catch(e) {}
     }
 
+    response.ok=Boolean(response.macd||response.adx||response.cci);
     return res.status(200).json(response);
   }
 

@@ -416,7 +416,7 @@ function gnRender(key){
         <div class="nb-between" style="align-items:flex-start">
           <div>
             <div class="nb-lbl">${info.tf||''} · ${info.n_trades||0} trade${disabled?' · <span style="color:var(--nb-down)">DISATTIVATA</span>':''}</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:700;margin-top:3px">${meta.label || BR_NAMES[key] || key}</div>
+            <div style="font-family:'Outfit',sans-serif;font-size:21px;font-weight:700;margin-top:3px">${meta.label || BR_NAMES[key] || key}</div>
           </div>
         </div>
 
@@ -429,7 +429,7 @@ function gnRender(key){
             <text class="nb-mono" x="88" y="104" text-anchor="middle" fill="var(--nb-muted)" font-size="12">/100</text>
           </svg>
           <div class="nb-stack nb-stack--tight" style="flex:1 1 200px;min-width:0">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:${s.tierColor}">${s.tier.split(' · ')[1]||s.tier}</span>
+            <span style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;color:${s.tierColor}">${s.tier.split(' · ')[1]||s.tier}</span>
             <p style="margin:0;font-size:12.5px;line-height:1.5;color:var(--nb-muted)">Score derivato da PF full/holdout + regime — non è Sharpe/DSR accademico (non ancora persistiti lato Python).</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <span class="nb-badge">${s.tier.split(' · ')[0]}</span>

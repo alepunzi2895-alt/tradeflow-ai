@@ -162,6 +162,7 @@ function switchTab(tab){
   document.querySelector(`[data-tab="${tab}"]`)?.classList.add('on');
   const panel=document.getElementById(`tp-${tab}`);
   panel.classList.add('on');
+  window.scrollTo({top:0,behavior:'instant'});
   // Reset scroll to top on tab switch
   const dp=panel.querySelector('.dp,.jp,.kbp,.mfxp');
   if(dp) dp.scrollTop=0;
@@ -355,7 +356,7 @@ try{updateConfidence({},{});}catch(e){}
 setInterval(loadPrices, 1000);
 setInterval(loadOrbitEquity, 20000);
 setInterval(loadSlowData, 30000);
-setInterval(loadSentimentOnly, 1500);
+// Sentiment shares the 30-second slow-data refresh.
 setInterval(loadIndicatorCandles, 60000);
 setInterval(recalcIndicators, 5000);
 setInterval(() => { if (P.currency && P.currency !== 'USD') fetchFxRates(); }, 60000);

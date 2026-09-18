@@ -15,7 +15,7 @@ function renderMyfx(){
     loadMyfxAccounts();
   }else{
     c.innerHTML=`
-      <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'JetBrains Mono',monospace">📊 MYFXBOOK</div>
+      <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Outfit',sans-serif">📊 MYFXBOOK</div>
       <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Connetti per importare lo storico trade e analizzare gli errori con AI.</div>
       <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="color:var(--g);font-size:11px;font-weight:700;margin-bottom:10px">LOGIN MYFXBOOK</div>

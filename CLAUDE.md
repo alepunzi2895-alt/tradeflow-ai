@@ -24,6 +24,10 @@ python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
 
 # Setup one-time (dopo ogni git clone) — pre-commit AI review hook
 python scripts/install_git_hooks.py
+
+# Export verso vault Obsidian (secondo cervello) — richiede OBSIDIAN_VAULT_PATH in .env locale
+python scripts/obsidian_export.py --dry-run   # anteprima, non tocca il vault
+python scripts/obsidian_export.py             # scrive/aggiorna le note
 ```
 
 ## Dove Trovare Cosa
@@ -67,6 +71,9 @@ public/modules/
   se-signals.js      — indicator helpers + SE_STRATEGY_FNS (browser)
   strategy.js        — SE config, seRefresh(), loop 1s
   se-render.js       — seRender(), seRenderNoData()
+  dashboard.js       — dashboard + hero "Orbite strategie" (renderOrbitHero(): nucleo/pianeti = roster SE.strategies per PF reale, equity da mt5_get)
+  backtest-report.js — pannello Report Backtest + dettaglio "Genoma" per strategia (gnOpen()/gnScore(): confidenza derivata da PF full/holdout/regime, bootstrap resample client-side — non Sharpe/DSR accademico)
+  hive.js            — "The Hive": nebulosa del roster (nodi = SE.strategies, link = regimi condivisi) + knowledge tiles (kb.js) + stato roster (brData)
 
 scripts/
   signals.py         — funzioni segnale unificate (source of truth)
@@ -79,6 +86,7 @@ scripts/
   ai_review.py       — client condiviso per chiamate Claude (Python)
   review_diff.py      — pre-commit AI code review (signals.py/mt5-bot.py/risk_guardian.py)
   install_git_hooks.py — setup one-time hook pre-commit
+  obsidian_export.py  — export locale → vault Obsidian (secondo cervello): Journal/Genomi/Knowledge/AI-Log come .md con frontmatter + [[wikilink]]. Legge via /api/db (stesso pattern HTTP di mt5-bot.py/daily_maintenance.py, MAI da api/*.js — Vercel è read-only su disco). Score "Genoma" replica gnScore() di backtest-report.js, tenerli allineati. Config: OBSIDIAN_VAULT_PATH + OBSIDIAN_USER_ID in .env locale (mai su Vercel)
   opt_harness.py     — fitness condivisa per sprint ottimizzazione: evaluate/is_promotable/dsr_check/pbo_check
   research_trials.py — registro cumulativo trial di ricerca (data/research_trials.json) — SEMPRE usarlo per num_trials in dsr_check, mai un numero a mano
   extra_indicators.py — 18 indicatori extra (Ichimoku, PSAR, MFI, ecc.); trix/choppiness_index/mfi promossi al path live (compute_all/compute_indicators), gli altri 15 restano research-only

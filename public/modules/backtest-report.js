@@ -72,7 +72,7 @@ function brRenderHero(){
   if(!canvas) return;
   const series = brHeroKey ? brStrategySeries(brHeroKey) : brCombinedSeries(brHeroMode);
   canvas._brSeries = series;
-  const color = brHeroKey ? '#c8a96e' : '#00e676';
+  const color = brHeroKey ? '#F4B860' : '#62E6A6';
   canvas._brGeom = brDrawLine(canvas, series, {color, fill:true, lw:2, zeroLine:true, pad:{t:14,r:10,b:14,l:10}});
   const label = document.getElementById('br-hero-label');
   if(label) label.textContent = brHeroKey ? (BR_NAMES[brHeroKey]||brHeroKey) : (brHeroMode==='active' ? 'Combinata · solo attive' : 'Combinata · roster completo');
@@ -119,9 +119,9 @@ function brCard(key){
   if(!info) return '';
   const disabled = (brData.disabled||[]).includes(key);
   const good = (info.holdout?.pf||0) >= 1;
-  const badge = disabled ? {t:'⛔ DISATTIVATA', c:'#ff8a80', bg:'rgba(255,71,87,.12)'}
+  const badge = disabled ? {t:'⛔ DISATTIVATA', c:'#FF8A8A', bg:'rgba(255,138,138,.12)'}
               : good ? {t:'STABILE', c:'var(--green)', bg:'rgba(0,230,118,.12)'}
-              : {t:'DECADUTA', c:'#ff8a80', bg:'rgba(255,71,87,.12)'};
+              : {t:'DECADUTA', c:'#FF8A8A', bg:'rgba(255,138,138,.12)'};
   return `
   <div class="br-card" data-key="${key}" style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:11px 12px;${disabled?'opacity:.65':''}">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
@@ -131,7 +131,7 @@ function brCard(key){
     <canvas class="br-spark" style="width:100%;height:40px;display:block;margin:5px 0 6px;cursor:pointer"></canvas>
     <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim)">
       <span>full PF <b style="color:var(--text)">${(info.full?.pf??0).toFixed(2)}</b></span>
-      <span>holdout PF <b style="color:${good?'var(--green)':'#ff8a80'}">${(info.holdout?.pf??0).toFixed(2)}</b></span>
+      <span>holdout PF <b style="color:${good?'var(--green)':'#FF8A8A'}">${(info.holdout?.pf??0).toFixed(2)}</b></span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
       <span style="font-size:9.5px;color:var(--dim)">n=${info.n_trades}</span>
@@ -139,8 +139,9 @@ function brCard(key){
     </div>
     <div style="display:flex;gap:5px;margin-top:8px">
       <button data-br-run="${key}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🔄 Backtest</button>
-      <button data-br-toggle="${key}" data-disabled="${disabled}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:${disabled?'var(--green)':'#ff8a80'};font-size:10px;cursor:pointer;font-family:inherit">${disabled?'🔓 Attiva':'⛔ Blocca'}</button>
+      <button data-br-toggle="${key}" data-disabled="${disabled}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:${disabled?'var(--green)':'#FF8A8A'};font-size:10px;cursor:pointer;font-family:inherit">${disabled?'🔓 Attiva':'⛔ Blocca'}</button>
     </div>
+    <button data-br-genome="${key}" style="width:100%;margin-top:5px;background:rgba(111,227,225,.06);border:1px solid rgba(111,227,225,.22);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🧬 Apri genoma</button>
   </div>`;
 }
 
@@ -152,7 +153,7 @@ function brRenderCards(){
     const key = c.closest('.br-card').dataset.key;
     const series = brStrategySeries(key);
     const positive = series.length && series[series.length-1].v >= 0;
-    requestAnimationFrame(()=> brDrawLine(c, series, {color: positive?'#00e676':'#ff4757', fill:true, lw:1.3, pad:{t:2,r:2,b:2,l:2}}));
+    requestAnimationFrame(()=> brDrawLine(c, series, {color: positive?'#62E6A6':'#FF8A8A', fill:true, lw:1.3, pad:{t:2,r:2,b:2,l:2}}));
     c.addEventListener('click', ()=>{ brHeroKey = (brHeroKey===key ? null : key); brRenderHero(); });
   });
 }
@@ -176,7 +177,7 @@ function brRenderCompare(){
       <div style="display:flex;align-items:baseline;gap:6px">
         <span style="font-size:11px;color:var(--dim);text-decoration:line-through">${r.b.toFixed(r.dp)}</span>
         <span style="font-size:15px;font-weight:700;color:var(--text)">${r.a.toFixed(r.dp)}</span>
-        <span style="font-size:10px;font-weight:700;color:${good?'var(--green)':'#ff8a80'}">${d>=0?'+':''}${d.toFixed(r.dp<1?2:0)}</span>
+        <span style="font-size:10px;font-weight:700;color:${good?'var(--green)':'#FF8A8A'}">${d>=0?'+':''}${d.toFixed(Math.max(r.dp,2))}</span>
       </div>
     </div>`;
   }).join('');
@@ -193,7 +194,7 @@ function brRenderRegime(){
       const ok = rv.optimal_regimes_coded.includes(reg);
       rows += `<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);padding:3px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--text)">${reg}</span><span>n=${s.n}</span><span>PF ${Math.min(s.pf,99.9).toFixed(2)}</span>
-        <span style="color:${s.pnl>=0?'var(--green)':'#ff8a80'}">${brFmt(s.pnl)}</span>
+        <span style="color:${s.pnl>=0?'var(--green)':'#FF8A8A'}">${brFmt(s.pnl)}</span>
         <span style="color:${ok?'var(--green)':'var(--yellow)'}">${ok?'✓':'⚠ fuori config'}</span>
       </div>`;
     });
@@ -221,7 +222,7 @@ async function brLoad(){
     if(d.ok && d.data){ brData = d.data; brRenderAll(); }
     else if(body) body.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:20px 0;text-align:center">Nessun report ancora disponibile — gira <code>python scripts/portfolio_backtest.py --push</code> una prima volta (poi lo fa da solo ogni giorno).</div>';
   }catch(e){
-    if(body) body.innerHTML = `<div style="color:#ff8a80;font-size:12px">Errore caricamento report: ${e.message}</div>`;
+    if(body) body.innerHTML = `<div style="color:#FF8A8A;font-size:12px">Errore caricamento report: ${e.message}</div>`;
   }
   if(body) body.style.opacity = '1';
 }
@@ -296,6 +297,157 @@ async function brToggleBlock(key, currentlyDisabled){
   if(btn){ btn.disabled = false; }
 }
 
+// ── GENOMA · dettaglio confidenza per singola strategia ─────────────────────
+// Punteggio "struttura dell'edge" derivato SOLO da metriche già in brData (full/holdout PF,
+// n_trades, regime_validation) — NON è Sharpe/DSR accademico (quei valori oggi non sono
+// persistiti lato Python, vedi opt_harness.dsr_check/pbo_check). Pesi arbitrari ma documentati:
+// 30% consistenza recente (holdout/full PF) + 30% durabilità (PF holdout assoluto)
+// + 25% copertura regime (quota regimi osservati con PF>=1) + 15% ampiezza campione (n_trades).
+function gnScore(info, regime){
+  const full = info.full||{}, holdout = info.holdout||{};
+  const fPf = full.pf||0, hPf = holdout.pf||0;
+  const consistency = fPf>0 ? Math.max(0,Math.min(1, hPf/fPf)) : 0;
+  const durability = Math.max(0, Math.min(1, (hPf-1)/1.5));
+  let coverage = 0.5, regimeNote = 'nessun dato di regime per questa strategia';
+  if(regime && regime.observed){
+    const obs = Object.entries(regime.observed);
+    if(obs.length){
+      const okN = obs.filter(([,st])=>st.pf>=1).length;
+      coverage = okN/obs.length;
+      regimeNote = `${okN}/${obs.length} regimi osservati con PF≥1`;
+    }
+  }
+  const sample = Math.max(0, Math.min(1, Math.log10(Math.max(info.n_trades||0,1)/20) / Math.log10(150/20)));
+  const score = Math.round((consistency*0.30 + durability*0.30 + coverage*0.25 + sample*0.15) * 100);
+  let tier, tierColor;
+  if(score>=70){ tier='TIER 1 · Credibile'; tierColor='var(--green)'; }
+  else if(score>=45){ tier='TIER 2 · Da confermare'; tierColor='#F4B860'; }
+  else { tier='TIER 3 · Fragile'; tierColor='#FF8A8A'; }
+  return {score, tier, tierColor, consistency, durability, coverage, sample, regimeNote};
+}
+
+// Bootstrap resample dai delta giornalieri dell'equity curve reale — "fortuna o edge":
+// se la % di resample profittevoli è alta il P&L non dipende da una manciata di trade fortunati.
+function gnBootstrap(equityCurve, iters=800){
+  const pts = (equityCurve||[]).map(p=> p.cum_pnl!==undefined?p.cum_pnl:p.v).filter(v=>typeof v==='number');
+  if(pts.length<6) return null;
+  const deltas = [];
+  for(let i=1;i<pts.length;i++) deltas.push(pts[i]-pts[i-1]);
+  const results = [];
+  for(let it=0; it<iters; it++){
+    let sum=0;
+    for(let i=0;i<deltas.length;i++) sum += deltas[(Math.random()*deltas.length)|0];
+    results.push(sum);
+  }
+  results.sort((a,b)=>a-b);
+  const median = results[Math.floor(results.length/2)];
+  const profitable = results.filter(r=>r>0).length/results.length;
+  return {results, median, profitable};
+}
+
+function gnDrawHist(canvas, boot){
+  const dpr = window.devicePixelRatio||1;
+  const rect = canvas.getBoundingClientRect();
+  const w=Math.max(rect.width,40), h=Math.max(rect.height,30);
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  if(!boot) return;
+  const nBins=22;
+  const min=boot.results[0], max=boot.results[boot.results.length-1];
+  const range = (max-min)||1;
+  const bins = new Array(nBins).fill(0);
+  boot.results.forEach(v=>{ const b=Math.min(nBins-1, Math.max(0,Math.floor((v-min)/range*nBins))); bins[b]++; });
+  const maxCount = Math.max(...bins,1);
+  const bw = w/nBins;
+  bins.forEach((c,i)=>{
+    const bh = (c/maxCount) * (h-4);
+    const binStart = min + (i/nBins)*range;
+    const col = binStart>=0 ? '#62E6A6' : '#FF8A8A';
+    ctx.fillStyle = col + 'cc';
+    ctx.fillRect(i*bw+1, h-bh, Math.max(bw-2,1), bh);
+  });
+  const zeroX = ((0-min)/range) * w;
+  if(zeroX>0 && zeroX<w){
+    ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(zeroX,0); ctx.lineTo(zeroX,h); ctx.stroke();
+  }
+}
+
+function gnRender(key){
+  const body = document.getElementById('genomesheet-body');
+  if(!body) return;
+  if(!brData){ body.innerHTML = '<div style="color:var(--dim);font-size:12px">Report backtest non disponibile — riprova con "🔃 Ricarica" nel Report Backtest.</div>'; return; }
+  const info = (brData.shared_pool && brData.shared_pool[key]) || (brData.isolated && brData.isolated[key]);
+  if(!info){ body.innerHTML = '<div style="color:var(--dim);font-size:12px">Nessun dato per questa strategia.</div>'; return; }
+  const meta = (typeof SE!=='undefined' && SE.strategies?.[key]) || {};
+  const regime = brData.regime_validation?.[key];
+  const s = gnScore(info, regime);
+  const boot = gnBootstrap(info.equity_curve || brData.equity_curves?.[key]);
+  const disabled = (brData.disabled||[]).includes(key);
+
+  const bar = (label, val, sub) => `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:var(--text);font-weight:600">${label}</span>
+        <span style="color:var(--dim);font-family:'JetBrains Mono',monospace">${Math.round(val*100)}/100</span>
+      </div>
+      <div style="height:6px;background:var(--border2);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(val*100)}%;background:${val>=0.6?'var(--green)':val>=0.35?'#F4B860':'#FF8A8A'};border-radius:3px"></div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-top:3px">${sub}</div>
+    </div>`;
+
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
+      <div>
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase">${info.tf||''} · ${info.n_trades||0} trade${disabled?' · <span style="color:#FF8A8A">DISATTIVATA</span>':''}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:700;margin-top:2px">${meta.label || BR_NAMES[key] || key}</div>
+      </div>
+      <div style="text-align:center;flex-shrink:0">
+        <div style="width:52px;height:52px;border-radius:50%;border:4px solid ${s.tierColor};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px">${s.score}</div>
+        <div style="font-size:9px;color:${s.tierColor};font-weight:700;margin-top:4px;white-space:nowrap">${s.tier}</div>
+      </div>
+    </div>
+
+    <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Struttura dell'edge · derivata da full/holdout PF + regime, non è Sharpe/DSR accademico</div>
+    ${bar('Consistenza recente', s.consistency, `holdout PF ${(info.holdout?.pf??0).toFixed(2)} su full PF ${(info.full?.pf??0).toFixed(2)}`)}
+    ${bar('Durabilità', s.durability, `PF holdout ${(info.holdout?.pf??0).toFixed(2)}`)}
+    ${bar('Copertura mercato', s.coverage, s.regimeNote)}
+    ${bar('Ampiezza campione', s.sample, `${info.n_trades||0} trade nel periodo testato`)}
+
+    <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 8px">Fortuna o edge · resample bootstrap sui delta reali dell'equity curve</div>
+    ${boot ? `
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px">
+      <canvas id="gn-hist" style="width:100%;height:90px;display:block"></canvas>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px">
+        <span style="color:var(--dim)">mediana resample <b style="color:var(--text);font-family:'JetBrains Mono',monospace">${brFmt(boot.median,0)}</b></span>
+        <span style="color:var(--dim)">resample profittevoli <b style="color:${boot.profitable>=0.6?'var(--green)':'#F4B860'};font-family:'JetBrains Mono',monospace">${Math.round(boot.profitable*100)}%</b></span>
+      </div>
+    </div>` : `<div style="font-size:11px;color:var(--dim)">Equity curve troppo corta per un resample affidabile.</div>`}
+
+    ${regime ? `<div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px">Elementi scoperti · regimi con miglior fit</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${Object.entries(regime.observed||{}).sort((a,b)=>b[1].pf-a[1].pf).slice(0,4).map(([reg,st])=>`
+        <div style="background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:6px 10px">
+          <div style="font-size:10px;font-weight:700;color:var(--text)">${reg}</div>
+          <div style="font-size:9.5px;color:var(--dim)">PF ${Math.min(st.pf,99.9).toFixed(2)} · n=${st.n}</div>
+        </div>`).join('')}
+    </div>` : ''}
+  `;
+  if(boot){
+    const c = document.getElementById('gn-hist');
+    if(c) requestAnimationFrame(()=> gnDrawHist(c, boot));
+  }
+}
+
+function gnOpen(key){
+  openOvl('genomesheet');
+  if(brData) gnRender(key);
+  else brLoad().then(()=> gnRender(key));
+}
+
 // ── Wiring (listener delegato — coerente con la regola "mai onclick su HTML rigenerato") ──
 document.addEventListener('click', (e)=>{
   if(e.target.closest('[data-action="open-backtest-report"]')){
@@ -308,6 +460,8 @@ document.addEventListener('click', (e)=>{
   if(runBtn){ brRunBacktest(runBtn.dataset.brRun); return; }
   const toggleBtn = e.target.closest('[data-br-toggle]');
   if(toggleBtn){ brToggleBlock(toggleBtn.dataset.brToggle, toggleBtn.dataset.disabled === 'true'); return; }
+  const genomeBtn = e.target.closest('[data-br-genome]');
+  if(genomeBtn){ gnOpen(genomeBtn.dataset.brGenome); return; }
   if(e.target.closest('#br-view-active')){ brHeroMode='active'; brHeroKey=null; brSetViewBtn('active'); brRenderHero(); return; }
   if(e.target.closest('#br-view-full')){ brHeroMode='full'; brHeroKey=null; brSetViewBtn('full'); brRenderHero(); return; }
   if(e.target.closest('#btn-br-refresh')){ brLoad(); return; }

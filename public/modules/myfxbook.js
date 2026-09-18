@@ -7,25 +7,25 @@ function renderMyfx(){
   const c=document.getElementById('mfx-content');
   if(mfxSession){
     c.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;background:#081408;border:1px solid #00e67625;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#081408;border:1px solid #62E6A625;border-radius:10px;padding:12px;margin-bottom:12px">
         <div><div style="color:var(--green);font-size:12px;font-weight:700">✓ Connesso a MyFxBook</div><div style="color:var(--dim);font-size:10px">${mfxSession.email}</div></div>
-        <button onclick="mfxLogout()" style="background:#160c0c;border:1px solid #ff475722;border-radius:6px;padding:5px 10px;color:#ff8a80;font-size:11px;cursor:pointer">Disconnetti</button>
+        <button onclick="mfxLogout()" style="background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:5px 10px;color:#FF8A8A;font-size:11px;cursor:pointer">Disconnetti</button>
       </div>
       <div id="mfx-accounts"></div>`;
     loadMyfxAccounts();
   }else{
     c.innerHTML=`
-      <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Space Grotesk',sans-serif">📊 MYFXBOOK</div>
+      <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Syne',sans-serif">📊 MYFXBOOK</div>
       <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Connetti per importare lo storico trade e analizzare gli errori con AI.</div>
       <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="color:var(--g);font-size:11px;font-weight:700;margin-bottom:10px">LOGIN MYFXBOOK</div>
         <div class="ff" style="margin-bottom:8px"><label>EMAIL</label><input id="mfx-email" type="email" placeholder="email@myfxbook.com"></div>
         <div class="ff" style="margin-bottom:10px"><label>PASSWORD</label><input id="mfx-pass" type="password" placeholder="••••••••"></div>
         <button class="bsave" id="btn-mfx-login" style="width:100%">🔗 Connetti</button>
-        <div id="mfx-err" style="display:none;margin-top:8px;font-size:11px;color:#ff8a80;background:#160c0c;border:1px solid #ff475722;border-radius:6px;padding:7px 9px"></div>
+        <div id="mfx-err" style="display:none;margin-top:8px;font-size:11px;color:#FF8A8A;background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:7px 9px"></div>
       </div>
       
-      <div style="margin-top:10px;background:#0d0f12;border:1px solid #c8a96e33;border-radius:9px;padding:12px">
+      <div style="margin-top:10px;background:#0d0f12;border:1px solid #6FE3E133;border-radius:9px;padding:12px">
         <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;display:flex;align-items:center;gap:5px">📘 COME COLLEGARE MYFXBOOK</div>
         <div style="font-size:11px;color:var(--dim);line-height:1.6;font-family:sans-serif">
           1. <b>Registrati su MyFxBook</b>: Vai su <a href="https://www.myfxbook.com/" target="_blank" style="color:var(--g);text-decoration:underline">myfxbook.com</a> e crea un account.<br>
@@ -95,7 +95,7 @@ function mfxShowExpired(wrap, msg){
   const hint=hasSavedPass
     ? 'Il rinnovo automatico ha provato e non è riuscito (password salvata probabilmente cambiata su MyFxBook).'
     : 'Questa connessione risale a prima del rinnovo automatico: riconnettiti una volta sola, da qui in poi le scadenze si risolveranno da sole.';
-  wrap.innerHTML=`<div style="color:#ff8a80;font-size:12px;background:#160c0c;border:1px solid #ff475722;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${msg||'Sessione MyFxBook scaduta.'}<br><span style="color:var(--dim);font-weight:400">${hint}</span></div>
+  wrap.innerHTML=`<div style="color:#FF8A8A;font-size:12px;background:#160c0c;border:1px solid #FF8A8A22;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${msg||'Sessione MyFxBook scaduta.'}<br><span style="color:var(--dim);font-weight:400">${hint}</span></div>
     <button onclick="mfxLogout()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--g);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Riconnetti (reinserisci email/password)</button>`;
 }
 
@@ -116,7 +116,7 @@ async function loadMyfxAccounts(){
         <button style="margin-top:6px;width:100%;background:linear-gradient(135deg,var(--g),var(--g2));border:none;border-radius:7px;padding:8px;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" onclick="analyzeMfxAccount('${a.id}')">🧠 Analizza Operatività</button>
         <button onclick="importMfxToJournal('${a.id}')" style="margin-top:5px;width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:7px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📥 Importa Trade al Journal</button>
       </div>`).join('');
-  }catch(e){wrap.innerHTML=`<div style="color:#ff8a80;font-size:12px">❌ ${e.message}</div>`;}
+  }catch(e){wrap.innerHTML=`<div style="color:#FF8A8A;font-size:12px">❌ ${e.message}</div>`;}
 }
 
 async function analyzeMfxAccount(accountId){

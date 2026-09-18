@@ -76,7 +76,7 @@ function openProfile(){
   const defs=[{lb:'Risk %',k:'risk',min:.5,max:5,step:.5},{lb:'Max DD %',k:'dd',min:1,max:15,step:1},{lb:'TP1 R',k:'tp1',min:1,max:3,step:.5},{lb:'TP2 R',k:'tp2',min:2,max:10,step:.5}];
   sl.innerHTML=defs.map(d=>`<div class="ff"><div class="rlbl">${d.lb} <span class="rval" id="rv-${d.k}">${P[d.k]}</span></div><input type="range" min="${d.min}" max="${d.max}" step="${d.step}" value="${P[d.k]||d.min}" id="rs-${d.k}" oninput="document.getElementById('rv-${d.k}').textContent=this.value"></div>`).join('');
   const pw=document.getElementById('perrs-wrap');const pt=document.getElementById('perrs-tags');
-  if(P.errors?.length){pw.style.display='block';pt.innerHTML=P.errors.map(e=>`<span style="font-size:11px;background:#ff475712;border:1px solid #ff475722;border-radius:4px;padding:2px 8px;color:#ff8a80;cursor:pointer" onclick="removeErr('${e}')">✕ ${e}</span>`).join('');}else{pw.style.display='none';}
+  if(P.errors?.length){pw.style.display='block';pt.innerHTML=P.errors.map(e=>`<span style="font-size:11px;background:#FF8A8A12;border:1px solid #FF8A8A22;border-radius:4px;padding:2px 8px;color:#FF8A8A;cursor:pointer" onclick="removeErr('${e}')">✕ ${e}</span>`).join('');}else{pw.style.display='none';}
   openOvl('profsheet');
 }
 function removeErr(e){P.errors=P.errors.filter(x=>x!==e);openProfile();}
@@ -175,11 +175,13 @@ document.querySelectorAll('.tb').forEach(btn=>btn.onclick=()=>switchTab(btn.data
 // ── OVERLAYS ────────────────────────────────────────────
 function openOvl(id){document.getElementById(id).classList.add('on');}
 function closeOvl(id){document.getElementById(id).classList.remove('on');}
-['imgsheet','csvsheet','scrsheet','profsheet','blockedsheet','brsheet'].forEach(id=>{
+['imgsheet','csvsheet','scrsheet','profsheet','blockedsheet','brsheet','genomesheet','hivesheet'].forEach(id=>{
   document.getElementById(id).onclick=e=>{if(e.target===document.getElementById(id))closeOvl(id);};
 });
 document.getElementById('btn-blockedc').onclick=()=>closeOvl('blockedsheet');
 document.getElementById('btn-brc').onclick=()=>closeOvl('brsheet');
+document.getElementById('btn-gnc').onclick=()=>closeOvl('genomesheet');
+document.getElementById('btn-hvc').onclick=()=>closeOvl('hivesheet');
 
 // ── EVENTS ──────────────────────────────────────────────
 // Safe button wiring - never crash if element missing
@@ -246,14 +248,14 @@ function hideAuth() {
 document.getElementById('tab-login').onclick=e=>{
   document.getElementById('form-login').style.display='block';
   document.getElementById('form-register').style.display='none';
-  e.target.style.borderBottom='2px solid #c8a96e'; e.target.style.color='var(--text)';
+  e.target.style.borderBottom='2px solid #6FE3E1'; e.target.style.color='var(--text)';
   document.getElementById('tab-register').style.borderBottom='2px solid transparent';
   document.getElementById('tab-register').style.color='var(--dim)';
 };
 document.getElementById('tab-register').onclick=e=>{
   document.getElementById('form-register').style.display='block';
   document.getElementById('form-login').style.display='none';
-  e.target.style.borderBottom='2px solid #c8a96e'; e.target.style.color='var(--text)';
+  e.target.style.borderBottom='2px solid #6FE3E1'; e.target.style.color='var(--text)';
   document.getElementById('tab-login').style.borderBottom='2px solid transparent';
   document.getElementById('tab-login').style.color='var(--dim)';
 };
@@ -340,6 +342,7 @@ try{ renderPlaceholders(); }catch(e){ console.error('renderPlaceholders:', e); }
 document.querySelectorAll('.dp,.jp,.kbp,.mfxp').forEach(el=>{ el.scrollTop=0; });
 
 setTimeout(loadPrices, 100);
+setTimeout(loadOrbitEquity, 300);
 setTimeout(initTVChart, 800);
 setTimeout(()=>{ try{updateConfidence({XAU:{price:'0',change:0}},{});} catch(e){} }, 50);
 setTimeout(loadCotData, 5000);
@@ -350,6 +353,7 @@ setTimeout(loadIndicators, 3000);
 try{updateConfidence({},{});}catch(e){}
 // Refresh intervals
 setInterval(loadPrices, 1000);
+setInterval(loadOrbitEquity, 20000);
 setInterval(loadSlowData, 30000);
 setInterval(loadSentimentOnly, 1500);
 setInterval(loadIndicatorCandles, 60000);

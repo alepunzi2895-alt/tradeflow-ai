@@ -1,7 +1,7 @@
 // TradeFlow AI — modules/dashboard.js
 
 // ── DASHBOARD ──────────────────────────────────────────
-// Fast refresh: prices only (called every 2s)
+// Fast refresh: prices only (called every 1s, vedi setInterval in app.js)
 // Fetch with timeout helper
 async function fetchJSON(url, timeoutMs=6000){
   const ctrl=new AbortController();
@@ -16,6 +16,147 @@ async function fetchJSON(url, timeoutMs=6000){
     clearTimeout(tid);
     return null;
   }
+}
+
+// ── ORBIT HERO ("Ogni strategia è un pianeta") ──────────────────────────────
+// Nucleo = strategia con il PF più alto nel roster live (esclude ritirate/signal-only).
+// Pianeti orbitanti = resto del roster. Colore/dimensione derivati dal PF reale (SE.strategies,
+// strategy.js) — nessun dato fittizio. Equity reale via mt5_get (stesso endpoint di strategy.js,
+// polling indipendente perché seRefresh() gira solo a tab Strategie attiva).
+let _orbitSel = null;       // key strategia selezionata nel pannello dettaglio (null = nucleo)
+let _orbitMt5 = null;
+let _orbitMt5Fetch = 0;
+let _orbitWired = false;
+
+function orbitRoster(){
+  return Object.entries(SE.strategies)
+    .filter(([k,s]) => !s.signalOnly && typeof s.pf === 'number' && !/RITIRATA/i.test(s.label||''))
+    .map(([key,s]) => ({key, ...s}))
+    .sort((a,b) => b.pf - a.pf);
+}
+function orbitTier(pf){
+  if(pf >= 1.8) return {color:'#6FE3E1', name:'ALTA'};
+  if(pf >= 1.3) return {color:'#F4B860', name:'BUONA'};
+  return {color:'#B79CFF', name:'MARGINALE'};
+}
+function orbitFmtEur(n){
+  if(typeof n !== 'number' || !isFinite(n)) return '—';
+  return '€ ' + n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+async function loadOrbitEquity(){
+  if(Date.now() - _orbitMt5Fetch < 20000 && _orbitMt5) { renderOrbitHero(); return; }
+  _orbitMt5Fetch = Date.now();
+  const j = await dbLoad('mt5_get', {}, 8000);
+  if(j && j.ok) _orbitMt5 = j.data;
+  renderOrbitHero();
+}
+
+function orbitWire(){
+  if(_orbitWired) return;
+  _orbitWired = true;
+  document.addEventListener('click', e=>{
+    const row = e.target.closest('[data-orbit-key]');
+    if(!row) return;
+    _orbitSel = row.dataset.orbitKey;
+    renderOrbitHero();
+  });
+}
+
+function renderOrbitDetail(entry){
+  const el = document.getElementById('orbit-detail');
+  if(!el || !entry) return;
+  const st = entry.stats || {};
+  const tier = orbitTier(entry.pf);
+  el.innerHTML = `
+    <div class="orbit-detail-title">${entry.label.replace(/\s*⛔.*$/,'')}</div>
+    <div class="orbit-detail-sub">PF ${entry.pf.toFixed(2)} · WR ${entry.wr||'—'} · tier <span style="color:${tier.color}">${tier.name}</span></div>
+    <div class="orbit-detail-stats">
+      <div class="orbit-dstat"><div class="orbit-dstat-lbl">P&amp;L 12m</div><div class="orbit-dstat-val" style="color:${(st.pnl_12m||0)>=0?'var(--green)':'var(--red)'}">${orbitFmtEur(st.pnl_12m)}</div></div>
+      <div class="orbit-dstat"><div class="orbit-dstat-lbl">Max DD</div><div class="orbit-dstat-val" style="color:var(--red)">${st.maxdd_pct||'—'}</div></div>
+      <div class="orbit-dstat"><div class="orbit-dstat-lbl">Trade/12m</div><div class="orbit-dstat-val">${st.trades_12m ?? '—'}</div></div>
+    </div>
+    ${st.best_regime ? `<div class="orbit-detail-note">${st.best_regime}</div>` : ''}
+  `;
+}
+
+function renderOrbitHero(){
+  const wrap = document.getElementById('orbit-hero');
+  if(!wrap) return;
+  const roster = orbitRoster();
+  if(!roster.length) return;
+  const nucleus = roster[0];
+  const sel = roster.find(r => r.key === _orbitSel) || nucleus;
+
+  const acc = _orbitMt5?.account || null;
+  const eqEl = document.getElementById('orbit-equity');
+  const eqSubEl = document.getElementById('orbit-equity-sub');
+  if(eqEl) eqEl.textContent = acc?.equity ? orbitFmtEur(acc.equity) : '—';
+  if(eqSubEl) eqSubEl.textContent = acc?.equity ? 'conto MT5 live' : 'bot MT5 non connesso';
+
+  const pnl12 = roster.reduce((s,r) => s + (r.stats?.pnl_12m || 0), 0);
+  const pnlEl = document.getElementById('orbit-pnl12');
+  if(pnlEl){ pnlEl.textContent = orbitFmtEur(pnl12); pnlEl.style.color = pnl12>=0 ? 'var(--green)' : 'var(--red)'; }
+  const countEl = document.getElementById('orbit-count');
+  if(countEl) countEl.textContent = roster.length;
+  const nucName = document.getElementById('orbit-nucleus-name');
+  if(nucName) nucName.textContent = nucleus.label.replace(/\s*⛔.*$/,'');
+
+  // Lista compatta (sempre visibile — mobile: unica vista, desktop: affiancata all'orbita)
+  const listEl = document.getElementById('orbit-list');
+  if(listEl){
+    listEl.innerHTML = roster.map(r => {
+      const tier = orbitTier(r.pf);
+      const isSel = r.key === sel.key;
+      return `<div class="orbit-row${isSel?' sel':''}" data-orbit-key="${r.key}">
+        <div class="orbit-planet-dot" style="background:${tier.color};color:${tier.color}"></div>
+        <div class="orbit-row-name">${r.label.replace(/\s*⛔.*$/,'')}</div>
+        <div class="orbit-row-meta">${r.wr||'—'}</div>
+        <div class="orbit-row-pf" style="color:${tier.color}">PF ${r.pf.toFixed(2)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Vista orbitale SVG (solo desktop, ≥1024px — vedi style.css orbit-visual)
+  const visEl = document.getElementById('orbit-visual');
+  if(visEl){
+    const cx=150, cy=150, others = roster.filter(r=>r.key!==nucleus.key);
+    const maxPf = roster[0].pf || 1, minPf = roster[roster.length-1].pf || 1;
+    const planets = others.map((r,i) => {
+      const ring = 60 + (i % 3) * 42;
+      const angle = (i / Math.max(others.length,1)) * Math.PI * 2 + (i % 3) * 0.7;
+      const px = cx + Math.cos(angle) * ring, py = cy + Math.sin(angle) * ring * 0.55;
+      const norm = maxPf>minPf ? (r.pf-minPf)/(maxPf-minPf) : 0.5;
+      const rad = 7 + norm * 9;
+      const tier = orbitTier(r.pf);
+      const isSel = r.key === sel.key;
+      return `<g data-orbit-key="${r.key}" class="orbit-planet" style="cursor:pointer">
+          <circle cx="${px}" cy="${py}" r="${rad+6}" fill="transparent"/>
+          <circle cx="${px}" cy="${py}" r="${rad}" fill="${tier.color}" opacity="${isSel?1:0.85}" style="filter:drop-shadow(0 0 ${isSel?10:5}px ${tier.color})"/>
+          <text x="${px}" y="${py+rad+12}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="${isSel?tier.color:'#9AA4C4'}">${r.label.split(' ')[0]}</text>
+        </g>`;
+    }).join('');
+    const rings = [60,102,144].map(r => `<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*0.58}" fill="none" stroke="rgba(150,175,255,.16)" stroke-width="1"/>`).join('');
+    visEl.innerHTML = `<svg viewBox="0 0 300 300" width="100%" height="100%">
+      <g class="orbit-ring-group" style="transform-origin:${cx}px ${cy}px">
+        ${rings}
+        ${planets}
+      </g>
+      <g data-orbit-key="${nucleus.key}" style="cursor:pointer">
+        <circle cx="${cx}" cy="${cy}" r="26" fill="url(#orbitNucleusGrad)" style="filter:drop-shadow(0 0 18px ${orbitTier(nucleus.pf).color}66)"/>
+        <text x="${cx}" y="${cy+42}" text-anchor="middle" font-family="Syne, sans-serif" font-weight="700" font-size="12" fill="#E8ECF7">${nucleus.label.split(' ')[0]}</text>
+      </g>
+      <defs>
+        <radialGradient id="orbitNucleusGrad" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#80EFEC"/>
+          <stop offset="100%" stop-color="${orbitTier(nucleus.pf).color}"/>
+        </radialGradient>
+      </defs>
+    </svg>`;
+  }
+
+  renderOrbitDetail(sel);
+  orbitWire();
 }
 
 // IMMEDIATE render with placeholder prices to unblock UI
@@ -902,10 +1043,10 @@ function updateConfidence(prices, sentimentData){
     const qel = document.getElementById('conf-quality');
     if(qel){
       let quality = '', qualityBg = '', qualityCol = '';
-      if(total >= 80){ quality = '💎 Setup di ALTA QUALITÀ: Confluenza macro e tecnica eccellente.'; qualityBg = '#00e67615'; qualityCol = 'var(--green)'; }
+      if(total >= 80){ quality = '💎 Setup di ALTA QUALITÀ: Confluenza macro e tecnica eccellente.'; qualityBg = '#62E6A615'; qualityCol = 'var(--green)'; }
       else if(total >= 65){ quality = '✅ Setup BUONO: Condizioni favorevoli per entry a basso rischio.'; qualityBg = '#4fc3f715'; qualityCol = 'var(--blue)'; }
-      else if(total >= 50){ quality = '⚠️ Setup MEDIO: Confluenza parziale, gestisci il rischio con attenzione.'; qualityBg = '#ffd70010'; qualityCol = 'var(--yellow)'; }
-      else if(total > 0) { quality = '❌ Bassa Qualità: Segnali contrastanti. Evita operazioni aggressive.'; qualityBg = '#ff475710'; qualityCol = 'var(--red)'; }
+      else if(total >= 50){ quality = '⚠️ Setup MEDIO: Confluenza parziale, gestisci il rischio con attenzione.'; qualityBg = '#F4B86010'; qualityCol = 'var(--yellow)'; }
+      else if(total > 0) { quality = '❌ Bassa Qualità: Segnali contrastanti. Evita operazioni aggressive.'; qualityBg = '#FF8A8A10'; qualityCol = 'var(--red)'; }
 
       if(quality){
         qel.style.display = 'block';
@@ -1152,8 +1293,8 @@ function renderCalEvents(){
         <div class="cal-ev-body">
           <div style="display:flex;align-items:center;gap:5px">
             <div class="cal-ev-time">${timeStr}</div>
-            ${isXau?`<span style="font-size:9px;background:#c8a96e18;border:1px solid #c8a96e33;border-radius:3px;padding:1px 4px;color:var(--g)">⚡${window.activeAsset||'XAU'}</span>`:''}
-            ${isHigh?'<span style="font-size:9px;background:#ff475710;border:1px solid #ff475730;border-radius:3px;padding:1px 4px;color:var(--red)">●HIGH</span>':''}
+            ${isXau?`<span style="font-size:9px;background:#6FE3E118;border:1px solid #6FE3E133;border-radius:3px;padding:1px 4px;color:var(--g)">⚡${window.activeAsset||'XAU'}</span>`:''}
+            ${isHigh?'<span style="font-size:9px;background:#FF8A8A10;border:1px solid #FF8A8A30;border-radius:3px;padding:1px 4px;color:var(--red)">●HIGH</span>':''}
           </div>
           <div class="cal-ev-name">${e.event||'—'}</div>
           <div style="font-size:10px;color:var(--dim);margin-top:1px">${e.currency||''}</div>

@@ -31,6 +31,8 @@ public/
     journal.js   — trade log, coaching AI, reports
     myfxbook.js  — account sync MyFxBook
     kb.js        — Knowledge Base, upload documenti, search
+    backtest-report.js — Report Backtest + dettaglio "Genoma" (confidenza derivata, resample bootstrap)
+    hive.js      — "The Hive": nebulosa roster strategie + knowledge tiles + stato roster
 
 api/
   price.js      — endpoint prezzi live XAU/USD (TV Scanner multi-ticker) + proxy candele
@@ -48,6 +50,7 @@ scripts/
   fetch_mt5_history.py   — Scarica GOLD da MT5 → data/xauusd_*.json
   strategy-engine-v2.py — Backtester Python principale
   backtest_mfkk_intraday.py — Backtester dedicato MFKK
+  obsidian_export.py     — Export locale → vault Obsidian (Journal/Genomi/Knowledge/AI-Log), via /api/db HTTP (mai da api/*.js)
 
 data/                     — Price data JSON (xauusd_h1_mt5.json, etc.)
 backtests/

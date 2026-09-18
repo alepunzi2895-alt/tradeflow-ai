@@ -406,7 +406,7 @@ function renderJournal(){
       </div>
       </div>
       ${tradeMemory.entries?.[e.id] ? `
-        <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(200,169,110,0.06);border:1px solid rgba(200,169,110,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
+        <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(111,227,225,0.06);border:1px solid rgba(111,227,225,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
           <button class="coach-close" data-id="${e.id}" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px">✕</button>
           💡 ${tradeMemory.entries[e.id]}
         </div>

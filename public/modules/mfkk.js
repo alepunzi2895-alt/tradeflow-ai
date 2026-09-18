@@ -16,7 +16,7 @@ function setMfkkTF(tf){
   ['1h','4h','1d'].forEach(t=>{
     const btn=document.getElementById('mfkk-tf-'+t);
     if(!btn)return;
-    if(t===tf){btn.style.background='#c8a96e30';btn.style.borderColor='#c8a96e55';btn.style.color='var(--g)';}
+    if(t===tf){btn.style.background='#6FE3E130';btn.style.borderColor='#6FE3E155';btn.style.color='var(--g)';}
     else{btn.style.background='var(--bg2)';btn.style.borderColor='var(--border)';btn.style.color='var(--dim)';}
   });
   loadIndicators();
@@ -605,7 +605,7 @@ function calcMfkk(){
 
   // Render — colori basati su soglie calibrate (BUY>=90, SELL>=68)
   const DASH=163.4;
-  const ringCol = isHighWrSignal ? '#ffd700'
+  const ringCol = isHighWrSignal ? '#F4B860'
     : isValidEntry
       ? (isExhaustion ? '#b36cff' : (score>=90?'var(--yellow)':col))
       : (score>=55?'var(--yellow)':'var(--red)');
@@ -614,7 +614,7 @@ function calcMfkk(){
   const num=document.getElementById('mfkk-num');
   if(num){num.textContent=score;num.style.color=ringCol;}
   const bel=document.getElementById('mfkk-bias');
-  if(bel){bel.textContent=bias;bel.style.color=isHighWrSignal?'#ffd700':(score>=80?'var(--yellow)':col);}
+  if(bel){bel.textContent=bias;bel.style.color=isHighWrSignal?'#F4B860':(score>=80?'var(--yellow)':col);}
   const del=document.getElementById('mfkk-desc');
   if(del)del.textContent=desc;
 
@@ -630,25 +630,25 @@ function calcMfkk(){
     const slVal = isXag ? '$0.25' : '$12';
     const rrLabel = isXag ? '1:2.0' : '1:1.67';
     if(isHighWrSignal){
-      qel.style.cssText='display:block;background:#ffd70020;border:2px solid #ffd70060;color:#ffd700;font-weight:700';
+      qel.style.cssText='display:block;background:#F4B86020;border:2px solid #F4B86060;color:#F4B860;font-weight:700';
       qel.innerHTML=`💎 HIGH-WR SELL: ADX≥35 · DI spread≥20 · MACD esaurito · London/NY<br><span style="font-size:9px;font-weight:400;opacity:.85">92-95% WR (730gg backtest) · TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}</span>`;
     } else if(isExhaustion && adxScore>=80 && isValidEntry){
       qel.style.cssText='display:block;background:#b36cff15;border:1px solid #b36cff40;color:#b36cff';
       qel.textContent=`🔥 ESAURIMENTO ${dirLabel}: ADX forte + MACD esteso = 82-88% WR. TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
     } else if(isValidEntry && allThree && strong>=2){
-      qel.style.cssText='display:block;background:#00e67615;border:1px solid #00e67630;color:var(--green)';
+      qel.style.cssText='display:block;background:#62E6A615;border:1px solid #62E6A630;color:var(--green)';
       qel.textContent=`✅ ENTRY VALIDA (calibrata 2yr) — TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
     } else if(isValidEntry){
-      qel.style.cssText='display:block;background:#00e67615;border:1px solid #00e67630;color:var(--green)';
+      qel.style.cssText='display:block;background:#62E6A615;border:1px solid #62E6A630;color:var(--green)';
       qel.textContent=`🎯 ${dirLabel} VALIDO — TP ${tpVal} | SL ${slVal} | R:R ${rrLabel}`;
     } else if(!isValidEntry && isBuy && score>=80){
-      qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
+      qel.style.cssText='display:block;background:#F4B86010;border:1px solid #F4B86025;color:var(--yellow)';
       qel.textContent=`⏳ BUY score ${score} — soglia minima 90. Attendi ulteriore forza.`;
     } else if(weak>=2){
-      qel.style.cssText='display:block;background:#ff475715;border:1px solid #ff475730;color:var(--red)';
+      qel.style.cssText='display:block;background:#FF8A8A15;border:1px solid #FF8A8A30;color:var(--red)';
       qel.textContent='❌ SEGNALE DEBOLE — Aspetta migliore allineamento';
     } else if(!allThree && (score>=68)){
-      qel.style.cssText='display:block;background:#ffca2810;border:1px solid #ffca2825;color:var(--yellow)';
+      qel.style.cssText='display:block;background:#F4B86010;border:1px solid #F4B86025;color:var(--yellow)';
       qel.textContent='⏳ Dati parziali — inserisci tutti e 3 indicatori per score completo';
     } else {
       qel.style.display='none';
@@ -682,7 +682,7 @@ function calcMfkk(){
       exit_sell:'↘ CCI uscito da OB (cross sotto 75)',
       neutral:''
     };
-    const crossHtml = crossMap[cciSig] ? `<br><span style="color:#ffca28;font-size:9px">${crossMap[cciSig]}</span>` : '';
+    const crossHtml = crossMap[cciSig] ? `<br><span style="color:#F4B860;font-size:9px">${crossMap[cciSig]}</span>` : '';
 
     confEl.style.display='block';
     confEl.innerHTML=`<span style="font-size:9px;color:var(--dim)">CONFERMA EMA50</span><br><span style="font-size:10px">${emaHint}</span>${crossHtml}`;
@@ -748,18 +748,18 @@ function calcMfkk(){
     <div style="font-size:11px;font-weight:700;color:var(--fg)">$${entry.toFixed(dec)}</div>
     <div style="font-size:8px;color:var(--dim)">${dirLabel}</div>
   </div>
-  <div style="background:#00e67608;border:1px solid #00e67630;border-radius:5px;padding:5px 3px">
+  <div style="background:#62E6A608;border:1px solid #62E6A630;border-radius:5px;padding:5px 3px">
     <div style="font-size:8px;color:var(--dim);margin-bottom:2px">TAKE PROFIT (TARGET)</div>
     <div style="font-size:11px;font-weight:700;color:var(--green)">$${tpPrice.toFixed(dec)}</div>
     <div style="font-size:8px;color:var(--green)">${tpLabel}$${tpDist.toFixed(dec)}</div>
   </div>
-  <div style="background:#ff475708;border:1px solid #ff475730;border-radius:5px;padding:5px 3px">
+  <div style="background:#FF8A8A08;border:1px solid #FF8A8A30;border-radius:5px;padding:5px 3px">
     <div style="font-size:8px;color:var(--dim);margin-bottom:2px">STOP LOSS (PROTECT)</div>
     <div style="font-size:11px;font-weight:700;color:var(--red)">$${slPrice.toFixed(dec)}</div>
     <div style="font-size:8px;color:var(--red)">${slLabel}$${slDist.toFixed(dec)}</div>
   </div>
 </div>
-${emaWarn?`<div style="margin-top:5px;font-size:9px;color:#ffca28">⚠️ Contro-trend EMA50: aumenta SL del 20% o riduci size</div>`:''}
+${emaWarn?`<div style="margin-top:5px;font-size:9px;color:#F4B860">⚠️ Contro-trend EMA50: aumenta SL del 20% o riduci size</div>`:''}
 ${emaOk?`<div style="margin-top:5px;font-size:9px;color:var(--green)">✅ EMA50 allineata — trend a favore dell'entry</div>`:''}
 <div style="margin-top:4px;font-size:8px;color:var(--dim)">Swing: H=${mfkkSwingHigh?mfkkSwingHigh.toFixed(dec):'—'} L=${mfkkSwingLow?mfkkSwingLow.toFixed(dec):'—'} · Adatta alla tua size</div>
     `.trim();

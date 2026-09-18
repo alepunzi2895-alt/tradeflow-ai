@@ -16,23 +16,23 @@
 </head>
 <body>
 <!-- AUTHENTICATION OVERLAY -->
-<div id="auth-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#050608;z-index:9999;flex-direction:column;justify-content:center;align-items:center;padding:20px;box-sizing:border-box">
-  <div style="background:var(--card);border:1px solid #c8a96e40;border-radius:15px;width:100%;max-width:360px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+<div id="auth-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#03050b;z-index:9999;flex-direction:column;justify-content:center;align-items:center;padding:20px;box-sizing:border-box">
+  <div style="background:var(--card);border:1px solid #6FE3E140;border-radius:15px;width:100%;max-width:360px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
     <div style="text-align:center;margin-bottom:20px">
       <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;margin:0 auto 10px">
         <path d="M4 20 Q10 8 16 14 Q22 20 28 6" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
         <path d="M24 6 L28 6 L28 10" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         <defs>
           <linearGradient id="ga1" x1="4" y1="20" x2="28" y2="6" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#8b5e1a"/><stop offset="100%" stop-color="#f0d080"/>
+            <stop offset="0%" stop-color="#1D8783"/><stop offset="100%" stop-color="#80EFEC"/>
           </linearGradient>
         </defs>
       </svg>
-      <div style="font-size:20px;font-weight:700;color:#e0e4ec;font-family:'Space Grotesk',sans-serif;letter-spacing:-.5px">TradeFlow <span style="color:#c8a96e">AI</span></div>
+      <div style="font-size:20px;font-weight:700;color:#E8ECF7;font-family:'Syne',sans-serif;letter-spacing:-.5px">TradeFlow <span style="color:#6FE3E1">AI</span></div>
     </div>
-    
+
     <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border2)">
-      <button id="tab-login" style="flex:1;background:none;border:none;padding:10px;color:var(--text);font-size:13px;font-weight:700;border-bottom:2px solid #c8a96e;cursor:pointer">Accedi</button>
+      <button id="tab-login" style="flex:1;background:none;border:none;padding:10px;color:var(--text);font-size:13px;font-weight:700;border-bottom:2px solid #6FE3E1;cursor:pointer">Accedi</button>
       <button id="tab-register" style="flex:1;background:none;border:none;padding:10px;color:var(--dim);font-size:13px;font-weight:700;border-bottom:2px solid transparent;cursor:pointer">Registrati</button>
     </div>
 
@@ -51,8 +51,8 @@
       <button id="btn-do-register" class="bsave" style="width:100%;font-size:13px;padding:12px">Crea nuovo account</button>
     </div>
 
-    <div id="auth-err" style="display:none;margin-top:15px;font-size:12px;color:#ff8a80;background:#160c0c;border:1px solid #ff475722;border-radius:6px;padding:8px 10px;text-align:center"></div>
-    <div id="auth-msg" style="display:none;margin-top:15px;font-size:12px;color:var(--green);background:#081408;border:1px solid #00e67622;border-radius:6px;padding:8px 10px;text-align:center"></div>
+    <div id="auth-err" style="display:none;margin-top:15px;font-size:12px;color:#FF8A8A;background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:8px 10px;text-align:center"></div>
+    <div id="auth-msg" style="display:none;margin-top:15px;font-size:12px;color:var(--green);background:#081408;border:1px solid #62E6A622;border-radius:6px;padding:8px 10px;text-align:center"></div>
   </div>
 </div>
 
@@ -70,8 +70,8 @@
           <path d="M24 6 L28 6 L28 10" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <defs>
             <linearGradient id="g1" x1="4" y1="20" x2="28" y2="6" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#8b5e1a"/>
-              <stop offset="100%" stop-color="#f0d080"/>
+              <stop offset="0%" stop-color="#1D8783"/>
+              <stop offset="100%" stop-color="#80EFEC"/>
             </linearGradient>
           </defs>
         </svg>
@@ -100,6 +100,29 @@
     <!-- ── DASHBOARD ── -->
     <div class="tp on" id="tp-dash">
       <div class="dp" id="dash-panel">
+        <!-- Orbite strategie: nucleo = miglior PF del roster live, pianeti = resto del roster -->
+        <div class="orbit-hero" id="orbit-hero">
+          <div class="orbit-top">
+            <div class="orbit-eyebrow">NUCLEO · <span id="orbit-nucleus-name">—</span></div>
+            <div class="orbit-eq-row">
+              <div>
+                <div class="orbit-eq-lbl">Equity conto</div>
+                <div class="orbit-eq-val" id="orbit-equity">—</div>
+                <div class="orbit-eq-sub" id="orbit-equity-sub"></div>
+              </div>
+              <div class="orbit-stat"><span class="orbit-stat-lbl">P&amp;L 12m (backtest)</span><span class="orbit-stat-val" id="orbit-pnl12">—</span></div>
+              <div class="orbit-stat"><span class="orbit-stat-lbl">Strategie attive</span><span class="orbit-stat-val" id="orbit-count">—</span></div>
+            </div>
+          </div>
+          <div class="orbit-body">
+            <div class="orbit-visual" id="orbit-visual"></div>
+            <div class="orbit-side">
+              <div class="orbit-list" id="orbit-list"></div>
+              <div class="orbit-detail" id="orbit-detail"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Price strip -->
         <div class="price-strip" id="price-strip">
           <div class="pc main"><div class="pc-sym" id="lbl-asset">XAU/USD</div><div class="pc-val" id="p-xau"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-xau"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
@@ -120,7 +143,7 @@
             <div class="conf-ring">
               <svg width="56" height="56" viewBox="0 0 56 56">
                 <circle cx="28" cy="28" r="22" fill="none" stroke="#1e222a" stroke-width="5"/>
-                <circle id="conf-circle" cx="28" cy="28" r="22" fill="none" stroke="#c8a96e" stroke-width="5" stroke-dasharray="138.2" stroke-dashoffset="138.2" stroke-linecap="round"/>
+                <circle id="conf-circle" cx="28" cy="28" r="22" fill="none" stroke="#6FE3E1" stroke-width="5" stroke-dasharray="138.2" stroke-dashoffset="138.2" stroke-linecap="round"/>
               </svg>
               <div class="conf-num" id="conf-num"><div class="skel" style="width:24px;height:18px"></div></div>
             </div>
@@ -267,9 +290,9 @@
             </div>
           </div>
           <!-- Next major event countdown -->
-          <div id="cal-next" style="background:linear-gradient(135deg,#1a1208,#0d0f12);border:1px solid #c8a96e33;border-radius:8px;padding:8px 10px;margin-bottom:8px;display:none">
+          <div id="cal-next" style="background:linear-gradient(135deg,#0c1a1a,#0d0f12);border:1px solid #6FE3E133;border-radius:8px;padding:8px 10px;margin-bottom:8px;display:none">
             <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:2px">PROSSIMO EVENTO AD ALTO IMPATTO</div>
-            <div id="cal-next-name" style="font-size:13px;color:#e0e4ec;font-weight:600"></div>
+            <div id="cal-next-name" style="font-size:13px;color:#E8ECF7;font-weight:600"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
               <div id="cal-next-meta" style="font-size:10px;color:var(--dim)"></div>
               <div id="cal-countdown" style="font-size:12px;font-family:monospace;color:var(--yellow);font-weight:700"></div>
@@ -322,7 +345,7 @@
           <div class="etag2" id="etags"></div>
         </div>
         <!-- Progress badge -->
-        <div id="progress-badge" style="display:none;background:linear-gradient(135deg,#081408,#0d0f12);border:1px solid #00e67625;border-radius:8px;padding:7px 11px;margin-bottom:9px;font-size:11px;color:var(--green)"></div>
+        <div id="progress-badge" style="display:none;background:linear-gradient(135deg,#081408,#0d0f12);border:1px solid #62E6A625;border-radius:8px;padding:7px 11px;margin-bottom:9px;font-size:11px;color:var(--green)"></div>
         <!-- Action buttons -->
         <div class="jbtns">
           <button class="bp" id="btn-new">+ Trade</button>
@@ -366,7 +389,7 @@
     <!-- ── KNOWLEDGE ── -->
     <div class="tp" id="tp-kb">
       <div class="kp">
-        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Space Grotesk',sans-serif">🧠 KNOWLEDGE BASE</div>
+        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Syne',sans-serif">🧠 KNOWLEDGE BASE</div>
         <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Carica la tua strategia, articoli, regole. TradeFlow AI li usa come contesto permanente in ogni analisi.</div>
         <div class="sdrop" id="kb-drop"><div class="sdropico">📂</div><div class="sdrop-t">Carica uno o più documenti</div><div class="sdrop-s">PDF · PNG · JPG · TXT · MD — selezione multipla</div></div>
         <input type="file" id="kb-file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md" style="display:none" multiple>
@@ -478,7 +501,7 @@
   </div>
   <div class="fbtns" style="margin-top:4px">
     <button class="bsave" id="btn-psave">Salva</button>
-    <button id="btn-preset" style="background:#160c0c;border:1px solid #ff475722;border-radius:7px;padding:9px 13px;color:#ff8a80;font-size:12px;cursor:pointer;font-family:inherit">Reset</button>
+    <button id="btn-preset" style="background:#160c0c;border:1px solid #FF8A8A22;border-radius:7px;padding:9px 13px;color:#FF8A8A;font-size:12px;cursor:pointer;font-family:inherit">Reset</button>
   </div>
 </div></div>
 
@@ -524,6 +547,36 @@
   <button class="scancel" id="btn-brc" style="margin-top:16px">Chiudi</button>
 </div></div>
 
+<!-- GENOMA · dettaglio confidenza per singola strategia -->
+<div class="ovl" id="genomesheet"><div class="sht" style="max-width:760px">
+  <div class="shnd"></div><div class="shtitle">🧬 GENOMA STRATEGIA</div>
+  <div id="genomesheet-body"></div>
+  <button class="scancel" id="btn-gnc" style="margin-top:16px">Chiudi</button>
+</div></div>
+
+<!-- THE HIVE · nebulosa del roster strategie + knowledge base -->
+<div class="ovl" id="hivesheet"><div class="sht" style="max-width:960px">
+  <div class="shnd"></div><div class="shtitle">🐝 THE HIVE</div>
+  <div id="hivesheet-body">
+    <div id="hive-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px"></div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">Nebulosa del roster · tocca un nodo per aprirne il genoma</div>
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:6px;margin-bottom:16px">
+      <div id="hive-nebula" style="width:100%;height:280px"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:700;color:var(--text)">Stato roster</span>
+      <span id="hive-roster-meta" style="font-size:9px;color:var(--dim)"></span>
+    </div>
+    <div id="hive-roster" style="background:var(--card);border:1px solid var(--border2);border-radius:10px;margin-bottom:16px;overflow:hidden"></div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">Knowledge base · ultime note</div>
+    <div id="hive-knowledge" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+  </div>
+  <button class="scancel" id="btn-hvc" style="margin-top:16px">Chiudi</button>
+</div></div>
+
   <!-- INDICATOR INFO MODAL -->
   <div id="info-overlay" class="info-overlay" onclick="closeIndicatorInfo()">
     <div class="info-content" onclick="event.stopPropagation()">
@@ -556,6 +609,8 @@
   <script src="/modules/se-render.js"></script>
   <!-- Report Backtest: equity curve, confronto attive/roster, lancia backtest, toggle blocco -->
   <script src="/modules/backtest-report.js"></script>
+  <!-- The Hive: nebulosa del roster strategie + knowledge base (usa brData/SE/kb, carica dopo) -->
+  <script src="/modules/hive.js"></script>
   <!-- App: init, tabs, overlays, profile -->
   <script src="/app.js"></script>
 </body>

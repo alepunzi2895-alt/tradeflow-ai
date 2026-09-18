@@ -42,7 +42,7 @@ async function processKbFile(file){
     const entry={id:Date.now(),name:file.name,size:file.size,date:new Date().toLocaleDateString('it-IT'),summary:reply};
     kb.unshift(entry);S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
     P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);S.set(K.p,P);
-    stat.style.cssText='display:block;background:#081408;border:1px solid #00e67622;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:var(--green)';
+    stat.style.cssText='display:block;background:#081408;border:1px solid #62E6A622;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:var(--green)';
     stat.textContent=`✓ "${file.name}" integrato.${kbSyncEnabled?' Salvataggio su GitHub...':''}`;
     renderKb();
     // Save to GitHub in background
@@ -50,7 +50,7 @@ async function processKbFile(file){
       if(kbSyncEnabled) stat.textContent=`✓ "${file.name}" integrato e salvato su GitHub ☁️`;
     });
   }catch(e){
-    stat.style.cssText='display:block;background:#160c0c;border:1px solid #ff475722;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:#ff8a80';
+    stat.style.cssText='display:block;background:#160c0c;border:1px solid #FF8A8A22;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:#FF8A8A';
     stat.textContent='❌ '+e.message;
   }
   drop.querySelector('.sdrop-t').textContent='Carica uno o più documenti';
@@ -177,7 +177,7 @@ function updateKbSyncBadge(synced){
   if(synced){
     badge.textContent = '☁️ Sync GitHub';
     badge.style.color = 'var(--green)';
-    badge.style.borderColor = '#00e67630';
+    badge.style.borderColor = '#62E6A630';
   } else {
     badge.textContent = '💾 Locale';
     badge.style.color = 'var(--dim)';

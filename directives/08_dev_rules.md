@@ -61,6 +61,8 @@ Ogni `fetch` in `api/*.js` DEVE usare questo pattern. Senza timeout, una richies
 
 | Componente | Intervallo | Cosa fa |
 |---|---|---|
+| `loadPrices()` (dashboard.js) | 5s | Un solo batch per 13 simboli, una richiesta in volo; sospeso con pagina nascosta |
+| `loadOrbitEquity()` (dashboard.js) | 20s | Stato MT5 e statistiche del conto, errori di accesso visibili |
 | `seRefresh()` (strategy.js) | 1s | Candele + regime + segnali + MT5 sync |
 | `recalcIndicators()` (mfkk.js) | 5s | Inietta live price nell'ultima candle + ricalcola CCI_S |
 | `loadIndicatorCandles()` (mfkk.js) | 60s | Fetch Yahoo candles + TV Scanner MACD/ADX |

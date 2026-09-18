@@ -86,7 +86,7 @@ function useLocalUser(id){
   tradeMemory=S.get(K.mem,{entries:{},summary:'',resetDate:null});analysisMemory=S.get(K.amem,{entries:[],lastReset:null});
   mfxSession=S.get(K.mfx,null);history=S.get(K.chat,[]);cm.replaceChildren();
   if(mfxSession?.pass){delete mfxSession.pass;S.set(K.mfx,mfxSession);}
-  _orbitMt5=null;_orbitMt5Fetch=0;
+  _orbitMt5=null;_orbitMt5Fetch=0;_orbitError=null;
   if(history.length)renderHistoryMessages(history);
 }
 const defP=()=>({name:'Alessandro',risk:2,dd:6,tp1:1.5,tp2:3,errors:[],sessions:0,winRate:null,knowledge:[],currency:'USD'});

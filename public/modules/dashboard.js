@@ -26,6 +26,7 @@ let _orbitSel = null;       // key strategia selezionata nel pannello dettaglio 
 let _orbitMt5 = null;
 let _orbitMt5Fetch = 0;
 let _orbitWired = false;
+let _orbitRequest = null, _orbitError = null;
 
 function orbitRoster(){
   return Object.entries(SE.strategies)
@@ -61,14 +62,57 @@ function nbSmoothPath(vals, W, H, pad){
 }
 
 async function loadOrbitEquity(){
-  if(Date.now() - _orbitMt5Fetch < 20000 && _orbitMt5) { renderOrbitHero(); return; }
-  _orbitMt5Fetch = Date.now();
-  const [j,config] = await Promise.all([dbLoad('mt5_get', {}, 8000),dbLoad('strategy_registry',{},8000)]);
-  if(j && j.ok) _orbitMt5 = j.data;
-  const recent=_orbitMt5?.synced_at && Date.now()-Date.parse(_orbitMt5.synced_at)<90000;
-  const applied=recent?_orbitMt5?.bot_status?.registry:null;
-  if(applied||config?.data) applyStrategyRegistry(applied||config.data,applied?'bot':'configurazione');
-  renderOrbitHero();
+  if(document.hidden||!window.sessionToken)return;
+  if(_orbitRequest)return _orbitRequest;
+  if(Date.now()-_orbitMt5Fetch<20000 && _orbitMt5 && !_orbitError){renderOrbitHero();return;}
+  _orbitMt5Fetch=Date.now();
+  const userId=window.userId;
+  _orbitRequest=(async()=>{
+    const read=async()=>{
+      try{
+        const response=await authFetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'mt5_get'}),signal:AbortSignal.timeout(8000)});
+        return {...await response.json(),status:response.status};
+      }catch{return {ok:false,error:'Connessione al sistema non disponibile. Nuovo tentativo tra 20 secondi.'};}
+    };
+    try{
+      const [result,config]=await Promise.all([read(),dbLoad('strategy_registry',{},8000)]);
+      if(userId!==window.userId)return;
+      _orbitError=result.ok?null:result.status===403?'Accesso alle statistiche MT5 non abilitato per questo account.':result.status===401?'Sessione scaduta: accedi di nuovo per leggere le statistiche.':result.error;
+      if(result.ok)_orbitMt5=result.data;
+      else if([401,403].includes(result.status))_orbitMt5=null;
+      const recent=_orbitMt5?.synced_at && Date.now()-Date.parse(_orbitMt5.synced_at)<90000;
+      const applied=recent?_orbitMt5?.bot_status?.registry:null;
+      if(applied||config?.data)applyStrategyRegistry(applied||config.data,applied?'bot':'configurazione');
+      renderOrbitHero();
+    }finally{_orbitRequest=null;}
+  })();
+  return _orbitRequest;
+}
+
+function renderSystemStats(){
+  const data=_orbitMt5, account=data?.account;
+  const trades=Array.isArray(data?.trades)?data.trades.filter(t=>Number.isFinite(t.profit)):[];
+  const wins=trades.filter(t=>t.profit>0), losses=trades.filter(t=>t.profit<0);
+  const grossWin=wins.reduce((sum,t)=>sum+t.profit,0),grossLoss=-losses.reduce((sum,t)=>sum+t.profit,0);
+  const money=value=>orbitFmtEur(value,account?.currency||'');
+  const write=(id,value,color)=>{const el=document.getElementById(id);if(el){el.textContent=value;el.style.color=color||'var(--text)';}};
+  const pnlColor=value=>value>0?'var(--green)':value<0?'var(--red)':'var(--dim)';
+  const today=data?.bot_status?.pnl_today;
+  const floating=Number.isFinite(account?.equity)&&Number.isFinite(account?.balance)?account.equity-account.balance:null;
+  write('system-today',Number.isFinite(today)?money(today):'—',pnlColor(today));
+  write('system-floating',floating!==null?money(floating):'—',pnlColor(floating));
+  write('system-winrate',trades.length?(100*wins.length/trades.length).toLocaleString('it-IT',{maximumFractionDigits:1})+'%':'—');
+  write('system-pf',trades.length?(grossLoss?(grossWin/grossLoss).toLocaleString('it-IT',{maximumFractionDigits:2}):grossWin?'∞':'—'):'—');
+  const status=document.getElementById('system-status');
+  if(!status)return;
+  status.dataset.error=String(!!_orbitError);
+  if(_orbitError){status.textContent=_orbitError;return;}
+  if(!account){status.textContent='Nessun dato MT5 ricevuto: attendi la sincronizzazione del bot.';return;}
+  const received=data.synced_at?new Date(data.synced_at):null;
+  const stale=!received||Date.now()-received.getTime()>90000;
+  status.dataset.error=String(stale);
+  const sample=trades.length?'WR e PF sui '+trades.length+' trade chiusi ricevuti':'Nessun trade chiuso ricevuto';
+  status.textContent=(stale?'Ultimi dati disponibili · ':'')+'Saldo '+money(account.balance)+' · '+(data.positions?.length??0)+' posizioni aperte · '+sample+(received?' · sync '+received.toLocaleTimeString('it-IT'):'');
 }
 
 function orbitWire(){
@@ -135,9 +179,9 @@ function renderOrbitHero(){
   const eqEl = document.getElementById('orbit-equity');
   const eqSubEl = document.getElementById('orbit-equity-sub');
   const hasEquity=Number.isFinite(acc?.equity);
-  const recent=_orbitMt5?.synced_at && Date.now()-Date.parse(_orbitMt5.synced_at)<90000;
+  const recent=!_orbitError && _orbitMt5?.synced_at && Date.now()-Date.parse(_orbitMt5.synced_at)<90000;
   if(eqEl) eqEl.textContent = hasEquity ? orbitFmtEur(acc.equity,acc.currency||'') : '—';
-  if(eqSubEl) eqSubEl.textContent = hasEquity ? (recent?'conto MT5 live':'ultimo dato ricevuto · connessione da verificare') : 'bot MT5 non connesso';
+  if(eqSubEl) eqSubEl.textContent = hasEquity ? (recent?'conto MT5 live':'ultimo dato ricevuto · connessione da verificare') : 'Dati del conto non disponibili';
 
   const pnlEl = document.getElementById('orbit-pnl12');
   const confirmed=window.strategyRegistry?.source==='bot'&&recent;
@@ -175,90 +219,34 @@ function renderOrbitHero(){
   const stageEl = document.getElementById('orbit-stage');
   if(stageEl) SaturnScene.update(stageEl, roster, sel?.key);
 
+  renderSystemStats();
   renderOrbitDetail(sel);
   renderOrbitCurve(sel);
   orbitWire();
 }
 
-// IMMEDIATE render with placeholder prices to unblock UI
-function renderPlaceholders(){
-  ['p-xau','p-dxy','p-eur','p-gbp','p-oil'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el&&el.textContent==='—')el.textContent='...';
-  });
-}
-
+// One batch, one in-flight request, one refresh clock for every displayed symbol.
+let priceRequest=null;
+function renderPlaceholders() {} // Cards are mounted once by market-watch.js.
 async function loadPrices(){
-  try{
-    // Try price.js first (dedicated, faster)
-    const active = window.activeAsset || 'XAU';
-    const pd=await fetchJSON(`/api/price?asset=${active}`, 5000);
-    if(active!==(window.activeAsset||'XAU'))return;
-    if(pd?.price){
-      // We have asset price — build minimal prices object
-      const assetPrice=parseFloat(pd.price);
-      const assetChg=parseFloat(pd.changePct)||0;
-      if(!marketData)marketData={};
-      marketData[active]={price:pd.price, change:assetChg, high:pd.high, low:pd.low};
-      dashContext.prices=marketData;
-      // Update just main asset immediately
-      const conv=convertPrice(pd.price);
-      const pxau=document.getElementById('p-xau');
-      if(pxau)pxau.textContent=conv.sym+conv.val;
-      const cxau=document.getElementById('c-xau');
-      if(cxau){cxau.textContent=(assetChg>=0?'+':'')+assetChg+'%';cxau.style.color=assetChg>=0?'var(--green)':'var(--red)';}
-      const bxau=document.getElementById('bxau');
-      if(bxau){bxau.style.display='';bxau.textContent=`${active} `+conv.sym+conv.val;bxau.className='hbadge '+(assetChg>=0?'hg':'hr');}
-      
-      // Update labels dynamically
-      const _an = active === 'US30' ? 'US30' : `${active}/USD`;
-      const lblAsset=document.getElementById('lbl-asset');
-      if(lblAsset)lblAsset.textContent = _an;
-      const lblSent=document.getElementById('lbl-sent-title');
-      if(lblSent)lblSent.textContent = `RETAIL SENTIMENT · ${_an}`;
-      const lblMfkk=document.getElementById('lbl-mfkk-title');
-      if(lblMfkk)lblMfkk.textContent = `MFKK STRATEGY SCORE · ${_an} H1`;
-    } else {
-      // price.js failed — try tvprice as XAU quick fallback
-      const tv=await fetchJSON('/api/tvprice', 6000);
-      if(active!==(window.activeAsset||'XAU'))return;
-      if(active==='XAU'&&tv?.ok&&tv.prices?.XAU){
-        const xd=tv.prices.XAU;
-        if(!marketData)marketData={};
-        marketData.XAU=xd;
-        dashContext.prices=marketData;
-        const conv=convertPrice(xd.price);
-        const pxau=document.getElementById('p-xau');
-        if(pxau)pxau.textContent=conv.sym+conv.val;
-        const cxau=document.getElementById('c-xau');
-        const xauChg=xd.change||0;
-        if(cxau){cxau.textContent=(xauChg>=0?'+':'')+xauChg+'%';cxau.style.color=xauChg>=0?'var(--green)':'var(--red)';}
-        const bxau=document.getElementById('bxau');
-        if(bxau){bxau.style.display='';bxau.textContent='XAU '+conv.sym+conv.val;bxau.className='hbadge '+(xauChg>=0?'hg':'hr');}
-        // TV Scanner returns all symbols — use them for full update too
-        if(Object.keys(tv.prices).length>2){
-          const prices=buildDerivedPrices(tv.prices);
-          marketData=prices; dashContext.prices=prices;
-          updatePriceStrip(prices);
-          updateCorrelation(prices);
-          updateConfidence(prices, dashContext.sentiment||null);
-          updateHeader(prices);
-          return; // Already have full data from tvprice
-        }
-      }
-    }
-    // Then try full market data in background (Centralized Market API)
-    fetchJSON('/api/market?type=prices', 7000).then(full=>{
-      if(full?.ok && full.prices){
-        const prices=buildDerivedPrices(full.prices);
-        marketData=prices; dashContext.prices=prices;
-        updatePriceStrip(prices);
-        updateCorrelation(prices);
-        updateConfidence(prices, dashContext.sentiment||null);
-        updateHeader(prices);
-      }
-    });
-  }catch(e){console.log('Prices:',e.message);}
+  if(document.hidden)return;
+  if(priceRequest)return priceRequest;
+  priceRequest=(async()=>{
+    try{
+      const response=await authFetch('/api/market?type=prices',{cache:'no-store',signal:AbortSignal.timeout(8500)});
+      const data=await response.json();
+      if(!response.ok||!data.ok)throw Error(data.error||'Fonte non disponibile');
+      marketData=buildDerivedPrices({...data.prices});dashContext.prices=marketData;
+      updatePriceStrip(marketData,data);
+      updateCorrelation(marketData);
+      updateConfidence(marketData,dashContext.sentiment||null);
+    }catch{
+      marketData=null;dashContext.prices=null;
+      updatePriceStrip({}, {error:true});
+      updateConfidence({},dashContext.sentiment||null);
+    }finally{priceRequest=null;}
+  })();
+  return priceRequest;
 }
 
 // Sentiment-only refresh — uses server-side proxy to avoid CORS
@@ -482,46 +470,6 @@ function renderLayoutStratCard(key, d){
     + (chips ? '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:9px">'+chips+'</div>' : '')
     + footer
     + '</div>';
-}
-
-
-function updatePriceStrip(prices){
-  const active = window.activeAsset || 'XAU';
-  // chiave prezzo dell'asset attivo: XAG e US30 tornano col proprio nome dall'API,
-  // XAU è il default. (bug fix 2026-09-03: prima 'SILVER'/'XAU' → US30 mostrava l'oro)
-  const assetKey = (active === 'XAG' || active === 'US30') ? active : 'XAU';
-  const map={[assetKey]:'xau',DXY:'dxy',EURUSD:'eur',GBPUSD:'gbp',OIL:'oil'};
-  Object.entries(map).forEach(([key,id])=>{
-    const d=prices[key];
-    if(!d)return;
-    const chg=d.change;
-    // Convert price for non-DXY symbols
-    let displayPrice;
-    if(key==='DXY'||key==='EURUSD'||key==='GBPUSD'){
-      displayPrice=`$${d.price}`;
-    }else{
-      const conv=convertPrice(d.price);
-      displayPrice=`${conv.sym}${conv.val}`;
-    }
-    document.getElementById(`p-${id}`).textContent=displayPrice;
-    const ce=document.getElementById(`c-${id}`);
-    ce.textContent=`${chg>=0?'+':''}${chg}%`;
-    ce.style.color=chg>=0?'var(--green)':'var(--red)';
-  });
-  const b1=document.getElementById('bxau');
-  if(prices.XAU && b1){
-    b1.style.display='';
-    const conv=convertPrice(prices.XAU.price);
-    b1.textContent=`XAU ${conv.sym}${conv.val}`;
-    b1.className='hbadge '+(prices.XAU.change>=0?'hg':'hr')+(active==='XAU'?' active-badge':'');
-  }
-  const b2=document.getElementById('bxag');
-  if(prices.XAG && b2){
-    b2.style.display='';
-    const conv=convertPrice(prices.XAG.price);
-    b2.textContent=`XAG ${conv.sym}${conv.val}`;
-    b2.className='hbadge '+(prices.XAG.change>=0?'hg':'hr')+(active==='XAG'?' active-badge':'');
-  }
 }
 
 

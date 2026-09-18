@@ -12,7 +12,7 @@
 
 <!-- TradingView Widget -->
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-  <link rel="stylesheet" href="/style.css?v=audit1">
+  <link rel="stylesheet" href="/style.css?v=quotes2">
   <link rel="stylesheet" href="/saturn.css?v=audit1">
   <link rel="stylesheet" href="/nebula-sky.css?v=sky1">
 </head>
@@ -116,6 +116,13 @@
               <div class="orbit-stat"><span class="orbit-stat-lbl">Strategie abilitate</span><span class="orbit-stat-val" id="orbit-count">—</span></div>
             </div>
           </div>
+          <div class="system-metrics" id="system-metrics" aria-label="Statistiche del sistema MT5">
+            <div><span>P&amp;L oggi · UTC</span><strong id="system-today">—</strong></div>
+            <div><span>Win rate</span><strong id="system-winrate">—</strong></div>
+            <div><span>Profit factor</span><strong id="system-pf">—</strong></div>
+            <div><span>P&amp;L aperto</span><strong id="system-floating">—</strong></div>
+          </div>
+          <p class="system-status" id="system-status" role="status">Caricamento statistiche del conto…</p>
           <div class="nb-stage-wrap" id="orbit-stage"></div><p class="roster-note" id="orbit-roster-note"></p>
           <div class="nb-panels">
             <div class="nb-panel nb-panel--pad nb-stack" id="orbit-curve-panel">
@@ -131,13 +138,11 @@
         </div>
 
         <!-- Price strip -->
-        <div class="price-strip" id="price-strip">
-          <div class="pc main"><div class="pc-sym" id="lbl-asset">XAU/USD</div><div class="pc-val" id="p-xau"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-xau"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
-          <div class="pc"><div class="pc-sym">DXY</div><div class="pc-val" id="p-dxy"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-dxy"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
-          <div class="pc"><div class="pc-sym">EUR/USD</div><div class="pc-val" id="p-eur"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-eur"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
-          <div class="pc"><div class="pc-sym">GBP/USD</div><div class="pc-val" id="p-gbp"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-gbp"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
-          <div class="pc"><div class="pc-sym">OIL</div><div class="pc-val" id="p-oil"><div class="skel" style="width:40px;height:14px;margin:4px 0"></div></div><div class="pc-chg" id="c-oil"><div class="skel" style="width:30px;height:10px;margin:2px 0"></div></div></div>
-        </div>
+        <section class="desk-section" id="market-quotes" aria-labelledby="quotes-title">
+          <header class="workspace-heading"><h2 id="quotes-title">Quotazioni</h2><p>Prezzo e variazione giornaliera · tutti i simboli nello stesso aggiornamento</p></header>
+          <div class="price-strip quote-grid"></div>
+          <p class="data-note quote-status">Connessione alla fonte…</p>
+        </section>
 
         <!-- DXY Correlation -->
 
@@ -597,11 +602,11 @@
   </div>
 
   <!-- Core utilities (storage, API, compression) -->
-  <script src="/modules/core.js?v=audit1"></script>
+  <script src="/modules/core.js?v=quotes2"></script>
   <script src="/modules/nebula-sky.js?v=sky1"></script>
   <script src="/modules/saturn.js?v=sky1"></script>
   <!-- Dashboard: prices, confidence, sentiment, macro -->
-  <script src="/modules/dashboard.js?v=audit1"></script>
+  <script src="/modules/dashboard.js?v=quotes2"></script>
   <!-- Chat: AI analysis, image upload -->
   <script src="/modules/chat.js?v=audit1"></script>
   <!-- Journal: trade log, coaching, reports -->
@@ -626,7 +631,7 @@
   <!-- App: init, tabs, overlays, profile -->
   <script src="/modules/lab-engine.js?v=audit1"></script>
   <script src="/modules/laboratory.js?v=audit1"></script>
-  <script src="/modules/market-watch.js?v=audit1"></script>
-  <script src="/app.js?v=audit1"></script>
+  <script src="/modules/market-watch.js?v=quotes2"></script>
+  <script src="/app.js?v=quotes2"></script>
 </body>
 </html>

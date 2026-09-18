@@ -27,11 +27,24 @@ async function call(action,body={},id,method='POST',url='/api/db'){
   const res={setHeader(k,v){headers[k]=v;},status(s){status=s;return this;},json(v){data=v;return this;},end(){}};
   await handler(req,res);return {status,data,headers};
 }
+// The release smoke check must detect an unavailable login before reporting success.
+const configuredJwt=process.env.JWT_SECRET;
+for(const secret of [undefined,'too-short']){
+  if(secret===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=secret;
+  assert.equal((await call(undefined,{},undefined,'GET')).status,503,'gateway reports invalid auth configuration');
+  assert.equal((await call('login',{email:'probe@example.test',password:'not-a-real-password'})).status,503);
+}
+process.env.JWT_SECRET=configuredJwt;
+assert.equal((await call(undefined,{},undefined,'GET')).status,200);
 for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','patch_db'])assert.equal((await call(action)).status,401,action);
 assert.equal((await call('admin_reset',{email:'alice@example.test',password:'attacker'})).status,410);
 assert.equal((await call('mt5_command_push',{command:{direction:'buy'}},'alice')).status,410);
 assert.equal((await call('auto_trade_set',{enabled:true},'bob')).status,403);
 assert.equal((await call('mt5_get',{},'bob')).status,403);
+await db.execute({sql:'INSERT INTO system_readers(user_id) VALUES (?)',args:['bob']});
+assert.equal((await call('mt5_get',{},'bob')).status,200,'explicit readers can see system data');
+assert.equal((await call('auto_trade_set',{enabled:true},'bob')).status,403,'system read access never grants trading control');
+assert.equal((await call('save_user_data',{doc_type:'system_readers',payload:'{}'},'bob')).status,400,'read access cannot be self-granted via blob storage');
 assert.equal((await call('auto_trade_get',{},'alice')).data.enabled,false);
 assert.equal((await call('save_user_data',{user_id:'bot-config',doc_type:'auto_trade',payload:'{}'},'alice')).status,403);
 assert.equal((await call('save_user_data',{doc_type:'auto_trade',payload:'{}'},'alice')).status,400);

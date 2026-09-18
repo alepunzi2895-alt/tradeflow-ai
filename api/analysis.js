@@ -1,3 +1,4 @@
+import {fetchQuotes} from '../lib/market-quotes.js';
 // api/analysis.js — Super-Consolidated Analysis Engine (Restored & Robust)
 // Handles: Market Data (Prices, Correlation, G/S Ratio), Sentiment, Economic Calendar, COT, Indicators (MACD, ADX, CCI)
 
@@ -66,66 +67,9 @@ export default async function handler(req, res) {
     
     // ── PRICES ──
     if (type === "prices") {
-      const TICKER_KEY = {
-        'OANDA:XAUUSD':'XAU','FOREXCOM:XAUUSD':'XAU','TVC:GOLD':'XAU',
-        'OANDA:XAGUSD':'XAG','FOREXCOM:XAGUSD':'XAG','TVC:SILVER':'XAG',
-        'TVC:DXY':'DXY','TVC:USOIL':'OIL','TVC:US10Y':'US10Y',
-        'OANDA:EURUSD':'EURUSD','OANDA:GBPUSD':'GBPUSD',
-        // US30 + fattori istituzionali equity (confidence score US30 — 2026-09-03)
-        'TVC:DJI':'US30','OANDA:US30USD':'US30','DJCFD:DJI':'US30',
-        'TVC:VIX':'VIX','SP:SPX':'SPX','NASDAQ:NDX':'NDX','TVC:RUT':'RUT','TVC:US02Y':'US02Y'
-      };
-      const DEC3 = new Set(['DXY','US10Y','US02Y']);
-      const tickers = Object.keys(TICKER_KEY);
-      const scannerBody = { symbols: { tickers, query: { types: [] } }, columns: ['close', 'change', 'high', 'low'] };
-
-      let prices = {};
-      let tvSource = false;
-      try {
-        const r = await fetchT('https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify(scannerBody), headers: { 'User-Agent': 'Mozilla/5.0', 'Content-Type':'application/json' } }, 3500);
-        if (r.ok) {
-          const d = await r.json();
-          d.data?.forEach(item => {
-            const key = TICKER_KEY[item.s];
-            if (!key || prices[key]) return;
-            const [val, chg, hi, lo] = item.d;
-            if(!Number.isFinite(val))return;
-            const dp = /USD$/.test(key) && key!=='US30' ? 5 : DEC3.has(key) ? 3 : 2;
-            prices[key] = { price: val.toFixed(dp), change: Number.isFinite(chg)?chg.toFixed(2):null, high: hi?.toFixed(dp), low: lo?.toFixed(dp), _source: item.s };
-          });
-          tvSource = true;
-        }
-      } catch(e) {}
-
-      // Fill gaps with Yahoo
-      const gaps = [
-        {k:'XAU', s:'XAUUSD=X'}, {k:'DXY', s:'DX-Y.NYB'}, {k:'EURUSD', s:'EURUSD=X'},
-        {k:'GBPUSD', s:'GBPUSD=X'}, {k:'OIL', s:'CL=F'}, {k:'XAG', s:'XAGUSD=X'}, {k:'US10Y', s:'^TNX'}
-      ].filter(g => !prices[g.k]);
-      
-      await Promise.allSettled(gaps.map(async gap => {
-        const q = await yahooQuote(gap.s);
-        const dp=/^(EURUSD|GBPUSD)$/.test(gap.k)?5:2;
-        if (q && Number.isFinite(q.price)) prices[gap.k] = { price: q.price.toFixed(dp), change: q.change.toFixed(2), high: q.high?.toFixed(dp), low: q.low?.toFixed(dp), _source: 'Yahoo · '+gap.s };
-      }));
-
-      if(!Object.keys(prices).length)return res.status(503).json({ok:false,error:'Quotazioni non disponibili'});
-      // Calculations
-      if (prices.US10Y) {
-        const yc = +prices.US10Y.change;
-        prices.US10Y_CONTEXT = { yield: +prices.US10Y.price, signal: yc > 0.05 ? "BEARISH_GOLD" : yc < -0.05 ? "BULLISH_GOLD" : "NEUTRAL" };
-      }
-      if (prices.XAU && prices.XAG) {
-        const ratio = parseFloat(prices.XAU.price) / parseFloat(prices.XAG.price);
-        prices.GOLD_SILVER_RATIO = { ratio: +ratio.toFixed(1), signal: ratio > 80 ? "RISK_OFF" : ratio < 65 ? "RISK_ON" : "NEUTRO" };
-      }
-      if (prices.XAU && prices.DXY) {
-        const xc = parseFloat(prices.XAU.change), dc = parseFloat(prices.DXY.change);
-        const div = (xc > 0.2 && dc > 0.1) || (xc < -0.2 && dc < -0.1);
-        prices.CORRELATION = { status: div ? "DIVERGENZA" : "NORMALE", signal: div ? "⚠️ Divergenza DXY/XAU" : "✅ Correlazione inversa ok" };
-      }
-
-      return res.status(200).json({ ok:true, prices, source: tvSource?'tv':'hybrid', timestamp: new Date().toISOString() });
+      res.setHeader('Cache-Control','no-store');
+      const snapshot=await fetchQuotes();
+      return res.status(snapshot.ok?200:503).json(snapshot);
     }
 
     // ── SENTIMENT ──

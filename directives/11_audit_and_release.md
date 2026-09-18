@@ -12,7 +12,7 @@ il processo Python sulla VPS.
 | Area | Comportamento verificato |
 |---|---|
 | Autenticazione | JWT senza segreti di fallback, cookie HttpOnly/SameSite, migrazione dei bearer esistenti, namespace utente imposto dal server |
-| Operatore | ID immutabili in `ADMIN_USER_IDS`; controlli di trading e lettura del conto riservati, identità del bot separata |
+| Operatore | Controlli di trading riservati agli ID immutabili in `ADMIN_USER_IDS`; lettura del conto anche agli ID esplicitamente autorizzati in `system_readers`, identità del bot separata |
 | Reset password e ordini manuali | Vecchie azioni remote restituite come 410: permettevano bypass dei controlli |
 | AI | Autenticazione, quota persistente per utente, modello e token limitati dal server, timeout |
 | Journal | Eliminazione con ownership, importazione MyFxBook atomica e idempotente, provenienza conservata, errori di sync visibili |
@@ -58,8 +58,24 @@ ricerca: nessun risultato viene presentato come prova indipendente su dati nuovi
 5. Verificare su demo login, stato bot, import, quota AI, lease del worker e rifiuto
    dei lotti fuori budget. Solo l'operatore può riabilitare gli ingressi.
 
-Non sono state modificate configurazioni Vercel, processi VPS o autorizzazioni del
-conto. Senza questi passaggi il rilascio della sicurezza resta da completare.
+Il rilascio del 18 settembre ha evidenziato due requisiti di configurazione: il
+segreto JWT valido e il permesso esplicito di lettura del conto. Il login remoto
+ora funziona; il gateway restituisce 503 anche sul controllo di salute quando il
+segreto è assente o troppo corto. Nessun processo VPS è stato riavviato.
+
+### Ripristino dashboard
+
+L'account indicato dal proprietario è stato autenticato e abilitato alla sola
+lettura dei dati MT5 tramite `system_readers`. Non sono stati assegnati permessi
+di trading. Per abilitare un altro proprietario verificato:
+`node scripts/grant-system-read.mjs --user-id <verified account ID>`.
+Il comando richiede accesso amministrativo locale a Turso; nessuna API pubblica
+può auto-assegnare il permesso. Il grant è separato da `user_data`.
+
+La dashboard mostra equity, P&L giornaliero UTC, P&L aperto e WR/PF calcolati sui
+trade chiusi ricevuti, con numerosità e orario di sincronizzazione espliciti.
+Un errore 401/403 elimina i dati del conto dalla vista. Le quotazioni hanno una
+sola sezione e un unico ciclo batch a 5 secondi; i dati MT5 si aggiornano ogni 20.
 
 ## Limiti residui espliciti
 

@@ -10,9 +10,11 @@
 ## Fonte Dati Prezzi
 
 - **Primaria**: TradingView Scanner (`scanner.tradingview.com/global/scan`)
-- **Ticker XAU in ordine**: `OANDA:XAUUSD` → `FOREXCOM:XAUUSD` → `PEPPERSTONE:XAUUSD` → `TVC:GOLD` → `CAPITALCOM:GOLD`
+- **Ticker XAU in ordine**: `OANDA:XAUUSD` → `FOREXCOM:XAUUSD` → `TVC:GOLD` (priorità deterministica in `lib/market-quotes.js`, indipendente dall'ordine della risposta).
+- **Dashboard**: una sola richiesta batch `/api/market?type=prices` ogni 5 secondi per tutti i 13 simboli; un unico gruppo di card con prezzi nella valuta/unità dello strumento e variazione giornaliera. `/api/price` usa lo stesso normalizzatore. OIL usa `FX:USOIL`, fallback `TVC:USOIL`.
+- Il timestamp indica la ricezione, non l'ora del tick del broker. Ritardi del provider possibili. Dati mancanti o guasti sono espliciti; gli ultimi prezzi restano marcati come tali, mai sostituiti da valori inventati.
 - **MAI usare `GC=F`** per prezzi LIVE (Gold Futures COMEX ≠ spot — spread variabile)
-- **Yahoo Finance come fallback SOLO con `XAUUSD=X`** (spot), non `GC=F` o `GLD`
+- Nessun secondo feed Yahoo per le card live: prezzo e percentuale vengono dallo stesso snapshot TradingView. Qualunque futuro fallback Yahoo per XAU deve usare SOLO `XAUUSD=X` (spot), non `GC=F` o `GLD`.
 - **Eccezione backtest**: `GC=F` via yfinance accettabile per backtest storico H1
 
 ## Fetch Candle per Indicatori
@@ -62,4 +64,4 @@ Formato: `NOMECOL|60`
 
 ## Audit 2026-09-18
 
-Le letture del conto e i comandi richiedono autenticazione operatore o segreto del servizio. KB personale in Turso, routing MyFxBook dedicato, endpoint FX corretto. Vedi 11_audit_and_release.md.
+Le letture del conto richiedono un operatore o un utente esplicitamente autorizzato in `system_readers`; i comandi restano riservati agli operatori. Identità del servizio separata. KB personale in Turso, routing MyFxBook dedicato, endpoint FX corretto. Vedi 11_audit_and_release.md.

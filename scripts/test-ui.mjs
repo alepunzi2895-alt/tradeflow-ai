@@ -19,6 +19,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({headless:true});
 const errors=[];
+let quoteRequests=0, quoteFailure=false, statsDenied=false;
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 page.setDefaultTimeout(8000);
 page.on('pageerror',e=>errors.push(e.message));
@@ -37,16 +38,38 @@ await page.route('**/*',async route=>{
   if(b.action==='get_user_data')json={ok:true,data:[{doc_type:'mfx',payload:JSON.stringify({session:'fixture-session',email:'test@example.test',pass:'legacy-test-password'})}]};
   if(b.action==='get_trades')json={ok:true,trades:[]};
   if(b.action==='strategy_registry')json={ok:true,data:registrySnapshot()};
-  if(b.action==='mt5_get')json={ok:true,data:{account:{equity:10000,currency:'USD'},positions:[],trades:[],bot_status:{running:true,registry:registrySnapshot()},synced_at:new Date().toISOString()}};
+  if(b.action==='mt5_get'){
+    if(statsDenied){await route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({ok:false,error:'Accesso non abilitato'})});return;}
+    json={ok:true,data:{account:{equity:10000,balance:9900,currency:'USD'},positions:[],trades:[{profit:10},{profit:-5},{profit:15}],bot_status:{running:true,pnl_today:25,registry:registrySnapshot()},synced_at:new Date().toISOString()}};
+  }
   if(url.pathname==='/api/price')json={ok:true,price:4000,changePct:0.2};
   if(url.pathname==='/api/kb')json={ok:true,kb:[],knowledge:[]};
   if(url.pathname==='/api/market')json={ok:true,prices:{},events:[]};
+  if(url.pathname==='/api/market' && url.searchParams.get('type')==='prices'){
+    quoteRequests++;
+    if(quoteFailure){await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({ok:false,error:'offline'})});return;}
+    const values={XAU:4000,XAG:40,US30:42000,DXY:100,EURUSD:1.08456,GBPUSD:1.23,OIL:70,US10Y:4,US02Y:3.8,VIX:16,SPX:5000,NDX:18000,RUT:2000};
+    const timestamp=new Date().toISOString();json={ok:true,timestamp,prices:Object.fromEntries(Object.entries(values).map(([key,price])=>[key,{price,change:key==='XAG'?null:.25,_source:'TradingView:'+key,received_at:timestamp}]))};
+  }
   await route.fulfill({contentType:'application/json',body:JSON.stringify(json)});
 });
 try {
   await page.goto(base);
   await page.waitForSelector('.saturn-satellite');
   assert.equal(await page.locator('.saturn-satellite').count(),3);
+  await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=XAU] .pc-val')?.textContent.includes('4.000'));
+  assert.equal(await page.locator('.price-strip').count(),1,'only one quote surface');
+  assert.equal(await page.locator('#market-quotes .pc').count(),13);
+  assert.equal(await page.locator('.market-watch,#hdr #bxau,#hdr #bxag').count(),0,'no duplicated price areas');
+  assert.equal(await page.locator('[data-quote-symbol=XAG] .pc-chg').innerText(),'—');
+  const xauBefore=await page.locator('[data-quote-symbol=XAU] .pc-val').innerText();
+  await page.locator('#asset-seg [data-asset=US30]').click();
+  assert.match(await page.locator('#lbl-sent-title').innerText(),/US30/);
+  assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'asset selection never replaces the gold quote');
+  assert.equal(await page.locator('[data-quote-symbol=US30] .pc-val').innerText(),'42.000,00');
+  assert.equal(await page.locator('#system-winrate').innerText(),'66,7%');
+  assert.equal(await page.locator('#system-pf').innerText(),'5');
+  assert.match(await page.locator('#system-status').innerText(),/3 trade chiusi/);
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tf_myfx:test-user')).pass),undefined,'legacy cloud password is not persisted');
   const first=page.locator('.saturn-satellite').nth(1);
   const before=await first.getAttribute('style');
@@ -65,6 +88,12 @@ try {
   assert.equal(await first.getAttribute('style'),frozen,'pause preserves position');
   fs.mkdirSync('artifacts',{recursive:true});
   await page.locator('#orbit-hero').screenshot({path:'artifacts/saturn-desktop.png'});
+  await page.locator('#market-quotes').screenshot({path:'artifacts/quotes-desktop.png'});
+  quoteFailure=true;
+  await page.evaluate(()=>loadPrices());
+  assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'failed refresh retains the last value with a stale label');
+  assert.match(await page.locator('.quote-status').innerText(),/Fonte non disponibile/);
+  quoteFailure=false;await page.evaluate(()=>loadPrices());
   await page.locator('[data-tab=journal]').click();
   await page.locator('#btn-report-day').click();assert.equal(await page.locator('#elist .ec').count(),1);
   await page.locator('#btn-report-week').click();assert.equal(await page.locator('#elist .ec').count(),2);
@@ -80,13 +109,24 @@ try {
   await page.locator('#orbit-stage').scrollIntoViewIfNeeded();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'no horizontal overflow');
   await page.locator('#orbit-hero').screenshot({path:'artifacts/saturn-mobile.png'});
+  await page.locator('#market-quotes').screenshot({path:'artifacts/quotes-mobile.png'});
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.saturn-motion').isVisible(),false);
+  statsDenied=true;
+  await page.evaluate(()=>{_orbitMt5Fetch=0;return loadOrbitEquity();});
+  assert.match(await page.locator('#system-status').innerText(),/Accesso/,'authorization failure is shown explicitly');
+  assert.equal(await page.locator('#orbit-equity').innerText(),'—','a forbidden response clears account data');
   await page.evaluate(()=>{applyStrategyRegistry({strategies:{}},'configurazione');renderOrbitHero();});
   assert.equal(await page.locator('.saturn-satellite').count(),0,'missing registry entries cannot enable strategies');
   assert.match(await page.locator('#orbit-detail').innerText(),/Nessuna strategia/);
   await page.evaluate(()=>{useLocalUser('second-test-user');renderOrbitHero();});
   assert.equal(await page.locator('#orbit-equity').innerText(),'—','account equity does not leak between users');
+  // Freeze page timers to measure the shared refresh without an interval racing it.
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now()+100));
+  const requestCount=quoteRequests;
+  await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
+  assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, motion/pause, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

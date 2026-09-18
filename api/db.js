@@ -6,7 +6,7 @@ import * as jobs from '../lib/backtest-jobs.js';
 
 import { createClient } from "@libsql/client";
 import { randomUUID } from 'node:crypto';
-import { fail, jwtSecret, requireUser, requireOperator, serviceAuthorized, setSession, rateLimit, parseBody } from '../lib/security.js';
+import { fail, jwtSecret, requireUser, requireOperator, requireSystemReader, serviceAuthorized, setSession, rateLimit, parseBody } from '../lib/security.js';
 
 
 // Knowledge Base (GitHub)
@@ -452,18 +452,27 @@ export function createHandler(dbFactory = getDb) {
       const body = parseBody(req);
       const isKb = req.url?.split('?')[0] === '/api/kb' || req.query?.route === 'kb';
       const action = body.action || (isKb ? (req.method === 'GET' ? 'kb_load' : 'kb_save') : null);
-      if (req.method === 'GET' && !isKb) return res.status(200).json({ok:true,service:'TradeFlow Gateway'});
+      if (req.method === 'GET' && !isKb) {
+        // A healthy gateway must be able to issue and verify login sessions.
+        jwtSecret();
+        return res.status(200).json({ok:true,service:'TradeFlow Gateway'});
+      }
       if (action === 'admin_reset') throw fail(410, 'Reset remoto disabilitato');
       // Manual orders are disabled until they support the same strategy/guardian checks as automatic entries.
       if (action === 'mt5_command_push') throw fail(410, 'Ordini manuali remoti disabilitati');
       if (!ACTIONS[action] && !['session','logout'].includes(action)) throw fail(400, 'Azione non valida');
       const service = serviceAuthorized(req, body);
+      let db;
       if (SERVICE_ACTIONS.has(action)) {
         if (!service) throw fail(401, 'Servizio non autorizzato');
         body.secret = process.env.MT5_BOT_SECRET;
       } else if (!['login','register'].includes(action) && !(service && READ_ACTIONS.has(action))) {
         const actor = requireUser(req, body);
-        if (OPERATOR_ACTIONS.has(action) || ['mt5_get','auto_trade_get','strat_live_get','s20_paper_get'].includes(action)) requireOperator(actor);
+        if (OPERATOR_ACTIONS.has(action)) requireOperator(actor);
+        if (['mt5_get','auto_trade_get','strat_live_get','s20_paper_get'].includes(action)) {
+          db=dbFactory();
+          await requireSystemReader(db,actor);
+        }
         if (body.user_id && body.user_id !== actor.id) throw fail(403, 'Utente non accessibile');
         body.user_id = actor.id;
         body.actor = actor;
@@ -475,7 +484,7 @@ export function createHandler(dbFactory = getDb) {
           return res.status(200).json({ok:true,user:{id:actor.id,email:actor.email}});
         }
       }
-      const db = dbFactory();
+      db ||= dbFactory();
       if (['login','register'].includes(action)) {
         jwtSecret();
         const ip = req.headers?.['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || 'unknown';

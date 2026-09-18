@@ -10,6 +10,9 @@ function _syncAssetSeg() {
   document.querySelectorAll('#asset-seg button').forEach(b => {
     b.classList.toggle('on', b.dataset.asset === window.activeAsset);
   });
+  const label=window.activeAsset==='US30'?'US30':window.activeAsset+'/USD';
+  document.getElementById('lbl-sent-title').textContent='RETAIL SENTIMENT · '+label;
+  document.getElementById('lbl-mfkk-title').textContent='MFKK STRATEGY SCORE · '+label+' H1';
 }
 (function _wireAssetSeg() {
   const seg = document.getElementById('asset-seg');
@@ -107,8 +110,8 @@ window.switchAsset = function(asset) {
   // Update TV Chart
   initTVChart();
   
-  // Re-fetch Prices 
-  if (typeof fetchPrices === 'function') fetchPrices();
+  // Reuse the shared snapshot; asset selection never starts another price feed.
+  if(marketData){marketData=buildDerivedPrices({...marketData});dashContext.prices=marketData;updatePriceStrip(marketData);updateConfidence(marketData,dashContext.sentiment);}
   
   // Reset MFKK inputs and re-fetch if we are on dashboard
   document.querySelectorAll('.mfkk-inp').forEach(i => i.value = '');
@@ -310,6 +313,7 @@ async function handleAuth(action) {
     renderKb();
     try{ renderPlaceholders(); }catch(e){}
     loadPrices();
+    _orbitMt5Fetch=0;loadOrbitEquity();
     
   } catch(e) {
     errWrap.style.display='block'; errWrap.textContent='❌ ' + e.message;
@@ -329,7 +333,7 @@ if(!window.sessionToken) {
     if(!session?.ok){window.sessionToken=null;localStorage.removeItem('tf_token');showAuth();return;}
     useLocalUser(session.user.id);window.sessionToken='cookie';localStorage.setItem('tf_token','cookie');window.userId=session.user.id;localStorage.setItem('tf_user_id',session.user.id);
     hideAuth();await syncStateFromCloud();
-    renderJournal(); renderKb(); switchTab('dash');
+    renderJournal(); renderKb(); switchTab('dash');_orbitMt5Fetch=0;loadOrbitEquity();
     // Re-render chat if cloud returned history that wasn't in localStorage
     if(history.length > 0 && cm.children.length <= 1) {
       cm.innerHTML = '';
@@ -356,7 +360,8 @@ setTimeout(loadIndicators, 3000);
 // Confidence score with session data immediately (no API needed)
 try{updateConfidence({},{});}catch(e){}
 // Refresh intervals
-setInterval(()=>{if(!document.hidden)loadPrices();}, 5000);
+setInterval(loadPrices,5000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadPrices();loadOrbitEquity();}});
 setInterval(loadOrbitEquity, 20000);
 setInterval(loadSlowData, 30000);
 // Sentiment shares the 30-second slow-data refresh.

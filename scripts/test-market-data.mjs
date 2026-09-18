@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
-import handler from '../api/analysis.js';
+import handler from '../api/market.js';
+import analysisHandler from '../api/analysis.js';
 import priceHandler from '../api/price.js';
 import {normalizeQuotes,QUOTE_SYMBOLS} from '../lib/market-quotes.js';
+assert.equal(handler,analysisHandler,'Vercel filesystem route and rewrite target must share the same handler');
 const rows=Array.from({length:40},(_,i)=>({date:`2026-09-${String(1+Math.floor(i/2)).padStart(2,'0')}T12:00:00Z`,country:'USD',title:'Event '+i,impact:'High',forecast:'1',previous:'2',actual:'3'}));
 let fetchCalls=0;globalThis.fetch=async()=>{fetchCalls++;return {ok:true,json:async()=>rows}};
 async function call(type,extra={}){let body,status;const res={setHeader(){},status(s){status=s;return this},json(d){body=d;return this}};await handler({query:{type,...extra},url:'/api/market',method:'GET'},res);return {body,status};}

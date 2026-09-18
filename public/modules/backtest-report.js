@@ -217,7 +217,7 @@ async function brLoad(){
   const body = document.getElementById('brsheet-body');
   if(body) body.style.opacity = '.5';
   try{
-    const r = await fetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_report_get'})});
+    const r = await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_report_get'})});
     const d = await r.json();
     if(d.ok && d.data){ brData = d.data; brRenderAll(); }
     else if(body) body.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:20px 0;text-align:center">Nessun report ancora disponibile — gira <code>python scripts/portfolio_backtest.py --push</code> una prima volta (poi lo fa da solo ogni giorno).</div>';
@@ -232,8 +232,10 @@ async function brRunBacktest(key){
   const badgeEl = document.querySelector(`[data-badge="${key}"]`);
   const btn = document.querySelector(`[data-br-run="${key}"]`);
   if(btn){ btn.textContent='⏳ In coda...'; btn.disabled = true; }
+  let requestId;
   try{
-    await fetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_cmd_push', strategy_id:key})});
+    const queued=await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_cmd_push', strategy_id:key})});
+    const q=await queued.json();if(!queued.ok||!q.ok)throw Error(q.error||'Coda non disponibile');requestId=q.request_id;
   }catch(e){ alert('Errore invio richiesta: '+e.message); if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;} return; }
 
   const requestedAt = Date.now();
@@ -248,11 +250,11 @@ async function brRunBacktest(key){
       return;
     }
     try{
-      const r = await fetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_result_get', strategy_id:key})});
+      const r = await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_result_get', strategy_id:key, request_id:requestId})});
       const d = await r.json();
       if(!d.ok || !d.data) return;
       const syncedAt = new Date(d.data.synced_at||0).getTime();
-      if(syncedAt < requestedAt) return; // risultato vecchio, non ancora arrivato quello nuovo
+      if(d.data.request_id !== requestId) return; // risultato vecchio, non ancora arrivato quello nuovo
       clearInterval(brPolling[key]); delete brPolling[key];
       if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;}
       if(d.data.error){ alert(`Backtest ${key} fallito: ${d.data.error}`); return; }
@@ -284,7 +286,7 @@ async function brToggleBlock(key, currentlyDisabled){
   try{
     // NB: "action" qui sotto è il dispatcher dell'API (hard_blocks_toggle) — il verbo
     // block/unblock viaggia come "mode" per non collidere sulla stessa chiave JSON.
-    const r = await fetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'},
+    const r = await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({action:'hard_blocks_toggle', token:window.sessionToken, strategy_id:key, mode, reason})});
     const d = await r.json();
     if(!d.ok) throw new Error(d.error||'Errore sconosciuto');

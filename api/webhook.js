@@ -6,37 +6,13 @@ const REPO  = process.env.GITHUB_REPO  || "tradeflow-ai";
 const FILE  = "data/indicators_live.json";
 const TOKEN = process.env.GITHUB_TOKEN;
 
-// ── Turso: persist signal (fire-and-forget) ───────────────────────────────
-async function saveSignalToDb(data) {
-  const url = process.env.TURSO_DB_URL;
-  const token = process.env.TURSO_AUTH_TOKEN;
-  if (!url || !token) return;
-  try {
-    await fetch(`${process.env.VERCEL_URL ? 'https://'+process.env.VERCEL_URL : ''}/api/db`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "save_signal",
-        symbol: data.symbol,
-        timeframe: data.tf,
-        type: data.macd > data.signal ? "BULLISH" : data.macd < data.signal ? "BEARISH" : "NEUTRAL",
-        strength: null,
-        source: "tradingview_webhook",
-        cci: data.cci,
-        macd: data.macd,
-        macd_signal: data.signal,
-        adx: data.adx,
-        di_plus: data.di_plus,
-        di_minus: data.di_minus,
-        price: data.price,
-      }),
-    });
-  } catch (e) { console.log("Turso signal save skipped:", e.message); }
-}
+import { getDb, saveSignal } from './db.js';
+import { parseBody } from '../lib/security.js';
+async function fetchT(url,options={}){ return fetch(url,{...options,signal:AbortSignal.timeout(3500)}); }
 
 async function getFileSha() {
   try {
-    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
+    const r = await fetchT(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
       headers: { "Authorization": `Bearer ${TOKEN}`, "Accept": "application/vnd.github+json", "User-Agent": "TradeFlowAI" }
     });
     if (r.status === 404) return null;
@@ -51,7 +27,7 @@ async function saveToGitHub(data, sha) {
     content: Buffer.from(JSON.stringify(data, null, 2)).toString("base64"),
     ...(sha ? { sha } : {})
   };
-  const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
+  const r = await fetchT(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
     method: "PUT",
     headers: { "Authorization": `Bearer ${TOKEN}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "TradeFlowAI" },
     body: JSON.stringify(body)
@@ -77,7 +53,7 @@ export default async function handler(req, res) {
     }
     // Try GitHub
     try {
-      const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
+      const r = await fetchT(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`, {
         headers: { "Authorization": `Bearer ${TOKEN}`, "Accept": "application/vnd.github+json", "User-Agent": "TradeFlowAI" }
       });
       if (r.ok) {
@@ -93,22 +69,10 @@ export default async function handler(req, res) {
   // POST — receive webhook from TradingView
   if (req.method === "POST") {
     try {
-      // Optional signature verification — set TV_WEBHOOK_SECRET in Vercel env
-      const TV_SECRET = process.env.TV_WEBHOOK_SECRET;
-      if (TV_SECRET) {
-        const incoming = req.headers['x-tv-secret'] || req.body?.secret;
-        if (incoming !== TV_SECRET) {
-          return res.status(401).json({ ok: false, error: "Unauthorized" });
-        }
-      }
-
-      let body = req.body;
-      // TradingView sends plain text sometimes
-      if (typeof body === "string") {
-        try { body = JSON.parse(body); } catch {
-          return res.status(400).json({ ok: false, error: "JSON non valido" });
-        }
-      }
+      const body=parseBody(req);
+      const TV_SECRET=process.env.TV_WEBHOOK_SECRET;
+      if(!TV_SECRET) return res.status(503).json({ok:false,error:'Webhook non configurato'});
+      if((req.headers['x-tv-secret']||body.secret)!==TV_SECRET) return res.status(401).json({ok:false,error:'Unauthorized'});
 
       // Expected fields from TradingView alert:
       // cci, macd, signal (macd signal), adx, di_plus, di_minus, price, tf, symbol
@@ -128,20 +92,13 @@ export default async function handler(req, res) {
         source:   "tradingview_webhook"
       };
 
-      // Save to memory cache with timestamp
-      memCache = data;
-      memCacheTs = Date.now();
-
-      // Save to GitHub async (don't wait)
-      if (TOKEN) {
-        getFileSha().then(sha => saveToGitHub(data, sha)).catch(e => console.log("GitHub save failed:", e.message));
-      }
-
-      // Save signal to Turso async (don't wait)
-      saveSignalToDb(data).catch(() => {});
-
+      if(!/^[A-Za-z0-9:_./-]{1,32}$/.test(data.symbol) || !Number.isFinite(data.price) || data.price<=0 || ['cci','macd','signal','adx','di_plus','di_minus','histogram'].some(k=>!Number.isFinite(data[k]))) return res.status(400).json({ok:false,error:'Valori non validi'});
+      await saveSignal(getDb(),data);
+      let githubSaved=false;
+      if(TOKEN) githubSaved=await saveToGitHub(data,await getFileSha());
+      memCache=data;memCacheTs=Date.now();
       console.log(`Webhook received: TF=${data.tf} Price=${data.price} CCI=${data.cci} MACD=${data.macd}/${data.signal} ADX=${data.adx}`);
-      return res.status(200).json({ ok: true, received: data });
+      return res.status(200).json({ ok: true, received: data, githubSaved });
 
     } catch (err) {
       return res.status(500).json({ ok: false, error: err.message });

@@ -153,15 +153,14 @@ async function seRefresh() {
   if(_seRefreshRunning) return;
   _seRefreshRunning = true;
   const el = document.getElementById('se-content');
-  if(!el) return;
+  if(!el){_seRefreshRunning=false;return;}
 
   // 1. Candele da Proxy (per evitare CORS)
   let candles = [];
   let candlesFailed = false;
   try {
-    const res = await fetch('/api/price?type=candles&asset=XAU&interval=1h&range=60d');
-    const json = await res.json();
-    if (json.ok && json.candles) {
+    const json = await fetchJSON('/api/price?type=candles&asset=XAU&interval=1h&range=60d',8000);
+    if (json?.ok && json.candles) {
       candles = json.candles;
     } else {
       throw new Error(json.error || 'Errore dati candele');
@@ -211,7 +210,7 @@ async function seRefresh() {
   let _m15 = null;
   if (!window._seM15Cache || Date.now() - (window._seM15CacheTime||0) > M15_TTL) {
     try {
-      const rm15 = await fetch('/api/price?type=candles&asset=XAU&interval=15m&range=5d');
+      const rm15 = await authFetch('/api/price?type=candles&asset=XAU&interval=15m&range=5d');
       const jm15 = await rm15.json();
       if (jm15.ok && jm15.candles?.length > 50) {
         window._seM15Cache    = jm15.candles;
@@ -350,7 +349,7 @@ async function seRefresh() {
     const score = dashContext?.confidence?.score;
     if (typeof score === 'number') {
       _lastScorePush = nowTs;
-      fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+      authFetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'score_push', score }) }).catch(()=>{});
     }
   }
@@ -358,7 +357,7 @@ async function seRefresh() {
   // Riepilogo live per-strategia (blocchi con lifecycle propria): S20 / S30 / S31 · ogni 60s
   if (nowTs - (window._stratLiveFetch||0) > 60000) {
     window._stratLiveFetch = nowTs;
-    const pull = (key, id) => fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+    const pull = (key, id) => authFetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'strat_live_get', key }) })
       .then(r=>r.json())
       .then(j=>{ if (j && j.ok && SE.strategies[id]) SE.strategies[id].rosterLive = j.data || SE.strategies[id].rosterLive || null; })
@@ -367,7 +366,7 @@ async function seRefresh() {
     pull('S30', 'S30_DOW_DIP');
     pull('S20', 'S20_FIB_CONFLUENCE');
     // fallback S20: il vecchio path s20_paper_get finché il bot non pusha anche su strat_live
-    fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+    authFetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'s20_paper_get' }) })
       .then(r=>r.json())
       .then(j=>{ if (j && j.ok && j.data && SE.strategies.S20_FIB_CONFLUENCE && !SE.strategies.S20_FIB_CONFLUENCE.rosterLive) SE.strategies.S20_FIB_CONFLUENCE.rosterLive = j.data; })
@@ -379,7 +378,7 @@ async function seRefresh() {
 
 async function seFetchMt5Data() {
   try {
-    const r=await fetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await authFetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'mt5_get'})});
     const j=await r.json();
     return j.ok ? j.data : null;

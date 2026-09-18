@@ -1,0 +1,18 @@
+{
+  "version": "2026-09-18.1",
+  "strategies": {
+    "S00_MFKK": {"symbol":"XAUUSD","tf":"H1","status":"eligible"},
+    "S05_MFKK_INTRADAY": {"symbol":"XAUUSD","tf":"M30","status":"retired","reason":"Ritirata dal roster live"},
+    "S09_MFKK_SCALPING": {"symbol":"XAUUSD","tf":"M30","status":"eligible"},
+    "S10_OB_FVG_SCALP": {"symbol":"XAUUSD","tf":"M30","status":"eligible"},
+    "S16_GOLDEN_SQUEEZE": {"symbol":"XAUUSD","tf":"H1","status":"eligible"},
+    "S17_CONVERGENCE_SCALP": {"symbol":"XAUUSD","tf":"H4","status":"eligible"},
+    "S18_RANGE_REVERSAL": {"symbol":"XAUUSD","tf":"M30","status":"eligible"},
+    "S20_FIB_CONFLUENCE": {"symbol":"XAUUSD","tf":"M5","status":"disabled","reason":"Holdout PF inferiore alla soglia di promozione"},
+    "S30_DOW_DIP": {"symbol":"US30","tf":"H4","status":"eligible"},
+    "S31_LAYOUT_SMART": {"symbol":"XAUUSD","tf":"H1","status":"eligible"},
+    "S32_ORDERFLOW_SCALP": {"symbol":"XAUUSD","tf":"M15","status":"research"},
+    "S33_TREND_MOMENTUM": {"symbol":"XAUUSD","tf":"M30","status":"research"},
+    "S34_VOLUME_AUCTION": {"symbol":"XAUUSD","tf":"H1","status":"research"}
+  }
+}

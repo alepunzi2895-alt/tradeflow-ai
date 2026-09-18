@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import 'dotenv/config';
 
 // Import Vercel handlers
+import myfxbookHandler from './api/myfxbook.js';
 import dbHandler from './api/db.js';
 import priceHandler from './api/price.js';
 import analysisHandler from './api/analysis.js';
@@ -61,7 +62,7 @@ const vercelBridge = (handler) => async (req, res) => {
 app.all('/api/db', vercelBridge(dbHandler));
 app.all('/api/auth', vercelBridge(dbHandler));
 app.all('/api/kb', vercelBridge(dbHandler));
-app.all('/api/myfxbook', vercelBridge(dbHandler));
+app.all('/api/myfxbook', vercelBridge(myfxbookHandler));
 
 // Prices
 app.all('/api/price', vercelBridge(priceHandler));

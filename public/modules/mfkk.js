@@ -173,7 +173,7 @@ async function fetchBrowserCandles(){
     // Try our server proxy first (it handles Yahoo + TV history fallback)
     const asset = window.activeAsset || 'XAU';
     const url = `/api/candles?asset=${asset}&range=60d&interval=1h`;
-    const r = await fetch(url);
+    const r = await authFetch(url);
     if(!r.ok) throw new Error('Candle proxy HTTP '+r.status);
     const d = await r.json();
     if(!d?.ok || !d.candles?.length) throw new Error('No candles from proxy');

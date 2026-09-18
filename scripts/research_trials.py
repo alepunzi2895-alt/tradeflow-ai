@@ -14,13 +14,14 @@ USO:
     record_trials(42, asset="XAU", strategy_id="S09_MFKK_SCALPING", note="grid tp/sl M5")
     n = total_trials()  # usalo come num_trials in dsr_check()/is_promotable()
 
-Nota: scrittura centralizzata (una sola sessione orchestratrice chiama record_trials dopo
-aver aggregato i risultati dei subagenti) — NON pensato per scritture concorrenti da più
-processi paralleli, che romperebbero il file con un read-modify-write non atomico.
+Scrittura protetta da lock del sistema operativo e sostituzione atomica del file.
+Il lock viene rilasciato anche alla terminazione del processo.
 """
 import datetime
 import json
 import os
+import tempfile
+from contextlib import contextmanager
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LEDGER_PATH = os.path.join(HERE, '..', 'data', 'research_trials.json')
@@ -33,9 +34,32 @@ def _load() -> dict:
         return json.load(f)
 
 
+@contextmanager
+def _ledger_lock():
+    with open(LEDGER_PATH+'.lock','a+b') as lock:
+        lock.seek(0,2)
+        if lock.tell()==0: lock.write(b'0');lock.flush()
+        lock.seek(0)
+        if os.name=='nt':
+            import msvcrt
+            msvcrt.locking(lock.fileno(),msvcrt.LK_LOCK,1)
+        else:
+            import fcntl
+            fcntl.flock(lock,fcntl.LOCK_EX)
+        try: yield
+        finally:
+            lock.seek(0)
+            if os.name=='nt': msvcrt.locking(lock.fileno(),msvcrt.LK_UNLCK,1)
+            else: fcntl.flock(lock,fcntl.LOCK_UN)
+
+
 def _save(data: dict) -> None:
-    with open(LEDGER_PATH, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',dir=os.path.dirname(LEDGER_PATH),delete=False) as handle:
+        json.dump(data,handle,indent=2,ensure_ascii=False)
+        handle.flush();os.fsync(handle.fileno());temporary=handle.name
+    try: os.replace(temporary,LEDGER_PATH)
+    finally:
+        if os.path.exists(temporary): os.unlink(temporary)
 
 
 def total_trials() -> int:
@@ -50,18 +74,20 @@ def record_trials(n_new: int, asset: str = "", strategy_id: str = "", note: str 
     singola chiamata a evaluate()) — se una sessione fallisce a metà e viene rilanciata,
     passa solo i trial NUOVI effettivamente aggiunti per evitare doppio conteggio.
     """
-    data = _load()
-    data['total'] += n_new
-    data['log'].append({
-        'ts': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'n_trials': n_new,
-        'cumulative_after': data['total'],
-        'asset': asset,
-        'strategy_id': strategy_id,
-        'note': note,
-    })
-    _save(data)
-    return data['total']
+    if not isinstance(n_new,int) or n_new<0: raise ValueError('n_new must be nonnegative integer')
+    with _ledger_lock():
+        data = _load()
+        data['total'] += n_new
+        data['log'].append({
+            'ts': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'n_trials': n_new,
+            'cumulative_after': data['total'],
+            'asset': asset,
+            'strategy_id': strategy_id,
+            'note': note,
+        })
+        _save(data)
+        return data['total']
 
 
 def log_summary(last_n: int = 15) -> str:

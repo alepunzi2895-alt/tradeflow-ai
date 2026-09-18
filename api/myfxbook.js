@@ -1,9 +1,10 @@
+import { requireUser } from '../lib/security.js';
 // TradeFlow AI — api/myfxbook.js
 // Proxy per le API ufficiali MyFxBook
 
 const BASE = 'https://www.myfxbook.com/api';
 
-async function fetchMfx(path, ms = 9000) {
+async function fetchMfx(path, ms = 8000) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -29,6 +30,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: true, message: 'Method not allowed' });
 
+  try { requireUser(req); } catch(e) { return res.status(e.status||401).json({error:true,message:e.message}); }
   let body = {};
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};

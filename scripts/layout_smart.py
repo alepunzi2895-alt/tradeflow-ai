@@ -313,7 +313,7 @@ def evaluate_ls_frozen(tf='H1', P=None, folds=4, cooldown_bars=3):
                 pnl = pos['booked'] + rem * move - se2.trade_cost(ek == 'sl')
                 trades.append({'date': pos['date'], 'hour': pos['hour'], 'dir': d,
                                'entry': pos['entry'], 'outcome': 'win' if pnl > 0 else 'loss',
-                               'pnl': round(pnl, 2), 'exit': ek})
+                               'pnl': round(pnl, 2), 'exit': ek,'entry_ts':T[pos['ebar']],'exit_ts':T[i]})
                 pos = None
                 last_exit = i
             continue

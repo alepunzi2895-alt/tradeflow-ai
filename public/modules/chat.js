@@ -125,7 +125,7 @@ document.getElementById('sdrop-cam').onclick=()=>document.getElementById('file-i
 document.getElementById('file-in-cam').onchange=async e=>{const f=e.target.files?.[0];if(f)setImg(await compress(f));e.target.value=''};
 
 // URL import
-document.getElementById('btn-url').onclick=async()=>{const u=document.getElementById('url-in').value.trim();if(!u)return;try{const r=await fetch(u);const bl=await r.blob();setImg(await compress(new File([bl],'i.jpg',{type:bl.type||'image/jpeg'})));}catch{setImg({dataUrl:u,b64:null,type:'image/jpeg',urlOnly:true});}};
+document.getElementById('btn-url').onclick=async()=>{const u=document.getElementById('url-in').value.trim();if(!u)return;try{const r=await authFetch(u);const bl=await r.blob();setImg(await compress(new File([bl],'i.jpg',{type:bl.type||'image/jpeg'})));}catch{setImg({dataUrl:u,b64:null,type:'image/jpeg',urlOnly:true});}};
 document.getElementById('btn-sc').onclick=()=>closeOvl('imgsheet');
 
 // PASTE handler — desktop + mobile

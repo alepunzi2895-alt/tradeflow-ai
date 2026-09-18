@@ -47,7 +47,7 @@ MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 SYMBOL_CANDIDATES = ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"]
 
 VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
-MT5_SECRET = os.getenv("MT5_BOT_SECRET", "tradeflow-mt5-secret")
+MT5_SECRET = os.getenv("MT5_BOT_SECRET", "")
 _SSL_CTX = ssl.create_default_context()
 
 

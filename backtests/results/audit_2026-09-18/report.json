@@ -1,0 +1,1041 @@
+{
+  "created_at": "2026-09-18T11:23:20.855583+00:00",
+  "git_head": "3d6d106990d74a9d244c49aa1e59f339a0c92ca7",
+  "code_sha256": {
+    "scripts\\add-skeletons.py": "630f45b2b635142bd980bc7b15886959864ddd36065724e148cf6438f7407e22",
+    "scripts\\ai_review.py": "66d68371b237543323ea73e9ac6c0db477ef2809798f4894130526943084b3b7",
+    "scripts\\analyze_s00.py": "73646e685d5dd6e38a88d1e9b911190604d30d4ffc5a038d9ea8bf22dd53d012",
+    "scripts\\analyze_sl_history.py": "c9220a27df3116610f4e3662b40ebda9e16e4837f649b9d8e109d422249a48ec",
+    "scripts\\backtest_combined.py": "5031e306e601b7de13e51c696a13f1acedbef001e5276908e77b37d83a60b651",
+    "scripts\\backtest_execution.py": "3c4a9ebcf6deed0b5601b66ba8ee8bdf490c91a25acc0816614f5276ec56cd03",
+    "scripts\\backtest_mfkk_campaign.py": "eaef078f4d456d7617644fce7334c72365d97f53f9aff8171a564f1dac3c2b5d",
+    "scripts\\backtest_mfkk_intraday.py": "c70c2062e63f740dfd697ec54a253c33b55a053620dc23db4cd58c9a315a5b0d",
+    "scripts\\backtest_mtf.py": "690ccd7c2f9c910a2b629578e14dcfd5a62c21840ce7032fba4921ba44812014",
+    "scripts\\backtest_ob_fvg_scalp.py": "55734cd277864215ca900942ee5a68e7831549199d838ff5b3ef123160c84a59",
+    "scripts\\backtest_obv_rsi_mom.py": "4739dcf5e766582877a3f3313d138d85fab75eef7ec2569f55fddd781acc4d21",
+    "scripts\\backtest_scalp_hunt.py": "e71084e7890f7f9c59c239282c571a686ed2a71401ed39a33650d203a1f2e0c7",
+    "scripts\\backtest_scalp_v2.py": "b228a98f0e9102886910bf874ae49552e3a09b528fd30cfe1b70cc70cf0fff59",
+    "scripts\\backtest_scalp_v3.py": "4f7a14c2a1e3d60628e0e85a77003994efa806d3601b6b35680e6aea403f6101",
+    "scripts\\backtest_scalp_v4.py": "a18be86cdeeeba14532283ca4aa7dd7e1e38e144dccd4795c6189123f65049bf",
+    "scripts\\backtest_worker.py": "7c7aaf43640c8698b9c4a33bdf65eebbf7cf98ffce0798086ba32ed875a8981c",
+    "scripts\\calibrate_costs.py": "5d6e28cbbb3d5aecf79f984cbe2b74f3e18e0585f85fd8d32e26163d2bc20517",
+    "scripts\\check_config_consistency.py": "3db590ffb851b9c83ba144826a917cf474a2409479eef373851b1819b5ab048b",
+    "scripts\\correlation_report.py": "0179d6d5d0fe8b1aa84598bb4d6ec0f82e904325a67c9c1a7bc2e514862def72",
+    "scripts\\daily_maintenance.py": "5658bddc3db5b53b67af626be6857f37fdbd3f0d2c24cbc11ad76e8a07493cc1",
+    "scripts\\daily_update.py": "fe7bbb5ff2f9efba67d8ac97367f956ae5f9fcc74767db4dc269c2573f3f0393",
+    "scripts\\execution_safety.py": "6e6b05ed416f8d4d0e7e6d08391bbc0d3a190bc2b10c2595512992bd6c533a30",
+    "scripts\\extra_indicators.py": "874fc640b03a077da3ec072a4a615e103228c1d574672b86423b6f5769210533",
+    "scripts\\feature_screen.py": "20292aad0befdbf31a55b3b7dc45c7e562d799a0b5ca05708a2726f05d6c5b60",
+    "scripts\\fetch_mt5_history.py": "63d52d88dae86505d5aafae89d6dcca76f12e3075dadf6249f366a7f1bd2fdb7",
+    "scripts\\install_git_hooks.py": "d95c3f2b305b38423dc2ed0675adf4601970e63c007d05228f4487bb00dbeea2",
+    "scripts\\ivan_lot_sizing.py": "7c6c7bb3e4ae566669744b2386f9424ced23e8c264dfa192fe4612b282031824",
+    "scripts\\key_levels.py": "c845fb576e8573f8e2bc984c9d226b2b9b34e936832215940f06373e24935a43",
+    "scripts\\layout_confidence.py": "efcd7d54d2ec95285f21cc57038483a0c68ec82f6f4e03e95b0d61487329cdc8",
+    "scripts\\layout_features.py": "4b113f08861bbc43ae0a9f6809e3c19a9c6938a17f411ea628772a3185a27f3f",
+    "scripts\\layout_indicators.py": "9863be77afe02d45dd519f9dfd9100ed4911a32b17fc81b935f3ec328e47d580",
+    "scripts\\layout_ml.py": "1ff6608b922b3b232957ec2732770421c71e39b383cec0de9de7da1caac560ab",
+    "scripts\\layout_s3x.py": "9d482770c48644f8e9f2f2fbba76f37a2bb2d90cf71faa38bdce9207fef34f38",
+    "scripts\\layout_sim.py": "d4e3212b20f216d2632426d56ce698a4bdddc77db70c0ae2945e4391f3d4eca7",
+    "scripts\\layout_smart.py": "0a81a3ebf4ca62af9e3fa630a3ef58bf5f8d70654e9d85b96981eea97dc1a902",
+    "scripts\\market_structure.py": "0655b3b2f0078217e494926d4fc525e5e130fa80a0f19d76be2cf723543412db",
+    "scripts\\mt5-bot.py": "123250a44419f18a386f6cd8778e31cae09f1c9a1766a9205c83d42ee591f035",
+    "scripts\\news_guardian.py": "7721bdb251f0cb47b06a7db189399af1cacee9a5b85a11e2f59757571f0e75cd",
+    "scripts\\obsidian_export.py": "2c9f37053a107b6fcc78d6f62e5e90468d5e4c017af2d514b04cd487f3832f42",
+    "scripts\\opt_harness.py": "ebaede74eff4d69b94f84fbb6e62e358e62eb9408cfb017f7a95811141eaa26b",
+    "scripts\\opt_minors_sprint.py": "ca608eafc2c3781afed80db3fc646560cb472470db81178c0e840bc6e8e5da44",
+    "scripts\\optimize-weights.py": "adf083c9ec86629ec6eeb2862a07d811928633a2c223420ef5e0019fdad137e1",
+    "scripts\\optimize_active_strategies.py": "21830350aba23f448541a57f912c6ac4bab94e790d6705a1ee845b4581183519",
+    "scripts\\optimize_params.py": "11a576f9b8e5e045d36300ca9b082df772adf694b2794dddd90e96c56892d9fe",
+    "scripts\\paper_trade_s20.py": "b4d6ffb3eea405bb40551ddf8c8ffccb82bf6e679cadc3d0a93e939e581d7503",
+    "scripts\\parse_telegram_signals.py": "e434ce924511c1475eefbcbb6401c65d8b66b31f57a1f987654bc6648d170d1c",
+    "scripts\\performance_tracker.py": "b62fdbf563d7a387595bca49ac61923e7ef768b24b7be6c86357670d17717cc1",
+    "scripts\\portfolio_backtest.py": "e50436768a3646ce97b300cc130fde400b03217d007d11b335513d6fdf3aa4a0",
+    "scripts\\reactivation_check.py": "18475ef4565eee182765b52139d62a845469ab56c39b9c8a5c5e5a7336aab5df",
+    "scripts\\research_audit.py": "d185b58f3f9f9c01ec7273df4da57197221dd65ed70fc0fcd45bf2e717a05e6f",
+    "scripts\\research_s20_fib.py": "051c316674159d5f7111859b1404a8a03a116ff77534945e00624f4e01f6a004",
+    "scripts\\research_s20_fib_v2.py": "7a130fa8c5a942cf1416be5d1a3aa1cfb90896bd24bcebe7291145c280b219c3",
+    "scripts\\research_s20_fib_v3_buy.py": "27c1af12aefc5ced2f7ec01d9f2500f9753b53bace1d9ba28d25e3e3892ea26d",
+    "scripts\\research_s20_fib_v4_session.py": "53160d0a98f41958f3f71ecd8e4de5b11daa11279afd34b69aa582a073d49a2a",
+    "scripts\\research_trials.py": "b579f0f204382b3e0bb333896ddd2966f7e183d7f95001086fda5757363d23d7",
+    "scripts\\review_diff.py": "784654ad8a5964c25a8ba21dc9c42693c6065526bfcbc082536030b2603cbfb7",
+    "scripts\\risk_guardian.py": "670112aa7a64bda4762792daf61d67aa37cdb66af16d3a05b88ee40783811991",
+    "scripts\\risk_manager.py": "73baf5187b1a940883628f40b069a7e7a26168bf0cf30a546546d671a7e4dfdc",
+    "scripts\\select_best_tf.py": "3bb014f4e6a0f07bcd1e4c88137563d001838643f5025ab9a1bd9d8941296c3e",
+    "scripts\\signals.py": "8fd8388fee26eed5de79b16f20c7ca51cc470e57d4ee72a14257bc90e548c08d",
+    "scripts\\strategy-engine-v2.py": "f7c7eb71a61ddab3476615ec3a68000c9bc4c30f43588b93e38e093559349f2d",
+    "scripts\\strategy_registry.py": "c03d6f2deea6160f772d593f082aa82a6147874d7ab173260164bce55e39bd07",
+    "scripts\\strategy_selector.py": "8e881be2357fb38f8f2fd8305c47c6be3a70c0a2dcfc4da31a16d828e2502db6",
+    "scripts\\sync_all.py": "a01362a9d5e1972718512186cadb12d0d66b1c1bbe68c4a7d22b19f93cd4506f",
+    "scripts\\telegram_key_levels.py": "3af372006d7aa6b4a5150fcbed9a575844b9de01ec3f25abec978e6a3e285c55",
+    "scripts\\telegram_signal_backtest.py": "eff21c1726f1bdf8827f23d197382ec216ec8a7329c692c8a23fa02d48fad527",
+    "scripts\\telegram_signal_listener.py": "c784a2bf1fa2fb04b34a501548f641a7b28f06b9ba65f5b86bfdc62a7d26c3d4",
+    "scripts\\telegram_signal_study.py": "ae8770f59ba7429e9e4e2fa1b922023bc854ee0e851920a37bdfded67941d722",
+    "scripts\\test_execution_safety.py": "6ff45be82f512371de3c4a5ee177f5aa3759d898ff94c8cf519476e771c42fba",
+    "scripts\\update-html.py": "670545aa1020b9a1f6aad03e6024d5b8ed11c7baa9f6bee1ef9d68853347da73",
+    "scripts\\us30_harness.py": "d69e86b7787007362524f58a422c6de665e91a7c06f8e600124fa22694415106",
+    "scripts\\us30_strategies.py": "5bc84ec108cc612a076efb3263011ba236ae8ae3ca50a48d79b6b0026b150742",
+    "scripts\\vercel_push.py": "f8868e87e05d7af8aeb1ef10cc03428d2ad5cd7c735b4af7cb84c0c932d8fb1c"
+  },
+  "trial_count": 1753,
+  "datasets": {
+    "xauusd_h1_mt5.json": {
+      "sha256": "f99d78c3655f5449d30833241035f714b2a72cf51441e7de702d866133797e0a",
+      "count": 11774,
+      "first": 1725238800,
+      "last": 1788253200
+    },
+    "xauusd_m30_mt5.json": {
+      "sha256": "3226fcaebbc2f40744cb030b6d20a18387b0a99e3f2e63c28c2a9e13d65f61ea",
+      "count": 23563,
+      "first": 1726497000,
+      "last": 1789567200
+    },
+    "xauusd_h4_mt5.json": {
+      "sha256": "6e40ba39d3a35c7b1b3971e12219de6e1baea961b04f1a1af852bdf593d71bf0",
+      "count": 3080,
+      "first": 1725235200,
+      "last": 1788249600
+    },
+    "xauusd_m5_mt5.json": {
+      "sha256": "e90843b85c43827978d2a18bc451037406b3d7aae474579d637178630eea7676",
+      "count": 99999,
+      "first": 1744927200,
+      "last": 1789578900
+    },
+    "us30_h4_mt5.json": {
+      "sha256": "a21084c8fcb3781ec7cd0fa5b88668c9bb029955c9acc104d21a69e8b1c86528",
+      "count": 3077,
+      "first": 1725393600,
+      "last": 1788451200
+    }
+  },
+  "strategies": {
+    "S00_MFKK": {
+      "tf": "H1",
+      "asset": "xauusd",
+      "full": {
+        "n": 1290,
+        "wr": 40.0,
+        "pnl": 3944.6,
+        "pf": 1.238,
+        "dd": 1941.3,
+        "avg_day": 17.23,
+        "tr_day": 5.63,
+        "months": "14/24"
+      },
+      "chronological_holdout": {
+        "n": 244,
+        "wr": 40.2,
+        "pnl": 992.3,
+        "pf": 1.314,
+        "dd": 599.4,
+        "avg_day": 24.2,
+        "tr_day": 5.95,
+        "months": "4/5"
+      },
+      "cutoff": 1775650320.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 200,
+          "wr": 35.0,
+          "pnl": -37.9,
+          "pf": 0.968,
+          "dd": 226.6,
+          "avg_day": -0.97,
+          "tr_day": 5.13,
+          "months": "2/5"
+        },
+        {
+          "n": 263,
+          "wr": 43.0,
+          "pnl": 1030.5,
+          "pf": 1.469,
+          "dd": 465.6,
+          "avg_day": 21.03,
+          "tr_day": 5.37,
+          "months": "3/5"
+        },
+        {
+          "n": 272,
+          "wr": 43.0,
+          "pnl": 1721.1,
+          "pf": 1.886,
+          "dd": 257.4,
+          "avg_day": 35.12,
+          "tr_day": 5.55,
+          "months": "4/5"
+        },
+        {
+          "n": 246,
+          "wr": 39.0,
+          "pnl": 522.3,
+          "pf": 1.072,
+          "dd": 1941.3,
+          "avg_day": 13.06,
+          "tr_day": 6.15,
+          "months": "2/6"
+        }
+      ],
+      "dsr": {
+        "pvalue": 3.2355801729770046e-308,
+        "significant": false
+      },
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 244,
+        "wr": 40.2,
+        "pnl": 748.3,
+        "pf": 1.226,
+        "dd": 654.4,
+        "avg_day": 18.25,
+        "tr_day": 5.95,
+        "months": "4/5"
+      },
+      "gates": {
+        "sample": true,
+        "holdout_pf": true,
+        "holdout_positive": true,
+        "positive_segments": true,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 263,
+        "wr": 39.5,
+        "pnl": 528.9,
+        "pf": 1.138,
+        "dd": 818.9,
+        "avg_day": 11.75,
+        "tr_day": 5.84,
+        "months": "3/5"
+      },
+      "timestamp_coverage": 1290
+    },
+    "S09_MFKK_SCALPING": {
+      "tf": "M30",
+      "asset": "xauusd",
+      "full": {
+        "n": 109,
+        "wr": 39.4,
+        "pnl": -104.7,
+        "pf": 0.902,
+        "dd": 441.2,
+        "avg_day": -1.5,
+        "tr_day": 1.56,
+        "months": "11/23"
+      },
+      "chronological_holdout": {
+        "n": 22,
+        "wr": 45.5,
+        "pnl": 156.3,
+        "pf": 1.854,
+        "dd": 79.8,
+        "avg_day": 10.42,
+        "tr_day": 1.47,
+        "months": "3/4"
+      },
+      "cutoff": 1776953160.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 23,
+          "wr": 52.2,
+          "pnl": 147.9,
+          "pf": 2.82,
+          "dd": 67.8,
+          "avg_day": 10.56,
+          "tr_day": 1.64,
+          "months": "5/5"
+        },
+        {
+          "n": 20,
+          "wr": 40.0,
+          "pnl": -65.8,
+          "pf": 0.685,
+          "dd": 119.8,
+          "avg_day": -5.48,
+          "tr_day": 1.67,
+          "months": "0/4"
+        },
+        {
+          "n": 21,
+          "wr": 9.5,
+          "pnl": -211.0,
+          "pf": 0.099,
+          "dd": 211.0,
+          "avg_day": -15.07,
+          "tr_day": 1.5,
+          "months": "1/5"
+        },
+        {
+          "n": 20,
+          "wr": 45.0,
+          "pnl": -148.1,
+          "pf": 0.594,
+          "dd": 194.8,
+          "avg_day": -11.4,
+          "tr_day": 1.54,
+          "months": "1/5"
+        }
+      ],
+      "dsr": null,
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 22,
+        "wr": 45.5,
+        "pnl": 134.3,
+        "pf": 1.689,
+        "dd": 84.8,
+        "avg_day": 8.95,
+        "tr_day": 1.47,
+        "months": "3/4"
+      },
+      "gates": {
+        "sample": false,
+        "holdout_pf": true,
+        "holdout_positive": true,
+        "positive_segments": false,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 21,
+        "wr": 42.9,
+        "pnl": 129.5,
+        "pf": 1.708,
+        "dd": 79.8,
+        "avg_day": 9.25,
+        "tr_day": 1.5,
+        "months": "3/4"
+      },
+      "timestamp_coverage": 109
+    },
+    "S10_OB_FVG_SCALP": {
+      "tf": "M30",
+      "asset": "xauusd",
+      "full": {
+        "n": 22,
+        "wr": 59.1,
+        "pnl": 191.2,
+        "pf": 1.534,
+        "dd": 145.7,
+        "avg_day": 10.62,
+        "tr_day": 1.22,
+        "months": "7/11"
+      },
+      "chronological_holdout": {
+        "n": 7,
+        "wr": 57.1,
+        "pnl": 106.9,
+        "pf": 6.599,
+        "dd": 18.6,
+        "avg_day": 21.39,
+        "tr_day": 1.4,
+        "months": "2/3"
+      },
+      "cutoff": 1776953160.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 1,
+          "wr": 100.0,
+          "pnl": 38.3,
+          "pf": 38270.0,
+          "dd": 0,
+          "avg_day": 38.27,
+          "tr_day": 1.0,
+          "months": "1/1"
+        },
+        {
+          "n": 2,
+          "wr": 50.0,
+          "pnl": -3.0,
+          "pf": 0.858,
+          "dd": 21.1,
+          "avg_day": -1.5,
+          "tr_day": 1.0,
+          "months": "1/2"
+        },
+        {
+          "n": 1,
+          "wr": 100.0,
+          "pnl": 8.6,
+          "pf": 8620.0,
+          "dd": 0,
+          "avg_day": 8.62,
+          "tr_day": 1.0,
+          "months": "1/1"
+        },
+        {
+          "n": 11,
+          "wr": 54.5,
+          "pnl": 40.4,
+          "pf": 1.127,
+          "dd": 145.7,
+          "avg_day": 4.48,
+          "tr_day": 1.22,
+          "months": "2/4"
+        }
+      ],
+      "dsr": null,
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 7,
+        "wr": 57.1,
+        "pnl": 99.9,
+        "pf": 5.522,
+        "dd": 19.6,
+        "avg_day": 19.99,
+        "tr_day": 1.4,
+        "months": "2/3"
+      },
+      "gates": {
+        "sample": false,
+        "holdout_pf": true,
+        "holdout_positive": true,
+        "positive_segments": true,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 5,
+        "wr": 60.0,
+        "pnl": 109.4,
+        "pf": 219.78,
+        "dd": 0.5,
+        "avg_day": 36.46,
+        "tr_day": 1.67,
+        "months": "2/2"
+      },
+      "timestamp_coverage": 22
+    },
+    "S16_GOLDEN_SQUEEZE": {
+      "tf": "H1",
+      "asset": "xauusd",
+      "full": {
+        "n": 240,
+        "wr": 48.3,
+        "pnl": 2024.5,
+        "pf": 1.877,
+        "dd": 513.7,
+        "avg_day": 17.45,
+        "tr_day": 2.07,
+        "months": "17/24"
+      },
+      "chronological_holdout": {
+        "n": 35,
+        "wr": 42.9,
+        "pnl": 204.3,
+        "pf": 1.43,
+        "dd": 279.3,
+        "avg_day": 12.02,
+        "tr_day": 2.06,
+        "months": "2/5"
+      },
+      "cutoff": 1775650320.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 46,
+          "wr": 30.4,
+          "pnl": -51.9,
+          "pf": 0.83,
+          "dd": 100.7,
+          "avg_day": -2.07,
+          "tr_day": 1.84,
+          "months": "3/5"
+        },
+        {
+          "n": 52,
+          "wr": 48.1,
+          "pnl": 301.9,
+          "pf": 1.703,
+          "dd": 111.3,
+          "avg_day": 12.58,
+          "tr_day": 2.17,
+          "months": "4/5"
+        },
+        {
+          "n": 54,
+          "wr": 61.1,
+          "pnl": 912.0,
+          "pf": 4.767,
+          "dd": 72.8,
+          "avg_day": 38.0,
+          "tr_day": 2.25,
+          "months": "4/5"
+        },
+        {
+          "n": 42,
+          "wr": 59.5,
+          "pnl": 775.3,
+          "pf": 2.136,
+          "dd": 199.3,
+          "avg_day": 36.92,
+          "tr_day": 2.0,
+          "months": "4/5"
+        }
+      ],
+      "dsr": {
+        "pvalue": 4.561767750573406e-291,
+        "significant": false
+      },
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 35,
+        "wr": 42.9,
+        "pnl": 169.3,
+        "pf": 1.342,
+        "dd": 290.3,
+        "avg_day": 9.96,
+        "tr_day": 2.06,
+        "months": "2/5"
+      },
+      "gates": {
+        "sample": true,
+        "holdout_pf": true,
+        "holdout_positive": true,
+        "positive_segments": true,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 43,
+        "wr": 39.5,
+        "pnl": 81.6,
+        "pf": 1.109,
+        "dd": 513.7,
+        "avg_day": 3.55,
+        "tr_day": 1.87,
+        "months": "3/6"
+      },
+      "timestamp_coverage": 240
+    },
+    "S17_CONVERGENCE_SCALP": {
+      "tf": "H4",
+      "asset": "xauusd",
+      "full": {
+        "n": 102,
+        "wr": 50.0,
+        "pnl": 3003.4,
+        "pf": 2.344,
+        "dd": 401.8,
+        "avg_day": 31.62,
+        "tr_day": 1.07,
+        "months": "14/21"
+      },
+      "chronological_holdout": {
+        "n": 19,
+        "wr": 42.1,
+        "pnl": 404.0,
+        "pf": 1.77,
+        "dd": 194.3,
+        "avg_day": 21.27,
+        "tr_day": 1.0,
+        "months": "3/5"
+      },
+      "cutoff": 1775646720.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 12,
+          "wr": 50.0,
+          "pnl": 152.7,
+          "pf": 2.239,
+          "dd": 92.8,
+          "avg_day": 13.88,
+          "tr_day": 1.09,
+          "months": "2/3"
+        },
+        {
+          "n": 21,
+          "wr": 52.4,
+          "pnl": 651.4,
+          "pf": 4.137,
+          "dd": 183.8,
+          "avg_day": 38.32,
+          "tr_day": 1.24,
+          "months": "3/4"
+        },
+        {
+          "n": 25,
+          "wr": 60.0,
+          "pnl": 764.5,
+          "pf": 3.296,
+          "dd": 93.8,
+          "avg_day": 31.86,
+          "tr_day": 1.04,
+          "months": "3/4"
+        },
+        {
+          "n": 22,
+          "wr": 45.5,
+          "pnl": 1090.0,
+          "pf": 2.121,
+          "dd": 288.0,
+          "avg_day": 51.91,
+          "tr_day": 1.05,
+          "months": "3/4"
+        }
+      ],
+      "dsr": null,
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 19,
+        "wr": 42.1,
+        "pnl": 385.0,
+        "pf": 1.719,
+        "dd": 198.3,
+        "avg_day": 20.27,
+        "tr_day": 1.0,
+        "months": "3/5"
+      },
+      "gates": {
+        "sample": false,
+        "holdout_pf": true,
+        "holdout_positive": true,
+        "positive_segments": true,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 19,
+        "wr": 42.1,
+        "pnl": 404.0,
+        "pf": 1.77,
+        "dd": 194.3,
+        "avg_day": 21.27,
+        "tr_day": 1.0,
+        "months": "3/5"
+      },
+      "timestamp_coverage": 102
+    },
+    "S18_RANGE_REVERSAL": {
+      "tf": "M30",
+      "asset": "xauusd",
+      "full": {
+        "n": 217,
+        "wr": 34.1,
+        "pnl": -349.8,
+        "pf": 0.74,
+        "dd": 380.8,
+        "avg_day": -2.07,
+        "tr_day": 1.28,
+        "months": "7/25"
+      },
+      "chronological_holdout": {
+        "n": 35,
+        "wr": 22.9,
+        "pnl": -227.9,
+        "pf": 0.376,
+        "dd": 241.5,
+        "avg_day": -7.6,
+        "tr_day": 1.17,
+        "months": "0/5"
+      },
+      "cutoff": 1776953160.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 54,
+          "wr": 33.3,
+          "pnl": -44.2,
+          "pf": 0.726,
+          "dd": 88.6,
+          "avg_day": -1.16,
+          "tr_day": 1.42,
+          "months": "2/6"
+        },
+        {
+          "n": 44,
+          "wr": 34.1,
+          "pnl": -63.1,
+          "pf": 0.743,
+          "dd": 102.7,
+          "avg_day": -1.85,
+          "tr_day": 1.29,
+          "months": "1/6"
+        },
+        {
+          "n": 45,
+          "wr": 40.0,
+          "pnl": 78.0,
+          "pf": 1.428,
+          "dd": 36.3,
+          "avg_day": 2.29,
+          "tr_day": 1.32,
+          "months": "5/5"
+        },
+        {
+          "n": 28,
+          "wr": 42.9,
+          "pnl": -67.5,
+          "pf": 0.777,
+          "dd": 161.6,
+          "avg_day": -2.94,
+          "tr_day": 1.22,
+          "months": "2/5"
+        }
+      ],
+      "dsr": {
+        "pvalue": 0.0,
+        "significant": false
+      },
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 35,
+        "wr": 22.9,
+        "pnl": -262.9,
+        "pf": 0.329,
+        "dd": 274.4,
+        "avg_day": -8.76,
+        "tr_day": 1.17,
+        "months": "0/5"
+      },
+      "gates": {
+        "sample": true,
+        "holdout_pf": false,
+        "holdout_positive": false,
+        "positive_segments": false,
+        "extra_costs": false,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 38,
+        "wr": 21.1,
+        "pnl": -267.2,
+        "pf": 0.339,
+        "dd": 267.2,
+        "avg_day": -8.1,
+        "tr_day": 1.15,
+        "months": "0/6"
+      },
+      "timestamp_coverage": 217
+    },
+    "S20_FIB_CONFLUENCE": {
+      "tf": "M5",
+      "asset": "xauusd",
+      "full": {
+        "n": 106,
+        "wr": 57.5,
+        "pnl": 230.5,
+        "pf": 1.718,
+        "dd": 46.3,
+        "avg_day": 3.03,
+        "tr_day": 1.39,
+        "months": "10/18"
+      },
+      "chronological_holdout": {
+        "n": 14,
+        "wr": 50.0,
+        "pnl": -6.2,
+        "pf": 0.861,
+        "dd": 21.3,
+        "avg_day": -0.48,
+        "tr_day": 1.08,
+        "months": "2/4"
+      },
+      "cutoff": 1780648560.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 18,
+          "wr": 44.4,
+          "pnl": -15.2,
+          "pf": 0.684,
+          "dd": 30.5,
+          "avg_day": -1.08,
+          "tr_day": 1.29,
+          "months": "1/4"
+        },
+        {
+          "n": 13,
+          "wr": 61.5,
+          "pnl": 9.0,
+          "pf": 1.366,
+          "dd": 11.8,
+          "avg_day": 0.9,
+          "tr_day": 1.3,
+          "months": "2/3"
+        },
+        {
+          "n": 28,
+          "wr": 57.1,
+          "pnl": 89.7,
+          "pf": 1.87,
+          "dd": 35.6,
+          "avg_day": 5.28,
+          "tr_day": 1.65,
+          "months": "3/4"
+        },
+        {
+          "n": 24,
+          "wr": 62.5,
+          "pnl": 89.5,
+          "pf": 2.09,
+          "dd": 46.3,
+          "avg_day": 4.97,
+          "tr_day": 1.33,
+          "months": "3/4"
+        }
+      ],
+      "dsr": null,
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 14,
+        "wr": 50.0,
+        "pnl": -20.2,
+        "pf": 0.609,
+        "dd": 24.3,
+        "avg_day": -1.55,
+        "tr_day": 1.08,
+        "months": "1/4"
+      },
+      "gates": {
+        "sample": false,
+        "holdout_pf": false,
+        "holdout_positive": false,
+        "positive_segments": true,
+        "extra_costs": false,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 16,
+        "wr": 50.0,
+        "pnl": -6.9,
+        "pf": 0.87,
+        "dd": 21.3,
+        "avg_day": -0.46,
+        "tr_day": 1.07,
+        "months": "2/4"
+      },
+      "timestamp_coverage": 106
+    },
+    "S31_LAYOUT_SMART": {
+      "tf": "H1",
+      "asset": "xauusd",
+      "full": {
+        "n": 53,
+        "wr": 50.9,
+        "pnl": 516.8,
+        "pf": 1.966,
+        "dd": 130.4,
+        "avg_day": 9.75,
+        "tr_day": 1.0,
+        "months": "17/22"
+      },
+      "chronological_holdout": {
+        "n": 9,
+        "wr": 44.4,
+        "pnl": 94.6,
+        "pf": 1.624,
+        "dd": 130.4,
+        "avg_day": 10.51,
+        "tr_day": 1.0,
+        "months": "2/4"
+      },
+      "cutoff": 1775650320.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 10,
+          "wr": 60.0,
+          "pnl": 56.2,
+          "pf": 2.572,
+          "dd": 11.8,
+          "avg_day": 5.62,
+          "tr_day": 1.0,
+          "months": "4/4"
+        },
+        {
+          "n": 10,
+          "wr": 30.0,
+          "pnl": -77.8,
+          "pf": 0.387,
+          "dd": 108.3,
+          "avg_day": -7.78,
+          "tr_day": 1.0,
+          "months": "2/5"
+        },
+        {
+          "n": 12,
+          "wr": 58.3,
+          "pnl": 204.1,
+          "pf": 3.398,
+          "dd": 31.5,
+          "avg_day": 17.01,
+          "tr_day": 1.0,
+          "months": "4/5"
+        },
+        {
+          "n": 11,
+          "wr": 63.6,
+          "pnl": 260.1,
+          "pf": 3.251,
+          "dd": 57.1,
+          "avg_day": 23.64,
+          "tr_day": 1.0,
+          "months": "5/5"
+        }
+      ],
+      "dsr": null,
+      "extra_cost_per_trade_native_units": 1.0,
+      "cost_stress": {
+        "n": 9,
+        "wr": 44.4,
+        "pnl": 85.6,
+        "pf": 1.546,
+        "dd": 134.4,
+        "avg_day": 9.51,
+        "tr_day": 1.0,
+        "months": "2/4"
+      },
+      "gates": {
+        "sample": false,
+        "holdout_pf": true,
+        "holdout_positive": true,
+        "positive_segments": true,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 10,
+        "wr": 50.0,
+        "pnl": 149.8,
+        "pf": 1.988,
+        "dd": 130.4,
+        "avg_day": 14.98,
+        "tr_day": 1.0,
+        "months": "3/5"
+      },
+      "timestamp_coverage": 53
+    },
+    "S30_DOW_DIP": {
+      "tf": "H4",
+      "asset": "us30",
+      "full": {
+        "n": 109,
+        "wr": 66.1,
+        "pnl": 1433.0,
+        "pf": 1.101,
+        "dd": 2096.4,
+        "avg_day": 13.15,
+        "tr_day": 1.0,
+        "months": "9/19"
+      },
+      "chronological_holdout": {
+        "n": 23,
+        "wr": 60.9,
+        "pnl": 445.2,
+        "pf": 1.144,
+        "dd": 1631.8,
+        "avg_day": 19.36,
+        "tr_day": 1.0,
+        "months": "2/5"
+      },
+      "cutoff": 1775839680.0,
+      "embargo_days": 7,
+      "segments": [
+        {
+          "n": 13,
+          "wr": 61.5,
+          "pnl": -211.2,
+          "pf": 0.87,
+          "dd": 594.0,
+          "avg_day": -16.24,
+          "tr_day": 1.0,
+          "months": "1/3"
+        },
+        {
+          "n": 17,
+          "wr": 70.6,
+          "pnl": 1468.1,
+          "pf": 2.107,
+          "dd": 916.5,
+          "avg_day": 86.36,
+          "tr_day": 1.0,
+          "months": "2/3"
+        },
+        {
+          "n": 31,
+          "wr": 64.5,
+          "pnl": -707.1,
+          "pf": 0.839,
+          "dd": 1625.0,
+          "avg_day": -22.81,
+          "tr_day": 1.0,
+          "months": "2/5"
+        },
+        {
+          "n": 19,
+          "wr": 73.7,
+          "pnl": 885.5,
+          "pf": 1.389,
+          "dd": 1050.4,
+          "avg_day": 46.61,
+          "tr_day": 1.0,
+          "months": "4/5"
+        }
+      ],
+      "dsr": null,
+      "extra_cost_per_trade_native_units": 3.0,
+      "cost_stress": {
+        "n": 23,
+        "wr": 60.9,
+        "pnl": 376.2,
+        "pf": 1.121,
+        "dd": 1670.8,
+        "avg_day": 16.36,
+        "tr_day": 1.0,
+        "months": "2/5"
+      },
+      "gates": {
+        "sample": false,
+        "holdout_pf": false,
+        "holdout_positive": true,
+        "positive_segments": false,
+        "extra_costs": true,
+        "dsr": false
+      },
+      "paper_candidate": false,
+      "live_approved": false,
+      "native_holdout": {
+        "n": 21,
+        "wr": 61.9,
+        "pnl": 222.4,
+        "pf": 1.073,
+        "dd": 1574.4,
+        "avg_day": 10.59,
+        "tr_day": 1.0,
+        "months": "2/5"
+      },
+      "timestamp_coverage": 109
+    }
+  },
+  "limitations": [
+    "Historical datasets already used in research; no unseen holdout claim.",
+    "P&L in each simulator native units; do not sum XAU and US30 as account currency.",
+    "Frozen standalone signals; live broker sizing/portfolio guard parity requires demo forward validation.",
+    "Four chronological segments are stability diagnostics, not repeated fit/refit walk-forward.",
+    "PBO requires a comparable candidate return matrix; not inferred from different-asset baselines."
+  ],
+  "live_promotions": [],
+  "execution_model": "causal-next-bar-stops-v1"
+}

@@ -25,12 +25,11 @@ Regola di promozione (identica per tutti gli owner):
       - fold positivi (pf>=1.0) di ev_new >= max(2, fold positivi base)
       - ev_new['holdout']['dd'] <= 1.35 * max(ev_base['holdout']['dd'], 1.0)
       - 0.3 <= trade/giorno <= 15  (full period)
-      - [SOLO SE num_trials è passato] Deflated Sharpe Ratio sull'holdout > 0.95
+      - Deflated Sharpe Ratio sull'holdout > 0.95; dati insufficienti = gate fallito
         (vedi dsr_check — corregge lo Sharpe per multiple-testing: num_trials =
         quante varianti/parametri sono state provate in questa sprint PRIMA di
         arrivare a questa configurazione. Va dichiarato onestamente dall'owner,
-        non c'è modo di dedurlo automaticamente. Se num_trials non è passato il
-        check DSR è saltato — comportamento invariato per compatibilità.)
+        non c'è modo di dedurlo automaticamente. Se num_trials non è passato viene letto dal registro cumulativo research_trials.)
 
 Il backtester è caricato via importlib (filename con trattino). Gli indicatori sono
 calcolati una volta per TF e messi in cache.
@@ -198,9 +197,12 @@ def is_promotable(ev_new, ev_base, num_trials=None):
         'dd_ok':       h_new['dd'] <= 1.35 * max(h_base['dd'], 1.0),
         'freq_ok':     0.3 <= f['tr_day'] <= 15,
     }
+    if num_trials is None:
+        from research_trials import total_trials
+        num_trials = total_trials()
     if num_trials is not None:
         dsr = dsr_check(ev_new, num_trials)
-        checks['dsr_ok'] = dsr.is_significant if dsr is not None else True
+        checks['dsr_ok'] = bool(dsr is not None and dsr.is_significant)
     return all(checks.values()), checks
 
 

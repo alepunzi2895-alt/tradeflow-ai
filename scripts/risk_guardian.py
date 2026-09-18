@@ -694,16 +694,16 @@ class RiskGuardian:
             # Approximate: sl_usd = sl_price × lot × contract_size
             # For GOLD on XM: 1 lot = 100oz, pip=$0.01 → $1/pip/lot
             # So lot = equity*0.02 / sl_in_usd_per_lot
-            # sl_usd here is already in dollar per 0.01lot (strategy engine units)
-            max_by_risk = (current_equity * 0.02) / (base_sl_usd / self.base_lot)
+            # base_sl_usd is a price distance; GOLD reference contract is 100 oz.
+            # Final execution guard uses broker/account-currency contract conversion.
+            max_by_risk = (current_equity * 0.02) / (base_sl_usd * 100.0)
             raw_lot = min(raw_lot, max_by_risk)
 
         return self._round_lot(raw_lot)
 
     def _round_lot(self, lot: float) -> float:
-        lot = max(0.01, min(self.max_lot, lot))
-        steps = round(lot / self.lot_step)
-        return round(steps * self.lot_step, 2)
+        from execution_safety import floor_volume
+        return floor_volume(lot,self.max_lot,0.01,self.max_lot,self.lot_step)
 
     def _modify_sl(self, mt5, pos, new_sl: float, tp: float, symbol: str) -> bool:
         req = {
@@ -720,6 +720,8 @@ class RiskGuardian:
         return False
 
     def _partial_close(self, mt5, pos, symbol: str, volume: float) -> bool:
+        if volume <= 0:
+            return False
         tick = mt5.symbol_info_tick(symbol)
         if not tick:
             return False

@@ -14,20 +14,40 @@ if(!userId){userId=genUUID();localStorage.setItem(USER_ID_KEY,userId);}
 window.userId=userId;
 window.sessionToken=sessionToken;
 
+async function authFetch(input, options={}) {
+  const url = new URL(typeof input==='string'?input:input.url, location.href);
+  const headers = new Headers(options.headers || {});
+  if(url.origin===location.origin && url.pathname.startsWith('/api/')) {
+    const token=window.sessionToken;
+    if(token && token!=='cookie') headers.set('Authorization','Bearer '+token);
+  }
+  return fetch(input,{...options,headers});
+}
+window.authFetch=authFetch;
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
 // ── TURSO DB HELPERS ────────────────────────────────────
 /**
- * Fire-and-forget: send data to /api/db without blocking UI.
- * Errors are silently swallowed (DB is a bonus, not critical).
+ * Returns the server result; failures also surface as a sync notice.
  */
 async function dbSave(action, data){
-  try{
-    await fetch('/api/db',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action,...data,user_id:data.user_id||userId}),
-    });
-  }catch(e){console.log(`[db] ${action} failed silently:`,e.message);}
+  try {
+    const r=await authFetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,...data,user_id:window.userId}),signal:AbortSignal.timeout(8000)});
+    const result=await r.json();
+    if(!r.ok || !result.ok) throw Error(result.error || 'Salvataggio non riuscito');
+    return result;
+  } catch(e) {
+    window.dispatchEvent(new CustomEvent('sync-error',{detail:e.message}));
+    return {ok:false,error:e.message};
+  }
 }
+window.addEventListener('sync-error',e=>{
+  let notice=document.getElementById('sync-notice');
+  if(!notice){notice=document.createElement('div');notice.id='sync-notice';notice.setAttribute('role','status');notice.style.cssText='position:fixed;bottom:85px;left:50%;transform:translateX(-50%);z-index:9999;background:#263144;color:#fff;padding:12px 18px;border-radius:12px;max-width:90vw;font-size:12px';document.body.append(notice);}
+  notice.textContent='Sincronizzazione: '+e.detail;notice.hidden=false;
+  clearTimeout(window._syncNoticeTimer);window._syncNoticeTimer=setTimeout(()=>notice.hidden=true,9000);
+});
 
 /**
  * Load data from Turso with timeout. Returns null on failure (fallback to localStorage).
@@ -36,7 +56,7 @@ async function dbLoad(action, data={}, timeoutMs=5000){
   try{
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),timeoutMs);
-    const r=await fetch('/api/db',{
+    const r=await authFetch('/api/db',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action,...data,user_id:data.user_id||window.userId}),
@@ -53,13 +73,29 @@ window.dbLoad=dbLoad;
 
 // ── STORAGE ────────────────────────────────────────────
 const S={get:(k,d=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
-const K={p:'tf_profile',j:'tf_journal',kb:'tf_knowledge',chat:'tf_chat',mfx:'tf_myfx',mem:'tf_memory',amem:'tf_analysis_mem'};
+const STORAGE_BASE={p:'tf_profile',j:'tf_journal',kb:'tf_knowledge',chat:'tf_chat',mfx:'tf_myfx',mem:'tf_memory',amem:'tf_analysis_mem'};
+const K=Object.fromEntries(Object.entries(STORAGE_BASE).map(([key,base])=>[key,base+':'+userId]));
+for(const [key,base] of Object.entries(STORAGE_BASE)){
+  const legacy=localStorage.getItem(base);
+  if(legacy!==null){if(localStorage.getItem(K[key])===null)localStorage.setItem(K[key],legacy);localStorage.removeItem(base);}
+}
+function useLocalUser(id){
+  if(id===window.userId)return;
+  for(const [key,base] of Object.entries(STORAGE_BASE))K[key]=base+':'+id;
+  P=S.get(K.p,defP());entries=S.get(K.j,[]);kb=S.get(K.kb,[]);
+  tradeMemory=S.get(K.mem,{entries:{},summary:'',resetDate:null});analysisMemory=S.get(K.amem,{entries:[],lastReset:null});
+  mfxSession=S.get(K.mfx,null);history=S.get(K.chat,[]);cm.replaceChildren();
+  if(mfxSession?.pass){delete mfxSession.pass;S.set(K.mfx,mfxSession);}
+  _orbitMt5=null;_orbitMt5Fetch=0;
+  if(history.length)renderHistoryMessages(history);
+}
 const defP=()=>({name:'Alessandro',risk:2,dd:6,tp1:1.5,tp2:3,errors:[],sessions:0,winRate:null,knowledge:[],currency:'USD'});
 let P=S.get(K.p,defP()),entries=S.get(K.j,[]),kb=S.get(K.kb,[]);
 let tradeMemory=S.get(K.mem,{entries:{},summary:'',resetDate:null});
 let analysisMemory=S.get(K.amem,{entries:[],lastReset:null});
 let pendingImg=null,loading=false,newsMode=true;
 let mfxSession=S.get(K.mfx,null);
+if(mfxSession?.pass){delete mfxSession.pass;S.set(K.mfx,mfxSession);}
 let marketData=null;
 let dashContext={prices:null,confidence:null,sentiment:null,calendar:null};
 let fxRates={USD:1,EUR:null,GBP:null,CHF:null,JPY:null};
@@ -82,11 +118,11 @@ async function syncStateFromCloud() {
         if (row.doc_type === 'chat') { history = payload; S.set(K.chat, history); }
         if (row.doc_type === 'kb') { kb = payload; S.set(K.kb, kb); }
         if (row.doc_type === 'mfx') {
-          // Il payload cloud non contiene mai la password (mai inviata al nostro DB) —
-          // se il device ha già una password locale salvata per l'auto-relogin, la preserviamo.
-          const localPass = S.get(K.mfx, null)?.pass;
-          mfxSession = payload ? { ...payload, pass: payload.pass || localPass } : payload;
+          // Credentials are memory-only, including legacy payload migrations.
+          const inMemoryPass=mfxSession?.pass;
+          mfxSession = payload ? {session:payload.session,email:payload.email} : null;
           S.set(K.mfx, mfxSession);
+          if(mfxSession && inMemoryPass)mfxSession.pass=inMemoryPass;
         }
         if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
         if (row.doc_type === 'mem') { tradeMemory = payload; S.set(K.mem, tradeMemory); }
@@ -107,9 +143,8 @@ async function fetchFxRates(){
     // TradingView public quote endpoint
     const pairs={EUR:'FX:EURUSD',GBP:'FX:GBPUSD',CHF:'FX:USDCHF',JPY:'FX:USDJPY'};
     const sym=pairs[P.currency];if(!sym)return;
-    const r=await fetch(`https://symbol-search.tradingview.com/symbol_search/v3/?text=${sym}&hl=0&exchange=FX&lang=en&search_type=undefined&domain=production`);
     // Fallback: use our server-side endpoint which uses TradingView data
-    const resp=await fetch(`/api/market?type=fx&currency=${P.currency}`);
+    const resp=await authFetch(`/api/market?type=fx&currency=${P.currency}`);
     const txt=await resp.text();
     if(!txt.trim().startsWith('<')){
       const d=JSON.parse(txt);
@@ -174,7 +209,7 @@ function compress(file){
 
 // ── API ────────────────────────────────────────────────
 async function api(messages,system){
-  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,thinking:{type:'disabled'},system:system||buildSys(),messages})});
+  const r=await authFetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,thinking:{type:'disabled'},system:system||buildSys(),messages})});
   const d=await r.json();
   if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
   const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
@@ -290,4 +325,4 @@ function md(text){
   });
   return d;
 }
-function bold(t){return t.replace(/\*\*([^*]+)\*\*/g,'<strong class="ms">$1</strong>');}
+function bold(t){return escapeHtml(t).replace(/\*\*([^*]+)\*\*/g,'<strong class="ms">$1</strong>');}

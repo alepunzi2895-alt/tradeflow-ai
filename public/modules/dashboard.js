@@ -1,28 +1,27 @@
 // TradeFlow AI — modules/dashboard.js
 
 // ── DASHBOARD ──────────────────────────────────────────
-// Fast refresh: prices only (called every 1s, vedi setInterval in app.js)
+// Prices refresh every 5s while the page is visible (app.js).
 // Fetch with timeout helper
+const jsonRequests=new Map(), jsonCache=new Map();
 async function fetchJSON(url, timeoutMs=6000){
-  const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(), timeoutMs);
-  try{
-    const r=await fetch(url,{signal:ctrl.signal});
-    clearTimeout(tid);
-    const txt=await r.text();
-    if(!txt||!txt.trim()||txt.trim()[0]==='<'||txt.trim()[0]==='!')return null;
-    return JSON.parse(txt);
-  }catch(e){
-    clearTimeout(tid);
-    return null;
-  }
+  const ttl=url.includes('candles')?60000:url.includes('prices')?10000:3000;
+  const cached=jsonCache.get(url);
+  if(cached&&Date.now()-cached.at<ttl)return cached.value;
+  if(jsonRequests.has(url))return jsonRequests.get(url);
+  const request=(async()=>{
+    try {
+      const r=await authFetch(url,{signal:AbortSignal.timeout(timeoutMs)});
+      if(!r.ok)return null;
+      const value=await r.json();if(value?.ok!==false)jsonCache.set(url,{value,at:Date.now()});return value;
+    }catch{return null;}finally{jsonRequests.delete(url);}
+  })();
+  jsonRequests.set(url,request);return request;
 }
 
 // ── ORBIT HERO ("Ogni strategia è un pianeta") ──────────────────────────────
-// Nucleo = strategia con il PF più alto nel roster live (esclude ritirate/signal-only).
-// Pianeti orbitanti = resto del roster. Colore/dimensione derivati dal PF reale (SE.strategies,
-// strategy.js) — nessun dato fittizio. Equity reale via mt5_get (stesso endpoint di strategy.js,
-// polling indipendente perché seRefresh() gira solo a tab Strategie attiva).
+// Saturno al centro, tutte le strategie abilitate in orbita. Registro condiviso
+// con il bot; metriche storiche da SE.strategies, equity conto da mt5_get.
 let _orbitSel = null;       // key strategia selezionata nel pannello dettaglio (null = nucleo)
 let _orbitMt5 = null;
 let _orbitMt5Fetch = 0;
@@ -64,8 +63,11 @@ function nbSmoothPath(vals, W, H, pad){
 async function loadOrbitEquity(){
   if(Date.now() - _orbitMt5Fetch < 20000 && _orbitMt5) { renderOrbitHero(); return; }
   _orbitMt5Fetch = Date.now();
-  const j = await dbLoad('mt5_get', {}, 8000);
+  const [j,config] = await Promise.all([dbLoad('mt5_get', {}, 8000),dbLoad('strategy_registry',{},8000)]);
   if(j && j.ok) _orbitMt5 = j.data;
+  const recent=_orbitMt5?.synced_at && Date.now()-Date.parse(_orbitMt5.synced_at)<90000;
+  const applied=recent?_orbitMt5?.bot_status?.registry:null;
+  if(applied||config?.data) applyStrategyRegistry(applied||config.data,applied?'bot':'configurazione');
   renderOrbitHero();
 }
 
@@ -82,11 +84,12 @@ function orbitWire(){
 
 function renderOrbitDetail(entry){
   const el = document.getElementById('orbit-detail');
-  if(!el || !entry) return;
+  if(!el) return;
+  if(!entry){el.textContent='Nessuna strategia abilitata da mostrare.';return;}
   const st = entry.stats || {};
   const tier = orbitTier(entry.pf);
   el.innerHTML = `
-    <div class="nb-lbl">Strategia selezionata</div>
+    <div class="nb-lbl">Strategia selezionata · baseline precedente</div>
     <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;margin-top:3px">${entry.label.replace(/\s*⛔.*$/,'')}</div>
     <div style="font-size:11px;color:var(--nb-muted);margin-top:2px">PF ${entry.pf.toFixed(2)} · WR ${entry.wr||'—'} · <span style="color:${tier.color}">${tier.name}</span></div>
     <div class="nb-metrics" style="margin-top:8px">
@@ -124,19 +127,21 @@ function renderOrbitHero(){
   const wrap = document.getElementById('orbit-hero');
   if(!wrap) return;
   const roster = orbitRoster();
-  if(!roster.length) return;
+
   const nucleus = roster[0];
   const sel = roster.find(r => r.key === _orbitSel) || nucleus;
 
   const acc = _orbitMt5?.account || null;
   const eqEl = document.getElementById('orbit-equity');
   const eqSubEl = document.getElementById('orbit-equity-sub');
-  if(eqEl) eqEl.textContent = acc?.equity ? orbitFmtEur(acc.equity,acc.currency||'') : '—';
-  if(eqSubEl) eqSubEl.textContent = acc?.equity ? 'conto MT5 live' : 'bot MT5 non connesso';
+  const hasEquity=Number.isFinite(acc?.equity);
+  const recent=_orbitMt5?.synced_at && Date.now()-Date.parse(_orbitMt5.synced_at)<90000;
+  if(eqEl) eqEl.textContent = hasEquity ? orbitFmtEur(acc.equity,acc.currency||'') : '—';
+  if(eqSubEl) eqSubEl.textContent = hasEquity ? (recent?'conto MT5 live':'ultimo dato ricevuto · connessione da verificare') : 'bot MT5 non connesso';
 
-  const pnl12 = roster.reduce((s,r) => s + (r.stats?.pnl_12m || 0), 0);
   const pnlEl = document.getElementById('orbit-pnl12');
-  if(pnlEl){ pnlEl.textContent = orbitFmtEur(pnl12); pnlEl.style.color = pnl12>=0 ? 'var(--nb-up)' : 'var(--nb-down)'; }
+  const confirmed=window.strategyRegistry?.source==='bot'&&recent;
+  if(pnlEl){pnlEl.textContent=confirmed?'Confermato dal bot':'Da confermare';pnlEl.style.color='var(--nb-dim)';}
   const countEl = document.getElementById('orbit-count');
   if(countEl) countEl.textContent = roster.length + ' / ' + Object.keys(SE.strategies).length;
   const configured=Object.entries(SE.strategies);
@@ -145,18 +150,19 @@ function renderOrbitHero(){
   const disabled=BLOCKED_STRATEGIES.includes('S20_FIB_CONFLUENCE')?1:0;
   const blocked=configured.filter(([id,s])=>!s.signalOnly&&!/RITIRATA/i.test(s.label||'')&&id!=='S20_FIB_CONFLUENCE'&&BLOCKED_STRATEGIES.includes(id)).length;
   const rosterNote=document.getElementById('orbit-roster-note');
-  if(rosterNote)rosterNote.textContent=`${roster.length} abilitate · ${blocked} bloccate · ${disabled} disabilitate · ${retired} ritirate · ${research} in ricerca. Configurazione del roster; il bot seleziona gli ingressi in base al regime.`;
+  if(rosterNote)rosterNote.textContent=`${roster.length} abilitate · ${blocked} bloccate · ${disabled} disabilitate · ${retired} ritirate · ${research} in ricerca. ${confirmed?'Roster confermato dal bot.':'Configurazione disponibile; applicazione sul bot non confermata.'} Il bot seleziona gli ingressi in base al regime.`;
   const nucName = document.getElementById('orbit-nucleus-name');
-  if(nucName) nucName.textContent = nucleus.label.replace(/\s*⛔.*$/,'');
+  if(nucName) nucName.textContent = roster.length?'Strategie in orbita':'Nessuna strategia abilitata';
 
   // Lista strategie (sempre visibile)
   const listEl = document.getElementById('orbit-list');
   if(listEl){
-    listEl.innerHTML = roster.map(r => {
+    listEl.innerHTML = roster.map((r,i) => {
       const tier = orbitTier(r.pf);
-      const isSel = r.key === sel.key;
+      const moonColor=SaturnScene.color(i);
+      const isSel = r.key === sel?.key;
       return `<li><button type="button" class="nb-row" data-orbit-key="${r.key}" aria-pressed="${isSel}">
-        <span class="nb-row__swatch" style="background:${tier.hex}35;box-shadow:0 0 10px ${tier.hex}55"></span>
+        <span class="nb-row__swatch" style="background:${moonColor}35;box-shadow:0 0 10px ${moonColor}55"></span>
         <span class="nb-row__main">
           <span class="nb-row__name">${r.label.replace(/\s*⛔.*$/,'')}</span>
           <span class="nb-row__sub">WR ${r.wr||'—'}</span>
@@ -166,26 +172,8 @@ function renderOrbitHero(){
     }).join('');
   }
 
-  // Palcoscenico pianeta + lune (CSS puro, solo desktop — vedi style.css nb-stage-wrap)
   const stageEl = document.getElementById('orbit-stage');
-  if(stageEl){
-    stageEl.innerHTML = `<svg class="saturn-scene" viewBox="0 0 600 300" role="img" aria-label="Saturno, panorama delle strategie">
-      <defs>
-        <radialGradient id="saturn-light" cx="30%" cy="24%" r="80%"><stop stop-color="#f7e6bc"/><stop offset=".42" stop-color="#bb9b6a"/><stop offset=".78" stop-color="#534535"/><stop offset="1" stop-color="#151b26"/></radialGradient>
-        <linearGradient id="saturn-ring"><stop stop-color="#c5a778" stop-opacity=".12"/><stop offset=".45" stop-color="#ebd5a5" stop-opacity=".8"/><stop offset="1" stop-color="#7e8aa3" stop-opacity=".25"/></linearGradient>
-        <radialGradient id="saturn-glow"><stop stop-color="#b6955d" stop-opacity=".15"/><stop offset="1" stop-color="#b6955d" stop-opacity="0"/></radialGradient>
-      </defs>
-      <ellipse cx="300" cy="150" rx="240" ry="145" fill="url(#saturn-glow)"/>
-      <g transform="rotate(-18 300 150)">
-        <ellipse cx="300" cy="150" rx="246" ry="71" fill="none" stroke="#8499ba" stroke-opacity=".14" stroke-dasharray="2 8"/>
-        <ellipse cx="300" cy="150" rx="179" ry="49" fill="none" stroke="url(#saturn-ring)" stroke-width="22"/>
-        <circle cx="300" cy="150" r="77" fill="url(#saturn-light)"/>
-        <path d="M 121 150 A 179 49 0 0 0 479 150" fill="none" stroke="url(#saturn-ring)" stroke-width="22"/>
-        <path d="M 112 150 A 188 53 0 0 0 488 150" fill="none" stroke="#eed7a4" stroke-opacity=".4"/>
-        <circle cx="88" cy="115" r="5" fill="#a2b8d4"/><circle cx="492" cy="193" r="9" fill="#8295ab"/>
-      </g>
-    </svg>`;
-  }
+  if(stageEl) SaturnScene.update(stageEl, roster, sel?.key);
 
   renderOrbitDetail(sel);
   renderOrbitCurve(sel);
@@ -205,6 +193,7 @@ async function loadPrices(){
     // Try price.js first (dedicated, faster)
     const active = window.activeAsset || 'XAU';
     const pd=await fetchJSON(`/api/price?asset=${active}`, 5000);
+    if(active!==(window.activeAsset||'XAU'))return;
     if(pd?.price){
       // We have asset price — build minimal prices object
       const assetPrice=parseFloat(pd.price);
@@ -232,7 +221,8 @@ async function loadPrices(){
     } else {
       // price.js failed — try tvprice as XAU quick fallback
       const tv=await fetchJSON('/api/tvprice', 6000);
-      if(tv?.ok&&tv.prices?.XAU){
+      if(active!==(window.activeAsset||'XAU'))return;
+      if(active==='XAU'&&tv?.ok&&tv.prices?.XAU){
         const xd=tv.prices.XAU;
         if(!marketData)marketData={};
         marketData.XAU=xd;
@@ -409,7 +399,7 @@ async function loadLayoutStrategies(){
   for(const key of Object.keys(LAYOUT_STRATS)){
     let d = null;
     try{
-      const r = await fetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
+      const r = await authFetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'strat_live_get', key }) });
       const j = await r.json();
       if(j && j.ok && j.data) d = j.data;

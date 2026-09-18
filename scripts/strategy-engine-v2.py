@@ -31,6 +31,7 @@ from signals import (
     fib_confluence_trade_levels,
     ls_scan as _ls_scan, ls_manage_step as _ls_manage_step, LS_PARAMS as _LS_PARAMS,
 )
+from backtest_execution import simulate_exit
 import numpy as np
 import extra_indicators as ei
 try:
@@ -957,7 +958,8 @@ def layout_smart_trades(candles, ind, P=None, cooldown_bars=3):
                 pnl = pos['booked'] + rem * move - trade_cost(ek == 'sl')
                 trades.append({'date': pos['date'], 'hour': pos['hour'], 'dir': d, 'entry': pos['entry'],
                                'outcome': 'win' if pnl > 0 else 'loss', 'pnl': round(pnl, 2),
-                               'strategy': 'S31_LAYOUT_SMART', 'tier': 'PARALLEL', 'exit': ek})
+                               'strategy': 'S31_LAYOUT_SMART', 'tier': 'PARALLEL', 'exit': ek,
+                               'entry_ts':candles[pos['ebar']]['t'],'exit_ts':candles[i]['t']})
                 pos = None; last_exit = i
             continue
         if i - last_exit < cooldown_bars or not av:
@@ -989,8 +991,10 @@ def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
     lvl = fib_confluence_trade_levels(ind, i, sig)
     if lvl is None:
         return None
-    entry = candles[i]['c']
+    entry = candles[i+1]['o'] if ENTRY_NEXT_OPEN and i+1<n else candles[i]['c']
+    if i+1>=n: return None
     sl, tp1, tp2 = lvl['sl'], lvl['tp1'], lvl['tp2']
+    if not (sl<entry<tp1<=tp2 if sig=='buy' else tp2<=tp1<entry<sl): return None
     sl_d = abs(entry - sl)
     if sl_d <= 0:
         return None
@@ -1001,7 +1005,8 @@ def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
         base = round(pnl / lot_mult, 2) if lot_mult else pnl
         return {'dir': sig, 'entry': entry,
                 'outcome': 'win' if pnl > 0 else 'loss',
-                'pnl': pnl, 'base_pnl': base, 'lot_mult': lot_mult}
+                'pnl': pnl, 'base_pnl': base, 'lot_mult': lot_mult,
+                'entry_ts':candles[i+1]['t'] if ENTRY_NEXT_OPEN else candles[i]['t'],'exit_ts':candles[j]['t']}
 
     filled_tp1 = False
     booked = 0.0
@@ -1011,14 +1016,14 @@ def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
         if sig == 'buy':
             # fill pessimistico: lo stop è valutato prima del TP nella stessa barra
             if jl <= stop:
-                return _mk(-(entry - stop) if not filled_tp1 else booked + 0.5 * (stop - entry), True)
+                return _mk(booked+(0.5 if filled_tp1 else 1.0)*(min(candles[j]['o'],stop)-entry),True)
             if not filled_tp1 and jh >= tp1:
                 booked = 0.5 * (tp1 - entry); filled_tp1 = True; stop = entry
             if filled_tp1 and jh >= tp2:
                 return _mk(booked + 0.5 * (tp2 - entry), False)
         else:
             if jh >= stop:
-                return _mk(-(stop - entry) if not filled_tp1 else booked + 0.5 * (entry - stop), True)
+                return _mk(booked+(0.5 if filled_tp1 else 1.0)*(entry-max(candles[j]['o'],stop)),True)
             if not filled_tp1 and jl <= tp1:
                 booked = 0.5 * (entry - tp1); filled_tp1 = True; stop = entry
             if filled_tp1 and jl <= tp2:
@@ -1026,7 +1031,9 @@ def sim_fib_confluence(candles, ind, i, sig, lookahead, n, lot_mult=1.0):
     # Fine lookahead: se TP1 era già stato fillato, la prima metà è profitto reale e il residuo
     # aveva stop a BE (non toccato) → assume wash sul residuo, pnl = booked. Se TP1 non fillato,
     # trade non risolto → scartato come le altre strategie single-exit.
-    return _mk(booked, False) if filled_tp1 else None
+    remaining=.5 if filled_tp1 else 1.0
+    move=(candles[j]['c']-entry)*(1 if sig=='buy' else -1)
+    return _mk(booked+remaining*move,False)
 
 
 # ── BACKTEST SINGOLA STRATEGIA ────────────────────────────────────────────────
@@ -1124,29 +1131,9 @@ def run_one(candles, ind, name, fn, tf='H1', tp=TP_USD, sl=SL_USD, tp_mult=None,
         tp_p=entry+curr_tp if sig=='buy' else entry-curr_tp
         sl_p=entry-curr_sl if sig=='buy' else entry+curr_sl
 
-        outcome='open'; win=False; close_price=entry; exit_kind=None
-        curr_sl_dyn = sl_p
-
-        for j in range(i+1,min(i+lookahead,n)): # Scaled lookahead (base 30 H1)
-            jc=candles[j]['c']; jh=candles[j]['h']; jl=candles[j]['l']
-
-            # --- SIMULA BE & TRAILING (nuovo richiesto) ---
-            profit = (jc - entry) if sig=='buy' else (entry - jc)
-            risk = curr_sl
-            if profit >= risk * 0.8: # Break Even
-                curr_sl_dyn = entry + 0.2 if sig=='buy' else entry - 0.2
-            if profit >= risk * 1.2: # Trailing
-                potential = jc - risk * 0.7 if sig=='buy' else jc + risk * 0.7
-                if sig=='buy': curr_sl_dyn = max(curr_sl_dyn, potential)
-                else: curr_sl_dyn = min(curr_sl_dyn, potential) if curr_sl_dyn else potential
-
-            res = resolve_intrabar(jh, jl, tp_p, curr_sl_dyn, sig=='buy')
-            if res == 'win':
-                win=True; outcome='win'; close_price=tp_p; exit_kind='tp'; break
-            if res == 'loss':
-                outcome='loss'; close_price=curr_sl_dyn; exit_kind='sl'; break
-
-        if outcome=='open': continue
+        fill=simulate_exit(candles,i+1,min(i+lookahead,n),entry,sl_p,tp_p,sig=='buy')
+        if fill is None: continue
+        close_price,j,exit_kind=fill['price'],fill['index'],fill['reason']
         # BUGFIX (2026-07-16): pnl/outcome derivato dal movimento di prezzo firmato reale, non
         # dal ramo (tp_p vs curr_sl_dyn) che ha chiuso il trade. curr_sl_dyn può essere trailato
         # in profondo profitto (BE/trailing sopra); un'uscita lì è comunque una VINCITA se

@@ -208,7 +208,7 @@ REGISTRY = [
     {'name': 'dow_dip_d1',       'fn': dow_dip_d1,     # ← candidata roster (S30_DOW_DIP)
      'tfs': ['H4'],
      'params': dict(tp_mult=1.2, sl_mult=2.6, session=(0, 24), max_trades_day=1,
-                    cooldown_bars=1, be_trail=False)},
+                    cooldown_bars=1, be_trail=False, max_hold_bars=18)},
     {'name': 'vwap_reclaim',     'fn': vwap_reclaim,
      'tfs': ['M30', 'H1'],
      'params': dict(tp_mult=2.2, sl_mult=1.6, session=(13, 18), max_trades_day=2, cooldown_bars=3)},

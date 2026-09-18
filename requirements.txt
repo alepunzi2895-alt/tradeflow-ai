@@ -1,0 +1,8 @@
+# Versions used by the reproducible offline audit on Python 3.12.
+numpy==2.4.4
+scipy==1.18.1
+pandas==3.0.2
+requests==2.32.3
+python-dotenv==1.2.2
+certifi==2026.4.22
+MetaTrader5==5.0.5735; platform_system == "Windows"

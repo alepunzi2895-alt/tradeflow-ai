@@ -58,3 +58,8 @@ Formato: `NOMECOL|60`
 4. Aggiungere la funzione Python in `scripts/signals.py` e importarla in strategy-engine-v2.py
 5. Backtest: `scripts/strategy-engine-v2.py --file data/xauusd_m30_mt5.json` — minimo 6 mesi dati
 6. Aggiornare `directives/02_strategies.md` + `directives/07_self_learning_log.md`
+
+
+## Audit 2026-09-18
+
+Le letture del conto e i comandi richiedono autenticazione operatore o segreto del servizio. KB personale in Turso, routing MyFxBook dedicato, endpoint FX corretto. Vedi 11_audit_and_release.md.

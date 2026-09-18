@@ -83,7 +83,10 @@ BR_NAMES = {
 # ── HTTP verso l'API già esistente (nessun nuovo endpoint) ──────────────────────
 def db_call(action, timeout=15, **body):
     body["action"] = action
-    r = requests.post(f"{VERCEL_URL}/api/db", json=body, timeout=timeout)
+    token=os.getenv('OBSIDIAN_AUTH_TOKEN')
+    if not token:
+        raise RuntimeError('OBSIDIAN_AUTH_TOKEN richiesto: token personale, non il segreto del bot')
+    r = requests.post(f"{VERCEL_URL}/api/db", json=body, headers={'Authorization':f'Bearer {token}'}, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
@@ -120,7 +123,27 @@ def write_note(subdir, filename, content, dry_run):
         return
     path = Path(VAULT_PATH) / subdir / f"{slugify(filename)}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    start,end='<!-- tradeflow:generated:start -->','<!-- tradeflow:generated:end -->'
+    generated=start+'\n'+content+'\n'+end
+    if path.exists():
+        original=path.read_text(encoding='utf-8')
+        if start in original and end in original and original.index(start)<original.index(end):
+            content=original[:original.index(start)]+generated+original[original.index(end)+len(end):]
+        else:
+            # Legacy files may contain user edits; preserve them and write a companion.
+            path=path.with_name(path.stem+'.generated.md')
+            if path.exists():
+                original=path.read_text(encoding='utf-8')
+                if start not in original or end not in original:
+                    raise RuntimeError(f'Nota senza marcatori protetti: {path.name}')
+                content=original[:original.index(start)]+generated+original[original.index(end)+len(end):]
+            else:
+                content=generated+'\n\n## Appunti personali\n'
+    else:
+        content=generated+'\n\n## Appunti personali\n'
+    temporary=path.with_suffix('.md.tmp')
+    temporary.write_text(content,encoding='utf-8')
+    temporary.replace(path)
 
 
 # ── JOURNAL ───────────────────────────────────────────────────────────────────
@@ -135,7 +158,7 @@ def export_journal(dry_run):
         return 0
     trades = resp.get("trades", [])
     for t in trades:
-        tid = str(t.get("id") or "")[:8]
+        tid = str(t.get("id") or "")
         title = f"{t.get('trade_date','') or ''} {t.get('symbol','')} {t.get('direction','')} {tid}"
         strategy = (t.get("strategy") or "").strip()
         fm = frontmatter({

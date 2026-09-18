@@ -280,7 +280,7 @@ async function handleAuth(action) {
   btn.textContent = '⏳ Attendere...'; btn.disabled = true;
   
   try {
-    const res = await fetch('/api/auth', {
+    const res = await authFetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, email, password: pass, name, current_user_id: window.userId })
@@ -290,9 +290,10 @@ async function handleAuth(action) {
     if (!d.ok) throw new Error(d.error || 'Errore di sistema');
     
     // Auth Success
-    localStorage.setItem('tf_token', d.token);
+    useLocalUser(d.user.id);
+    localStorage.setItem('tf_token', 'cookie');
     localStorage.setItem('tf_user_id', d.user.id);
-    window.sessionToken = d.token;
+    window.sessionToken = 'cookie';
     window.userId = d.user.id;
     P.name = d.user.name;
     S.set(K.p, P);
@@ -324,8 +325,10 @@ document.getElementById('btn-do-register').onclick = () => handleAuth('register'
 if(!window.sessionToken) {
   showAuth();
 } else {
-  hideAuth();
-  syncStateFromCloud().then(() => {
+  dbLoad('session').then(async session=>{
+    if(!session?.ok){window.sessionToken=null;localStorage.removeItem('tf_token');showAuth();return;}
+    useLocalUser(session.user.id);window.sessionToken='cookie';localStorage.setItem('tf_token','cookie');window.userId=session.user.id;localStorage.setItem('tf_user_id',session.user.id);
+    hideAuth();await syncStateFromCloud();
     renderJournal(); renderKb(); switchTab('dash');
     // Re-render chat if cloud returned history that wasn't in localStorage
     if(history.length > 0 && cm.children.length <= 1) {
@@ -353,7 +356,7 @@ setTimeout(loadIndicators, 3000);
 // Confidence score with session data immediately (no API needed)
 try{updateConfidence({},{});}catch(e){}
 // Refresh intervals
-setInterval(loadPrices, 1000);
+setInterval(()=>{if(!document.hidden)loadPrices();}, 5000);
 setInterval(loadOrbitEquity, 20000);
 setInterval(loadSlowData, 30000);
 // Sentiment shares the 30-second slow-data refresh.

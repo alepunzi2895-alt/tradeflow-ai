@@ -41,12 +41,12 @@ async function processKbFile(file){
       'Estrai informazioni di trading. Italiano.');
     const entry={id:Date.now(),name:file.name,size:file.size,date:new Date().toLocaleDateString('it-IT'),summary:reply};
     kb.unshift(entry);S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
-    P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);S.set(K.p,P);
+    P.knowledge=kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6);S.set(K.p,P);
     stat.style.cssText='display:block;background:#081408;border:1px solid #62E6A622;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:var(--green)';
-    stat.textContent=`✓ "${file.name}" integrato.${kbSyncEnabled?' Salvataggio su GitHub...':''}`;
+    stat.textContent=`✓ "${file.name}" integrato.${kbSyncEnabled?' Salvataggio personale...':''}`;
     renderKb();
     // Save to GitHub in background
-    saveKbToGithub().then(()=>{
+    saveKbToCloud().then(()=>{
       if(kbSyncEnabled) stat.textContent=`✓ "${file.name}" integrato e salvato su GitHub ☁️`;
     });
   }catch(e){
@@ -72,8 +72,8 @@ function renderKb(){
     d.innerHTML=`
       <div class="kb-icon">${ico}</div>
       <div style="flex:1; min-width:0">
-        <div style="font-size:13px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${k.name}</div>
-        <div style="font-size:10px; color:var(--dim); margin-top:2px">${k.date} · ${(k.size/1024).toFixed(0)}KB</div>
+        <div style="font-size:13px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${escapeHtml(k.name)}</div>
+        <div style="font-size:10px; color:var(--dim); margin-top:2px">${escapeHtml(k.date)} · ${(k.size/1024).toFixed(0)}KB</div>
       </div>
       <button onclick="deleteKb(${k.id})" style="background:none; border:none; color:var(--dim); cursor:pointer; font-size:16px; padding:4px">✕</button>
     `;
@@ -83,10 +83,10 @@ function renderKb(){
 function deleteKb(id){
   kb=kb.filter(k=>k.id!==id);
   S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
-  P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);
+  P.knowledge=kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6);
   S.set(K.p,P);
   renderKb();
-  saveKbToGithub();
+  saveKbToCloud();
 }
 
 function exportKb(){
@@ -110,7 +110,7 @@ function importKbFromJson(file){
         const newDocs=data.knowledge.filter(k=>!existing.has(k.name));
         kb=[...newDocs,...kb];
         S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
-        P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);
+        P.knowledge=kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6);
         S.set(K.p,P);
         renderKb();
         alert(`✅ ${newDocs.length} documenti importati nella Knowledge Base.`);
@@ -125,7 +125,7 @@ let kbSyncEnabled = false;
 
 async function checkKbSync(){
   try{
-    const r = await fetch('/api/kb');
+    const r = await authFetch('/api/kb');
     const txt = await r.text();
     if(txt.trim().startsWith('<'))return; // endpoint not ready
     const d = JSON.parse(txt);
@@ -139,7 +139,7 @@ async function checkKbSync(){
           if(d.knowledge && d.knowledge.length > 0){
             P.knowledge = d.knowledge;
           } else {
-            P.knowledge = kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6);
+            P.knowledge = kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6);
           }
           S.set(K.p, P);
           renderKb();
@@ -149,25 +149,26 @@ async function checkKbSync(){
       updateKbSyncBadge(true);
     }
   }catch(e){
-    console.log('GitHub KB sync non disponibile:', e.message);
+    console.log('Cloud KB sync non disponibile:', e.message);
     updateKbSyncBadge(false);
   }
 }
 
-async function saveKbToGithub(){
+async function saveKbToCloud(){
   if(!kbSyncEnabled) return;
   try{
-    await fetch('/api/kb',{
+    const response=await authFetch('/api/kb',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         kb: kb,
-        knowledge: kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6)
+        knowledge: kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6)
       })
     });
-    console.log('KB salvata su GitHub');
+    const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Salvataggio KB non riuscito');
+    updateKbSyncBadge(true);
   }catch(e){
-    console.log('GitHub KB save failed:', e.message);
+    updateKbSyncBadge(false);window.dispatchEvent(new CustomEvent('sync-error',{detail:e.message}));
   }
 }
 
@@ -175,7 +176,7 @@ function updateKbSyncBadge(synced){
   const badge = document.getElementById('kb-sync-badge');
   if(!badge) return;
   if(synced){
-    badge.textContent = '☁️ Sync GitHub';
+    badge.textContent = '☁️ Sync personale';
     badge.style.color = 'var(--green)';
     badge.style.borderColor = '#62E6A630';
   } else {

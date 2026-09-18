@@ -38,12 +38,28 @@
   rule({left:'ema',period:20,op:'crossUp',right:'ema',value:0,rightPeriod:50});
   el('add').onclick=()=>rule();
   function config(){return {name:el('name').value,direction:el('direction').value,stop:+el('stop').value,take:+el('take').value,cost:+el('cost').value,quantity:+el('quantity').value,rules:[...el('rules').children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-field]')].map(x=>[x.dataset.field,x.type==='number'?Number(x.value):x.value])))};}
+  let dataVersion=0,activeWorker=null;
+  function workerRun(candles,config,mode='backtest'){
+    return new Promise((resolve,reject)=>{
+      const worker=new Worker('/modules/lab-worker.js?v=audit1');
+      if(mode==='backtest')activeWorker=worker;
+      const timer=setTimeout(()=>{worker.terminate();reject(Error('Tempo massimo superato'));},120000);
+      const done=()=>{clearTimeout(timer);worker.terminate();if(activeWorker===worker)activeWorker=null;};
+      worker.onmessage=({data})=>{done();data.ok?resolve(data.result):reject(Error(data.error));};
+      worker.onerror=()=>{done();reject(Error('Calcolo non disponibile. Ricarica il Laboratorio.'));};
+      worker.postMessage({candles,config,mode});
+    });
+  }
   function accept(rows,source){
     data=LabEngine.normalize(rows);meta={asset:el('asset').value,tf:el('tf').value,source,from:data[0].t,to:data.at(-1).t,count:data.length};
     el('data-status').textContent=`${meta.asset} · ${meta.tf} · ${data.length} candele · ${new Date(meta.from*1000).toLocaleDateString()} – ${new Date(meta.to*1000).toLocaleDateString()} · ${source}`;
-    const list=el('indicators');list.replaceChildren();for(const [key,label] of Object.entries(LabEngine.catalog)){const value=LabEngine.indicator(data,key,14).at(-1),row=document.createElement('p');row.className='lab-indicator';row.textContent=label+'  '+(value===null?'Non disponibile':value.toLocaleString('it-IT',{maximumFractionDigits:4}));list.append(row);}
+    const version=++dataVersion,list=el('indicators');list.textContent='Calcolo indicatori…';
+    workerRun(data,null,'indicators').then(values=>{
+      if(version!==dataVersion)return;list.replaceChildren();
+      for(const [key,label] of Object.entries(LabEngine.catalog)){const value=values[key],row=document.createElement('p');row.className='lab-indicator';row.textContent=label+'  '+(value==null?'Non disponibile':value.toLocaleString('it-IT',{maximumFractionDigits:4}));list.append(row);}
+    }).catch(e=>{if(version===dataVersion)list.textContent=e.message;});
   }
-  function invalidate(){data=null;meta=null;el('data-status').textContent='Selezione modificata: ricarica i dati.';el('indicators').textContent='Carica un dataset.';}
+  function invalidate(){dataVersion++;data=null;meta=null;el('data-status').textContent='Selezione modificata: ricarica i dati.';el('indicators').textContent='Carica un dataset.';}
   el('asset').onchange=invalidate;el('tf').onchange=invalidate;
   el('load').onclick=async()=>{
     const button=el('load'),asset=el('asset').value,tf=el('tf').value;invalidate();button.disabled=true;el('data-status').textContent='Caricamento…';
@@ -53,11 +69,15 @@
   const fmt=n=>n===null?'—':n.toLocaleString('it-IT',{maximumFractionDigits:2});
   function download(value,name){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function renderHistory(){const root=el('history');root.replaceChildren();history.forEach(item=>{const b=document.createElement('button');b.className='lab-history-item';b.textContent=`${item.config.name} · ${item.meta.asset} ${item.meta.tf} · P&L ${fmt(item.stats.pnl)}`;b.title='Ripristina le regole; ricarica i dati per rieseguire';b.onclick=()=>{el('name').value=item.config.name;for(const key of ['direction','stop','take','cost','quantity'])el(key).value=item.config[key];el('rules').replaceChildren();item.config.rules.forEach(rule);el('asset').value=item.meta.asset;el('tf').value=item.meta.tf;invalidate();};root.append(b);});}
-  el('form').onsubmit=e=>{
-    e.preventDefault();const root=el('result');
+  el('form').onsubmit=async e=>{
+    e.preventDefault();if(activeWorker)return;const root=el('result'),submit=el('form').querySelector('[type=submit]');submit.disabled=true;root.textContent='Backtest in esecuzione…';
     try{
       if(!data)throw Error('Carica un dataset prima di eseguire il backtest.');
-      const cfg=config(),result=LabEngine.run(data,cfg);last={createdAt:new Date().toISOString(),config:cfg,meta:{...meta},candles:data,...result};
+      const cfg=config(),candles=data,metadata={...meta},version=dataVersion;
+      const result=await workerRun(candles,cfg);
+      if(version!==dataVersion)throw Error('Dataset modificato durante il calcolo: riesegui il backtest.');
+      const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(candles)));
+      last={engineVersion:'audit1',datasetSha256:[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join(''),createdAt:new Date().toISOString(),config:cfg,meta:metadata,candles,...result};
       root.innerHTML='<span class="nb-lbl">Esperimento completato</span>';const title=document.createElement('h2');title.textContent=cfg.name;root.append(title);const provenance=document.createElement('p');provenance.className='data-note';provenance.textContent=`${meta.asset} · ${meta.tf} · ${meta.count} candele · ${meta.source}`;root.append(provenance);
       const grid=document.createElement('div');grid.className='lab-stats';for(const [label,value] of [['Trade',result.stats.n],['P&L netto',result.stats.pnl],['Profit factor',result.stats.pf],['Win rate %',result.stats.wr],['Drawdown chiuso',result.stats.dd]]){const tile=document.createElement('div');tile.textContent=label;const strong=document.createElement('strong');strong.textContent=fmt(value);tile.append(strong);grid.append(tile);}root.append(grid);
       let sum=0;const curve=[0,...result.trades.map(t=>sum+=t.pnl)];if(curve.length>1){const path=nbSmoothPath(curve,500,150,12);root.insertAdjacentHTML('beforeend',`<svg class="lab-chart" viewBox="0 0 500 150" role="img" aria-label="P&L cumulato dei trade chiusi"><path d="${path.line}" fill="none" stroke="var(--g)" stroke-width="2"/></svg>`);}
@@ -65,7 +85,7 @@
       const exportBtn=document.createElement('button');exportBtn.textContent='Esporta regole e risultati JSON';exportBtn.onclick=()=>download(last,'tradeflow-experiment.json');root.append(exportBtn);
       const details=document.createElement('details');details.innerHTML='<summary>Ultimi 100 trade</summary>';result.trades.slice(-100).forEach(t=>{const p=document.createElement('p');p.className='lab-indicator';p.textContent=`${new Date(t.entryTime*1000).toLocaleString()} → ${new Date(t.exitTime*1000).toLocaleString()} · ${t.reason} · ${fmt(t.pnl)}`;details.append(p);});root.append(details);
       history.unshift({createdAt:last.createdAt,config:cfg,meta:last.meta,stats:result.stats});history=history.slice(0,20);try{localStorage.setItem('tf_lab_history',JSON.stringify(history));}catch{note.textContent+=' Salvataggio locale non disponibile: esporta il risultato.';}renderHistory();
-    }catch(error){root.textContent=error.message;}
+    }catch(error){root.textContent=error.message;}finally{submit.disabled=false;}
   };
   el('save').onclick=()=>{try{if(!el('form').reportValidity())return;localStorage.setItem('tf_lab_draft',JSON.stringify({config:config(),asset:el('asset').value,tf:el('tf').value}));el('save-status').textContent='Bozza salvata su questo browser.';}catch{el('save-status').textContent='Salvataggio locale non disponibile.';}};
   try{const draft=JSON.parse(localStorage.getItem('tf_lab_draft')||'null');if(draft){el('name').value=draft.config.name;for(const key of ['direction','stop','take','cost','quantity'])el(key).value=draft.config[key];el('rules').replaceChildren();draft.config.rules.forEach(rule);el('asset').value=draft.asset;el('tf').value=draft.tf;}}catch{}

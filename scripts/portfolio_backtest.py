@@ -47,8 +47,8 @@ MAX_OPEN_ORDERS = 2  # scripts/mt5-bot.py
 # Stato live al 2026-09-17 dopo il giro di disattivazioni (data/hard_blocks.json +
 # S20_ENABLED=False in mt5-bot.py) — usato solo da --active-only, non tocca is_hard_blocked()
 # reale (fonte di verità resta data/hard_blocks.json / mt5-bot.py).
-DISABLED_NOW = {'S00_MFKK', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP',
-                'S16_GOLDEN_SQUEEZE', 'S18_RANGE_REVERSAL', 'S20_FIB_CONFLUENCE'}
+from strategy_registry import SNAPSHOT
+DISABLED_NOW = {key for key,item in SNAPSHOT['strategies'].items() if item['status'] != 'eligible'}
 
 # Strategia → (tf live, funzione segnale) per il pool condiviso XAU (StrategySelector,
 # soggetto a MAX_OPEN_ORDERS). TF = best_tf storico in STRATEGIES_CONFIG.

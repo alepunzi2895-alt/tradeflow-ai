@@ -156,3 +156,8 @@ Lo StrategySelector usa questi valori per lo scoring (`best_PF × best_WR` deter
 - **S10_OB_FVG_SCALP**: WR 44%, PF 1.85 ma solo 84 trade → fragile. Non scalare senza out-of-sample 12+ mesi.
 - **S09_MFKK_SCALPING M15**: PF 0.92 → non attivare su M15. Solo M5.
 - **S17_CONVERGENCE_SCALP**: gate `min_atr_percentile = 0.60` → attivo solo in mercati con ATR nella fascia alta.
+
+
+## Audit 2026-09-18
+
+Nuovo riferimento offline: backtests/results/audit_2026-09-18/report.json. Stop da chiusura applicato dalla barra successiva, gap e timeout contabilizzati, US30 una posizione e time-stop 18 barre. Le metriche precedenti non sono direttamente confrontabili. Nessuna promozione automatica: campioni insufficienti o DSR non significativo.

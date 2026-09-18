@@ -135,3 +135,12 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Watchlist 13 simboli con fonte e indisponibilità; fallback prezzi paralleli e bounded. Font Outfit, Saturno SVG più piccolo/centrato, navigazione mobile 6 voci fissa e reset scroll al cambio tab.
 - Roster: 3 abilitate su 13 (S17/S31/S30), 5 hard-block, S20 disabilitata, S05 ritirata, 3 research; nessuna modifica a config trading. Valute backtest mostrate USD, conto con currency del payload.
 - Verifica: scripts/test-lab.mjs e scripts/test-market-data.mjs, node --check, UI desktop/mobile (390px), flusso backtest con fixture sintetica esclusivamente su server temporaneo. Fonti reali verificate localmente con Node --use-system-ca: calendario 22 eventi, 13 quotazioni; sentiment senza sessione richiede collegamento.
+
+
+## 2026-09-18 — Audit API, ordini, simulazione e UI
+
+- Il gateway non verificava identità e ownership; reset password remoto e comandi manuali aggiravano i controlli. Aggiunti guard centralizzati, ruoli per ID immutabile e namespace personale; le due azioni insicure sono disabilitate.
+- Lotto minimo e arrotondamento potevano superare il rischio; calcolo finale ora sul contratto MT5, arrotondamento per difetto e rifiuto del minimo eccessivo. Il boot non forza più auto-trade=true.
+- Nel backtest, trailing calcolato con la chiusura della barra applicato retroattivamente alla barra stessa: corretto ordine temporale e aggiunti test di causalità. US30 include posizioni esclusive e time-stop coerente (18 barre).
+- I pulsanti orbitanti ereditavano `button:active {transform:scale(...)}`, perdendo la traslazione al mousedown e spostandosi prima del click. Override specifico conserva la posizione; test browser desktop/mobile.
+- Risultati, limiti residui e migrazione: `11_audit_and_release.md` e `backtests/results/audit_2026-09-18/README.md`. Nessuna nuova strategia promossa.

@@ -1,17 +1,19 @@
-// ── STRATEGIE BLOCCATE ─────────────────────────────────────────────────────────
-// Sincronizzato a mano con data/hard_blocks.json + S20_ENABLED in mt5-bot.py (nessuna API
-// espone questi dati al frontend, vedi directives/06_known_issues.md 2026-09-17). Aggiornare
-// qui quando cambia lo stato di blocco lato bot.
-const BLOCKED_INFO = {
-  S05_MFKK_INTRADAY: { since:'2026-07-16', reason:'Ritirata dal roster live: PF standalone <1, unico slot vivo era H4 e nessuna finestra recente lo riporta sopra il pareggio (vedi strategy.js).' },
-  S00_MFKK: { since:'2026-07-16', reason:'WR live 13.3% contro un baseline atteso del 49.4% — il segnale funzionava nel backtest storico ma dal vivo perdeva quasi 4 trade su 5. Confermato morto dallo sprint di re-ottimizzazione del 2026-09-02 (holdout PF 0.47).' },
-  S09_MFKK_SCALPING: { since:'2026-07-16', reason:'WR live 11.8% contro un baseline atteso del 36.0%, PF live 0.10. Nessuna combinazione di parametri testata nello sprint 2026-09-02 è tornata sopra un PF full-period di ~0.75.' },
-  S18_RANGE_REVERSAL: { since:'2026-09-01', reason:'WR live 14.3% (6 stop-loss su 7 trade), PF 0.07. Ri-testata su ogni finestra il 2026-09-01: negativa ovunque (M30 standalone PF 0.63, H4 PF 0.20).' },
-  S10_OB_FVG_SCALP: { since:'2026-09-17', reason:'Re-backtest a 24 mesi: PF 0.83 su appena 22 trade in due anni (frequenza troppo bassa per fidarsi). In più non spara mai nei regimi di mercato per cui è configurata (RANGING/VOLATILE) — opera sempre fuori dalla sua condizione ideale.' },
-  S16_GOLDEN_SQUEEZE: { since:'2026-09-17', reason:'Storicamente solida (PF 1.43 sui 24 mesi), ma il periodo più recente (ultimo 20%, 43 trade) è sceso a PF 0.69 — lo stesso segnale di decadimento che aveva preceduto il blocco di S00 e S18. Bloccata per prudenza in attesa di conferma dal WR live reale.' },
-  S20_FIB_CONFLUENCE: { since:'2026-09-17', reason:'Il periodo più recente ha un PF di 0.87, sotto la soglia (1.2) già decisa in anticipo per questa strategia quando fu messa in produzione a lotto ridotto.' },
-};
-const BLOCKED_STRATEGIES = Object.keys(BLOCKED_INFO);
+// Fail closed until configuration arrives from the API or the running bot.
+const BLOCKED_INFO = {};
+const BLOCKED_STRATEGIES = Object.keys(SE.strategies).filter(id=>!SE.strategies[id].signalOnly);
+function applyStrategyRegistry(snapshot, source) {
+  if(!snapshot?.strategies) return;
+  Object.keys(BLOCKED_INFO).forEach(k=>delete BLOCKED_INFO[k]);
+  BLOCKED_STRATEGIES.splice(0);
+  for(const id of Object.keys(SE.strategies)) {
+    const item=snapshot.strategies[id]||{status:'unknown',reason:'Configurazione non disponibile'};
+    if(item.status!=='eligible' && !(item.status==='research' && SE.strategies[id].signalOnly)) {
+      BLOCKED_STRATEGIES.push(id);
+      BLOCKED_INFO[id]={since:item.since||'—',reason:item.reason||item.status};
+    }
+  }
+  window.strategyRegistry={...snapshot,source};
+}
 
 // ── CONFIGURAZIONE TAB (persistita, sopravvive al rebuild di 1s) ────────────────
 // showBlocked: mostra le strategie bloccate/ritirate anche nella griglia principale
@@ -38,13 +40,13 @@ function renderBlockedSheet(){
   if(!body) return;
   body.innerHTML = BLOCKED_STRATEGIES.map(id=>{
     const name = (typeof SE!=='undefined' && SE.strategies?.[id]?.label) || id;
-    const info = BLOCKED_INFO[id];
+    const info = BLOCKED_INFO[id]||{since:'—',reason:'In attesa della configurazione'};
     return `<div style="background:var(--card);border:1px solid #FF8A8A22;border-radius:10px;padding:12px 13px;margin-bottom:9px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
-        <span style="font-size:12.5px;font-weight:700;color:var(--text)">${name}</span>
-        <span style="font-size:9.5px;color:var(--dim)">dal ${info.since}</span>
+        <span style="font-size:12.5px;font-weight:700;color:var(--text)">${escapeHtml(name)}</span>
+        <span style="font-size:9.5px;color:var(--dim)">dal ${escapeHtml(info.since)}</span>
       </div>
-      <div style="font-size:11.5px;color:var(--dim);line-height:1.55">${info.reason}</div>
+      <div style="font-size:11.5px;color:var(--dim);line-height:1.55">${escapeHtml(info.reason)}</div>
     </div>`;
   }).join('');
 }
@@ -764,7 +766,7 @@ async function seSendTradeToMt5(s) {
   try {
     // Il bot MT5 usa il simbolo verificato all'avvio (GOLD, XAUUSD, ecc.)
     // Passiamo 'auto' così il bot usa il simbolo che ha trovato attivo
-    const res = await fetch('/api/db', {
+    const res = await authFetch('/api/db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -52,6 +52,15 @@ export default async function handler(req, res) {
     };
   }
 
+  if(type==='fx'){
+    const symbols={EUR:'EURUSD=X',GBP:'GBPUSD=X',CHF:'CHF=X',JPY:'JPY=X'};
+    const currency=String(req.query.currency||'USD').toUpperCase();
+    if(currency==='USD')return res.status(200).json({ok:true,rate:1});
+    if(!symbols[currency])return res.status(400).json({ok:false,error:'Valuta non supportata'});
+    const q=await yahooQuote(symbols[currency]);
+    return res.status(q?.price?200:502).json(q?.price?{ok:true,rate:q.price,source:'yahoo'}:{ok:false,error:'Cambio non disponibile'});
+  }
+
   // ── BRANCH: MARKET DATA & SENTIMENT ───────────────────────────────────────
   if (type === 'market' || type === 'prices' || type === 'sentiment' || type === 'calendar' || type === 'cot') {
     

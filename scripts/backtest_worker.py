@@ -39,20 +39,20 @@ def handle_command(cmd):
     sid = cmd.get('strategy_id')
     print(f"[backtest_worker] richiesta ricevuta: {sid} (chiesta alle {cmd.get('requested_at')})")
     if sid not in ALL_IDS:
-        push('backtest_result_push', {'strategy_id': sid, 'result': {'error': f'strategy_id sconosciuto: {sid}'}})
+        push('backtest_result_push', {'strategy_id': sid, 'request_id':cmd.get('request_id'), 'lease_token':cmd.get('lease_token'), 'result': {'error': f'strategy_id sconosciuto: {sid}'}})
         print(f"[backtest_worker] ✗ {sid}: id sconosciuto")
         return
     try:
         t0 = time.time()
         result = evaluate_one(sid)
         result['computed_in_s'] = round(time.time() - t0, 1)
-        push('backtest_result_push', {'strategy_id': sid, 'result': result}, timeout=30)
+        push('backtest_result_push', {'strategy_id': sid, 'request_id':cmd.get('request_id'), 'lease_token':cmd.get('lease_token'), 'result': result}, timeout=30)
         print(f"[backtest_worker] ✓ {sid} completato in {result['computed_in_s']}s — "
               f"full PF {result['full'].get('pf')} holdout PF {result['holdout'].get('pf')}")
     except Exception as e:
         traceback.print_exc()
         try:
-            push('backtest_result_push', {'strategy_id': sid, 'result': {'error': str(e)}})
+            push('backtest_result_push', {'strategy_id': sid, 'request_id':cmd.get('request_id'), 'lease_token':cmd.get('lease_token'), 'result': {'error': str(e)}})
         except Exception:
             pass
         print(f"[backtest_worker] ✗ {sid} fallito: {e}")

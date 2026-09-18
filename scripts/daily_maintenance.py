@@ -404,7 +404,7 @@ def _fetch_recent_trades_from_vercel(timeout: int = 15) -> list:
     try:
         r = requests.post(
             f"{VERCEL_URL}/api/db",
-            json={'action': 'mt5_get'},
+            json={'action': 'mt5_get', 'secret':os.getenv('MT5_BOT_SECRET','')},
             timeout=timeout,
         )
         if r.status_code != 200:

@@ -47,6 +47,14 @@ const LabEngine = (() => {
       if(key==='volume'){out[i]=c.v;continue;}
       if(key==='obv'){out[i]=hasVolume?obv:null;continue;}
       if(i<p-1)continue;
+      const fast={ema,rsi:i<p?null:avgGain+avgLoss===0?50:avgLoss===0?100:100-100/(1+avgGain/avgLoss),atr,roc:i<p?null:(c.c/data[i-p].c-1)*100,momentum:i<p?null:c.c-data[i-p].c};
+      if(Object.hasOwn(fast,key)){out[i]=fast[key];continue;}
+      if(key==='donHigh'||key==='donLow'){
+        if(i<p)continue;
+        const previous=data.slice(i-p,i);
+        out[i]=key==='donHigh'?Math.max(...previous.map(x=>x.h)):Math.min(...previous.map(x=>x.l));
+        continue;
+      }
       const w=data.slice(i-p+1,i+1),mean=w.reduce((a,x)=>a+x.c,0)/p;
       const sd=Math.sqrt(w.reduce((a,x)=>a+(x.c-mean)**2,0)/p),hi=Math.max(...w.map(x=>x.h)),lo=Math.min(...w.map(x=>x.l));
       const tp=w.map(x=>(x.h+x.l+x.c)/3),tm=tp.reduce((a,x)=>a+x,0)/p,md=tp.reduce((a,x)=>a+Math.abs(x-tm),0)/p;

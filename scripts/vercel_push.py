@@ -21,17 +21,15 @@ try:
     _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 except ImportError:
     _SSL_CTX = ssl.create_default_context()
-    _SSL_CTX.check_hostname = False
-    _SSL_CTX.verify_mode = ssl.CERT_NONE
 
 VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
-MT5_SECRET = os.getenv("MT5_BOT_SECRET", "tradeflow-mt5-secret")
+MT5_SECRET = os.getenv("MT5_BOT_SECRET", "")
 
 
 def _post(body: dict, timeout: int = 20) -> dict:
     req = urllib.request.Request(
         f"{VERCEL_URL}/api/db", data=json.dumps(body).encode(),
-        headers={'Content-Type': 'application/json'}, method='POST')
+        headers={'Content-Type': 'application/json','X-Bot-Secret': MT5_SECRET}, method='POST')
     with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CTX) as r:
         return json.loads(r.read().decode('utf-8'))
 

@@ -29,3 +29,9 @@ assert.equal(E.run(bars,{...cfg,direction:'short'}).trades[0].reason,'Stop');
 assert.throws(()=>E.run(bars,{...cfg,rules:[]}),/regole/);
 assert.throws(()=>E.run(bars,{...cfg,take:120}),/Parametri/);
 console.log('Additional checks passed: ADX/MACD, causality, short, empty signals, validation');
+
+assert.equal(E.indicator(bars,'donHigh',20)[20],121); // only indices 0..19, excludes current high 122
+const breakout=E.run(bars,{...cfg,rules:[{left:'close',period:14,op:'gt',right:'donHigh',rightPeriod:2}]});
+assert.equal(E.indicator(bars,'donHigh',2)[20],121);
+assert.deepEqual(E.indicator(bars.slice(0,60),'donHigh',20),E.indicator(bars,'donHigh',20).slice(0,60));
+console.log('Donchian prior-bar and causality checks passed');

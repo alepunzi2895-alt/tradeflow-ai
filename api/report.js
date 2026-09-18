@@ -1,3 +1,5 @@
+import { requireUser, rateLimit, parseBody } from '../lib/security.js';
+import { getDb, savePerformanceSnapshot } from './db.js';
 // Generate trading reports: daily, weekly, monthly
 // Also stores/retrieves trade coaching memory
 
@@ -20,7 +22,11 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  if(req.method!=='POST') return res.status(405).json({ok:false,error:'Metodo non consentito'});
   try {
+    req.body=parseBody(req);
+    const actor=requireUser(req);
+    await rateLimit(getDb(),'ai:'+actor.id,30,3600);
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY mancante" });
 
@@ -149,36 +155,19 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
     if (d.error) throw new Error(d.error.message);
     const text = (d.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
 
-    // Fire-and-forget: save performance snapshot to Turso
-    const userId = req.body.user_id;
-    if (userId && type === "report") {
-      const expectancy = wins > 0 && losses > 0
-        ? ((wins / filtered.length) * avgWin - (losses / filtered.length) * avgLoss)
-        : 0;
-      fetch(`${process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : ""}/api/db`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save_performance_snapshot",
-          user_id: userId,
-          symbol: (req.body.asset || "XAU") + "USD",
-          period,
-          total_trades: filtered.length,
-          wins,
-          losses,
-          winrate: wr,
-          expectancy: expectancy.toFixed(2),
-          avg_win: avgWin.toFixed(2),
-          avg_loss: avgLoss.toFixed(2),
-          total_pnl: pnl.toFixed(2),
-          profit_factor: pf,
-        }),
-      }).catch(() => {});
+    let snapshotSaved = false;
+    if (type === 'report') {
+      try {
+        await savePerformanceSnapshot(getDb(), {user_id:actor.id,symbol:req.body.asset||'XAUUSD',period,
+          total_trades:filtered.length,wins,losses,winrate:wr,expectancy:filtered.length?pnl/filtered.length:0,
+          avg_win:avgWin,avg_loss:avgLoss,total_pnl:pnl,profit_factor:pf});
+        snapshotSaved = true;
+      } catch { /* Report returned with explicit persistence status. */ }
     }
 
-    return res.status(200).json({ ok: true, report: text, stats: { total: filtered.length, wins, losses, wr, pnl: pnl.toFixed(0), pf } });
+    return res.status(200).json({ ok: true, report: text, snapshotSaved, stats: { total: filtered.length, wins, losses, wr, pnl: pnl.toFixed(0), pf } });
 
   } catch (err) {
-    return res.status(500).json({ ok: false, error: err.message });
+    return res.status(err.status || 502).json({ ok: false, error: err.message });
   }
 }

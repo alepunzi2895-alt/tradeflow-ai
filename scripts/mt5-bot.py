@@ -17,8 +17,6 @@ try:
     _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 except ImportError:
     _SSL_CTX = ssl.create_default_context()
-    _SSL_CTX.check_hostname = False
-    _SSL_CTX.verify_mode = ssl.CERT_NONE
 from dotenv import load_dotenv
 load_dotenv() # Carica .env dal root se presente
 
@@ -144,7 +142,8 @@ CHECK_SEC    = 10            # polling ogni 10 secondi
 # Gestione posizione resta un mini-manager proprio (SL strutturale + TP hard 2R; a TP1/1R
 # chiude S20_PARTIAL_LOT e sposta lo SL del residuo a BE) — non generica RiskGuardian,
 # perché l'edge backtestato (OOS PF 1.72) dipende da questa lifecycle specifica.
-S20_ENABLED     = False    # 2026-09-17: holdout 24m PF 0.867 < 1.2 (soglia decisa in origine, vedi
+from strategy_registry import SNAPSHOT as REGISTRY_SNAPSHOT, enabled as strategy_enabled
+S20_ENABLED = strategy_enabled('S20_FIB_CONFLUENCE')
                            # sotto/directives/02_strategies.md) — disattivata, non riattivare senza
                            # un nuovo giro di conferma sul WR live reale
 S20_LOT         = 0.03      # fallback se RiskGuardian non disponibile
@@ -165,7 +164,7 @@ _s20_last_entry_ts = 0.0
 # simbolo proprio (US30Cash), niente StrategySelector/playbook/RiskGuardian/compounding,
 # non conta in MAX_OPEN_ORDERS GOLD. Exit: SL/TP hard ATR-based lasciati a MT5 +
 # time-stop. Fase iniziale: lotto fisso minimo, come fece S20 (paper→0.03→scala).
-US30_ENABLED     = True
+US30_ENABLED = strategy_enabled('S30_DOW_DIP')
 US30_SYMBOL_CANDIDATES = ["US30Cash", "US30", "US30.cash", "DJ30", "WS30", "US30m", "US30.spot"]
 US30_SYMBOL      = None                       # risolto a startup
 US30_TAG         = 'S30_DOW_DIP'
@@ -191,7 +190,7 @@ _us30_last_entry_ts = 0.0
 # MAX_OPEN_ORDERS. Logica = signals.ls_scan / ls_manage_step (stessa del backtest).
 # Lifecycle propria (SL strutturale + trailing su trendline) come S20 -> mini-manager qui,
 # non RiskGuardian generico (l'edge dipende da questa gestione).
-LS_ENABLED       = True
+LS_ENABLED = strategy_enabled('S31_LAYOUT_SMART')
 LS_TAG           = 'S31_LAYOUT_SMART'
 LS_TF            = 'H1'
 LS_LOT           = 0.02                       # fallback se RiskGuardian non disponibile
@@ -232,7 +231,7 @@ _layout_score_snap: dict = {}               # {key: status dict}
 
 # Se sei su VPS Standalone, usa http://localhost:3000
 VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
-MT5_SECRET   = os.getenv("MT5_BOT_SECRET", "tradeflow-mt5-secret") 
+MT5_SECRET   = os.getenv("MT5_BOT_SECRET", "")
 
 SYNC_ENABLED = True          # False per disabilitare il sync cloud
 
@@ -998,6 +997,22 @@ def has_open_position_for_strategy(strategy_name):
         _strategy_order_tickets.pop(strategy_name, None)
     return False
 
+from execution_safety import guard_entry, OrderRejected
+_ENTRY_PERMISSION = {'enabled': False, 'updated': 0.0}
+
+def _guard_new_order(request, strategy):
+    from strategy_selector import is_hard_blocked
+    if not strategy_enabled(strategy) or is_hard_blocked(strategy):
+        log.warning('Ingresso rifiutato: strategia bloccata %s', strategy)
+        return None
+    allowed = _ENTRY_PERMISSION['enabled'] and time.time()-_ENTRY_PERMISSION['updated'] < 65
+    try:
+        return guard_entry(mt5,request,allowed)
+    except (OrderRejected, AttributeError, TypeError, ValueError) as exc:
+        log.warning('Ingresso rifiutato [%s]: %s', strategy, exc)
+        return None
+
+
 def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
                 key_levels_result=None, atr=None):
     """Invia un ordine market su MT5 con lot size adattivo da RiskManager"""
@@ -1008,7 +1023,7 @@ def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
         return None
 
     digits = sym_info.digits
-    lot = lot_size if lot_size else LOT_SIZE
+    lot = lot_size if lot_size is not None else LOT_SIZE
 
     # Risolvi ATR-based TP/SL (se 'ATR' stringa, usa valore calcolato)
     if not isinstance(tp_usd, (int, float)) or tp_usd <= 0:
@@ -1059,6 +1074,11 @@ def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
 
+    request = _guard_new_order(request,strategy_name)
+    if request is None:
+        return None
+    lot = request['volume']
+
     if DRY_RUN:
         import random
         _dry_ticket = random.randint(100000, 999999)
@@ -1072,8 +1092,8 @@ def place_order(direction, tp_usd, sl_usd, strategy_name, lot_size=None,
         return _DryResult()
 
     result = mt5.order_send(request)
-    if result.retcode != mt5.TRADE_RETCODE_DONE:
-        log.error(f"Ordine fallito: retcode={result.retcode} — {result.comment}")
+    if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
+        log.error("Ordine fallito: %s", result)
         return None
     log.info(f"✓ Ordine eseguito: #{result.order} {direction.upper()} {lot} {SYMBOL} "
              f"@ {price:.2f}  TP={tp_price:.2f}  SL={sl_price:.2f}  [{strategy_name}]")
@@ -1595,6 +1615,10 @@ def _us30_place_order(sl_pts, tp_pts, lot):
            "type": mt5.ORDER_TYPE_BUY, "price": price, "sl": sl_price, "tp": tp_price,
            "deviation": 30, "magic": MAGIC, "comment": f"TF-AI {US30_TAG}",
            "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC}
+    req = _guard_new_order(req,US30_TAG)
+    if req is None:
+        return None
+    lot = req['volume']
     if DRY_RUN:
         import random
         t = random.randint(100000, 999999)
@@ -1999,6 +2023,7 @@ def layout_scores_push(trades=None):
 
 
 def sync_to_vercel(acc, positions, trades, bot_status):
+    bot_status = {**bot_status, "registry": REGISTRY_SNAPSHOT}
     """Invia lo stato corrente alla UI su Vercel"""
     if not SYNC_ENABLED or not VERCEL_URL: return
     payload = json.dumps({
@@ -2061,21 +2086,6 @@ def run():
         log.error("Connessione MT5 fallita. Assicurati che MT5 sia aperto e configurato.")
         sys.exit(1)
 
-    # ── Imposta auto_trade = True al boot ────────────────────────────────────
-    # Il bot trada autonomamente di default — l'utente può disabilitare dalla UI mentre è in running.
-    if SYNC_ENABLED and VERCEL_URL:
-        try:
-            _at_boot = urllib.request.Request(
-                f"{VERCEL_URL}/api/db",
-                data=json.dumps({'action': 'auto_trade_set', 'enabled': True}).encode(),
-                headers={'Content-Type': 'application/json'}, method='POST')
-            with urllib.request.urlopen(_at_boot, timeout=6, context=_SSL_CTX) as _r:
-                _d = json.loads(_r.read())
-                if _d.get('ok'):
-                    log.info("🤖 Auto-trading ATTIVATO (set al boot su DB Vercel)")
-        except Exception as _e:
-            log.warning(f"Auto-trade boot-set fallito ({_e}) — uso default True locale")
-
     load_playbook()
 
     acc = get_account_info()
@@ -2093,7 +2103,7 @@ def run():
     last_ai_score        = 50.0  # default neutro
     last_score_ts        = 0     # timestamp ultimo fetch score
     last_cmd_ts          = 0     # timestamp ultimo check comandi manuali
-    auto_trade_enabled   = True  # letto da DB Vercel: se False, loop H1/M30/H4 non aprono ordini
+    auto_trade_enabled   = False  # letto da DB Vercel: se False, loop H1/M30/H4 non aprono ordini
     last_auto_trade_ts   = 0     # timestamp ultimo fetch flag auto_trade
     reconnect_attempts   = 0     # contatore per exponential backoff MT5
     last_candle_fetch_ts = 0     # timestamp ultimo fetch candele H1
@@ -2222,36 +2232,7 @@ def run():
                 continue
             candles = cached_candles
 
-            # ── Controlla comandi manuali dalla UI (ogni 5s) ──────────────────
-            if now_ts - last_cmd_ts >= 5:
-                last_cmd_ts = now_ts
-                manual_cmd = fetch_pending_command()
-                if manual_cmd:
-                    direction = manual_cmd.get('direction')
-                    strategy  = manual_cmd.get('strategy', 'S00_MFKK')
-                    age_s = (datetime.datetime.now(datetime.timezone.utc) - 
-                             datetime.datetime.fromisoformat(manual_cmd.get('created_at', '2000-01-01T00:00:00')
-                             .replace('Z', '+00:00'))).total_seconds()
-                    if age_s > 60:
-                        log.warning(f"⚠ Comando manuale scaduto ({age_s:.0f}s fa) — ignorato")
-                    elif direction not in ('buy', 'sell'):
-                        log.warning(f"⚠ Comando manuale con direzione invalida: {direction} — ignorato")
-                    else:
-                        params = STRATEGY_PARAMS.get(strategy, STRATEGY_PARAMS['S00_MFKK'])
-                        tp_use = params['tp_usd'] if isinstance(params['tp_usd'], (int, float)) else 20.0
-                        sl_use = params['sl_usd'] if isinstance(params['sl_usd'], (int, float)) else 12.0
-                        log.info(f"🎯 COMANDO MANUALE UI: {direction.upper()} | {strategy} | TP=${tp_use} SL=${sl_use}")
-                        result = place_order(direction, tp_use, sl_use, strategy, lot_size=LOT_SIZE)
-                        if result:
-                            state.record_trade(0, now_utc)
-                            acc_data = get_account_info()
-                            sync_to_vercel(
-                                acc_data, get_open_positions_data(), get_recent_trades_data(200),
-                                {'running': True, 'dry_run': DRY_RUN, 'symbol': SYMBOL,
-                                 'lot': LOT_SIZE, 'trades_today': state.trades_today,
-                                 'pnl_today': state.pnl_today, 'last_signal': f'MANUAL_{strategy}'}
-                            )
-                            last_sync_time = now_ts
+            # Remote manual orders intentionally disabled: they bypassed strategy guardians.
 
             # ── Sync periodico a Vercel (ogni 20s) ────────────────────────
             now_ts = time.time()
@@ -2517,17 +2498,19 @@ def run():
                 try:
                     _at_req = urllib.request.Request(
                         f"{VERCEL_URL}/api/db",
-                        data=json.dumps({'action': 'auto_trade_get'}).encode(),
+                        data=json.dumps({'action': 'auto_trade_get', 'secret': MT5_SECRET}).encode(),
                         headers={'Content-Type': 'application/json'}, method='POST')
                     with urllib.request.urlopen(_at_req, timeout=6, context=_SSL_CTX) as _at_r:
                         _at_d = json.loads(_at_r.read())
                         if _at_d.get('ok') and isinstance(_at_d.get('enabled'), bool):
                             _prev_at = auto_trade_enabled
                             auto_trade_enabled = _at_d['enabled']
+                            _ENTRY_PERMISSION.update(enabled=auto_trade_enabled,updated=time.time())
                             if auto_trade_enabled != _prev_at:
                                 log.info(f"🤖 Auto-trading {'ATTIVATO' if auto_trade_enabled else 'DISATTIVATO'} (da DB Vercel)")
                 except Exception:
-                    pass  # fallback: mantieni valore precedente (True di default)
+                    auto_trade_enabled = False
+                    _ENTRY_PERMISSION.update(enabled=False,updated=time.time())
                 last_auto_trade_ts = now_ts
 
             # ── Controlla nuova candela H1 ────────────────────────────────────

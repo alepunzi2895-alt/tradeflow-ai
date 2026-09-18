@@ -37,7 +37,7 @@ function saveEntry(){
     emo:document.getElementById('f-emo').value,
     err:document.getElementById('f-err').value,
     notes:document.getElementById('f-notes').value,
-    symbol:(window.activeAsset||'XAU')+'USD',
+    symbol:window.activeAsset==='US30'?'US30':(window.activeAsset||'XAU')+'USD',
   };
   entries.unshift(e);S.set(K.j,entries);
   const w=entries.filter(x=>x.result==='WIN').length;P.winRate=Math.round(w/entries.length*100);S.set(K.p,P);
@@ -125,7 +125,7 @@ function showAiError(msg){
 // restituisce spesso HTML non-JSON — leggere come testo prima ed evitare che r.json() lanci
 // un errore criptico. Il body grezzo va in console per poter diagnosticare senza indovinare.
 async function fetchReport(body){
-  const r=await fetch('/api/report',{signal:AbortSignal.timeout(15000),method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const r=await authFetch('/api/report',{signal:AbortSignal.timeout(15000),method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const raw=await r.text();
   let d;
   try{d=JSON.parse(raw);}
@@ -192,7 +192,7 @@ function setJournalPeriod(period){
 
 async function coachSingleTrade(entry){
   try{
-    const r=await fetch('/api/report',{
+    const r=await authFetch('/api/report',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({type:'coaching',entries:[entry],profile:P,period:'single',asset:window.activeAsset||'XAU'})
@@ -293,8 +293,8 @@ async function importMfxToJournal(accountId){
     // L'import deve riflettere SOLO i trade di questo account MyFxBook: qualunque trade importato
     // in precedenza (da questo o da un altro account collegato) viene svuotato prima di reimportare,
     // altrimenti si accumulano doppioni/trade di account diversi nel Journal.
-    const staleCount=entries.filter(e=>e.source==='myfxbook').length;
-    entries=entries.filter(e=>e.source!=='myfxbook');
+    const staleCount=entries.filter(e=>String(e.source||'').startsWith('myfxbook')).length;
+    const retainedEntries=entries.filter(e=>!String(e.source||'').startsWith('myfxbook'));
 
     if(!realTrades.length){
       S.set(K.j,entries);
@@ -302,16 +302,16 @@ async function importMfxToJournal(accountId){
       P.winRate=entries.length?Math.round(wins/entries.length*100):null;S.set(K.p,P);
       renderJournal();updateHdr();
       const types=[...new Set((d.history||[]).map(t=>String(t.action||t.type||'unknown')))];
-      alert(`Nessun trade reale trovato su questo account MyFxBook (tipi presenti: ${types.slice(0,10).join(', ')||'nessuno'}).`+(staleCount?` I ${staleCount} trade MyFxBook precedenti sono stati rimossi dal Journal.`:''));
+      alert(`Nessun trade reale trovato su questo account MyFxBook (tipi presenti: ${types.slice(0,10).join(', ')||'nessuno'}).`);
       if(btn){btn.textContent='📥 Importa Trade al Journal';btn.disabled=false;}
       return;
     }
 
-    const existingKeys=new Set(entries.map(e=>`${e.date}_${e.dir}_${parseFloat(e.entry).toFixed(2)}`));
+    const existingKeys=new Set();
     let imported=0;
     const newEntries=[];
 
-    for(const t of realTrades.slice(0,100)){
+    for(const t of realTrades.slice(0,5000)){
       const rawDate=t.openTime||t.open_time||t.openDate||'';
       const openDate=mfxNormalizeDate(rawDate);
 
@@ -329,7 +329,9 @@ async function importMfxToJournal(accountId){
       const sl=parseFloat(t.sl||t.stopLoss||0)||'';
       const tp1=parseFloat(t.tp||t.takeProfit||0)||'';
 
-      const key=`${openDate}_${dir}_${entryPrice.toFixed(2)}`;
+      const externalId=t.id||t.orderId||t.ticket||[sym,rawDate,t.closeTime||t.close_time,dir,entryPrice,closePrice,lots,pnl].join('|');
+      const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(externalId)));
+      const key=`mfx:${window.userId}:${accountId}:`+[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
       if(existingKeys.has(key)) continue;
       existingKeys.add(key);
 
@@ -337,7 +339,7 @@ async function importMfxToJournal(accountId){
       const rr=entryPrice&&closePrice&&sl?Math.abs(closePrice-entryPrice)/Math.abs(entryPrice-(sl||entryPrice)):0;
 
       newEntries.push({
-        id:Date.now()+imported+Math.floor(Math.random()*1000),
+        id:key,
         date:openDate,
         dir,
         entry:entryPrice,
@@ -350,29 +352,24 @@ async function importMfxToJournal(accountId){
         err:'Nessuno',
         notes:`${sym} ${lots}lot | E:${entryPrice} → C:${closePrice} | RR:${rr.toFixed(2)}`,
         symbol:sym,
-        source:'myfxbook',
+        source:'myfxbook:'+accountId,
+        exit:closePrice,size:lots,
         mfxAccountId:accountId
       });
       imported++;
     }
 
     if(imported>0){
-      entries=[...newEntries,...entries];
+      const saved=await dbSave('replace_imported_trades',{account_id:accountId,trades:newEntries.map(ne=>({
+        id:ne.id,symbol:ne.symbol,direction:ne.dir,entry_price:ne.entry,exit_price:ne.exit,size:ne.size,
+        sl:parseFloat(ne.sl)||null,tp1:parseFloat(ne.tp1)||null,tp2:parseFloat(ne.tp2)||null,
+        result:ne.result,pnl:parseFloat(ne.pnl)||0,emotion:ne.emo,mistake:ne.err,notes:ne.notes,trade_date:ne.date}))});
+      if(!saved.ok)throw Error(saved.error);
+      entries=[...newEntries,...retainedEntries];
       S.set(K.j,entries);
       // Update win rate
       const wins=entries.filter(x=>x.result==='WIN').length;
       if(entries.length>0){P.winRate=Math.round(wins/entries.length*100);S.set(K.p,P);}
-      // Persist a Turso — mancava, i trade MFX restavano solo in localStorage e sparivano
-      // cambiando device/browser (stesso pattern del salvataggio manuale, saveEntry() sopra).
-      newEntries.forEach(ne=>{
-        dbSave('save_trade',{
-          id:ne.id, symbol:ne.symbol||((window.activeAsset||'XAU')+'USD'), direction:ne.dir,
-          entry_price:parseFloat(ne.entry)||null, sl:parseFloat(ne.sl)||null,
-          tp1:parseFloat(ne.tp1)||null, tp2:parseFloat(ne.tp2)||null,
-          result:ne.result, pnl:parseFloat(ne.pnl)||0, emotion:ne.emo, mistake:ne.err,
-          notes:ne.notes, trade_date:ne.date,
-        }).catch(()=>{});
-      });
       alert('✅ '+imported+' trade importati nel Journal da MyFxBook!'+(staleCount?` (${staleCount} vecchi trade MyFxBook sostituiti)`:''));
       switchTab('journal');
       renderJournal();
@@ -394,7 +391,7 @@ document.getElementById('btn-analyze').onclick=async()=>{
   try{
     const mem=analysisMemory.entries?.slice(0,3).map(e=>`[${e.date?.slice(0,10)}] ${e.text}`).join('\n')||'';
     const memCtx=mem?`\nMEMORIA ANALISI PRECEDENTE:\n${mem}`:'';
-    const sum=entries.slice(0,25).map(e=>`${e.date}|${e.dir}|E:${e.entry} SL:${e.sl}|${e.result||'?'}|${e.pnl}$|${e.emo}|${e.err}`).join('\n');
+    const sum=entries.slice(0,25).map(e=>`${e.date}|${escapeHtml(e.dir)}|E:${escapeHtml(e.entry)} SL:${escapeHtml(e.sl)}|${e.result||'?'}|${escapeHtml(e.pnl)}$|${e.emo}|${e.err}`).join('\n');
     const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nUsa SOLO i numeri riportati sopra. Statistiche, aree di sviluppo (non errori) con evidenza numerica, 3 azioni concrete e specifiche da applicare da subito, Score Disciplina X/10 motivato.`}],
       `Sei TradeFlow AI Coach. Italiano. Tono costruttivo ma diretto. Aree noto sviluppo: ${P.errors.join(',')}.`);
     showAiResult(reply);autoLearn(reply);pushAnalysisMemory(reply);
@@ -432,7 +429,7 @@ function renderJournal(){
   const eb=document.getElementById('ebox');const et=document.getElementById('etags');
   if(P.errors?.length){
     eb.style.display='block';
-    et.innerHTML=P.errors.map(e=>`<span class="etag">${e}</span>`).join('');
+    et.innerHTML=P.errors.map(e=>`<span class="etag">${escapeHtml(e)}</span>`).join('');
   }else{eb.style.display='none';}
 
   const list=document.getElementById('elist');
@@ -450,28 +447,28 @@ function renderJournal(){
     d.innerHTML=`
       <div class="etop">
         <div>
-          <div class="edate">${dateStr} · ${e.symbol || 'XAUUSD'}</div>
+          <div class="edate">${dateStr} · ${escapeHtml(e.symbol || 'XAUUSD')}</div>
           <div style="display:flex;gap:6px;margin-top:4px">
-            <span class="etag" style="background:${e.dir==='BUY'?'rgba(0,230,118,0.1)':'rgba(255,71,87,0.1)'};color:${e.dir==='BUY'?'var(--green)':'var(--red)'}">${e.dir}</span>
-            ${e.result ? `<span class="etag" style="text-transform:uppercase">${e.result}</span>` : ''}
+            <span class="etag" style="background:${e.dir==='BUY'?'rgba(0,230,118,0.1)':'rgba(255,71,87,0.1)'};color:${e.dir==='BUY'?'var(--green)':'var(--red)'}">${escapeHtml(e.dir)}</span>
+            ${e.result ? `<span class="etag" style="text-transform:uppercase">${escapeHtml(e.result)}</span>` : ''}
           </div>
         </div>
         <div style="text-align:right">
-          <div class="epnl" style="color:${pv>=0?'var(--green)':'var(--red)'}">${pv>=0?'+':''}${e.pnl}$</div>
+          <div class="epnl" style="color:${pv>=0?'var(--green)':'var(--red)'}">${pv>=0?'+':''}${escapeHtml(e.pnl)}$</div>
           <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end">
             <button class="bcoach" style="background:none;border:none;color:var(--g);font-size:14px;cursor:pointer" title="Coaching AI">💡</button>
-            <button class="bdel" data-id="${e.id}" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer">✕</button>
+            <button class="bdel" data-id="${escapeHtml(e.id)}" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer">✕</button>
           </div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--text);margin-bottom:8px;opacity:0.8">
-        Entry: ${e.entry} · SL: ${e.sl} · TP: ${e.tp1}
+        Entry: ${escapeHtml(e.entry)} · SL: ${escapeHtml(e.sl)} · TP: ${escapeHtml(e.tp1)}
       </div>
       </div>
       ${tradeMemory.entries?.[e.id] ? `
         <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(229,189,108,0.06);border:1px solid rgba(229,189,108,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
-          <button class="coach-close" data-id="${e.id}" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px">✕</button>
-          💡 ${tradeMemory.entries[e.id]}
+          <button class="coach-close" data-id="${escapeHtml(e.id)}" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px">✕</button>
+          💡 ${escapeHtml(tradeMemory.entries[e.id])}
         </div>
       ` : ''}
     `;
@@ -479,15 +476,18 @@ function renderJournal(){
     // Handle Delete
     const delBtn = d.querySelector('.bdel');
     if(delBtn) {
-      delBtn.onclick=(ev)=>{
+      delBtn.onclick=async(ev)=>{
         ev.stopPropagation();
         if(!confirm('Eliminare questo trade?'))return;
         const id=e.id;
+        delBtn.disabled=true;
+        const saved=await dbSave('delete_trade',{id});
+        if(!saved.ok){delBtn.disabled=false;return;}
         entries=entries.filter(x=>String(x.id)!==String(id));
         S.set(K.j,entries);
         renderJournal();
         updateHdr();
-        dbSave('delete_trade',{id,user_id:window.userId}).catch(()=>{});
+
       };
     }
 
@@ -526,7 +526,7 @@ function renderJournal(){
 // On load: fetch trades from Turso and merge with localStorage (union by id)
 async function syncJournalFromDb(){
   try{
-    const res=await dbLoad('get_trades',{user_id:window.userId},4000);
+    const res=await dbLoad('get_trades',{user_id:window.userId,limit:5000},8000);
     if(!res?.ok||!res.trades?.length) return;
     const localIds=new Set(entries.map(e=>String(e.id)));
     let added=0;
@@ -548,7 +548,8 @@ async function syncJournalFromDb(){
         err:t.mistake||'Nessuno',
         notes:t.notes||'',
         symbol:t.symbol||'XAUUSD',
-        source:'turso_sync',
+        source:t.source||'manual',
+        mfxAccountId:String(t.source||'').split(':')[1]||null,
       });
       localIds.add(tid);
       added++;

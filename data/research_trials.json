@@ -1,5 +1,5 @@
 {
-  "total": 1735,
+  "total": 1753,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -200,6 +200,22 @@
       "asset": "Test decisivo: confidence score predice l esito delle ENTRY? ~3000 candidati (param larghi) S32/S33/S34. Spearman(conf,pnl) = -0.02..+0.02, p>0.5 su TUTTE. ZERO potere predittivo, relazione se mai leggermente invertita (bucket conf-basso migliori). Chiude la domanda: l intelligenza sulle entry NON aumenta la profittabilita di questi segnali.",
       "strategy_id": "",
       "note": ""
+    },
+    {
+      "ts": "2026-09-18T11:13:56Z",
+      "n_trials": 9,
+      "cumulative_after": 1744,
+      "asset": "XAUUSD+US30",
+      "strategy_id": "ROSTER_AUDIT",
+      "note": "9 frozen baselines; no optimization; previously used history; chronological diagnostic only"
+    },
+    {
+      "ts": "2026-09-18T11:22:55Z",
+      "n_trials": 9,
+      "cumulative_after": 1753,
+      "asset": "XAUUSD+US30",
+      "strategy_id": "ROSTER_AUDIT",
+      "note": "9 frozen baselines; no optimization; previously used history; chronological diagnostic only"
     }
   ]
 }

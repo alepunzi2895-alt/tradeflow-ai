@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TradeFlow AI">
@@ -12,7 +12,9 @@
 
 <!-- TradingView Widget -->
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-  <link rel="stylesheet" href="/style.css?v=space3">
+  <link rel="stylesheet" href="/style.css?v=audit1">
+  <link rel="stylesheet" href="/saturn.css?v=audit1">
+  <link rel="stylesheet" href="/nebula-sky.css?v=sky1">
 </head>
 <body>
 <!-- AUTHENTICATION OVERLAY -->
@@ -103,14 +105,14 @@
         <!-- Orbite strategie: nucleo = miglior PF del roster live, pianeti = resto del roster -->
         <div class="orbit-hero" id="orbit-hero">
           <div class="orbit-top">
-            <div class="orbit-eyebrow">MIGLIOR PF STORICO · <span id="orbit-nucleus-name">—</span></div>
+            <div class="orbit-eyebrow">IL TUO SISTEMA · <span id="orbit-nucleus-name">—</span></div>
             <div class="orbit-eq-row">
               <div>
                 <div class="orbit-eq-lbl">Equity conto</div>
                 <div class="orbit-eq-val" id="orbit-equity">—</div>
                 <div class="orbit-eq-sub" id="orbit-equity-sub"></div>
               </div>
-              <div class="orbit-stat"><span class="orbit-stat-lbl">Somma P&amp;L · backtest 12m</span><span class="orbit-stat-val" id="orbit-pnl12">—</span></div>
+              <div class="orbit-stat"><span class="orbit-stat-lbl">Stato del roster</span><span class="orbit-stat-val" id="orbit-pnl12">—</span></div>
               <div class="orbit-stat"><span class="orbit-stat-lbl">Strategie abilitate</span><span class="orbit-stat-val" id="orbit-count">—</span></div>
             </div>
           </div>
@@ -595,34 +597,36 @@
   </div>
 
   <!-- Core utilities (storage, API, compression) -->
-  <script src="/modules/core.js?v=space3"></script>
+  <script src="/modules/core.js?v=audit1"></script>
+  <script src="/modules/nebula-sky.js?v=sky1"></script>
+  <script src="/modules/saturn.js?v=sky1"></script>
   <!-- Dashboard: prices, confidence, sentiment, macro -->
-  <script src="/modules/dashboard.js?v=space3"></script>
+  <script src="/modules/dashboard.js?v=audit1"></script>
   <!-- Chat: AI analysis, image upload -->
-  <script src="/modules/chat.js?v=space3"></script>
+  <script src="/modules/chat.js?v=audit1"></script>
   <!-- Journal: trade log, coaching, reports -->
-  <script src="/modules/journal.js?v=space3"></script>
+  <script src="/modules/journal.js?v=audit1"></script>
   <!-- MyFxBook: account sync, import -->
-  <script src="/modules/myfxbook.js?v=space3"></script>
+  <script src="/modules/myfxbook.js?v=audit1"></script>
   <!-- Knowledge Base: upload, search -->
-  <script src="/modules/kb.js?v=space3"></script>
+  <script src="/modules/kb.js?v=audit1"></script>
   <!-- MFKK: strategy score, indicators -->
-  <script src="/modules/mfkk.js?v=space3"></script>
+  <script src="/modules/mfkk.js?v=audit1"></script>
   <!-- Strategy Engine: indicator helpers + signal functions -->
-  <script src="/modules/se-signals.js?v=space3"></script>
+  <script src="/modules/se-signals.js?v=audit1"></script>
   <!-- Strategy Engine: SE config, seRefresh(), main loop -->
-  <script src="/modules/strategy.js?v=space3"></script>
+  <script src="/modules/strategy.js?v=audit1"></script>
   <!-- Strategy Engine: seRender(), seToast(), initStrategyEngine() -->
-  <script src="/modules/se-render.js?v=space3"></script>
+  <script src="/modules/se-render.js?v=audit1"></script>
   <!-- Report Backtest: equity curve, confronto attive/roster, lancia backtest, toggle blocco -->
-  <script src="/modules/backtest-report.js?v=space3"></script>
+  <script src="/modules/backtest-report.js?v=audit1"></script>
   <!-- The Hive: nebulosa del roster strategie + knowledge base (usa brData/SE/kb, carica dopo) -->
-  <script src="/modules/hive.js?v=space3"></script>
-  <script src="/modules/workspace-ui.js?v=space3"></script>
+  <script src="/modules/hive.js?v=audit1"></script>
+  <script src="/modules/workspace-ui.js?v=audit1"></script>
   <!-- App: init, tabs, overlays, profile -->
-  <script src="/modules/lab-engine.js?v=space3"></script>
-  <script src="/modules/laboratory.js?v=space3"></script>
-  <script src="/modules/market-watch.js?v=space3"></script>
-  <script src="/app.js?v=space3"></script>
+  <script src="/modules/lab-engine.js?v=audit1"></script>
+  <script src="/modules/laboratory.js?v=audit1"></script>
+  <script src="/modules/market-watch.js?v=audit1"></script>
+  <script src="/app.js?v=audit1"></script>
 </body>
 </html>

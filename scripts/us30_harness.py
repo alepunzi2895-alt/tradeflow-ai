@@ -27,6 +27,7 @@ USO:
 """
 import sys, os, io, argparse, importlib.util, functools, json, datetime
 from collections import defaultdict
+from backtest_execution import simulate_exit
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 _REAL_STDOUT = sys.stdout
@@ -110,7 +111,9 @@ def run_signal(tf, signal_fn, *, tp_mult=2.5, sl_mult=1.5,
     day_n = defaultdict(int)
     last_entry_bar = -10 ** 9
 
+    last_exit_bar=-1
     for i in range(warmup, n - 1):
+        if i < last_exit_bar: continue
         dt = dts[i]
         hour = dt.hour
         day = dt.strftime('%Y-%m-%d')
@@ -134,29 +137,17 @@ def run_signal(tf, signal_fn, *, tp_mult=2.5, sl_mult=1.5,
         tp_p = entry + tp if sig == 'buy' else entry - tp
         sl_dyn = entry - sl if sig == 'buy' else entry + sl
 
-        outcome = 'open'; close_price = entry; exit_stop = False
-        for j in range(i + 1, min(i + 1 + max_hold_bars, n)):
-            jh, jl, jc = candles[j]['h'], candles[j]['l'], candles[j]['c']
-            if be_trail:
-                prof = (jc - entry) if sig == 'buy' else (entry - jc)
-                if prof >= sl * 0.8:
-                    sl_dyn = (entry + 0.2) if sig == 'buy' else (entry - 0.2)
-                if prof >= sl * 1.4:
-                    trail = jc - sl * 0.7 if sig == 'buy' else jc + sl * 0.7
-                    sl_dyn = max(sl_dyn, trail) if sig == 'buy' else min(sl_dyn, trail)
-            res = SE2.resolve_intrabar(jh, jl, tp_p, sl_dyn, sig == 'buy')
-            if res == 'win':
-                outcome = 'win'; close_price = tp_p; break
-            if res == 'loss':
-                outcome = 'loss'; close_price = sl_dyn; exit_stop = True; break
-        if outcome == 'open':
-            continue
+        fill=simulate_exit(candles,i+1,i+1+max_hold_bars,entry,sl_dyn,tp_p,sig=='buy',be=be_trail,trail_trigger=1.4)
+        if fill is None: continue
+        close_price,j=fill['price'],fill['index']
+        exit_stop=fill['reason']=='sl'
+        last_exit_bar=j
 
         pnl = (close_price - entry) if sig == 'buy' else (entry - close_price)
         pnl -= _trade_cost(exit_stop)
         trades.append({'date': day, 'hour': hour, 'dir': sig, 'entry': round(entry, 2),
                        'outcome': 'win' if pnl > 0 else 'loss', 'pnl': round(pnl, 2),
-                       'strategy': signal_fn.__name__})
+                       'strategy': signal_fn.__name__,'entry_ts':candles[i+1]['t'],'exit_ts':candles[j]['t'],'exit':fill['reason']})
         day_n[day] += 1
         last_entry_bar = i
     return trades

@@ -393,15 +393,13 @@ class RiskManager:
                 _ctx = ssl.create_default_context(cafile=certifi.where())
             except ImportError:
                 _ctx = ssl.create_default_context()
-                _ctx.check_hostname = False
-                _ctx.verify_mode = ssl.CERT_NONE
             # POST con body JSON: l'endpoint /api/db instrada le action solo via
             # POST — un GET con ?action=mt5_get ritorna il banner di servizio
             # ({ok:true, service:...}) senza 'data', quindi lo score era sempre None.
             url = f"{vercel_url.rstrip('/')}/api/db"
             req = urllib.request.Request(
                 url,
-                data=_json.dumps({'action': 'mt5_get'}).encode(),
+                data=_json.dumps({'action': 'mt5_get', 'secret': os.getenv('MT5_BOT_SECRET','')}).encode(),
                 headers={'Content-Type': 'application/json'},
                 method='POST')
             with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:

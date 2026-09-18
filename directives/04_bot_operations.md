@@ -230,3 +230,8 @@ schtasks /create /tn "TradeFlowAI_ReactivationCheck" /tr "python -X utf8 C:\path
 - [ ] Fetch server-side con timeout < 8s (limite Vercel)
 - [ ] `git add <file-specifico>` — non `git add .` per evitare commit `.env`
 - [ ] `git push origin main` → attendere ~60s → verificare URL produzione
+
+
+## Audit 2026-09-18
+
+Il boot rispetta auto_trade persistito (default off). Tutti i nuovi ingressi attraversano execution_safety.guard_entry: rischio contratto/account-currency, tetti per ingresso e conto, circuit breaker e stop obbligatori. Aggiornare bot e worker insieme alle API; configurare ADMIN_USER_IDS. Vedi 11_audit_and_release.md.

@@ -8,7 +8,7 @@ function renderMyfx(){
   if(mfxSession){
     c.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;background:#081408;border:1px solid #62E6A625;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div><div style="color:var(--green);font-size:12px;font-weight:700">✓ Connesso a MyFxBook</div><div style="color:var(--dim);font-size:10px">${mfxSession.email}</div></div>
+        <div><div style="color:var(--green);font-size:12px;font-weight:700">✓ Connesso a MyFxBook</div><div style="color:var(--dim);font-size:10px">${escapeHtml(mfxSession.email)}</div></div>
         <button onclick="mfxLogout()" style="background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:5px 10px;color:#FF8A8A;font-size:11px;cursor:pointer">Disconnetti</button>
       </div>
       <div id="mfx-accounts"></div>`;
@@ -32,7 +32,7 @@ function renderMyfx(){
           2. <b>Scarica l'EA</b>: Nella sezione <i>Portfolio > Add Account</i>, seleziona MetaTrader 4/5 (EA) e scarica il plugin.<br>
           3. <b>Configura MT4/MT5</b>: Trascina l'EA sul grafico. Durante i settaggi inserisci l'indirizzo email e la password utilizzati per registrarti a MyFxBook e imposta un intervallo di pubblicazione (es. 5 min).<br>
           4. <b>Collega l'app</b>: Usa la stessa mail e password nel form in alto su TradeFlow AI.<br><br>
-          <i>⚠️ Sicurezza: TradeFlow invia la password solo in una chiamata one-shot alle API ufficiali di MyFxBook per generare un token di sessione. La password NON viene mai salvata sul nostro database (Turso) — resta salvata solo nel browser di questo dispositivo, per riconnetterti in automatico quando la sessione MyFxBook scade da sola.</i>
+          <i>⚠️ Sicurezza: TradeFlow invia la password solo in una chiamata one-shot alle API ufficiali di MyFxBook per generare un token di sessione. La password NON viene mai salvata sul nostro database (Turso) — rimane solo in memoria durante la sessione corrente. Alla riapertura potrebbe essere necessario riconnettersi.</i>
         </div>
       </div>
       `;
@@ -46,13 +46,13 @@ async function mfxLogin(){
   if(!email||!pass)return;
   const btn=document.getElementById('btn-mfx-login');btn.textContent='⏳...';btn.disabled=true;
   try{
-    const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password:pass})});
+    const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password:pass})});
     const d=await r.json();
     if(d.error||!d.session)throw new Error(d.message||'Login fallito');
     // pass viene salvata SOLO in localStorage (per riautenticarsi in automatico quando la sessione
     // MyFxBook scade lato loro) — mai inviata al nostro DB Turso, solo session+email lo sono.
     mfxSession={session:d.session,email,pass};
-    S.set(K.mfx,mfxSession);
+    S.set(K.mfx,{session:mfxSession.session,email:mfxSession.email});
     window.dbSaveUserData && window.dbSaveUserData('mfx', {session:d.session,email});
     renderMyfx();
   }catch(e){
@@ -68,11 +68,11 @@ function mfxLogout(){mfxSession=null;S.set(K.mfx,null); window.dbSaveUserData &&
 async function mfxRelogin(){
   if(!mfxSession?.email||!mfxSession?.pass) return false;
   try{
-    const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email:mfxSession.email,password:mfxSession.pass})});
+    const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email:mfxSession.email,password:mfxSession.pass})});
     const d=await r.json();
     if(d.error||!d.session) return false;
     mfxSession={...mfxSession,session:d.session};
-    S.set(K.mfx,mfxSession);
+    S.set(K.mfx,{session:mfxSession.session,email:mfxSession.email});
     window.dbSaveUserData && window.dbSaveUserData('mfx',{session:mfxSession.session,email:mfxSession.email});
     return true;
   }catch(e){return false;}
@@ -81,7 +81,7 @@ async function mfxRelogin(){
 // Wrapper per tutte le chiamate autenticate: se la sessione risulta scaduta, prova un relogin
 // silenzioso con le credenziali salvate e ritenta una volta sola prima di arrendersi.
 async function mfxApiCall(action, extra={}, _retried=false){
-  const r=await fetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,session:mfxSession?.session,...extra})});
+  const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,session:mfxSession?.session,...extra})});
   const d=await r.json();
   if(d.error && !_retried){
     const ok=await mfxRelogin();
@@ -94,8 +94,8 @@ function mfxShowExpired(wrap, msg){
   const hasSavedPass=!!mfxSession?.pass;
   const hint=hasSavedPass
     ? 'Il rinnovo automatico ha provato e non è riuscito (password salvata probabilmente cambiata su MyFxBook).'
-    : 'Questa connessione risale a prima del rinnovo automatico: riconnettiti una volta sola, da qui in poi le scadenze si risolveranno da sole.';
-  wrap.innerHTML=`<div style="color:#FF8A8A;font-size:12px;background:#160c0c;border:1px solid #FF8A8A22;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${msg||'Sessione MyFxBook scaduta.'}<br><span style="color:var(--dim);font-weight:400">${hint}</span></div>
+    : 'Riconnettiti a MyFxBook. La password viene conservata solo durante questa sessione.';
+  wrap.innerHTML=`<div style="color:#FF8A8A;font-size:12px;background:#160c0c;border:1px solid #FF8A8A22;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${escapeHtml(msg||'Sessione MyFxBook scaduta.')}<br><span style="color:var(--dim);font-weight:400">${hint}</span></div>
     <button onclick="mfxLogout()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--g);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Riconnetti (reinserisci email/password)</button>`;
 }
 
@@ -109,7 +109,7 @@ async function loadMyfxAccounts(){
     wrap.innerHTML='<div style="color:var(--g);font-size:10px;font-weight:700;margin-bottom:8px;letter-spacing:.07em">ACCOUNT</div>'+
       d.accounts.map(a=>`<div style="background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:7px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:13px;color:var(--text);font-weight:700">${a.name}</div>
+          <div style="font-size:13px;color:var(--text);font-weight:700">${escapeHtml(a.name)}</div>
           <div style="font-size:12px;font-family:monospace;color:${parseFloat(a.gain)>=0?'var(--green)':'var(--red)'}">${parseFloat(a.gain)>=0?'+':''}${parseFloat(a.gain).toFixed(1)}%</div>
         </div>
         <div style="font-size:10px;color:var(--dim);font-family:monospace">DD: ${a.drawdown}% · Balance: $${parseFloat(a.balance).toFixed(0)}</div>

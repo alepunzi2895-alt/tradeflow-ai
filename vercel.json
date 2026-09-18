@@ -2,8 +2,8 @@
   "rewrites": [
     { "source": "/api/auth",         "destination": "/api/db.js" },
     { "source": "/api/db",           "destination": "/api/db.js" },
-    { "source": "/api/kb",           "destination": "/api/db.js" },
-    { "source": "/api/myfxbook",     "destination": "/api/db.js" },
+    { "source": "/api/kb",           "destination": "/api/db.js?route=kb" },
+    { "source": "/api/myfxbook",     "destination": "/api/myfxbook.js" },
     
     { "source": "/api/price",        "destination": "/api/price.js" },
     { "source": "/api/tvprice",      "destination": "/api/price.js" },

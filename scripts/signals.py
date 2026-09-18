@@ -1328,6 +1328,11 @@ def ls_manage_step(pos, jh, jl, jc, tlb_low_i, tlb_up_i, atr0, P=None):
     be_off = P.get('be_off', 0.05) * atr0
     pos['hh'] = max(pos['hh'], jh); pos['ll'] = min(pos['ll'], jl)
 
+    # The stop that existed BEFORE this bar wins any ambiguous path.
+    hit_sl = (jl <= pos['sl']) if is_buy else (jh >= pos['sl'])
+    if hit_sl:
+        return pos['sl'], ('trail' if pos['part'] else 'sl')
+
     # TP1 (1.5R) toccato INTRABAR -> chiude 50%, SL a BE (+/- piccolo offset)
     tp1_hit = (jh >= pos['tp1']) if is_buy else (jl <= pos['tp1'])
     if not pos['part'] and tp1_hit:
@@ -1337,18 +1342,15 @@ def ls_manage_step(pos, jh, jl, jc, tlb_low_i, tlb_up_i, atr0, P=None):
         be = (entry + be_off) if is_buy else (entry - be_off)
         pos['sl'] = max(pos['sl'], be) if is_buy else min(pos['sl'], be)
 
+    hit_tp2 = (jh >= pos['tp2']) if is_buy else (jl <= pos['tp2'])
+    if hit_tp2:
+        return pos['tp2'], 'tp2'
+    # Close-derived trailing applies to the NEXT bar, never retroactively.
     if pos['part']:
         tl = tlb_low_i if is_buy else tlb_up_i
         cand = float(tl) if (tl is not None and tl == tl) else ((jc - R) if is_buy else (jc + R))
         pos['sl'] = max(pos['sl'], cand) if is_buy else min(pos['sl'], cand)
 
-    # priorita pessimistica: se la barra tocca sia SL che TP2 -> SL
-    hit_sl = (jl <= pos['sl']) if is_buy else (jh >= pos['sl'])
-    hit_tp2 = (jh >= pos['tp2']) if is_buy else (jl <= pos['tp2'])
-    if hit_sl:
-        return pos['sl'], ('sl' if not pos['part'] else 'trail')
-    if hit_tp2:
-        return pos['tp2'], 'tp2'
     return None, None
 
 

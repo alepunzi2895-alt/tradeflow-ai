@@ -1,0 +1,39 @@
+/* Continuous sky, translucent orbital workspace, opaque reading surfaces. */
+#nebula-sky {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  z-index:0;
+  pointer-events:none;
+}
+body.has-nebula-sky { background:#04060e; }
+.has-nebula-sky #app {
+  z-index:1;
+  background:transparent;
+  box-shadow:none;
+}
+.has-nebula-sky .orbit-hero {
+  background:linear-gradient(120deg,rgba(8,12,24,.58),rgba(8,12,24,.10) 65%,rgba(8,12,24,.25));
+  border-color:rgba(120,155,235,.17);
+  box-shadow:inset 0 1px 0 rgba(190,208,255,.025);
+}
+.has-nebula-sky .nb-panel {
+  background:rgba(8,12,24,.82);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-color:rgba(120,155,235,.20);
+}
+.has-nebula-sky #tabs-wrapper { background:transparent; }
+.has-nebula-sky #tabs { background:rgba(8,12,24,.9); }
+.has-nebula-sky #hdr { background:rgba(8,12,24,.86); }
+.has-nebula-sky .workspace-heading {
+  text-shadow:0 2px 12px #04060e;
+}
+.has-nebula-sky .saturn-starlight { display:none; }
+@media(max-width:600px) {
+  .has-nebula-sky .orbit-hero {
+    background:linear-gradient(180deg,rgba(8,12,24,.4),rgba(8,12,24,.18) 42%,rgba(8,12,24,.7));
+  }
+}

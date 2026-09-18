@@ -16,7 +16,7 @@ function setMfkkTF(tf){
   ['1h','4h','1d'].forEach(t=>{
     const btn=document.getElementById('mfkk-tf-'+t);
     if(!btn)return;
-    if(t===tf){btn.style.background='#6FE3E130';btn.style.borderColor='#6FE3E155';btn.style.color='var(--g)';}
+    if(t===tf){btn.style.background='#E5BD6C30';btn.style.borderColor='#E5BD6C55';btn.style.color='var(--g)';}
     else{btn.style.background='var(--bg2)';btn.style.borderColor='var(--border)';btn.style.color='var(--dim)';}
   });
   loadIndicators();

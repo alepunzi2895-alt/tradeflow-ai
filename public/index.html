@@ -12,12 +12,12 @@
 
 <!-- TradingView Widget -->
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?v=desk2">
 </head>
 <body>
 <!-- AUTHENTICATION OVERLAY -->
 <div id="auth-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#03050b;z-index:9999;flex-direction:column;justify-content:center;align-items:center;padding:20px;box-sizing:border-box">
-  <div style="background:var(--card);border:1px solid #6FE3E140;border-radius:15px;width:100%;max-width:360px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+  <div style="background:var(--card);border:1px solid #E5BD6C40;border-radius:15px;width:100%;max-width:360px;padding:25px;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
     <div style="text-align:center;margin-bottom:20px">
       <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;margin:0 auto 10px">
         <path d="M4 20 Q10 8 16 14 Q22 20 28 6" stroke="url(#ga1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
@@ -28,11 +28,11 @@
           </linearGradient>
         </defs>
       </svg>
-      <div style="font-size:20px;font-weight:700;color:#E8ECF7;font-family:'Syne',sans-serif;letter-spacing:-.5px">TradeFlow <span style="color:#6FE3E1">AI</span></div>
+      <div style="font-size:20px;font-weight:700;color:#E8ECF7;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px">TradeFlow <span style="color:#E5BD6C">AI</span></div>
     </div>
 
     <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border2)">
-      <button id="tab-login" style="flex:1;background:none;border:none;padding:10px;color:var(--text);font-size:13px;font-weight:700;border-bottom:2px solid #6FE3E1;cursor:pointer">Accedi</button>
+      <button id="tab-login" style="flex:1;background:none;border:none;padding:10px;color:var(--text);font-size:13px;font-weight:700;border-bottom:2px solid #E5BD6C;cursor:pointer">Accedi</button>
       <button id="tab-register" style="flex:1;background:none;border:none;padding:10px;color:var(--dim);font-size:13px;font-weight:700;border-bottom:2px solid transparent;cursor:pointer">Registrati</button>
     </div>
 
@@ -114,12 +114,17 @@
               <div class="orbit-stat"><span class="orbit-stat-lbl">Strategie attive</span><span class="orbit-stat-val" id="orbit-count">—</span></div>
             </div>
           </div>
-          <div class="orbit-body">
-            <div class="orbit-visual" id="orbit-visual"></div>
-            <div class="orbit-side">
-              <div class="orbit-list" id="orbit-list"></div>
-              <div class="orbit-detail" id="orbit-detail"></div>
+          <div class="nb-stage-wrap" id="orbit-stage"></div>
+          <div class="nb-panels">
+            <div class="nb-panel nb-panel--pad nb-stack" id="orbit-curve-panel">
+              <div class="nb-lbl">Curva equity (12m)</div>
+              <div id="orbit-curve"></div>
             </div>
+            <div class="nb-panel nb-panel--pad nb-stack">
+              <div class="nb-lbl">Strategie</div>
+              <ul class="nb-list" id="orbit-list"></ul>
+            </div>
+            <div class="nb-panel nb-panel--pad nb-stack" id="orbit-detail"></div>
           </div>
         </div>
 
@@ -143,7 +148,7 @@
             <div class="conf-ring">
               <svg width="56" height="56" viewBox="0 0 56 56">
                 <circle cx="28" cy="28" r="22" fill="none" stroke="#1e222a" stroke-width="5"/>
-                <circle id="conf-circle" cx="28" cy="28" r="22" fill="none" stroke="#6FE3E1" stroke-width="5" stroke-dasharray="138.2" stroke-dashoffset="138.2" stroke-linecap="round"/>
+                <circle id="conf-circle" cx="28" cy="28" r="22" fill="none" stroke="#E5BD6C" stroke-width="5" stroke-dasharray="138.2" stroke-dashoffset="138.2" stroke-linecap="round"/>
               </svg>
               <div class="conf-num" id="conf-num"><div class="skel" style="width:24px;height:18px"></div></div>
             </div>
@@ -290,7 +295,7 @@
             </div>
           </div>
           <!-- Next major event countdown -->
-          <div id="cal-next" style="background:linear-gradient(135deg,#0c1a1a,#0d0f12);border:1px solid #6FE3E133;border-radius:8px;padding:8px 10px;margin-bottom:8px;display:none">
+          <div id="cal-next" style="background:linear-gradient(135deg,#0c1a1a,#0d0f12);border:1px solid #E5BD6C33;border-radius:8px;padding:8px 10px;margin-bottom:8px;display:none">
             <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:2px">PROSSIMO EVENTO AD ALTO IMPATTO</div>
             <div id="cal-next-name" style="font-size:13px;color:#E8ECF7;font-weight:600"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
@@ -354,11 +359,12 @@
           <button class="bs" id="btn-myfxb-j" style="color:var(--g)">📊 MFX</button>
           <button class="bs" id="btn-analyze" style="color:var(--g)">🧠 Analisi</button>
         </div>
-        <!-- Report buttons -->
+        <!-- Filtri locali: distinti dal report AI -->
+        <div class="workspace-heading"><span>Registro operazioni</span><button class="bs" data-journal-period="all" aria-pressed="true" onclick="setJournalPeriod('all')">Tutti</button><button class="bs" onclick="generateReport(journalPeriod)">Report AI</button></div>
         <div style="display:flex;gap:5px;margin-bottom:10px">
-          <button class="bs" id="btn-report-day" style="color:var(--dim);font-size:11px;flex:1">📋 Oggi</button>
-          <button class="bs" id="btn-report-week" style="color:var(--dim);font-size:11px;flex:1">📋 Settimana</button>
-          <button class="bs" id="btn-report-month" style="color:var(--dim);font-size:11px;flex:1">📋 Mese</button>
+          <button class="bs" data-journal-period="day" aria-pressed="false" id="btn-report-day" style="color:var(--dim);font-size:11px;flex:1">Oggi</button>
+          <button class="bs" data-journal-period="week" aria-pressed="false" id="btn-report-week" style="color:var(--dim);font-size:11px;flex:1">7 giorni</button>
+          <button class="bs" data-journal-period="month" aria-pressed="false" id="btn-report-month" style="color:var(--dim);font-size:11px;flex:1">30 giorni</button>
           <button class="bs" id="btn-progress" style="color:var(--blue);font-size:11px;flex:1">📈 Progressi</button>
         </div>
         <!-- Memory reset -->
@@ -389,7 +395,7 @@
     <!-- ── KNOWLEDGE ── -->
     <div class="tp" id="tp-kb">
       <div class="kp">
-        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Syne',sans-serif">🧠 KNOWLEDGE BASE</div>
+        <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'JetBrains Mono',monospace">🧠 KNOWLEDGE BASE</div>
         <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Carica la tua strategia, articoli, regole. TradeFlow AI li usa come contesto permanente in ogni analisi.</div>
         <div class="sdrop" id="kb-drop"><div class="sdropico">📂</div><div class="sdrop-t">Carica uno o più documenti</div><div class="sdrop-s">PDF · PNG · JPG · TXT · MD — selezione multipla</div></div>
         <input type="file" id="kb-file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md" style="display:none" multiple>
@@ -557,22 +563,23 @@
 <!-- THE HIVE · nebulosa del roster strategie + knowledge base -->
 <div class="ovl" id="hivesheet"><div class="sht" style="max-width:960px">
   <div class="shnd"></div><div class="shtitle">🐝 THE HIVE</div>
-  <div id="hivesheet-body">
-    <div id="hive-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px"></div>
+  <div id="hivesheet-body" class="nb-stack" style="gap:16px">
+    <div id="hive-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
 
-    <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">Nebulosa del roster · tocca un nodo per aprirne il genoma</div>
-    <div style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:6px;margin-bottom:16px">
-      <div id="hive-nebula" style="width:100%;height:280px"></div>
+    <div class="nb-panel nb-panel--pad nb-stack nb-stack--tight">
+      <span class="nb-lbl">Nebulosa del roster · tocca un nodo per aprirne il genoma</span>
+      <div id="hive-nebula" style="width:100%;height:280px;position:relative"></div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <span style="font-size:11px;font-weight:700;color:var(--text)">Stato roster</span>
-      <span id="hive-roster-meta" style="font-size:9px;color:var(--dim)"></span>
+    <div class="nb-stack nb-stack--tight">
+      <div class="nb-between"><span class="nb-lbl">Stato roster</span><span id="hive-roster-meta" style="font-size:10px;color:var(--nb-muted)"></span></div>
+      <ul class="nb-list" id="hive-roster" style="max-height:none"></ul>
     </div>
-    <div id="hive-roster" style="background:var(--card);border:1px solid var(--border2);border-radius:10px;margin-bottom:16px;overflow:hidden"></div>
 
-    <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">Knowledge base · ultime note</div>
-    <div id="hive-knowledge" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+    <div class="nb-stack nb-stack--tight">
+      <span class="nb-lbl">Knowledge base · ultime note</span>
+      <div id="hive-knowledge" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+    </div>
   </div>
   <button class="scancel" id="btn-hvc" style="margin-top:16px">Chiudi</button>
 </div></div>
@@ -588,30 +595,31 @@
   </div>
 
   <!-- Core utilities (storage, API, compression) -->
-  <script src="/modules/core.js"></script>
+  <script src="/modules/core.js?v=desk2"></script>
   <!-- Dashboard: prices, confidence, sentiment, macro -->
-  <script src="/modules/dashboard.js"></script>
+  <script src="/modules/dashboard.js?v=desk2"></script>
   <!-- Chat: AI analysis, image upload -->
-  <script src="/modules/chat.js"></script>
+  <script src="/modules/chat.js?v=desk2"></script>
   <!-- Journal: trade log, coaching, reports -->
-  <script src="/modules/journal.js"></script>
+  <script src="/modules/journal.js?v=desk2"></script>
   <!-- MyFxBook: account sync, import -->
-  <script src="/modules/myfxbook.js"></script>
+  <script src="/modules/myfxbook.js?v=desk2"></script>
   <!-- Knowledge Base: upload, search -->
-  <script src="/modules/kb.js"></script>
+  <script src="/modules/kb.js?v=desk2"></script>
   <!-- MFKK: strategy score, indicators -->
-  <script src="/modules/mfkk.js"></script>
+  <script src="/modules/mfkk.js?v=desk2"></script>
   <!-- Strategy Engine: indicator helpers + signal functions -->
-  <script src="/modules/se-signals.js"></script>
+  <script src="/modules/se-signals.js?v=desk2"></script>
   <!-- Strategy Engine: SE config, seRefresh(), main loop -->
-  <script src="/modules/strategy.js"></script>
+  <script src="/modules/strategy.js?v=desk2"></script>
   <!-- Strategy Engine: seRender(), seToast(), initStrategyEngine() -->
-  <script src="/modules/se-render.js"></script>
+  <script src="/modules/se-render.js?v=desk2"></script>
   <!-- Report Backtest: equity curve, confronto attive/roster, lancia backtest, toggle blocco -->
-  <script src="/modules/backtest-report.js"></script>
+  <script src="/modules/backtest-report.js?v=desk2"></script>
   <!-- The Hive: nebulosa del roster strategie + knowledge base (usa brData/SE/kb, carica dopo) -->
-  <script src="/modules/hive.js"></script>
+  <script src="/modules/hive.js?v=desk2"></script>
+  <script src="/modules/workspace-ui.js?v=desk2"></script>
   <!-- App: init, tabs, overlays, profile -->
-  <script src="/app.js"></script>
+  <script src="/app.js?v=desk2"></script>
 </body>
 </html>

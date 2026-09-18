@@ -15,7 +15,7 @@ function renderMyfx(){
     loadMyfxAccounts();
   }else{
     c.innerHTML=`
-      <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'Syne',sans-serif">📊 MYFXBOOK</div>
+      <div style="color:var(--g);font-size:12px;font-weight:700;margin-bottom:3px;font-family:'JetBrains Mono',monospace">📊 MYFXBOOK</div>
       <div style="color:var(--dim);font-size:12px;margin-bottom:13px;line-height:1.65">Connetti per importare lo storico trade e analizzare gli errori con AI.</div>
       <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="color:var(--g);font-size:11px;font-weight:700;margin-bottom:10px">LOGIN MYFXBOOK</div>
@@ -25,7 +25,7 @@ function renderMyfx(){
         <div id="mfx-err" style="display:none;margin-top:8px;font-size:11px;color:#FF8A8A;background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:7px 9px"></div>
       </div>
       
-      <div style="margin-top:10px;background:#0d0f12;border:1px solid #6FE3E133;border-radius:9px;padding:12px">
+      <div style="margin-top:10px;background:#0d0f12;border:1px solid #E5BD6C33;border-radius:9px;padding:12px">
         <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;display:flex;align-items:center;gap:5px">📘 COME COLLEGARE MYFXBOOK</div>
         <div style="font-size:11px;color:var(--dim);line-height:1.6;font-family:sans-serif">
           1. <b>Registrati su MyFxBook</b>: Vai su <a href="https://www.myfxbook.com/" target="_blank" style="color:var(--g);text-decoration:underline">myfxbook.com</a> e crea un account.<br>

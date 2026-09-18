@@ -159,7 +159,7 @@ function importData(file){
 function switchTab(tab){
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('on');
+  document.querySelector(`[data-tab="${tab}"]`)?.classList.add('on');
   const panel=document.getElementById(`tp-${tab}`);
   panel.classList.add('on');
   // Reset scroll to top on tab switch
@@ -248,14 +248,14 @@ function hideAuth() {
 document.getElementById('tab-login').onclick=e=>{
   document.getElementById('form-login').style.display='block';
   document.getElementById('form-register').style.display='none';
-  e.target.style.borderBottom='2px solid #6FE3E1'; e.target.style.color='var(--text)';
+  e.target.style.borderBottom='2px solid #E5BD6C'; e.target.style.color='var(--text)';
   document.getElementById('tab-register').style.borderBottom='2px solid transparent';
   document.getElementById('tab-register').style.color='var(--dim)';
 };
 document.getElementById('tab-register').onclick=e=>{
   document.getElementById('form-register').style.display='block';
   document.getElementById('form-login').style.display='none';
-  e.target.style.borderBottom='2px solid #6FE3E1'; e.target.style.color='var(--text)';
+  e.target.style.borderBottom='2px solid #E5BD6C'; e.target.style.color='var(--text)';
   document.getElementById('tab-login').style.borderBottom='2px solid transparent';
   document.getElementById('tab-login').style.color='var(--dim)';
 };

@@ -143,7 +143,7 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
         system: "Sei TradeFlow AI, coach di trading professionale. Rispondi sempre in italiano. Usa linguaggio costruttivo, orientato alla crescita. Mai 'errori' — usa 'opportunità di miglioramento', 'da ottimizzare', 'area di sviluppo'.",
         messages: [{ role: "user", content: prompt }]
       })
-    }, 9000);
+    }, 8000);
 
     const d = await r.json();
     if (d.error) throw new Error(d.error.message);

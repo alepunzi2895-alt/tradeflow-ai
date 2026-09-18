@@ -5,6 +5,7 @@
 // "Stato roster" = snapshot dei badge STABILE/DECADUTA già usati in backtest-report.js,
 // con timestamp reale di brData.synced_at — non un log live fittizio (nessuna sorgente
 // dati con eventi timestampati per-singolo-evento esiste oggi lato backend).
+// Stile: design system "nb-*" condiviso con Orbite/Genoma (vedi style.css).
 
 function hvHash(str){
   let h = 0;
@@ -51,86 +52,90 @@ function hvRenderStats(all){
       }
     });
   }
-  const winShare = wrN ? (wrSum/wrN).toFixed(1)+'%' : '—';
+  const winShare = wrN ? Math.round(wrSum/wrN) : null;
   const tiles = [
-    {k:'STRATEGIE VIVE', v: tradeable.length},
-    {k:'IN RICERCA (solo score)', v: research.length},
-    {k:'TRADE TESTATI', v: testedTrades ? testedTrades.toLocaleString('it-IT') : '—'},
-    {k:'WIN SHARE (pesata)', v: winShare},
+    {k:'STRATEGIE VIVE', v: tradeable.length, c:'var(--nb-accent)', w: Math.min(100, tradeable.length*10)},
+    {k:'IN RICERCA', v: research.length, c:'var(--nb-cyan)', w: Math.min(100, research.length*25)},
+    {k:'TRADE TESTATI', v: testedTrades ? testedTrades.toLocaleString('it-IT') : '—', c:'var(--nb-violet)', w: Math.min(100, testedTrades/10)},
+    {k:'WIN SHARE', v: winShare!=null ? winShare+'%' : '—', c:'var(--nb-up)', w: winShare||0},
   ];
   el.innerHTML = tiles.map(t=>`
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px">
-      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">${t.k}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700">${t.v}</div>
+    <div class="nb-panel nb-panel--pad nb-stack nb-stack--tight">
+      <span class="nb-lbl">${t.k}</span>
+      <span class="nb-num" style="font-size:22px;font-weight:600;color:${t.c}">${t.v}</span>
+      <div class="nb-bar" style="height:3px"><div class="nb-bar__fill" style="width:${t.w}%;background:${t.c}"></div></div>
     </div>`).join('');
 }
 
+// Nodi a gauge (come i "token" del riferimento nebula-ui): arco colorato per PF reale,
+// tratteggiato per le strategie solo-score. Posizione da hash stabile della key (nebulosa
+// non fisicamente accurata, ma stabile tra un render e l'altro).
 function hvRenderNebula(all){
   const el = document.getElementById('hive-nebula');
   if(!el) return;
-  const W=900, H=420, cx=W/2, cy=H/2;
+  const W=900, H=340, cx=W/2, cy=H/2;
   const links = hvRegimeLinks(all);
   const pos = {};
   all.forEach(s=>{
     const a = (hvHash(s.key) % 360) * Math.PI/180;
-    const r = 60 + (hvHash(s.key+'r') % 340);
+    const r = 55 + (hvHash(s.key+'r') % 280);
     pos[s.key] = {x: cx + Math.cos(a)*r, y: cy + Math.sin(a)*r*0.62};
   });
   const linkSvg = links.map(([a,b])=>{
     if(!pos[a] || !pos[b]) return '';
-    return `<line x1="${pos[a].x}" y1="${pos[a].y}" x2="${pos[b].x}" y2="${pos[b].y}" stroke="rgba(183,156,255,.18)" stroke-width="1"/>`;
+    return `<line x1="${pos[a].x.toFixed(0)}" y1="${pos[a].y.toFixed(0)}" x2="${pos[b].x.toFixed(0)}" y2="${pos[b].y.toFixed(0)}" stroke="rgba(232,193,115,.14)" stroke-width="1"/>`;
   }).join('');
-  const nodesSvg = all.map(s=>{
-    const p = pos[s.key];
-    if(s.signalOnly){
-      return `<g data-hive-key="${s.key}" style="cursor:pointer">
-        <circle cx="${p.x}" cy="${p.y}" r="10" fill="none" stroke="#5a4a7a" stroke-width="1.5" stroke-dasharray="2 3"/>
-        <text x="${p.x}" y="${p.y+20}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#8791B2">${s.label.split(' ')[0]}</text>
-      </g>`;
-    }
-    const tier = orbitTier(s.pf);
-    return `<g data-hive-key="${s.key}" style="cursor:pointer">
-      <circle cx="${p.x}" cy="${p.y}" r="${9 + Math.min(s.pf,3)*3}" fill="${tier.color}" opacity=".88" style="filter:drop-shadow(0 0 6px ${tier.color})"/>
-      <text x="${p.x}" y="${p.y+22}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#C6D0E8">${s.label.split(' ')[0]}</text>
-    </g>`;
+  const nodesSvg = all.map((s,i) => {
+    const p = pos[s.key], d = s.signalOnly ? 46 : 54;
+    const tier = s.signalOnly ? {hex:'#5a4a7a'} : orbitTier(s.pf);
+    const pfNorm = s.signalOnly ? 0.3 : Math.max(0.08, Math.min(1, (s.pf-0.6)/2));
+    const dashArr = s.signalOnly ? '2 6' : `${Math.round(2*Math.PI*40 * pfNorm)} 251`;
+    return `<a class="nb-token" href="#" data-hive-key="${s.key}" style="left:${(p.x/W*100).toFixed(1)}%;top:${(p.y/H*100).toFixed(1)}%;--delay:${(-i*0.7).toFixed(1)}s;--glow:${tier.hex}66">
+      <svg width="${d}" height="${d}" viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="40" stroke="var(--nb-line)" stroke-width="7"/>
+        <circle class="nb-arc" cx="50" cy="50" r="40" stroke="${tier.hex}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${dashArr}"/>
+        <circle cx="50" cy="50" r="27" fill="#04060a" fill-opacity=".8"/>
+      </svg>
+      <span class="nb-token__hash">${s.label.split(' ')[0]}</span>
+      <span class="nb-token__v" style="color:${tier.hex}">${s.signalOnly?'solo score':'PF '+s.pf.toFixed(2)}</span>
+    </a>`;
   }).join('');
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%">${linkSvg}${nodesSvg}</svg>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" style="position:absolute;inset:0">${linkSvg}</svg>${nodesSvg}`;
 }
 
 function hvRenderKnowledge(){
   const el = document.getElementById('hive-knowledge');
   if(!el) return;
   const items = (typeof kb !== 'undefined' ? kb : []).slice(-6).reverse();
-  if(!items.length){ el.innerHTML = '<div style="font-size:11px;color:var(--dim)">Nessuna nota in Knowledge Base ancora — caricane una dal tab 🧠.</div>'; return; }
+  if(!items.length){ el.innerHTML = '<div style="font-size:11px;color:var(--nb-muted)">Nessuna nota in Knowledge Base ancora — caricane una dal tab 🧠.</div>'; return; }
   el.innerHTML = items.map(k=>`
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 11px">
-      <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.name||'nota'}</div>
-      <div style="font-size:10px;color:var(--dim);line-height:1.4;max-height:2.8em;overflow:hidden">${(k.summary||'').slice(0,160)}</div>
-    </div>`).join('');
+    <article class="nb-panel nb-tile" style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0">
+      <span style="font-size:12px;font-weight:600;color:var(--nb-txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.name||'nota'}</span>
+      <span style="font-size:11px;color:var(--nb-muted);line-height:1.4;max-height:2.8em;overflow:hidden">${(k.summary||'').slice(0,160)}</span>
+    </article>`).join('');
 }
 
 function hvRenderRoster(all){
   const el = document.getElementById('hive-roster');
   if(!el) return;
-  if(!brData){ el.innerHTML = '<div style="font-size:11px;color:var(--dim)">Report backtest non ancora caricato.</div>'; return; }
+  if(!brData){ el.innerHTML = '<div style="font-size:11px;color:var(--nb-muted)">Report backtest non ancora caricato.</div>'; return; }
   const rows = all.filter(s=>!s.signalOnly).map(s=>{
     const info = (brData.shared_pool && brData.shared_pool[s.key]) || (brData.isolated && brData.isolated[s.key]);
     if(!info) return null;
     const disabled = (brData.disabled||[]).includes(s.key);
     const good = (info.holdout?.pf||0) >= 1;
-    const badge = disabled ? {t:'⛔ DISATTIVATA', c:'#FF8A8A'} : good ? {t:'STABILE', c:'var(--green)'} : {t:'DECADUTA', c:'#FF8A8A'};
+    const badge = disabled ? {t:'DISATTIVATA', cls:''} : good ? {t:'STABILE', cls:'nb-badge--ok'} : {t:'DECADUTA', cls:''};
     return {key:s.key, label:s.label, badge, hpf: info.holdout?.pf ?? 0};
   }).filter(Boolean).sort((a,b)=> (a.badge.t==='STABILE'?0:1) - (b.badge.t==='STABILE'?0:1));
   const meta = document.getElementById('hive-roster-meta');
   if(meta) meta.textContent = brData.synced_at ? `stato al ${new Date(brData.synced_at).toLocaleString('it-IT')}` : '';
-  el.innerHTML = rows.map(r=>`
-    <div data-hive-key="${r.key}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer">
-      <span style="font-size:11px;color:var(--text)">${r.label.replace(/\s*⛔.*$/,'')}</span>
-      <span style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--dim)">holdout PF ${r.hpf.toFixed(2)}</span>
-        <span style="font-size:9px;font-weight:800;color:${r.badge.c}">${r.badge.t}</span>
-      </span>
-    </div>`).join('');
+  el.innerHTML = rows.map(r=>`<li><button type="button" class="nb-row" data-hive-key="${r.key}" style="min-height:48px">
+    <span class="nb-row__main"><span class="nb-row__name" style="font-size:13px">${r.label.replace(/\s*⛔.*$/,'')}</span></span>
+    <span class="nb-row__side" style="flex-direction:row;align-items:center;gap:10px">
+      <span class="nb-num" style="font-size:11px;color:var(--nb-muted)">holdout PF ${r.hpf.toFixed(2)}</span>
+      <span class="nb-badge ${r.badge.cls}" style="color:${r.badge.cls?'':'var(--nb-down)'}">${r.badge.t}</span>
+    </span>
+  </button></li>`).join('');
 }
 
 function hvRender(){
@@ -149,6 +154,7 @@ document.addEventListener('click', (e)=>{
   }
   const node = e.target.closest('[data-hive-key]');
   if(node){
+    e.preventDefault();
     closeOvl('hivesheet');
     gnOpen(node.dataset.hiveKey);
   }

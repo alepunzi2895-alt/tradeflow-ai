@@ -141,7 +141,7 @@ function brCard(key){
       <button data-br-run="${key}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🔄 Backtest</button>
       <button data-br-toggle="${key}" data-disabled="${disabled}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:${disabled?'var(--green)':'#FF8A8A'};font-size:10px;cursor:pointer;font-family:inherit">${disabled?'🔓 Attiva':'⛔ Blocca'}</button>
     </div>
-    <button data-br-genome="${key}" style="width:100%;margin-top:5px;background:rgba(111,227,225,.06);border:1px solid rgba(111,227,225,.22);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🧬 Apri genoma</button>
+    <button data-br-genome="${key}" style="width:100%;margin-top:5px;background:rgba(229,189,108,.06);border:1px solid rgba(229,189,108,.22);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🧬 Apri genoma</button>
   </div>`;
 }
 
@@ -345,101 +345,137 @@ function gnBootstrap(equityCurve, iters=800){
   return {results, median, profitable};
 }
 
-function gnDrawHist(canvas, boot){
-  const dpr = window.devicePixelRatio||1;
-  const rect = canvas.getBoundingClientRect();
-  const w=Math.max(rect.width,40), h=Math.max(rect.height,30);
-  canvas.width=w*dpr; canvas.height=h*dpr;
-  const ctx=canvas.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,w,h);
-  if(!boot) return;
+// Istogramma resample come colonne CSS (.nb-cols) invece di canvas — coerente con lo stile
+// del resto delle viste Nebula e riusa l'animazione "nb-rise" già definita.
+function gnHistCols(boot){
   const nBins=22;
   const min=boot.results[0], max=boot.results[boot.results.length-1];
-  const range = (max-min)||1;
-  const bins = new Array(nBins).fill(0);
-  boot.results.forEach(v=>{ const b=Math.min(nBins-1, Math.max(0,Math.floor((v-min)/range*nBins))); bins[b]++; });
-  const maxCount = Math.max(...bins,1);
-  const bw = w/nBins;
-  bins.forEach((c,i)=>{
-    const bh = (c/maxCount) * (h-4);
-    const binStart = min + (i/nBins)*range;
-    const col = binStart>=0 ? '#62E6A6' : '#FF8A8A';
-    ctx.fillStyle = col + 'cc';
-    ctx.fillRect(i*bw+1, h-bh, Math.max(bw-2,1), bh);
-  });
-  const zeroX = ((0-min)/range) * w;
-  if(zeroX>0 && zeroX<w){
-    ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(zeroX,0); ctx.lineTo(zeroX,h); ctx.stroke();
+  const range=(max-min)||1;
+  const bins=new Array(nBins).fill(0);
+  boot.results.forEach(v=>{ const b=Math.min(nBins-1,Math.max(0,Math.floor((v-min)/range*nBins))); bins[b]++; });
+  const maxCount=Math.max(...bins,1);
+  return bins.map((c,i)=>{
+    const h=Math.max(3,Math.round((c/maxCount)*84));
+    const binStart=min+(i/nBins)*range;
+    const col=binStart>=0?'rgba(79,224,168,.75)':'rgba(255,138,138,.7)';
+    return `<span style="height:${h}px;background:${col};--delay:${(i*0.025).toFixed(2)}s"></span>`;
+  }).join('');
+}
+
+// "Periodi profittevoli": bucket reali dell'equity curve (non dati inventati) — delta di
+// P&L cumulato per decile della serie storica disponibile.
+function gnPeriodCols(equityCurve){
+  const pts=(equityCurve||[]).map(p=>p.cum_pnl!==undefined?p.cum_pnl:p.v).filter(v=>typeof v==='number');
+  if(pts.length<4) return null;
+  const nBuckets=Math.min(10, pts.length-1);
+  const bucketSize=Math.max(1, Math.floor(pts.length/nBuckets));
+  const deltas=[];
+  for(let i=0;i<nBuckets;i++){
+    const a=pts[i*bucketSize], b=pts[Math.min((i+1)*bucketSize, pts.length-1)];
+    deltas.push(b-a);
   }
+  const maxAbs=Math.max(...deltas.map(Math.abs),1);
+  const profitable=deltas.filter(d=>d>=0).length;
+  const cols=deltas.map((d,i)=>{
+    const h=Math.max(4,Math.round(Math.abs(d)/maxAbs*70));
+    return `<span style="height:${h}px;background:${d>=0?'rgba(79,224,168,.75)':'rgba(255,138,138,.7)'};--delay:${(i*0.06).toFixed(2)}s"></span>`;
+  }).join('');
+  return {cols, profitable, total:deltas.length};
 }
 
 function gnRender(key){
   const body = document.getElementById('genomesheet-body');
   if(!body) return;
-  if(!brData){ body.innerHTML = '<div style="color:var(--dim);font-size:12px">Report backtest non disponibile — riprova con "🔃 Ricarica" nel Report Backtest.</div>'; return; }
+  if(!brData){ body.innerHTML = '<div style="color:var(--nb-muted);font-size:12px">Report backtest non disponibile — riprova con "🔃 Ricarica" nel Report Backtest.</div>'; return; }
   const info = (brData.shared_pool && brData.shared_pool[key]) || (brData.isolated && brData.isolated[key]);
-  if(!info){ body.innerHTML = '<div style="color:var(--dim);font-size:12px">Nessun dato per questa strategia.</div>'; return; }
+  if(!info){ body.innerHTML = '<div style="color:var(--nb-muted);font-size:12px">Nessun dato per questa strategia.</div>'; return; }
   const meta = (typeof SE!=='undefined' && SE.strategies?.[key]) || {};
   const regime = brData.regime_validation?.[key];
   const s = gnScore(info, regime);
-  const boot = gnBootstrap(info.equity_curve || brData.equity_curves?.[key]);
+  const eqCurve = info.equity_curve || brData.equity_curves?.[key];
+  const boot = gnBootstrap(eqCurve);
+  const periods = gnPeriodCols(eqCurve);
   const disabled = (brData.disabled||[]).includes(key);
 
+  const R1=70, C1=2*Math.PI*R1, off1=(C1*(100-s.score)/100).toFixed(1);
+  const R2=45, C2=2*Math.PI*R2, off2=(C2*(1-s.coverage)).toFixed(1);
+
   const bar = (label, val, sub) => `
-    <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
-        <span style="color:var(--text);font-weight:600">${label}</span>
-        <span style="color:var(--dim);font-family:'JetBrains Mono',monospace">${Math.round(val*100)}/100</span>
+    <div class="nb-stack nb-stack--tight" style="margin-bottom:2px">
+      <div class="nb-between" style="align-items:baseline">
+        <span style="font-size:13px;color:var(--nb-dim)">${label}</span>
+        <span class="nb-num" style="font-size:14px;font-weight:600;color:${val>=0.6?'var(--nb-up)':val>=0.35?'var(--nb-accent)':'var(--nb-down)'}">${Math.round(val*100)}/100</span>
       </div>
-      <div style="height:6px;background:var(--border2);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${Math.round(val*100)}%;background:${val>=0.6?'var(--green)':val>=0.35?'#F4B860':'#FF8A8A'};border-radius:3px"></div>
-      </div>
-      <div style="font-size:10px;color:var(--dim);margin-top:3px">${sub}</div>
+      <div class="nb-bar"><div class="nb-bar__fill" style="width:${Math.round(val*100)}%;background:linear-gradient(90deg,${val>=0.6?'var(--nb-up),#8FF0CE':val>=0.35?'var(--nb-accent),var(--nb-accent3)':'var(--nb-down),#FFB6B6'})"></div></div>
+      <span style="font-size:11px;line-height:1.4;color:var(--nb-muted)">${sub}</span>
     </div>`;
 
   body.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
-      <div>
-        <div style="font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase">${info.tf||''} · ${info.n_trades||0} trade${disabled?' · <span style="color:#FF8A8A">DISATTIVATA</span>':''}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:700;margin-top:2px">${meta.label || BR_NAMES[key] || key}</div>
-      </div>
-      <div style="text-align:center;flex-shrink:0">
-        <div style="width:52px;height:52px;border-radius:50%;border:4px solid ${s.tierColor};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px">${s.score}</div>
-        <div style="font-size:9px;color:${s.tierColor};font-weight:700;margin-top:4px;white-space:nowrap">${s.tier}</div>
+    <div class="nb-panels" style="grid-template-columns:1fr">
+      <div class="nb-stack" style="gap:16px">
+        <div class="nb-between" style="align-items:flex-start">
+          <div>
+            <div class="nb-lbl">${info.tf||''} · ${info.n_trades||0} trade${disabled?' · <span style="color:var(--nb-down)">DISATTIVATA</span>':''}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:700;margin-top:3px">${meta.label || BR_NAMES[key] || key}</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <svg width="140" height="140" viewBox="0 0 176 176" fill="none">
+            <circle cx="88" cy="88" r="${R1}" stroke="var(--nb-line)" stroke-width="13"/>
+            <circle class="nb-gauge__arc" cx="88" cy="88" r="${R1}" stroke="${s.tierColor}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${C1.toFixed(1)}" stroke-dashoffset="${off1}" transform="rotate(-90 88 88)"/>
+            <circle class="nb-gauge__arc--thin" cx="88" cy="88" r="${R2}" stroke="rgba(111,168,255,.5)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${off2}" transform="rotate(-90 88 88)"/>
+            <text class="nb-mono" x="88" y="84" text-anchor="middle" fill="var(--nb-txt)" font-size="38" font-weight="600">${s.score}</text>
+            <text class="nb-mono" x="88" y="104" text-anchor="middle" fill="var(--nb-muted)" font-size="12">/100</text>
+          </svg>
+          <div class="nb-stack nb-stack--tight" style="flex:1 1 200px;min-width:0">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:${s.tierColor}">${s.tier.split(' · ')[1]||s.tier}</span>
+            <p style="margin:0;font-size:12.5px;line-height:1.5;color:var(--nb-muted)">Score derivato da PF full/holdout + regime — non è Sharpe/DSR accademico (non ancora persistiti lato Python).</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="nb-badge">${s.tier.split(' · ')[0]}</span>
+              <span class="nb-badge" style="color:var(--nb-accent);border-color:rgba(232,193,115,.45)">PF full ${(info.full?.pf??0).toFixed(2)}</span>
+              <span class="nb-badge">PF holdout ${(info.holdout?.pf??0).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="nb-hr">
+        <div class="nb-lbl">Struttura dell'edge</div>
+        <div class="nb-stack">
+          ${bar('Consistenza recente', s.consistency, `holdout PF ${(info.holdout?.pf??0).toFixed(2)} su full PF ${(info.full?.pf??0).toFixed(2)}`)}
+          ${bar('Durabilità', s.durability, `PF holdout ${(info.holdout?.pf??0).toFixed(2)}`)}
+          ${bar('Copertura mercato', s.coverage, s.regimeNote)}
+          ${bar('Ampiezza campione', s.sample, `${info.n_trades||0} trade nel periodo testato`)}
+        </div>
+
+        ${periods ? `
+        <hr class="nb-hr">
+        <div class="nb-stack nb-stack--tight">
+          <div class="nb-lbl">Periodi profittevoli</div>
+          <div class="nb-cols" style="height:84px">${periods.cols}</div>
+          <div class="nb-between nb-mono" style="font-size:11px;color:var(--nb-muted)"><span>${periods.profitable} su ${periods.total} in profitto</span><span class="nb-up">${Math.round(periods.profitable/periods.total*100)}%</span></div>
+        </div>` : ''}
+
+        <hr class="nb-hr">
+        <div class="nb-between" style="align-items:baseline">
+          <span class="nb-lbl">Fortuna o edge · resample bootstrap</span>
+          ${boot ? `<span class="nb-num nb-up" style="font-size:16px;font-weight:600">${Math.round(boot.profitable*100)}%</span>` : ''}
+        </div>
+        ${boot ? `
+        <div class="nb-cols" style="height:80px">${gnHistCols(boot)}</div>
+        <p style="margin:0;font-size:11.5px;line-height:1.5;color:var(--nb-muted)">Rimescolando la sequenza dei delta reali dell'equity curve, ${Math.round(boot.profitable*100)}% delle ${boot.results.length.toLocaleString('it-IT')} simulazioni resta in profitto (mediana ${brFmt(boot.median,0)}) — il risultato non dipende da una singola serie fortunata.</p>
+        ` : `<p style="margin:0;font-size:11.5px;color:var(--nb-muted)">Equity curve troppo corta per un resample affidabile.</p>`}
+
+        ${regime ? `
+        <hr class="nb-hr">
+        <div class="nb-lbl">Elementi scoperti · regimi con miglior fit</div>
+        <div class="nb-metrics" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr))">
+          ${Object.entries(regime.observed||{}).sort((a,b)=>b[1].pf-a[1].pf).slice(0,4).map(([reg,st])=>`
+            <div class="nb-metric"><span class="nb-metric__k">${reg}</span><span class="nb-metric__v" style="font-size:14px">PF ${Math.min(st.pf,99.9).toFixed(2)}</span><span style="font-size:10px;color:var(--nb-muted)">n=${st.n}</span></div>`).join('')}
+        </div>` : ''}
       </div>
     </div>
-
-    <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Struttura dell'edge · derivata da full/holdout PF + regime, non è Sharpe/DSR accademico</div>
-    ${bar('Consistenza recente', s.consistency, `holdout PF ${(info.holdout?.pf??0).toFixed(2)} su full PF ${(info.full?.pf??0).toFixed(2)}`)}
-    ${bar('Durabilità', s.durability, `PF holdout ${(info.holdout?.pf??0).toFixed(2)}`)}
-    ${bar('Copertura mercato', s.coverage, s.regimeNote)}
-    ${bar('Ampiezza campione', s.sample, `${info.n_trades||0} trade nel periodo testato`)}
-
-    <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 8px">Fortuna o edge · resample bootstrap sui delta reali dell'equity curve</div>
-    ${boot ? `
-    <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px">
-      <canvas id="gn-hist" style="width:100%;height:90px;display:block"></canvas>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px">
-        <span style="color:var(--dim)">mediana resample <b style="color:var(--text);font-family:'JetBrains Mono',monospace">${brFmt(boot.median,0)}</b></span>
-        <span style="color:var(--dim)">resample profittevoli <b style="color:${boot.profitable>=0.6?'var(--green)':'#F4B860'};font-family:'JetBrains Mono',monospace">${Math.round(boot.profitable*100)}%</b></span>
-      </div>
-    </div>` : `<div style="font-size:11px;color:var(--dim)">Equity curve troppo corta per un resample affidabile.</div>`}
-
-    ${regime ? `<div style="font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px">Elementi scoperti · regimi con miglior fit</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${Object.entries(regime.observed||{}).sort((a,b)=>b[1].pf-a[1].pf).slice(0,4).map(([reg,st])=>`
-        <div style="background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:6px 10px">
-          <div style="font-size:10px;font-weight:700;color:var(--text)">${reg}</div>
-          <div style="font-size:9.5px;color:var(--dim)">PF ${Math.min(st.pf,99.9).toFixed(2)} · n=${st.n}</div>
-        </div>`).join('')}
-    </div>` : ''}
   `;
-  if(boot){
-    const c = document.getElementById('gn-hist');
-    if(c) requestAnimationFrame(()=> gnDrawHist(c, boot));
-  }
 }
 
 function gnOpen(key){

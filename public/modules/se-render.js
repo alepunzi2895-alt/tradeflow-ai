@@ -3,6 +3,7 @@
 // espone questi dati al frontend, vedi directives/06_known_issues.md 2026-09-17). Aggiornare
 // qui quando cambia lo stato di blocco lato bot.
 const BLOCKED_INFO = {
+  S05_MFKK_INTRADAY: { since:'2026-07-16', reason:'Ritirata dal roster live: PF standalone <1, unico slot vivo era H4 e nessuna finestra recente lo riporta sopra il pareggio (vedi strategy.js).' },
   S00_MFKK: { since:'2026-07-16', reason:'WR live 13.3% contro un baseline atteso del 49.4% — il segnale funzionava nel backtest storico ma dal vivo perdeva quasi 4 trade su 5. Confermato morto dallo sprint di re-ottimizzazione del 2026-09-02 (holdout PF 0.47).' },
   S09_MFKK_SCALPING: { since:'2026-07-16', reason:'WR live 11.8% contro un baseline atteso del 36.0%, PF live 0.10. Nessuna combinazione di parametri testata nello sprint 2026-09-02 è tornata sopra un PF full-period di ~0.75.' },
   S18_RANGE_REVERSAL: { since:'2026-09-01', reason:'WR live 14.3% (6 stop-loss su 7 trade), PF 0.07. Ri-testata su ogni finestra il 2026-09-01: negativa ovunque (M30 standalone PF 0.63, H4 PF 0.20).' },
@@ -11,6 +12,26 @@ const BLOCKED_INFO = {
   S20_FIB_CONFLUENCE: { since:'2026-09-17', reason:'Il periodo più recente ha un PF di 0.87, sotto la soglia (1.2) già decisa in anticipo per questa strategia quando fu messa in produzione a lotto ridotto.' },
 };
 const BLOCKED_STRATEGIES = Object.keys(BLOCKED_INFO);
+
+// ── CONFIGURAZIONE TAB (persistita, sopravvive al rebuild di 1s) ────────────────
+// showBlocked: mostra le strategie bloccate/ritirate anche nella griglia principale
+// (di default sono nascoste — restano raggiungibili dalla sheet "Strategie bloccate").
+// collapsedIndicators: nasconde di default il blocco tecnico denso (snapshot indicatori,
+// Order Block, ICT M15) — meno serve a colpo d'occhio degli altri blocchi.
+let SE_UI = (() => {
+  try { return {view:"live", showBlocked:false, collapsedIndicators:true, ...JSON.parse(localStorage.getItem('tf_se_ui')||'{}')}; }
+  catch(e) { return {view:"live", showBlocked:false, collapsedIndicators:true}; }
+})();
+function seUiSave(){ try{ localStorage.setItem('tf_se_ui', JSON.stringify(SE_UI)); }catch(e){} }
+document.addEventListener('click', (e) => {
+  if(e.target.closest('[data-action="toggle-blocked-inline"]')){
+    SE_UI.showBlocked = !SE_UI.showBlocked; seUiSave();
+  }
+  const indToggle = e.target.closest('[data-action="toggle-indicators"]');
+  if(indToggle){
+    SE_UI.collapsedIndicators = !SE_UI.collapsedIndicators; seUiSave();
+  }
+});
 
 function renderBlockedSheet(){
   const body = document.getElementById('blockedsheet-body');
@@ -72,7 +93,9 @@ function seEquitySpark(points, label){
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
+let seLastViewArgs=null;
 function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
+  seLastViewArgs=[mt5Data,pending,snap,isExtreme,inSession,hour];
   const el=document.getElementById('se-content');
   if(!el)return;
 
@@ -81,12 +104,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     TREND_DOWN:  {col:'#FF8A8A',bg:'#FF8A8A12',icon:'📉',label:'TREND RIBASSISTA'},
     WEAK_UP:     {col:'#F4B860',bg:'#F4B86012',icon:'↗️',label:'TREND DEBOLE ↑'},
     WEAK_DOWN:   {col:'#F4B860',bg:'#F4B86012',icon:'↘️',label:'TREND DEBOLE ↓'},
-    RANGE:       {col:'#6FE3E1',bg:'#6FE3E112',icon:'↔️',label:'LATERALE (RANGING)'},
+    RANGE:       {col:'#E5BD6C',bg:'#E5BD6C12',icon:'↔️',label:'LATERALE (RANGING)'},
     VOLATILE:    {col:'#b36cff',bg:'#b36cff12',icon:'⚡',label:'VOLATILE'},
     UNKNOWN:     {col:'var(--dim)',bg:'var(--bg2)',icon:'❓',label:'SCONOSCIUTO'},
   };
   const rm=REGIME_META[seRegime]||REGIME_META.UNKNOWN;
-  
+
   const acc=mt5Data?.account||{};
   const pos=mt5Data?.positions||[];
   const history=mt5Data?.trades||[];
@@ -137,7 +160,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <div style="font-size:8px;color:var(--dim);margin-top:2px">Score <b style="color:var(--fg)">${_rgComp}</b> · Lot <b style="color:var(--fg)">${_rgLot}</b></div>
   </div>
 </div>` : '';
-  statusHtml = statusHtml + guardianHtml;
+
 
   // ── BOT LOG PANEL
   const _logs = (bs.last_logs || []).slice().reverse(); // più recenti in cima
@@ -157,7 +180,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     </div>`).join('')}
   </div>
 </div>` : '';
-  statusHtml = statusHtml + logHtml;
+
 
   // ── REGIME + P&L REALE
   const pnlOggi = bs.pnl_today || 0;
@@ -293,7 +316,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   // ── SEGNALI ATTIVI
   let pendingHtml='';
   if(pending.length>0&&!isExtreme){
-    const qualColors={elite:'#6FE3E1', high:'#62E6A6', medium:'#F4B860'};
+    const qualColors={elite:'#E5BD6C', high:'#62E6A6', medium:'#F4B860'};
     const qualLabels={elite:'💎 ELITE', high:'🔥 FORTE', medium:'⚠️ MODERATO'};
     pendingHtml=`<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
@@ -435,10 +458,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     'UNKNOWN':    {strategy:'S18_RANGE_REVERSAL',  others:['S10_OB_FVG_SCALP','S16_GOLDEN_SQUEEZE'], tf:'M30/H4'},
   };
   const playbookEntry = PLAYBOOK_UI[seRegime] || PLAYBOOK_UI['UNKNOWN'];
-  // BLOCKED_STRATEGIES/BLOCKED_INFO sono definite a livello di modulo (inizio file) — qui si
-  // usa solo per correggere "isActive": PLAYBOOK_UI sopra è statico per-regime e non consulta
-  // lo stato di blocco reale (mismatch noto, vedi directives/06_known_issues.md).
-  const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])];
+  // PLAYBOOK_UI sopra è statico per-regime e non consulta lo stato di blocco reale — fix
+  // 2026-09-18: filtrare qui con BLOCKED_STRATEGIES, altrimenti il pannello "MFKK AI GOLD BOT"
+  // (il più visibile del tab) mostra come "attiva" una strategia in realtà bloccata, mentre
+  // il blocco regime sottostante e le card la marcano già correttamente come bloccata
+  // (mismatch segnalato dall'utente, vedi directives/06_known_issues.md).
+  const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])].filter(id=>!BLOCKED_STRATEGIES.includes(id));
   const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
   const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#F4B860' : '#FF8A8A';
@@ -454,16 +479,16 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 <div style="margin-top:18px; padding-top:15px; border-top:1px dashed var(--border)">
 
   <!-- ══ AI GOLD BOT ══ -->
-  <div style="position:relative;background:linear-gradient(135deg,#0d0f12 60%,#0a1a1a 100%);border:1.5px solid #6FE3E160;border-radius:12px;padding:14px 14px 11px;margin-bottom:18px;overflow:hidden">
+  <div style="position:relative;background:linear-gradient(135deg,#0d0f12 60%,#0a1a1a 100%);border:1.5px solid #E5BD6C60;border-radius:12px;padding:14px 14px 11px;margin-bottom:18px;overflow:hidden">
     <!-- sfondo decorativo -->
-    <div style="position:absolute;top:-18px;right:-18px;width:90px;height:90px;background:radial-gradient(circle,#6FE3E118 0%,transparent 70%);pointer-events:none"></div>
+    <div style="position:absolute;top:-18px;right:-18px;width:90px;height:90px;background:radial-gradient(circle,#E5BD6C18 0%,transparent 70%);pointer-events:none"></div>
 
     <!-- header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:20px">🤖</span>
         <div>
-          <div style="font-size:14px;font-weight:900;color:#6FE3E1;letter-spacing:.06em">MFKK AI GOLD BOT</div>
+          <div style="font-size:14px;font-weight:900;color:#E5BD6C;letter-spacing:.06em">MFKK AI GOLD BOT</div>
           <div style="font-size:8px;color:var(--dim);letter-spacing:.04em">XAU/USD · Sistema Multi-Strategia</div>
         </div>
       </div>
@@ -481,7 +506,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
         <div style="color:var(--dim);font-size:10px">→</div>
         <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIE ATTIVE</div>
-        <div style="font-size:10px;font-weight:800;color:#6FE3E1">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
+        <div style="font-size:10px;font-weight:800;color:#E5BD6C">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
         <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;font-size:8px" title="Max drawdown storico da backtest (24 mesi) del roster attivo — non è il DD live del conto, i circuit breaker live sono separati (daily/weekly/consecutive losses)">
@@ -500,7 +525,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       ${[['1 MESE',BOT_STATS.pnl_1m,null],['6 MESI',BOT_STATS.pnl_6m,null],['12 MESI',BOT_STATS.pnl_12m,null],['24 MESI',BOT_STATS.pnl_24m,null],['MAX DD',-BOT_STATS.maxdd,BOT_STATS.maxdd_pct]].map(([lbl,val,ddPct])=>{
         const col = ddPct ? 'var(--red)' : (val>=0?'var(--green)':'var(--red)');
         const pctStr = ddPct ? ddPct : `lot0.01: $${Math.abs(val).toFixed(0)}`;
-        return `<div style="background:#0d0f12;border:1px solid #6FE3E125;border-radius:5px;padding:5px 2px">
+        return `<div style="background:#0d0f12;border:1px solid #E5BD6C25;border-radius:5px;padding:5px 2px">
           <div style="color:var(--dim);margin-bottom:2px;font-size:7px">${lbl}</div>
           <div style="font-weight:800;color:${col};font-size:10px">${val>=0&&!ddPct?'+':''}\$${Math.abs(val).toFixed(0)}</div>
           <div style="font-size:7px;color:${col};opacity:0.75;margin-top:1px">${pctStr}</div>
@@ -516,7 +541,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <span style="color:var(--dim)">Oggi <b style="color:${pnlOggiCol}">${pnlOggiStr}</b></span>
       </div>
       <div style="display:flex;gap:8px;font-size:9px">
-        <span style="color:#6FE3E1">PF <b>${BOT_STATS.pf}</b></span>
+        <span style="color:#E5BD6C">PF <b>${BOT_STATS.pf}</b></span>
         <span style="color:var(--blue)">WR <b>${BOT_STATS.wr}</b></span>
         <span style="color:var(--dim)">${BOT_STATS.n_strat} strategie · ${BOT_STATS.trades_12m} trade/anno</span>
       </div>
@@ -535,12 +560,15 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
     <span style="flex:1;height:1px;background:var(--border)"></span>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:10px">
-    <button data-action="open-backtest-report" style="flex:1;background:rgba(111,227,225,0.1);border:1px solid var(--g)33;border-radius:8px;padding:8px 10px;color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">📊 Report Backtest</button>
+    <button data-action="open-backtest-report" style="flex:1;background:rgba(229,189,108,0.1);border:1px solid var(--g)33;border-radius:8px;padding:8px 10px;color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">📊 Report Backtest</button>
     <button data-action="open-hive" style="flex:1;background:rgba(183,156,255,0.1);border:1px solid #B79CFF33;border-radius:8px;padding:8px 10px;color:#B79CFF;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">🐝 The Hive</button>
     <button data-action="open-blocked" style="flex:1;background:rgba(255,71,87,0.08);border:1px solid #FF8A8A33;border-radius:8px;padding:8px 10px;color:#FF8A8A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">⛔ Bloccate (${BLOCKED_STRATEGIES.length})</button>
   </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button data-action="toggle-blocked-inline" style="background:none;border:none;color:var(--dim);font-size:10px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:2px">${SE_UI.showBlocked ? `👁️ Nascondi le ${BLOCKED_STRATEGIES.length} bloccate` : `👁️ Mostra anche le ${BLOCKED_STRATEGIES.length} bloccate`}</button>
+  </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
-    ${Object.entries(SE.strategies).map(([id, s]) => {
+    ${Object.entries(SE.strategies).filter(([id]) => SE_UI.showBlocked || !BLOCKED_STRATEGIES.includes(id)).map(([id, s]) => {
       const isBlocked   = BLOCKED_STRATEGIES.includes(id);
       const isActive    = activeList.includes(id) && !isBlocked;
       const isPrimary   = isActive;   // tutte le attive ottengono badge ✓ ATTIVA
@@ -591,18 +619,16 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         : 'Strategia aggregata di portafoglio · Bilanciamento dinamico · Rischio controllato';
       const pl = s.paperLive || s.rosterLive || null;
       const plClosed = pl && pl.overall ? pl.overall : null;
-      const isLT = !!s.liveTest;
       const isSignalOnly = !!s.signalOnly;   // S32/S33/S34: solo score in dashboard, il bot non apre ordini
-      const isRosterLive = !s.liveTest && !s.signalOnly && !!s.rosterLive;   // S31: strategia reale nel roster, mostra P&L live isolato
+      const isRosterLive = !s.signalOnly && !!s.rosterLive;   // S31: strategia reale nel roster, mostra P&L live isolato
       return `
-      <div style="background:var(--bg2); border:1px solid ${isBlocked?'#FF8A8A55':isLT?'#6FE3E155':isSignalOnly?'#5a4a7a55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden${isSignalOnly||isBlocked?';opacity:.7':''}">
+      <div style="background:var(--bg2); border:1px solid ${isBlocked?'#FF8A8A55':isSignalOnly?'#5a4a7a55':isPrimary?rm.col+'70':isSecondary?rm.col+'30':'var(--border)'}; border-radius:8px; padding:9px 10px; position:relative; overflow:hidden${isSignalOnly||isBlocked?';opacity:.7':''}">
         ${isBlocked ? `<div style="position:absolute;top:0;right:0;background:#FF8A8A;color:#fff;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">⛔ BLOCCATA</div>`
         : isActive ? `<div style="position:absolute;top:0;right:0;background:${rm.col};color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">✓ ATTIVA</div>` : ''}
-        ${isLT ? `<div style="position:absolute;top:0;right:0;background:#6FE3E1;color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🧪 LIVE ${s.liveTestLot||'0.03'}</div>` : ''}
         ${isRosterLive ? `<div style="position:absolute;top:0;right:0;background:var(--green);color:#000;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">📡 LIVE · ROSTER</div>` : ''}
         ${!isBlocked && isSignalOnly ? `<div style="position:absolute;top:0;right:0;background:#7a5cba;color:#fff;font-size:7px;font-weight:900;padding:2px 6px;border-bottom-left-radius:6px">🔬 SOLO SCORE</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:${isLT?'#6FE3E1':isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
+          <span style="font-size:11px;font-weight:700;color:${isPrimary?rm.col:isSecondary?rm.col+'bb':'var(--fg)'}">${s.label}</span>
           <div style="display:flex;gap:5px;align-items:center;font-size:10px">
             ${_tf ? `<span style="background:${_tfCol}22;border:1px solid ${_tfCol}55;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:${_tfCol};letter-spacing:.04em">${_tf}</span>` : ''}
             ${s.pf!=null ? `<span style="color:var(--green)">PF <b>${s.pf}</b></span>` : ''}
@@ -610,21 +636,6 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           </div>
         </div>
         <div style="font-size:8px;color:var(--dim);margin-bottom:6px;line-height:1.4">${inds}</div>
-        ${isLT ? `
-        <div style="background:#0a1a1a;border:1px solid #6FE3E140;border-radius:5px;padding:6px 8px;margin-bottom:5px">
-          <div style="font-size:8px;color:#6FE3E1;font-weight:700;margin-bottom:3px">🧪 ${s.liveTestNote||'LIVE TEST — lotto fisso 0.03 · isolata dal roster (no Strategy Selector / compounding)'}${pl&&pl.synced_at?` · agg. ${new Date(pl.synced_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:''}</div>
-          ${plClosed ? `
-          <div style="display:flex;gap:10px;font-size:9px;flex-wrap:wrap">
-            <span style="color:var(--dim)">chiusi <b style="color:var(--fg)">${plClosed.n}</b></span>
-            <span style="color:var(--dim)">WR <b style="color:var(--blue)">${plClosed.wr}%</b></span>
-            <span style="color:var(--dim)">PF <b style="color:${plClosed.pf>=1?'var(--green)':'var(--red)'}">${plClosed.pf}</b></span>
-            <span style="color:var(--dim)">P&L <b style="color:${plClosed.pnl>=0?'var(--green)':'var(--red)'}">${plClosed.pnl>=0?'+':''}$${plClosed.pnl}</b></span>
-            ${pl.n_open?`<span style="color:#6FE3E1">${pl.n_open} aperta</span>`:''}
-          </div>
-          ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
-          ` : `<div style="font-size:8px;color:var(--dim)">📡 ${s.liveTestEmptyNote||'nessun trade S20 ancora — la strategia apre solo in London+NY, no-lunedì, ~5-6/mese'}</div>`}
-        </div>
-        ` : ''}
         ${isSignalOnly ? `
         <div style="background:#15101f;border:1px solid #7a5cba40;border-radius:5px;padding:6px 8px;margin-bottom:5px">
           <div style="font-size:8px;color:#b79ce6;font-weight:700;margin-bottom:2px">🔬 RICERCA — solo score in dashboard, il bot non apre ordini</div>
@@ -640,7 +651,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
             <span style="color:var(--dim)">WR <b style="color:var(--blue)">${plClosed.wr}%</b></span>
             <span style="color:var(--dim)">PF <b style="color:${plClosed.pf>=1?'var(--green)':'var(--red)'}">${plClosed.pf}</b></span>
             <span style="color:var(--dim)">P&L <b style="color:${plClosed.pnl>=0?'var(--green)':'var(--red)'}">${plClosed.pnl>=0?'+':''}$${plClosed.pnl}</b></span>
-            ${pl.n_open?`<span style="color:#6FE3E1">${pl.n_open} aperta</span>`:''}
+            ${pl.n_open?`<span style="color:#E5BD6C">${pl.n_open} aperta</span>`:''}
           </div>
           ${pl.buy&&pl.sell?`<div style="font-size:7px;color:var(--dim);margin-top:2px">BUY ${pl.buy.n}·PF ${pl.buy.pf} — SELL ${pl.sell.n}·PF ${pl.sell.pf}</div>`:''}
           ` : `<div style="font-size:8px;color:var(--dim)">📡 ${s.rosterEmptyNote || 'nessun trade ancora — strategia selettiva, pochi ingressi al mese'}</div>`}
@@ -657,13 +668,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         </div>
         ` : ''}
         ${isSignalOnly ? '' : st.pnl_24m==null ? `
-        <div style="background:#0a1a1a;border:1px solid #6FE3E140;border-radius:5px;padding:6px 8px;margin-bottom:4px">
-          <div style="font-size:8px;color:#6FE3E1;font-weight:700;margin-bottom:2px">⏳ BACKTEST PENDENTE</div>
+        <div style="background:#0a1a1a;border:1px solid #E5BD6C40;border-radius:5px;padding:6px 8px;margin-bottom:4px">
+          <div style="font-size:8px;color:#E5BD6C;font-weight:700;margin-bottom:2px">⏳ BACKTEST PENDENTE</div>
           <div style="font-size:7px;color:var(--dim);line-height:1.5">
             Esegui per ottenere statistiche reali:<br>
-            <code style="color:#6FE3E1;background:#0d0f12;padding:1px 4px;border-radius:3px">python scripts/backtest_ob_fvg_scalp.py --mt5</code><br>
+            <code style="color:#E5BD6C;background:#0d0f12;padding:1px 4px;border-radius:3px">python scripts/backtest_ob_fvg_scalp.py --mt5</code><br>
             Poi ottimizza parametri:<br>
-            <code style="color:#6FE3E1;background:#0d0f12;padding:1px 4px;border-radius:3px">python scripts/param_optimizer.py --mt5</code>
+            <code style="color:#E5BD6C;background:#0d0f12;padding:1px 4px;border-radius:3px">python scripts/param_optimizer.py --mt5</code>
           </div>
         </div>
         ` : `
@@ -700,13 +711,27 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // Preserva scroll di tutti i container scrollabili prima del rebuild 1s
+  const historyExpanded=!!el.querySelector('.desk-details[open]');
   const _mfp  = document.querySelector('#tp-strategy .mfp');
   const _log  = document.getElementById('se-log-scroll');
   const _hist = document.getElementById('se-hist-scroll');
   const _mfpST  = _mfp  ? _mfp.scrollTop  : 0;
   const _logST  = _log  ? _log.scrollTop  : 0;
   const _histST = _hist ? _hist.scrollTop : 0;
-  el.innerHTML=statusHtml+regimeHtml+botPanelHtml+pendingHtml+posHtml+histHtml+stratCardsHtml+indSnap+obPanelHtml+m15PanelHtml;
+  // "Indicatori tecnici" (snapshot ADX/RSI/EMA + Order Block + ICT M15) collassato di
+  // default — dettaglio denso, non serve a colpo d'occhio. Stato persistito (SE_UI).
+  const indicatorsBody = indSnap+obPanelHtml+m15PanelHtml;
+  const indicatorsSection = indicatorsBody ? `
+<div style="margin-top:18px; padding-top:15px; border-top:1px dashed var(--border)">
+  <button data-action="toggle-indicators" style="width:100%;background:none;border:none;padding:0 0 8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+    <span style="flex:1;height:1px;background:var(--border)"></span>
+    <span style="font-size:10px;color:var(--dim);font-weight:700;letter-spacing:.07em">${SE_UI.collapsedIndicators?'▸':'▾'} INDICATORI TECNICI</span>
+    <span style="flex:1;height:1px;background:var(--border)"></span>
+  </button>
+  ${SE_UI.collapsedIndicators ? '' : indicatorsBody}
+</div>` : '';
+  el.innerHTML=statusHtml+(SE_UI.view==='catalog' ? stratCardsHtml : SE_UI.view==='diagnostics' ? guardianHtml+logHtml+indicatorsSection : regimeHtml+pendingHtml+posHtml+histHtml);
+  if(SE_UI.view==='live') el.insertAdjacentHTML('beforeend','<details class="desk-details"'+(historyExpanded?' open':'')+'><summary>Statistiche storiche del sistema</summary>'+botPanelHtml+'</details>');
   const _mfpN  = document.querySelector('#tp-strategy .mfp');
   const _logN  = document.getElementById('se-log-scroll');
   const _histN = document.getElementById('se-hist-scroll');
@@ -724,7 +749,7 @@ async function seSendTradeToMt5(s) {
   if (!mt5Live) {
     mt5Live = await seFetchMt5Data();
   }
-  
+
   const syncAge = mt5Live?.synced_at ? Math.round((Date.now()-new Date(mt5Live.synced_at).getTime())/1000) : null;
   // Soglia più generosa: 3 minuti (il bot synca ogni 20s ma potrebbe essere in un ciclo lungo)
   const botOk = syncAge !== null && syncAge < 180;

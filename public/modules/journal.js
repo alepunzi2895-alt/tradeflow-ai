@@ -109,6 +109,34 @@ function showAiResult(reply){
   document.getElementById('jp').scrollTop=0;
 }
 
+// Errore non bloccante (mai alert() — un popup nativo facile da chiudere senza leggere fa
+// sembrare "non funziona" un bottone che in realtà ha solo fallito la chiamata AI).
+function showAiError(msg){
+  const box=document.getElementById('aibox');const aic=document.getElementById('aic');
+  aic.innerHTML='';
+  const d=document.createElement('div');
+  d.style.cssText='color:#FF8A8A;font-size:12px;line-height:1.6;padding:4px 0';
+  d.textContent='⚠️ '+msg;
+  aic.appendChild(d);box.style.display='block';
+  document.getElementById('jp').scrollTop=0;
+}
+
+// Fetch verso /api/report con parsing sicuro: se la function Vercel va in timeout/errore
+// restituisce spesso HTML non-JSON — leggere come testo prima ed evitare che r.json() lanci
+// un errore criptico. Il body grezzo va in console per poter diagnosticare senza indovinare.
+async function fetchReport(body){
+  const r=await fetch('/api/report',{signal:AbortSignal.timeout(15000),method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const raw=await r.text();
+  let d;
+  try{d=JSON.parse(raw);}
+  catch(parseErr){
+    console.error('[report] risposta non-JSON (possibile timeout Vercel):',raw.slice(0,500));
+    throw new Error('Risposta del server non valida (probabile timeout) — riprova tra qualche secondo.');
+  }
+  if(!d.ok)throw new Error(d.error||'Errore report');
+  return d;
+}
+
 // ── REPORT & COACHING ────────────────────────────────────
 async function generateReport(period){
   if(!entries.length){alert('Nessun trade nel journal.');return;}
@@ -116,13 +144,7 @@ async function generateReport(period){
   if(btn){btn.textContent='⏳...';btn.disabled=true;}
   try{
     const mem=tradeMemory.summary||'';
-    const r=await fetch('/api/report',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'report',entries,profile:P,period,memory:mem,asset:window.activeAsset||'XAU'})
-    });
-    const d=await r.json();
-    if(!d.ok)throw new Error(d.error||'Errore report');
+    const d=await fetchReport({type:'report',entries:journalRows(),profile:P,period,memory:mem,asset:window.activeAsset||'XAU'});
     showAiResult(d.report);
     // Auto-save to memory
     tradeMemory.summary=d.report.slice(0,500);
@@ -130,29 +152,42 @@ async function generateReport(period){
     S.set(K.mem,tradeMemory);
     window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
     updateMemoryInfo();
-  }catch(e){alert('Errore: '+e.message);}
+  }catch(e){showAiError(e.message);}
   if(btn){btn.textContent={day:'📋 Oggi',week:'📋 Settimana',month:'📋 Mese'}[period];btn.disabled=false;}
 }
 
-async function generateProgress(){
-  if(!entries.length){alert('Nessun trade nel journal.');return;}
-  const btn=document.getElementById('btn-progress');
-  if(btn){btn.textContent='⏳...';btn.disabled=true;}
-  try{
-    const mem=tradeMemory.summary||'';
-    const r=await fetch('/api/report',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({type:'progress',entries:entries.slice(0,30),profile:P,period:'all',memory:mem,asset:window.activeAsset||'XAU'})
-    });
-    const d=await r.json();
-    if(!d.ok)throw new Error(d.error||'Errore');
-    showAiResult(d.report);
-    // Update progress badge
-    const badge=document.getElementById('progress-badge');
-    if(badge){badge.style.display='block';badge.textContent='📈 Progressi aggiornati — '+new Date().toLocaleDateString('it-IT');}
-  }catch(e){alert('Errore: '+e.message);}
-  if(btn){btn.textContent='📈 Progressi';btn.disabled=false;}
+function generateProgress(){
+  const valid=entries.map(e=>({...e,date:mfxNormalizeDate(e.date)})).filter(e=>e.date).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!valid.length){showAiError('Importa o registra almeno un trade per vedere i progressi.');return;}
+  const today=new Date(); today.setHours(0,0,0,0);
+  const boundary=new Date(today); boundary.setDate(boundary.getDate()-29);
+  const previous=new Date(boundary); previous.setDate(previous.getDate()-30);
+  const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const stats=rows=>({n:rows.length,pnl:rows.reduce((n,e)=>n+(Number(e.pnl)||0),0),wr:rows.length?100*rows.filter(e=>e.result==='WIN').length/rows.length:0});
+  const now=stats(valid.filter(e=>e.date>=key(boundary)&&e.date<=key(today)));
+  const before=stats(valid.filter(e=>e.date>=key(previous)&&e.date<key(boundary)));
+  showAiResult(`### Progressi · ultimi 30 giorni
+
+${now.n} trade · P&L ${now.pnl.toFixed(2)} · Win rate ${now.wr.toFixed(1)}%
+
+### 30 giorni precedenti
+
+${before.n} trade · P&L ${before.pnl.toFixed(2)} · Win rate ${before.wr.toFixed(1)}%
+
+${now.n&&before.n ? `Variazione P&L: ${(now.pnl-before.pnl).toFixed(2)}. Variazione win rate: ${(now.wr-before.wr).toFixed(1)} punti percentuali.` : 'Confronto incompleto: mancano trade in uno dei due periodi.'}
+
+Statistiche calcolate dai trade registrati, senza analisi AI.`);
+}
+let journalPeriod='all';
+function journalRows(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const start=new Date(now);start.setDate(start.getDate()-({day:0,week:6,month:29}[journalPeriod]||0));
+  const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return entries.map(e=>({...e,date:mfxNormalizeDate(e.date)})).filter(e=>journalPeriod==='all'||(e.date>=key(start)&&e.date<=key(now))).sort((a,b)=>b.date.localeCompare(a.date));
+}
+function setJournalPeriod(period){
+  journalPeriod=period;renderJournal();
+  document.querySelectorAll('[data-journal-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.journalPeriod===period)));
 }
 
 async function coachSingleTrade(entry){
@@ -205,6 +240,22 @@ function updateMemoryInfo(){
   const count=(analysisMemory.entries||[]).length;
   const last=tradeMemory.lastReset||tradeMemory.lastReport?.date;
   el.textContent=`Memoria: ${count} analisi salvate${last?' · ultimo reset '+new Date(last).toLocaleDateString('it-IT'):''}`;
+}
+
+// MyFxBook get-history restituisce openTime in formato slash US "MM/DD/YYYY HH:MM" (non
+// punteggiato come MT4/MT5) — normalizzare SEMPRE a ISO "YYYY-MM-DD" prima di salvarlo come
+// entries[].date, altrimenti il confronto di stringa dei filtri Oggi/Settimana/Mese in
+// api/report.js (assume ISO) fallisce silenziosamente per ogni trade importato.
+function mfxNormalizeDate(raw){
+  const s=String(raw||'').trim();
+  if(!s) return '';
+  let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // MM/DD/YYYY (reale formato MyFxBook)
+  if(m){ const [,mo,d,y]=m; return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+  m=s.match(/^(\d{4})[.\-](\d{1,2})[.\-](\d{1,2})/); // YYYY.MM.DD (MT4/MT5) o già ISO
+  if(m){ const [,y,mo,d]=m; return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+  const parsed=new Date(s);
+  if(!isNaN(parsed.getTime())) return parsed.toISOString().slice(0,10);
+  return '';
 }
 
 // ── MYFXBOOK IMPORT TO JOURNAL ────────────────────────────
@@ -261,9 +312,8 @@ async function importMfxToJournal(accountId){
     const newEntries=[];
 
     for(const t of realTrades.slice(0,100)){
-      // Handle both date formats: "2024.01.15 10:30" and "2024-01-15 10:30"
       const rawDate=t.openTime||t.open_time||t.openDate||'';
-      const openDate=rawDate?String(rawDate).replace(/\./g,'-').slice(0,10):new Date().toISOString().slice(0,10);
+      const openDate=mfxNormalizeDate(rawDate);
 
       // Direction from action or type
       const action=String(t.action||t.type||'').toLowerCase();
@@ -276,8 +326,8 @@ async function importMfxToJournal(accountId){
       const sym=t.symbol||t.instrument||((window.activeAsset||'XAU')+'USD');
 
       // Compute SL/TP if available
-      const sl=parseFloat(t.tp||t.stopLoss||0)||'';
-      const tp1=parseFloat(t.sl||t.takeProfit||0)||'';
+      const sl=parseFloat(t.sl||t.stopLoss||0)||'';
+      const tp1=parseFloat(t.tp||t.takeProfit||0)||'';
 
       const key=`${openDate}_${dir}_${entryPrice.toFixed(2)}`;
       if(existingKeys.has(key)) continue;
@@ -299,6 +349,7 @@ async function importMfxToJournal(accountId){
         emo:'Neutro',
         err:'Nessuno',
         notes:`${sym} ${lots}lot | E:${entryPrice} → C:${closePrice} | RR:${rr.toFixed(2)}`,
+        symbol:sym,
         source:'myfxbook',
         mfxAccountId:accountId
       });
@@ -311,6 +362,17 @@ async function importMfxToJournal(accountId){
       // Update win rate
       const wins=entries.filter(x=>x.result==='WIN').length;
       if(entries.length>0){P.winRate=Math.round(wins/entries.length*100);S.set(K.p,P);}
+      // Persist a Turso — mancava, i trade MFX restavano solo in localStorage e sparivano
+      // cambiando device/browser (stesso pattern del salvataggio manuale, saveEntry() sopra).
+      newEntries.forEach(ne=>{
+        dbSave('save_trade',{
+          id:ne.id, symbol:ne.symbol||((window.activeAsset||'XAU')+'USD'), direction:ne.dir,
+          entry_price:parseFloat(ne.entry)||null, sl:parseFloat(ne.sl)||null,
+          tp1:parseFloat(ne.tp1)||null, tp2:parseFloat(ne.tp2)||null,
+          result:ne.result, pnl:parseFloat(ne.pnl)||0, emotion:ne.emo, mistake:ne.err,
+          notes:ne.notes, trade_date:ne.date,
+        }).catch(()=>{});
+      });
       alert('✅ '+imported+' trade importati nel Journal da MyFxBook!'+(staleCount?` (${staleCount} vecchi trade MyFxBook sostituiti)`:''));
       switchTab('journal');
       renderJournal();
@@ -341,24 +403,25 @@ document.getElementById('btn-analyze').onclick=async()=>{
 };
 
 // Wire report buttons
-document.getElementById('btn-report-day').onclick=()=>generateReport('day');
-document.getElementById('btn-report-week').onclick=()=>generateReport('week');
-document.getElementById('btn-report-month').onclick=()=>generateReport('month');
+document.getElementById('btn-report-day').onclick=()=>setJournalPeriod('day');
+document.getElementById('btn-report-week').onclick=()=>setJournalPeriod('week');
+document.getElementById('btn-report-month').onclick=()=>setJournalPeriod('month');
 document.getElementById('btn-progress').onclick=generateProgress;
 document.getElementById('btn-myfxb-j').onclick=()=>switchTab('myfx');
 
 function renderJournal(){
-  const wins=entries.filter(e=>e.result==='WIN').length;
-  const wr=entries.length?Math.round(wins/entries.length*100):0;
-  const pnl=entries.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
-  
+  const visible=journalRows();
+  const wins=visible.filter(e=>e.result==='WIN').length;
+  const wr=visible.length?Math.round(wins/visible.length*100):0;
+  const pnl=visible.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
+
   const stats=[
     {l:'Win Rate',v:`${wr}%`,c:wr>=50?'var(--green)':'var(--red)'},
     {l:'P&L Totale',v:`${pnl>=0?'+':''}${pnl.toFixed(0)}$`,c:pnl>=0?'var(--green)':'var(--red)'},
-    {l:'Trade Totali',v:entries.length,c:'#fff'},
+    {l:'Trade Totali',v:visible.length,c:'#fff'},
     {l:'Sessioni',v:P.sessions||0,c:'var(--dim)'}
   ];
-  
+
   document.getElementById('sgrid').innerHTML=stats.map(s=>`
     <div class="sc">
       <div class="sv" style="color:${s.c}">${s.v}</div>
@@ -373,17 +436,17 @@ function renderJournal(){
   }else{eb.style.display='none';}
 
   const list=document.getElementById('elist');
-  if(!entries.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim);font-size:12px">Nessun trade loggato.</div>';return;}
+  if(!visible.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--dim);font-size:12px">Nessun trade in questo periodo.</div>';return;}
   list.innerHTML='';
 
-  entries.forEach(e=>{
+  visible.forEach(e=>{
     const resClass = e.result ? e.result.toLowerCase() : '';
     const d=document.createElement('div');
     d.className=`ec ${resClass}`;
-    
+
     const pv=parseFloat(e.pnl)||0;
     const dateStr = new Date(e.date).toLocaleDateString('it-IT', {day:'2-digit', month:'short'});
-    
+
     d.innerHTML=`
       <div class="etop">
         <div>
@@ -406,7 +469,7 @@ function renderJournal(){
       </div>
       </div>
       ${tradeMemory.entries?.[e.id] ? `
-        <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(111,227,225,0.06);border:1px solid rgba(111,227,225,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
+        <div class="trade-coach" style="position:relative;margin-top:10px;padding:12px 28px 12px 12px;background:rgba(229,189,108,0.06);border:1px solid rgba(229,189,108,0.15);border-radius:12px;font-size:11px;color:var(--text);line-height:1.6">
           <button class="coach-close" data-id="${e.id}" style="position:absolute;top:6px;right:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:4px">✕</button>
           💡 ${tradeMemory.entries[e.id]}
         </div>
@@ -417,7 +480,7 @@ function renderJournal(){
     const delBtn = d.querySelector('.bdel');
     if(delBtn) {
       delBtn.onclick=(ev)=>{
-        ev.stopPropagation(); 
+        ev.stopPropagation();
         if(!confirm('Eliminare questo trade?'))return;
         const id=e.id;
         entries=entries.filter(x=>String(x.id)!==String(id));

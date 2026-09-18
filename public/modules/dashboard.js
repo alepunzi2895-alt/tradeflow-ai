@@ -30,18 +30,35 @@ let _orbitWired = false;
 
 function orbitRoster(){
   return Object.entries(SE.strategies)
-    .filter(([k,s]) => !s.signalOnly && typeof s.pf === 'number' && !/RITIRATA/i.test(s.label||''))
+    .filter(([k,s]) => !s.signalOnly && !BLOCKED_STRATEGIES.includes(k) && typeof s.pf === 'number' && !/RITIRATA/i.test(s.label||''))
     .map(([key,s]) => ({key, ...s}))
     .sort((a,b) => b.pf - a.pf);
 }
 function orbitTier(pf){
-  if(pf >= 1.8) return {color:'#6FE3E1', name:'ALTA'};
-  if(pf >= 1.3) return {color:'#F4B860', name:'BUONA'};
-  return {color:'#B79CFF', name:'MARGINALE'};
+  if(pf >= 1.8) return {color:'var(--nb-accent)', hex:'#E5BD6C', name:'ALTA'};
+  if(pf >= 1.3) return {color:'var(--nb-cyan)', hex:'#6FA8FF', name:'BUONA'};
+  return {color:'var(--nb-violet)', hex:'#B79CFF', name:'MARGINALE'};
 }
 function orbitFmtEur(n){
   if(typeof n !== 'number' || !isFinite(n)) return '—';
   return '€ ' + n.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+const ORBIT_TEX = ['nb-tex--gas','nb-tex--ocean','nb-tex--ice','nb-tex--lava'];
+
+// Path SVG morbido (catmull-rom → bezier) — riuso condiviso da Orbite/Genoma/Hive per le
+// curve equity, stesso algoritmo del riferimento nebula-ui (js/nebula-app.js::smoothPath).
+function nbSmoothPath(vals, W, H, pad){
+  const n = vals.length;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const P = [];
+  for(let i=0;i<n;i++) P.push([(i/(n-1))*W, pad + (1-(vals[i]-mn)/((mx-mn)||1))*(H-pad*2)]);
+  const f = x=>x.toFixed(1);
+  let d = `M ${f(P[0][0])} ${f(P[0][1])}`;
+  for(let i=0;i<n-1;i++){
+    const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||p2;
+    d += ` C ${f(p1[0]+(p2[0]-p0[0])/6)} ${f(p1[1]+(p2[1]-p0[1])/6)} ${f(p2[0]-(p3[0]-p1[0])/6)} ${f(p2[1]-(p3[1]-p1[1])/6)} ${f(p2[0])} ${f(p2[1])}`;
+  }
+  return { line:d, area:`${d} L ${W} ${H} L 0 ${H} Z`, last:P[n-1] };
 }
 
 async function loadOrbitEquity(){
@@ -69,15 +86,38 @@ function renderOrbitDetail(entry){
   const st = entry.stats || {};
   const tier = orbitTier(entry.pf);
   el.innerHTML = `
-    <div class="orbit-detail-title">${entry.label.replace(/\s*⛔.*$/,'')}</div>
-    <div class="orbit-detail-sub">PF ${entry.pf.toFixed(2)} · WR ${entry.wr||'—'} · tier <span style="color:${tier.color}">${tier.name}</span></div>
-    <div class="orbit-detail-stats">
-      <div class="orbit-dstat"><div class="orbit-dstat-lbl">P&amp;L 12m</div><div class="orbit-dstat-val" style="color:${(st.pnl_12m||0)>=0?'var(--green)':'var(--red)'}">${orbitFmtEur(st.pnl_12m)}</div></div>
-      <div class="orbit-dstat"><div class="orbit-dstat-lbl">Max DD</div><div class="orbit-dstat-val" style="color:var(--red)">${st.maxdd_pct||'—'}</div></div>
-      <div class="orbit-dstat"><div class="orbit-dstat-lbl">Trade/12m</div><div class="orbit-dstat-val">${st.trades_12m ?? '—'}</div></div>
+    <div class="nb-lbl">Strategia selezionata</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;margin-top:3px">${entry.label.replace(/\s*⛔.*$/,'')}</div>
+    <div style="font-size:11px;color:var(--nb-muted);margin-top:2px">PF ${entry.pf.toFixed(2)} · WR ${entry.wr||'—'} · <span style="color:${tier.color}">${tier.name}</span></div>
+    <div class="nb-metrics" style="margin-top:8px">
+      <div class="nb-metric"><span class="nb-metric__k">P&amp;L 12m</span><span class="nb-metric__v" style="color:${(st.pnl_12m||0)>=0?'var(--nb-up)':'var(--nb-down)'}">${orbitFmtEur(st.pnl_12m)}</span></div>
+      <div class="nb-metric"><span class="nb-metric__k">Max DD</span><span class="nb-metric__v" style="color:var(--nb-down)">${st.maxdd_pct||'—'}</span></div>
+      <div class="nb-metric"><span class="nb-metric__k">Trade/12m</span><span class="nb-metric__v">${st.trades_12m ?? '—'}</span></div>
     </div>
-    ${st.best_regime ? `<div class="orbit-detail-note">${st.best_regime}</div>` : ''}
+    ${st.best_regime ? `<p style="margin:10px 0 0;font-size:11.5px;line-height:1.5;color:var(--nb-dim)">${st.best_regime}</p>` : ''}
   `;
+}
+
+// Curva equity mensile cumulata reale (SE.strategies[key].stats.eq, già presente nel config —
+// nessun nuovo dato). Segue la selezione nella lista.
+function renderOrbitCurve(entry){
+  const el = document.getElementById('orbit-curve');
+  if(!el) return;
+  const eq = entry?.stats?.eq;
+  if(!eq || eq.length < 2){ el.innerHTML = '<div style="font-size:11px;color:var(--nb-muted);padding:20px 0">Curva non disponibile per questa strategia.</div>'; return; }
+  const W=300, H=100;
+  const c = nbSmoothPath(eq, W, H, 8);
+  const up = eq[eq.length-1] >= eq[0];
+  const color = up ? 'var(--nb-up)' : 'var(--nb-down)';
+  el.innerHTML = `<svg class="nb-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="orbitFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}" stop-opacity=".3"/><stop offset="1" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${c.area}" fill="url(#orbitFill)"/>
+    <path class="nb-chart__line" d="${c.line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle class="nb-ping" cx="${c.last[0].toFixed(1)}" cy="${c.last[1].toFixed(1)}" r="3.5" fill="${color}"/>
+    <circle cx="${c.last[0].toFixed(1)}" cy="${c.last[1].toFixed(1)}" r="4" fill="var(--nb-txt)" stroke="${color}" stroke-width="2"/>
+  </svg>`;
 }
 
 function renderOrbitHero(){
@@ -96,66 +136,72 @@ function renderOrbitHero(){
 
   const pnl12 = roster.reduce((s,r) => s + (r.stats?.pnl_12m || 0), 0);
   const pnlEl = document.getElementById('orbit-pnl12');
-  if(pnlEl){ pnlEl.textContent = orbitFmtEur(pnl12); pnlEl.style.color = pnl12>=0 ? 'var(--green)' : 'var(--red)'; }
+  if(pnlEl){ pnlEl.textContent = orbitFmtEur(pnl12); pnlEl.style.color = pnl12>=0 ? 'var(--nb-up)' : 'var(--nb-down)'; }
   const countEl = document.getElementById('orbit-count');
   if(countEl) countEl.textContent = roster.length;
   const nucName = document.getElementById('orbit-nucleus-name');
   if(nucName) nucName.textContent = nucleus.label.replace(/\s*⛔.*$/,'');
 
-  // Lista compatta (sempre visibile — mobile: unica vista, desktop: affiancata all'orbita)
+  // Lista strategie (sempre visibile)
   const listEl = document.getElementById('orbit-list');
   if(listEl){
     listEl.innerHTML = roster.map(r => {
       const tier = orbitTier(r.pf);
       const isSel = r.key === sel.key;
-      return `<div class="orbit-row${isSel?' sel':''}" data-orbit-key="${r.key}">
-        <div class="orbit-planet-dot" style="background:${tier.color};color:${tier.color}"></div>
-        <div class="orbit-row-name">${r.label.replace(/\s*⛔.*$/,'')}</div>
-        <div class="orbit-row-meta">${r.wr||'—'}</div>
-        <div class="orbit-row-pf" style="color:${tier.color}">PF ${r.pf.toFixed(2)}</div>
-      </div>`;
+      return `<li><button type="button" class="nb-row" data-orbit-key="${r.key}" aria-pressed="${isSel}">
+        <span class="nb-row__swatch" style="background:${tier.hex}35;box-shadow:0 0 10px ${tier.hex}55"></span>
+        <span class="nb-row__main">
+          <span class="nb-row__name">${r.label.replace(/\s*⛔.*$/,'')}</span>
+          <span class="nb-row__sub">WR ${r.wr||'—'}</span>
+        </span>
+        <span class="nb-row__side"><span class="nb-num" style="font-size:14px;font-weight:600;color:${tier.color}">PF ${r.pf.toFixed(2)}</span></span>
+      </button></li>`;
     }).join('');
   }
 
-  // Vista orbitale SVG (solo desktop, ≥1024px — vedi style.css orbit-visual)
-  const visEl = document.getElementById('orbit-visual');
-  if(visEl){
-    const cx=150, cy=150, others = roster.filter(r=>r.key!==nucleus.key);
-    const maxPf = roster[0].pf || 1, minPf = roster[roster.length-1].pf || 1;
-    const planets = others.map((r,i) => {
-      const ring = 60 + (i % 3) * 42;
-      const angle = (i / Math.max(others.length,1)) * Math.PI * 2 + (i % 3) * 0.7;
-      const px = cx + Math.cos(angle) * ring, py = cy + Math.sin(angle) * ring * 0.55;
-      const norm = maxPf>minPf ? (r.pf-minPf)/(maxPf-minPf) : 0.5;
-      const rad = 7 + norm * 9;
+  // Palcoscenico pianeta + lune (CSS puro, solo desktop — vedi style.css nb-stage-wrap)
+  const stageEl = document.getElementById('orbit-stage');
+  if(stageEl){
+    const moonCls = ['nb-moon--a','nb-moon--b','nb-moon--c'], moonSz = [30,42,34];
+    const moons = roster.filter(r=>r.key!==nucleus.key).slice(0,3);
+    const moonsHtml = moons.map((r,i) => {
       const tier = orbitTier(r.pf);
-      const isSel = r.key === sel.key;
-      return `<g data-orbit-key="${r.key}" class="orbit-planet" style="cursor:pointer">
-          <circle cx="${px}" cy="${py}" r="${rad+6}" fill="transparent"/>
-          <circle cx="${px}" cy="${py}" r="${rad}" fill="${tier.color}" opacity="${isSel?1:0.85}" style="filter:drop-shadow(0 0 ${isSel?10:5}px ${tier.color})"/>
-          <text x="${px}" y="${py+rad+12}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="${isSel?tier.color:'#9AA4C4'}">${r.label.split(' ')[0]}</text>
-        </g>`;
+      const tex = ORBIT_TEX[(i+1) % ORBIT_TEX.length];
+      const sz = moonSz[i];
+      return `<div class="nb-moon ${moonCls[i]}" style="width:${sz}px;height:${sz}px">
+        <div class="nb-planet nb-planet--inline" data-orbit-key="${r.key}" style="width:${sz}px;height:${sz}px;box-shadow:0 0 18px ${tier.hex}70;cursor:pointer">
+          <div class="nb-tex ${tex} nb-tex--quick"></div><div class="nb-shade"></div>
+        </div>
+        <span class="nb-moon__label" style="color:${tier.hex}">${r.label.split(' ')[0]}</span>
+      </div>`;
     }).join('');
-    const rings = [60,102,144].map(r => `<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*0.58}" fill="none" stroke="rgba(150,175,255,.16)" stroke-width="1"/>`).join('');
-    visEl.innerHTML = `<svg viewBox="0 0 300 300" width="100%" height="100%">
-      <g class="orbit-ring-group" style="transform-origin:${cx}px ${cy}px">
-        ${rings}
-        ${planets}
-      </g>
-      <g data-orbit-key="${nucleus.key}" style="cursor:pointer">
-        <circle cx="${cx}" cy="${cy}" r="26" fill="url(#orbitNucleusGrad)" style="filter:drop-shadow(0 0 18px ${orbitTier(nucleus.pf).color}66)"/>
-        <text x="${cx}" y="${cy+42}" text-anchor="middle" font-family="Syne, sans-serif" font-weight="700" font-size="12" fill="#E8ECF7">${nucleus.label.split(' ')[0]}</text>
-      </g>
-      <defs>
-        <radialGradient id="orbitNucleusGrad" cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stop-color="#80EFEC"/>
-          <stop offset="100%" stop-color="${orbitTier(nucleus.pf).color}"/>
-        </radialGradient>
-      </defs>
-    </svg>`;
+    const nucTier = orbitTier(nucleus.pf);
+    stageEl.innerHTML = `
+      <svg class="nb-stage__orbits" width="600" height="430" viewBox="0 0 600 430" fill="none">
+        <ellipse cx="300" cy="215" rx="215" ry="58" stroke="rgba(232,193,115,.2)" stroke-width="1"/>
+        <ellipse cx="300" cy="215" rx="262" ry="86" stroke="rgba(232,193,115,.16)" stroke-width="1" stroke-dasharray="2 6"/>
+        <ellipse cx="300" cy="215" rx="290" ry="128" stroke="rgba(232,193,115,.12)" stroke-width="1"/>
+      </svg>
+      <div class="nb-halo" style="left:120px;top:35px;width:360px;height:360px;z-index:1;background:radial-gradient(circle, ${nucTier.hex}38 0%, ${nucTier.hex}10 42%, transparent 68%)"></div>
+      <div class="nb-ring" style="left:65px;top:155px;width:470px;height:120px;z-index:2"></div>
+      <div class="nb-planet" data-orbit-key="${nucleus.key}" style="left:185px;top:100px;width:230px;height:230px;z-index:3;cursor:pointer;box-shadow:0 0 60px ${nucTier.hex}40, -12px -12px 40px rgba(229,189,108,.08)">
+        <div class="nb-tex nb-tex--gas" style="--spin:90s"></div><div class="nb-shade"></div>
+      </div>
+      <div class="nb-ring nb-ring--front" style="left:65px;top:155px;width:470px;height:120px;z-index:4"></div>
+      <svg class="nb-stage__orbits nb-stage__orbits--front" width="600" height="430" viewBox="0 0 600 430" fill="none">
+        <ellipse cx="300" cy="215" rx="215" ry="58" stroke="rgba(232,193,115,.28)" stroke-width="1"/>
+        <ellipse cx="300" cy="215" rx="262" ry="86" stroke="rgba(232,193,115,.2)" stroke-width="1" stroke-dasharray="2 6"/>
+      </svg>
+      ${moonsHtml}
+      <div class="nb-panel nb-hud-chip nb-hud-chip--tr">
+        <span class="nb-lbl">Nucleo · ${nucleus.label.split(' ')[0]}</span>
+        <span style="font-size:13px">PF ${nucleus.pf.toFixed(2)} · WR ${nucleus.wr||'—'}</span>
+      </div>
+    `;
   }
 
   renderOrbitDetail(sel);
+  renderOrbitCurve(sel);
   orbitWire();
 }
 
@@ -1293,7 +1339,7 @@ function renderCalEvents(){
         <div class="cal-ev-body">
           <div style="display:flex;align-items:center;gap:5px">
             <div class="cal-ev-time">${timeStr}</div>
-            ${isXau?`<span style="font-size:9px;background:#6FE3E118;border:1px solid #6FE3E133;border-radius:3px;padding:1px 4px;color:var(--g)">⚡${window.activeAsset||'XAU'}</span>`:''}
+            ${isXau?`<span style="font-size:9px;background:#E5BD6C18;border:1px solid #E5BD6C33;border-radius:3px;padding:1px 4px;color:var(--g)">⚡${window.activeAsset||'XAU'}</span>`:''}
             ${isHigh?'<span style="font-size:9px;background:#FF8A8A10;border:1px solid #FF8A8A30;border-radius:3px;padding:1px 4px;color:var(--red)">●HIGH</span>':''}
           </div>
           <div class="cal-ev-name">${e.event||'—'}</div>

@@ -925,6 +925,8 @@ button:disabled { cursor:wait;opacity:.55; }
 .desk-details>summary { cursor:pointer;padding:18px 22px;color:var(--g);font-size:12px;line-height:1.6; }
 .desk-details[open]>summary { border-bottom:1px solid var(--desk-line);margin-bottom:16px; }
 .desk-details>.desk-grid { padding:0 16px 16px; }
+.desk-details>.mfkk-inputs, .desk-details>#cal-events-wrap { padding:0 16px 16px; }
+#mfkk-inputs-badge { font-size:10px; color:var(--green); font-weight:700; text-transform:none; letter-spacing:0; }
 .desk-tabs { display:flex;gap:4px;background:#111319;border:1px solid var(--desk-line);padding:5px;border-radius:12px;margin:12px 0 22px;position:sticky;top:0;z-index:5; }
 .desk-tabs button { flex:1;border:0;background:transparent;color:var(--dim);border-radius:8px;padding:12px 8px;font-size:11px;cursor:pointer; }
 .desk-tabs button[aria-pressed=true], [data-journal-period][aria-pressed=true] { background:var(--g)!important;color:#15120a!important; }

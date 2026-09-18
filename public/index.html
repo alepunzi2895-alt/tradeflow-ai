@@ -220,7 +220,11 @@
             </div>
           </div>
 
-          <!-- Indicator inputs -->
+          <!-- Indicator inputs — collassati di default (inserimento manuale opzionale via
+               webhook TradingView, non serve sempre visibile). Badge "dati inseriti" nel
+               summary quando l'utente ha già compilato qualcosa (mfkk.js::updateMfkkInputsBadge). -->
+          <details class="desk-details" id="mfkk-inputs-details">
+            <summary>Inserisci dati indicatori (opzionale) <span id="mfkk-inputs-badge"></span></summary>
           <div class="mfkk-inputs">
 
             <!-- CCI -->
@@ -276,6 +280,7 @@
             </div>
 
           </div>
+          </details>
 
           <!-- Quality badge -->
           <div class="mfkk-quality" id="mfkk-quality" style="display:none"></div>
@@ -310,14 +315,21 @@
               <div id="cal-countdown" style="font-size:12px;font-family:monospace;color:var(--yellow);font-weight:700"></div>
             </div>
           </div>
-          <!-- XAU impact filter -->
-          <div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto">
-            <button onclick="filterCal('all')" id="cal-f-all" class="cal-filter on">Tutti</button>
-            <button onclick="filterCal('xau')" id="cal-f-xau" class="cal-filter">⚡ XAU</button>
-            <button onclick="filterCal('usd')" id="cal-f-usd" class="cal-filter">🇺🇸 USD</button>
-            <button onclick="filterCal('eur')" id="cal-f-eur" class="cal-filter">🇪🇺 EUR</button>
-          </div>
-          <div id="cal-events"><div class="skel"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:85%"></div></div>
+          <!-- Lista eventi collassata di default — resta sempre visibile solo il countdown
+               al prossimo evento ad alto impatto sopra (informazione time-sensitive). -->
+          <details class="desk-details">
+            <summary>Vedi tutti gli eventi</summary>
+            <div id="cal-events-wrap">
+              <!-- XAU impact filter -->
+              <div style="display:flex;gap:5px;margin-bottom:8px;overflow-x:auto">
+                <button onclick="filterCal('all')" id="cal-f-all" class="cal-filter on">Tutti</button>
+                <button onclick="filterCal('xau')" id="cal-f-xau" class="cal-filter">⚡ XAU</button>
+                <button onclick="filterCal('usd')" id="cal-f-usd" class="cal-filter">🇺🇸 USD</button>
+                <button onclick="filterCal('eur')" id="cal-f-eur" class="cal-filter">🇪🇺 EUR</button>
+              </div>
+              <div id="cal-events"><div class="skel"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:85%"></div></div>
+            </div>
+          </details>
         </div>
 
         <!-- TradingView Chart Widget -->

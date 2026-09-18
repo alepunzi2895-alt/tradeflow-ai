@@ -370,6 +370,8 @@ function calcMfkk(){
   const hasMacd = !isNaN(macdFast) && !isNaN(macdSlow);
   const hasHist = !isNaN(macdHist);
   const hasAdx = !isNaN(adxVal) && !isNaN(diPlus) && !isNaN(diMinus);
+  const _badge = document.getElementById('mfkk-inputs-badge');
+  if(_badge) _badge.textContent = (hasCci||hasMacd||hasAdx) ? '✓ dati inseriti' : '';
 
   if(!hasCci && !hasMacd && !hasAdx){
     ['mfkk-num','mfkk-bias','mfkk-circle','mfkk-desc','mfkk-quality'].forEach(id=>{

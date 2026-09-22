@@ -66,16 +66,29 @@ document.getElementById('btn-fcan').onclick=()=>document.getElementById('tform')
 // CSV Import
 document.getElementById('btn-import').onclick=()=>openOvl('csvsheet');
 document.getElementById('btn-csvc').onclick=()=>closeOvl('csvsheet');
-document.getElementById('csv-drop').onclick=()=>document.getElementById('csv-file').click();
-document.getElementById('csv-file').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;document.getElementById('csv-text').value=(await f.text()).slice(0,3000);e.target.value='';};
+async function handleCsvFile(f){ if(!f)return; document.getElementById('csv-text').value=(await f.text()).slice(0,3000); }
+const csvDrop=document.getElementById('csv-drop');
+csvDrop.onclick=()=>document.getElementById('csv-file').click();
+document.getElementById('csv-file').onchange=async e=>{await handleCsvFile(e.target.files?.[0]);e.target.value='';};
+// Il bordo tratteggiato di .sdrop promette drag&drop: prima non c'era nessun handler reale
+// (audit 2026-09-18) — ora la zona funziona davvero, oltre alla guardia globale in core.js
+// che comunque impedisce sempre la navigazione di default del browser su un drop.
+csvDrop.addEventListener('dragover', e=>{ e.preventDefault(); csvDrop.style.borderColor='rgba(229,189,108,.7)'; });
+csvDrop.addEventListener('dragleave', ()=>{ csvDrop.style.borderColor=''; });
+csvDrop.addEventListener('drop', async e=>{ e.preventDefault(); csvDrop.style.borderColor=''; await handleCsvFile(e.dataTransfer.files?.[0]); });
 document.getElementById('btn-csv-go').onclick=async()=>{
   const text=document.getElementById('csv-text').value.trim();if(!text)return;
   const btn=document.getElementById('btn-csv-go');btn.textContent='⏳...';btn.disabled=true;
+  const err=document.getElementById('csv-err');err.style.display='none';
   try{
     const reply=await api([{role:'user',content:`Analizza storico trade:\n\n${text.slice(0,2000)}\n\nIgnora Balance/Credit/Deposit/Withdrawal. Solo trade reali. Statistiche, pattern errori, 3 azioni concrete.`}],
       `Sei TradeFlow AI Journal Coach. Italiano. Profilo: ${P.name}.`);
     closeOvl('csvsheet');showAiResult(reply);autoLearn(reply);
-  }catch(e){alert('Errore: '+e.message);}
+  }catch(e){
+    // Inline nella sheet, mai alert(): un popup nativo bloccante qui costringe l'utente a
+    // richiudere e perde il paste del CSV se non fa attenzione (audit 2026-09-18).
+    err.textContent='⚠️ '+e.message;err.style.display='block';
+  }
   btn.textContent='🧠 Analizza con AI';btn.disabled=false;
 };
 
@@ -83,23 +96,30 @@ document.getElementById('btn-csv-go').onclick=async()=>{
 let scrImgData=null;
 document.getElementById('btn-screen').onclick=()=>openOvl('scrsheet');
 document.getElementById('btn-scrc').onclick=()=>{closeOvl('scrsheet');scrImgData=null;document.getElementById('scr-prev').style.display='none';document.getElementById('btn-scr-go').style.display='none';};
-document.getElementById('scr-drop').onclick=()=>document.getElementById('scr-file').click();
-document.getElementById('scr-file').onchange=async e=>{
-  const f=e.target.files?.[0];if(!f)return;
+async function handleScrFile(f){
+  if(!f)return;
   scrImgData=await compress(f);
   document.getElementById('scr-img').src=scrImgData.dataUrl;
   document.getElementById('scr-prev').style.display='block';
   document.getElementById('btn-scr-go').style.display='block';
-  e.target.value='';
-};
+}
+const scrDrop=document.getElementById('scr-drop');
+scrDrop.onclick=()=>document.getElementById('scr-file').click();
+document.getElementById('scr-file').onchange=async e=>{await handleScrFile(e.target.files?.[0]);e.target.value='';};
+scrDrop.addEventListener('dragover', e=>{ e.preventDefault(); scrDrop.style.borderColor='rgba(229,189,108,.7)'; });
+scrDrop.addEventListener('dragleave', ()=>{ scrDrop.style.borderColor=''; });
+scrDrop.addEventListener('drop', async e=>{ e.preventDefault(); scrDrop.style.borderColor=''; await handleScrFile(e.dataTransfer.files?.[0]); });
 document.getElementById('btn-scr-go').onclick=async()=>{
   if(!scrImgData?.b64)return;
   const btn=document.getElementById('btn-scr-go');btn.textContent='⏳...';btn.disabled=true;
+  const err=document.getElementById('scr-err');err.style.display='none';
   try{
     const reply=await api([{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:scrImgData.b64}},{type:'text',text:'Screenshot storico MT5. REGOLA: ignora completamente Balance, Credit, Deposit, Withdrawal, Bonus, EXP, SC-CC. Leggi SOLO trade reali su strumenti finanziari con direzione buy/sell. Per ogni trade reale: strumento, lotti, entry→exit, P&L. Calcola statistiche SOLO sui trade reali: win rate, avg RR, profitto. Pattern errori e 3 azioni concrete.'}]}],
       `Sei TradeFlow AI Coach. Italiano. Profilo: ${P.name}.`);
     closeOvl('scrsheet');scrImgData=null;showAiResult(reply);autoLearn(reply);
-  }catch(e){alert('Errore: '+e.message);}
+  }catch(e){
+    err.textContent='⚠️ '+e.message;err.style.display='block';
+  }
   btn.textContent='🧠 Analizza Trade Chiusi';btn.disabled=false;
 };
 
@@ -138,9 +158,13 @@ async function fetchReport(body){
 }
 
 // ── REPORT & COACHING ────────────────────────────────────
-async function generateReport(period){
+async function generateReport(period,btnEl){
   if(!entries.length){alert('Nessun trade nel journal.');return;}
-  const btn=document.getElementById(`btn-report-${period}`);
+  // btnEl = il bottone realmente cliccato (passato da index.html); il fallback per id
+  // esisteva per bottoni "btn-report-{day,week,month}" che oggi sono i filtri periodo, non
+  // il bottone "Report AI" reale — senza btnEl restava senza id e senza feedback (audit 2026-09-18).
+  const btn=btnEl||document.getElementById(`btn-report-${period}`);
+  const originalLabel=btn?btn.textContent:'';
   if(btn){btn.textContent='⏳...';btn.disabled=true;}
   try{
     const mem=tradeMemory.summary||'';
@@ -153,7 +177,7 @@ async function generateReport(period){
     window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
     updateMemoryInfo();
   }catch(e){showAiError(e.message);}
-  if(btn){btn.textContent={day:'📋 Oggi',week:'📋 Settimana',month:'📋 Mese'}[period];btn.disabled=false;}
+  if(btn){btn.textContent=originalLabel;btn.disabled=false;}
 }
 
 function generateProgress(){
@@ -223,15 +247,21 @@ function saveAnalysisMemory(){
 }
 
 function resetMemory(type){
-  const label=type==='week'?'settimana':'mese';
+  // "sett." e "mese" erano byte-identici: entrambi svuotavano SEMPRE tutta la memoria, il
+  // parametro type contava solo per la parola nel confirm() (bug audit 2026-09-18). Ora
+  // ciascuno pota solo le voci più recenti della propria finestra, in base alla data reale
+  // già presente su ogni entry — le note più vecchie della finestra restano.
+  const label=type==='week'?'ultima settimana':'ultimo mese';
   if(!confirm(`Reset memoria analisi operatività (${label})?`))return;
-  analysisMemory={entries:[],lastReset:new Date().toISOString()};
+  const cutoff=Date.now()-(type==='week'?7:30)*86400000;
+  analysisMemory.entries=(analysisMemory.entries||[]).filter(e=>new Date(e.date).getTime()<cutoff);
+  analysisMemory.lastReset=new Date().toISOString();
   S.set(K.amem,analysisMemory);
   window.dbSaveUserData&&window.dbSaveUserData('amem',analysisMemory);
-  tradeMemory.summary='';S.set(K.mem,tradeMemory);
-  window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
+  const lastReportTime=tradeMemory.lastReport?.date?new Date(tradeMemory.lastReport.date).getTime():0;
+  if(lastReportTime>=cutoff){tradeMemory.summary='';S.set(K.mem,tradeMemory);window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);}
   updateMemoryInfo();
-  alert('✅ Memoria resettata.');
+  alert(`✅ Memoria (${label}) resettata.`);
 }
 
 function updateMemoryInfo(){
@@ -395,7 +425,7 @@ document.getElementById('btn-analyze').onclick=async()=>{
     const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nUsa SOLO i numeri riportati sopra. Statistiche, aree di sviluppo (non errori) con evidenza numerica, 3 azioni concrete e specifiche da applicare da subito, Score Disciplina X/10 motivato.`}],
       `Sei TradeFlow AI Coach. Italiano. Tono costruttivo ma diretto. Aree noto sviluppo: ${P.errors.join(',')}.`);
     showAiResult(reply);autoLearn(reply);pushAnalysisMemory(reply);
-  }catch(e){alert('Errore: '+e.message);}
+  }catch(e){showAiError(e.message);}
   btn.textContent='🧠 Analisi';btn.disabled=false;
 };
 
@@ -515,8 +545,13 @@ function renderJournal(){
         tradeMemory.entries[e.id]=coaching;
         S.set(K.mem,tradeMemory);
         window.dbSaveUserData&&window.dbSaveUserData('mem',tradeMemory);
+        return;
       }
-      cbtn.textContent='💡';cbtn.disabled=false;
+      // coachSingleTrade ritorna null sia su errore che su risposta vuota: nessun modo di
+      // distinguerli da qui, ma almeno un lampeggio visibile invece di tornare muto a 💡
+      // come se il click non fosse mai partito (audit 2026-09-18).
+      cbtn.textContent='⚠️';setTimeout(()=>{cbtn.textContent='💡';cbtn.disabled=false;},1500);
+      return;
     };
     list.appendChild(d);
   });

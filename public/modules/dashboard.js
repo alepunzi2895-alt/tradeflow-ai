@@ -550,19 +550,13 @@ function buildDerivedPrices(prices){
 }
 
 
+// La card DXY Correlation è stata rimossa da index.html (resta solo un commento) — questa
+// funzione girava comunque ogni 5s scrivendo su elementi ormai inesistenti (guardie if(el),
+// innocuo ma confuso da leggere). dashContext.correlation resta invece un vero side-effect:
+// updateConfidence() lo usa come fallback quando prices?.CORRELATION manca (audit 2026-09-18).
 function updateCorrelation(prices){
   const c=prices.CORRELATION;if(!c)return;
-  // Store globally so confidence score uses same value
   dashContext.correlation=c;
-  const el=document.getElementById('corr-status');
-  const sig=document.getElementById('corr-signal');
-  const col=c.status==='DIVERGENZA'?'var(--red)':c.status==='NORMALE'?'var(--green)':'var(--yellow)';
-  if(el){el.textContent=c.status;el.style.color=col;}
-  if(sig){sig.textContent=c.signal;sig.style.color=col;}
-  const xcEl=document.getElementById('corr-xau-chg');
-  if(prices.XAU&&xcEl) xcEl.textContent=`${prices.XAU.change>=0?'+':''}${prices.XAU.change}%`;
-  const dcEl=document.getElementById('corr-dxy-chg');
-  if(prices.DXY&&dcEl) dcEl.textContent=`${prices.DXY.change>=0?'+':''}${prices.DXY.change}%`;
 }
 
 function updateConfidence(prices, sentimentData){
@@ -1278,6 +1272,13 @@ async function captureChartScreenshot(){
   }
 }
 
+// iOS Safari non implementa getDisplayMedia: prima il bottone restava visibile e falliva solo
+// al tap con un alert() — su mobile (la piattaforma principale dell'app) sembrava rotto senza
+// spiegazione finché non si provava (audit 2026-09-18). Meglio dirlo subito, al mount.
+if(!navigator.mediaDevices?.getDisplayMedia){
+  const chartBtn=document.getElementById('btn-chart-analyze');
+  if(chartBtn){ chartBtn.textContent='📷 Cattura schermo non supportata su questo browser'; chartBtn.disabled=true; chartBtn.title='Richiede desktop o un browser con supporto alla condivisione schermo (non disponibile su iOS Safari).'; }
+}
 document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=>{
   console.log('[chart-analyze] click');
   const btn=document.getElementById('btn-chart-analyze');

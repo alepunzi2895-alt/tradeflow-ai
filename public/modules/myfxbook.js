@@ -43,7 +43,14 @@ function renderMyfx(){
 async function mfxLogin(){
   const email=document.getElementById('mfx-email').value.trim();
   const pass=document.getElementById('mfx-pass').value;
-  if(!email||!pass)return;
+  const err=document.getElementById('mfx-err');
+  if(!email||!pass){
+    // Prima usciva senza toccare la UI: un click su un campo vuoto sembrava non fare nulla
+    // (audit 2026-09-18) — stesso box errore già usato per un login fallito, riusato qui.
+    err.style.display='block';err.textContent='⚠️ Inserisci email e password.';
+    return;
+  }
+  err.style.display='none';
   const btn=document.getElementById('btn-mfx-login');btn.textContent='⏳...';btn.disabled=true;
   try{
     const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password:pass})});

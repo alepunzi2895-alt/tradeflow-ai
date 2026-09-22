@@ -26,6 +26,14 @@ async function authFetch(input, options={}) {
 window.authFetch=authFetch;
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+// Le zone .sdrop (Journal CSV/screenshot, Knowledge Base, Chat foto) hanno bordo tratteggiato
+// che promette drag&drop visivamente, ma nessuna di loro ha mai avuto un vero handler
+// dragover/drop — un trascinamento reale attiva il comportamento di default del browser
+// (apre/naviga il file), perdendo tutto lo stato dell'app in memoria (audit 2026-09-18).
+// Guardia globale: mai lasciare che il browser gestisca un drop di file sulla pagina.
+document.addEventListener('dragover', e=>{ e.preventDefault(); });
+document.addEventListener('drop', e=>{ e.preventDefault(); });
+
 // ── TURSO DB HELPERS ────────────────────────────────────
 /**
  * Returns the server result; failures also surface as a sync notice.

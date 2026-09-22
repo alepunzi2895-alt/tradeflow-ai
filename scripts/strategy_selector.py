@@ -35,7 +35,7 @@ STRATEGIES_CONFIG = [
             "M30": {"wr": 0.438, "pf": 1.300, "daily_pnl": 8.0,  "dd": 244},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
-        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.0},
+        "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},  # allineato a risk_guardian.STRATEGY_ATR_PARAMS["S00_MFKK"] (era 1.0, outlier — stessa classe di bug fixata 2026-04-30 per S05/S09/S10/S17)
     },
     {
         "id": "S09_MFKK_SCALPING",

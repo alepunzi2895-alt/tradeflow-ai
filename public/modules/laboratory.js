@@ -43,8 +43,8 @@
     return new Promise((resolve,reject)=>{
       const worker=new Worker('/modules/lab-worker.js?v=audit1');
       if(mode==='backtest')activeWorker=worker;
-      const timer=setTimeout(()=>{worker.terminate();reject(Error('Tempo massimo superato'));},120000);
       const done=()=>{clearTimeout(timer);worker.terminate();if(activeWorker===worker)activeWorker=null;};
+      const timer=setTimeout(()=>{done();reject(Error('Tempo massimo superato'));},120000);
       worker.onmessage=({data})=>{done();data.ok?resolve(data.result):reject(Error(data.error));};
       worker.onerror=()=>{done();reject(Error('Calcolo non disponibile. Ricarica il Laboratorio.'));};
       worker.postMessage({candles,config,mode});
@@ -78,7 +78,7 @@
       if(version!==dataVersion)throw Error('Dataset modificato durante il calcolo: riesegui il backtest.');
       const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(candles)));
       last={engineVersion:'audit1',datasetSha256:[...new Uint8Array(hash)].map(x=>x.toString(16).padStart(2,'0')).join(''),createdAt:new Date().toISOString(),config:cfg,meta:metadata,candles,...result};
-      root.innerHTML='<span class="nb-lbl">Esperimento completato</span>';const title=document.createElement('h2');title.textContent=cfg.name;root.append(title);const provenance=document.createElement('p');provenance.className='data-note';provenance.textContent=`${meta.asset} · ${meta.tf} · ${meta.count} candele · ${meta.source}`;root.append(provenance);
+      root.innerHTML='<span class="nb-lbl">Esperimento completato</span>';const title=document.createElement('h2');title.textContent=cfg.name;root.append(title);const provenance=document.createElement('p');provenance.className='data-note';provenance.textContent=`${meta.asset} · ${meta.tf} · ${meta.count} candele · ${meta.source}`;root.append(provenance);const safety=document.createElement('p');safety.className='data-note';safety.textContent='Solo ricerca: nessun ordine inviato al bot.';root.append(safety);
       const grid=document.createElement('div');grid.className='lab-stats';for(const [label,value] of [['Trade',result.stats.n],['P&L netto',result.stats.pnl],['Profit factor',result.stats.pf],['Win rate %',result.stats.wr],['Drawdown chiuso',result.stats.dd]]){const tile=document.createElement('div');tile.textContent=label;const strong=document.createElement('strong');strong.textContent=fmt(value);tile.append(strong);grid.append(tile);}root.append(grid);
       let sum=0;const curve=[0,...result.trades.map(t=>sum+=t.pnl)];if(curve.length>1){const path=nbSmoothPath(curve,500,150,12);root.insertAdjacentHTML('beforeend',`<svg class="lab-chart" viewBox="0 0 500 150" role="img" aria-label="P&L cumulato dei trade chiusi"><path d="${path.line}" fill="none" stroke="var(--g)" stroke-width="2"/></svg>`);}
       const note=document.createElement('p');note.className='data-note';note.textContent=`Prime 70% candele: ${result.train.n} trade, P&L ${fmt(result.train.pnl)}. Ultime 30%: ${result.holdout.n} trade, P&L ${fmt(result.holdout.pnl)}. Divisione per data d’ingresso; confronto descrittivo, non validazione indipendente. Stop prima del target se entrambi toccati. Posizione residua chiusa a fine dati. Drawdown sui soli trade chiusi.`;root.append(note);

@@ -87,8 +87,12 @@ function hvRenderNebula(all){
   }).join('');
   const nodesSvg = all.map((s,i) => {
     const p = pos[s.key], d = s.signalOnly ? 46 : 54;
-    const tier = s.signalOnly ? {hex:'#5a4a7a'} : orbitTier(s.pf);
-    const pfNorm = s.signalOnly ? 0.3 : Math.max(0.08, Math.min(1, (s.pf-0.6)/2));
+    // Guardia numerica: una strategia senza ancora un backtest ha pf null/undefined — senza
+    // questo fallback orbitTier()/.toFixed() mandano in crash l'intera nebulosa (audit 2026-09-18,
+    // stesso pattern già presente in dashboard.js::orbitRoster()).
+    const pf = typeof s.pf === 'number' ? s.pf : 0;
+    const tier = s.signalOnly ? {hex:'#5a4a7a'} : orbitTier(pf);
+    const pfNorm = s.signalOnly ? 0.3 : Math.max(0.08, Math.min(1, (pf-0.6)/2));
     const dashArr = s.signalOnly ? '2 6' : `${Math.round(2*Math.PI*40 * pfNorm)} 251`;
     return `<a class="nb-token" href="#" data-hive-key="${s.key}" style="left:${(p.x/W*100).toFixed(1)}%;top:${(p.y/H*100).toFixed(1)}%;--delay:${(-i*0.7).toFixed(1)}s;--glow:${tier.hex}66">
       <svg width="${d}" height="${d}" viewBox="0 0 100 100" fill="none">
@@ -97,7 +101,7 @@ function hvRenderNebula(all){
         <circle cx="50" cy="50" r="27" fill="#04060a" fill-opacity=".8"/>
       </svg>
       <span class="nb-token__hash">${s.label.split(' ')[0]}</span>
-      <span class="nb-token__v" style="color:${tier.hex}">${s.signalOnly?'solo score':'PF '+s.pf.toFixed(2)}</span>
+      <span class="nb-token__v" style="color:${tier.hex}">${s.signalOnly?'solo score':'PF '+pf.toFixed(2)}</span>
     </a>`;
   }).join('');
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" style="position:absolute;inset:0">${linkSvg}</svg>${nodesSvg}`;
@@ -140,10 +144,9 @@ function hvRenderRoster(all){
 
 function hvRender(){
   const all = hvAllStrategies();
-  hvRenderStats(all);
-  hvRenderNebula(all);
-  hvRenderKnowledge();
-  hvRenderRoster(all);
+  for(const fn of [()=>hvRenderStats(all), ()=>hvRenderNebula(all), hvRenderKnowledge, ()=>hvRenderRoster(all)]){
+    try{ fn(); }catch(e){ console.error('[hive]', e); }
+  }
 }
 
 document.addEventListener('click', (e)=>{

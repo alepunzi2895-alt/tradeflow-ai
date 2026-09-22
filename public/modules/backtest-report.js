@@ -119,9 +119,9 @@ function brCard(key){
   if(!info) return '';
   const disabled = (brData.disabled||[]).includes(key);
   const good = (info.holdout?.pf||0) >= 1;
-  const badge = disabled ? {t:'⛔ DISATTIVATA', c:'#FF8A8A', bg:'rgba(255,138,138,.12)'}
+  const badge = disabled ? {t:'⛔ DISATTIVATA', c:'var(--red)', bg:'rgba(255,138,138,.12)'}
               : good ? {t:'STABILE', c:'var(--green)', bg:'rgba(0,230,118,.12)'}
-              : {t:'DECADUTA', c:'#FF8A8A', bg:'rgba(255,138,138,.12)'};
+              : {t:'DECADUTA', c:'var(--red)', bg:'rgba(255,138,138,.12)'};
   return `
   <div class="br-card" data-key="${key}" style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:11px 12px;${disabled?'opacity:.65':''}">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
@@ -131,7 +131,7 @@ function brCard(key){
     <canvas class="br-spark" style="width:100%;height:40px;display:block;margin:5px 0 6px;cursor:pointer"></canvas>
     <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim)">
       <span>full PF <b style="color:var(--text)">${(info.full?.pf??0).toFixed(2)}</b></span>
-      <span>holdout PF <b style="color:${good?'var(--green)':'#FF8A8A'}">${(info.holdout?.pf??0).toFixed(2)}</b></span>
+      <span>holdout PF <b style="color:${good?'var(--green)':'var(--red)'}">${(info.holdout?.pf??0).toFixed(2)}</b></span>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
       <span style="font-size:9.5px;color:var(--dim)">n=${info.n_trades}</span>
@@ -139,7 +139,7 @@ function brCard(key){
     </div>
     <div style="display:flex;gap:5px;margin-top:8px">
       <button data-br-run="${key}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🔄 Backtest</button>
-      <button data-br-toggle="${key}" data-disabled="${disabled}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:${disabled?'var(--green)':'#FF8A8A'};font-size:10px;cursor:pointer;font-family:inherit">${disabled?'🔓 Attiva':'⛔ Blocca'}</button>
+      <button data-br-toggle="${key}" data-disabled="${disabled}" style="flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:5px;color:${disabled?'var(--green)':'var(--red)'};font-size:10px;cursor:pointer;font-family:inherit">${disabled?'🔓 Attiva':'⛔ Blocca'}</button>
     </div>
     <button data-br-genome="${key}" style="width:100%;margin-top:5px;background:rgba(229,189,108,.06);border:1px solid rgba(229,189,108,.22);border-radius:6px;padding:5px;color:var(--g);font-size:10px;cursor:pointer;font-family:inherit">🧬 Apri genoma</button>
   </div>`;
@@ -164,10 +164,10 @@ function brRenderCompare(){
   const cs = brData.combined_stats, ca = brData.active_combined_stats;
   if(!cs || !ca){ el.innerHTML=''; return; }
   const rows = [
-    {l:'Profit Factor', b:cs.pf, a:ca.pf, dp:2, higher:true},
-    {l:'Win Rate %', b:cs.wr, a:ca.wr, dp:1, higher:true},
-    {l:'P&L totale', b:cs.total_pnl, a:ca.total_pnl, dp:0, higher:true},
-    {l:'Max Drawdown', b:cs.max_dd, a:ca.max_dd, dp:0, higher:false},
+    {l:'Profit Factor', b:cs.pf??0, a:ca.pf??0, dp:2, higher:true},
+    {l:'Win Rate %', b:cs.wr??0, a:ca.wr??0, dp:1, higher:true},
+    {l:'P&L totale', b:cs.total_pnl??0, a:ca.total_pnl??0, dp:0, higher:true},
+    {l:'Max Drawdown', b:cs.max_dd??0, a:ca.max_dd??0, dp:0, higher:false},
   ];
   el.innerHTML = rows.map(r=>{
     const d = r.a - r.b;
@@ -177,7 +177,7 @@ function brRenderCompare(){
       <div style="display:flex;align-items:baseline;gap:6px">
         <span style="font-size:11px;color:var(--dim);text-decoration:line-through">${r.b.toFixed(r.dp)}</span>
         <span style="font-size:15px;font-weight:700;color:var(--text)">${r.a.toFixed(r.dp)}</span>
-        <span style="font-size:10px;font-weight:700;color:${good?'var(--green)':'#FF8A8A'}">${d>=0?'+':''}${d.toFixed(Math.max(r.dp,2))}</span>
+        <span style="font-size:10px;font-weight:700;color:${good?'var(--green)':'var(--red)'}">${d>=0?'+':''}${d.toFixed(Math.max(r.dp,2))}</span>
       </div>
     </div>`;
   }).join('');
@@ -194,7 +194,7 @@ function brRenderRegime(){
       const ok = rv.optimal_regimes_coded.includes(reg);
       rows += `<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);padding:3px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--text)">${reg}</span><span>n=${s.n}</span><span>PF ${Math.min(s.pf,99.9).toFixed(2)}</span>
-        <span style="color:${s.pnl>=0?'var(--green)':'#FF8A8A'}">${brFmt(s.pnl)}</span>
+        <span style="color:${s.pnl>=0?'var(--green)':'var(--red)'}">${brFmt(s.pnl)}</span>
         <span style="color:${ok?'var(--green)':'var(--yellow)'}">${ok?'✓':'⚠ fuori config'}</span>
       </div>`;
     });
@@ -206,46 +206,49 @@ function brRenderAll(){
   if(!brData) return;
   const meta = document.getElementById('br-meta');
   if(meta) meta.textContent = brData.synced_at ? `Aggiornato ${new Date(brData.synced_at).toLocaleString('it-IT')}` : '';
-  brRenderCompare();
-  brRenderCards();
-  brRenderHero();
-  brWireHero();
-  brRenderRegime();
+  // Isolate each section: un campo mancante in una non deve svuotare le altre (bug noto, audit 2026-09-18).
+  for(const fn of [brRenderCompare, brRenderCards, brRenderHero, brWireHero, brRenderRegime]){
+    try{ fn(); }catch(e){ console.error('[backtest-report]', fn.name, e); }
+  }
 }
 
 async function brLoad(){
   const body = document.getElementById('brsheet-body');
+  const status = document.getElementById('br-status');
   if(body) body.style.opacity = '.5';
+  if(status){ status.style.display='none'; status.innerHTML=''; status.style.color='var(--dim)'; }
   try{
     const r = await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_report_get'})});
     const d = await r.json();
     if(d.ok && d.data){ brData = d.data; brRenderAll(); }
-    else if(body) body.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:20px 0;text-align:center">Nessun report ancora disponibile — gira <code>python scripts/portfolio_backtest.py --push</code> una prima volta (poi lo fa da solo ogni giorno).</div>';
+    else if(status){ status.style.display='block'; status.innerHTML = 'Nessun report ancora disponibile — gira <code>python scripts/portfolio_backtest.py --push</code> una prima volta (poi lo fa da solo ogni giorno).'; }
   }catch(e){
-    if(body) body.innerHTML = `<div style="color:#FF8A8A;font-size:12px">Errore caricamento report: ${e.message}</div>`;
+    if(status){ status.style.display='block'; status.style.color='var(--red)'; status.textContent = `Errore caricamento report: ${e.message}`; }
   }
   if(body) body.style.opacity = '1';
 }
 
 // ── Lancia backtest on-demand ─────────────────────────────────────────────────
 async function brRunBacktest(key){
-  const badgeEl = document.querySelector(`[data-badge="${key}"]`);
-  const btn = document.querySelector(`[data-br-run="${key}"]`);
+  // Il bottone va ri-cercato nel DOM ad ogni uso, mai catturato una volta sola: #br-grid viene
+  // ricostruito da brRenderCards() (es. via "Ricarica" mentre un polling è in corso) e un
+  // riferimento cache diventerebbe un nodo orfano, desincronizzato dal bottone reale (audit 2026-09-18).
+  const liveBtn = ()=> document.querySelector(`[data-br-run="${key}"]`);
+  let btn = liveBtn();
   if(btn){ btn.textContent='⏳ In coda...'; btn.disabled = true; }
   let requestId;
   try{
     const queued=await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_cmd_push', strategy_id:key})});
     const q=await queued.json();if(!queued.ok||!q.ok)throw Error(q.error||'Coda non disponibile');requestId=q.request_id;
-  }catch(e){ alert('Errore invio richiesta: '+e.message); if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;} return; }
+  }catch(e){ alert('Errore invio richiesta: '+e.message); btn=liveBtn(); if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;} return; }
 
-  const requestedAt = Date.now();
   if(brPolling[key]) clearInterval(brPolling[key]);
   let tries = 0;
   brPolling[key] = setInterval(async ()=>{
     tries++;
     if(tries > 40){ // ~6 min a 9s/poll
       clearInterval(brPolling[key]); delete brPolling[key];
-      if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;}
+      btn=liveBtn(); if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;}
       alert(`Nessuna risposta dal worker per ${key} — è in esecuzione scripts/backtest_worker.py?`);
       return;
     }
@@ -253,10 +256,9 @@ async function brRunBacktest(key){
       const r = await authFetch('/api/db', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'backtest_result_get', strategy_id:key, request_id:requestId})});
       const d = await r.json();
       if(!d.ok || !d.data) return;
-      const syncedAt = new Date(d.data.synced_at||0).getTime();
       if(d.data.request_id !== requestId) return; // risultato vecchio, non ancora arrivato quello nuovo
       clearInterval(brPolling[key]); delete brPolling[key];
-      if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;}
+      btn=liveBtn(); if(btn){btn.textContent='🔄 Backtest';btn.disabled=false;}
       if(d.data.error){ alert(`Backtest ${key} fallito: ${d.data.error}`); return; }
       // Aggiorna in-place i dati locali + ri-renderizza quella card
       const bucket = brData.shared_pool?.[key] ? 'shared_pool' : 'isolated';
@@ -323,8 +325,8 @@ function gnScore(info, regime){
   const score = Math.round((consistency*0.30 + durability*0.30 + coverage*0.25 + sample*0.15) * 100);
   let tier, tierColor;
   if(score>=70){ tier='TIER 1 · Credibile'; tierColor='var(--green)'; }
-  else if(score>=45){ tier='TIER 2 · Da confermare'; tierColor='#F4B860'; }
-  else { tier='TIER 3 · Fragile'; tierColor='#FF8A8A'; }
+  else if(score>=45){ tier='TIER 2 · Da confermare'; tierColor='var(--yellow)'; }
+  else { tier='TIER 3 · Fragile'; tierColor='var(--red)'; }
   return {score, tier, tierColor, consistency, durability, coverage, sample, regimeNote};
 }
 
@@ -373,7 +375,10 @@ function gnPeriodCols(equityCurve){
   const bucketSize=Math.max(1, Math.floor(pts.length/nBuckets));
   const deltas=[];
   for(let i=0;i<nBuckets;i++){
-    const a=pts[i*bucketSize], b=pts[Math.min((i+1)*bucketSize, pts.length-1)];
+    // L'ultimo bucket termina sempre sull'ultimo punto reale, anche quando pts.length non è
+    // multiplo di nBuckets — altrimenti la coda più recente della curva (fino al 9%) non
+    // entra in nessun bucket (bug audit 2026-09-18).
+    const a=pts[i*bucketSize], b=pts[i===nBuckets-1 ? pts.length-1 : (i+1)*bucketSize];
     deltas.push(b-a);
   }
   const maxAbs=Math.max(...deltas.map(Math.abs),1);

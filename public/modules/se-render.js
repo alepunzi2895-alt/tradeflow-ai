@@ -66,6 +66,14 @@ document.addEventListener('click', (e) => {
   if (!btn) return;
   window._seTradeFilter = btn.dataset.tf;
 });
+// Stesso motivo dei bottoni OGGI/7G/30G sopra: gli input data CUSTOM vengono ricreati ad ogni
+// rebuild di seRender() (ogni 1s) — un onchange inline sull'input può restare orfano se il
+// rebuild capita mentre il date-picker nativo è aperto (audit 2026-09-18). change bubbla,
+// quindi la delega funziona identica al pattern click di sopra.
+document.addEventListener('change', (e) => {
+  if(e.target.matches('[data-role="se-trade-from"]')) window._seTradeFrom = e.target.value;
+  else if(e.target.matches('[data-role="se-trade-to"]')) window._seTradeTo = e.target.value;
+});
 
 // ── EQUITY SPARKLINE ─────────────────────────────────────────────────────────
 // Mini-chart SVG inline (no JS state, sopravvive al rebuild di seRender() ogni 1s).
@@ -334,7 +342,6 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
           ?`background:${dc};color:${s.dir==='buy'?'#000':'#fff'};cursor:pointer;opacity:1`
           :`background:var(--bg2);color:var(--dim);cursor:not-allowed;opacity:0.5`;
         const btnLabel=botOnline?`🤖 AUTO — in esecuzione`:`🔴 Bot offline — avvia mt5-bot.py`;
-        const btnDisabled='disabled';
         return `<div style="background:${dc}10;border:1px solid ${dc}35;border-radius:8px;padding:9px 11px;margin-bottom:6px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <div style="display:flex;align-items:center;gap:6px">
@@ -353,7 +360,12 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
             <span style="color:var(--dim)">R:R 1:${(s.tp/s.sl).toFixed(1)}</span>
             <span style="color:var(--dim)">PF ${s.pf}</span>
           </div>
-          <button onclick='seSendTradeToMt5(${JSON.stringify(s)})' ${btnDisabled}
+          <!-- Sempre disabled: l'invio manuale al bot non è collegato, il pannello mostra solo lo
+               stato AUTO. Niente onclick qui — seSendTradeToMt5(JSON.stringify(s)) si rompeva in
+               silenzio su un apostrofo italiano in s.why (es. "dall'ADX"), l'esatta trappola che
+               le dev rules del progetto segnalano; se va riabilitato, serve data-* + listener
+               delegato come il resto del tab, mai onclick inline (audit 2026-09-18). -->
+          <button disabled
             style="width:100%;padding:7px;border:none;border-radius:5px;font-size:10px;font-weight:800;${btnStyle}">
             ${btnLabel}
           </button>
@@ -412,9 +424,9 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   const customInputs=window._seTradeFilter==='custom'?`
     <div style="display:flex;gap:4px;margin-top:4px;align-items:center">
       <span style="font-size:8px;color:var(--dim)">Da</span>
-      <input type="date" value="${window._seTradeFrom}" onchange="window._seTradeFrom=this.value" style="font-size:8px;background:var(--card2);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:1px 4px">
+      <input type="date" data-role="se-trade-from" value="${window._seTradeFrom}" style="font-size:8px;background:var(--card2);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:1px 4px">
       <span style="font-size:8px;color:var(--dim)">A</span>
-      <input type="date" value="${window._seTradeTo}" onchange="window._seTradeTo=this.value" style="font-size:8px;background:var(--card2);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:1px 4px">
+      <input type="date" data-role="se-trade-to" value="${window._seTradeTo}" style="font-size:8px;background:var(--card2);border:1px solid var(--border2);border-radius:3px;color:var(--text);padding:1px 4px">
     </div>`:'';
   const pnlTot=filtered.reduce((s,t)=>s+(t.profit||0),0);
   const histHtml=`
@@ -466,6 +478,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   // il blocco regime sottostante e le card la marcano già correttamente come bloccata
   // (mismatch segnalato dall'utente, vedi directives/06_known_issues.md).
   const activeList = [playbookEntry.strategy, ...(playbookEntry.others || [])].filter(id=>!BLOCKED_STRATEGIES.includes(id));
+  // S20/S31 tradano XAU su blocchi sempre-attivi dedicati in mt5-bot.py, fuori dal sistema
+  // regime/PLAYBOOK_UI — senza questo il pannello più visibile del tab (e il badge ATTIVA
+  // sulle loro card più sotto) non le mostra mai come vive (audit 2026-09-18). S30 tradea
+  // US30, un asset diverso da questo pannello XAU-specifico, e resta volutamente fuori.
+  ['S20_FIB_CONFLUENCE','S31_LAYOUT_SMART'].forEach(id=>{
+    if(SE.strategies[id] && !BLOCKED_STRATEGIES.includes(id) && !activeList.includes(id)) activeList.push(id);
+  });
   const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
   const portfolioDdPct = parseFloat(BOT_STATS.maxdd_pct) || 0;
   const ddColor = portfolioDdPct < 15 ? 'var(--green)' : portfolioDdPct < 20 ? '#F4B860' : '#FF8A8A';
@@ -564,10 +583,10 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <button data-action="open-backtest-report" style="flex:1;background:rgba(229,189,108,0.1);border:1px solid var(--g)33;border-radius:8px;padding:8px 10px;color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">📊 Report Backtest</button>
     <button data-action="open-hive" style="flex:1;background:rgba(183,156,255,0.1);border:1px solid #B79CFF33;border-radius:8px;padding:8px 10px;color:#B79CFF;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">🐝 The Hive</button>
-    <button data-action="open-blocked" style="flex:1;background:rgba(255,71,87,0.08);border:1px solid #FF8A8A33;border-radius:8px;padding:8px 10px;color:#FF8A8A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">⛔ Bloccate (${BLOCKED_STRATEGIES.length})</button>
+    <button data-action="open-blocked" title="Motivo e data del blocco, una per una" style="flex:1;background:rgba(255,71,87,0.08);border:1px solid #FF8A8A33;border-radius:8px;padding:8px 10px;color:#FF8A8A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">⛔ Perché bloccate (${BLOCKED_STRATEGIES.length})</button>
   </div>
   <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-    <button data-action="toggle-blocked-inline" style="background:none;border:none;color:var(--dim);font-size:10px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:2px">${SE_UI.showBlocked ? `👁️ Nascondi le ${BLOCKED_STRATEGIES.length} bloccate` : `👁️ Mostra anche le ${BLOCKED_STRATEGIES.length} bloccate`}</button>
+    <button data-action="toggle-blocked-inline" title="Mostra le performance storiche delle strategie bloccate, qui in griglia" style="background:none;border:none;color:var(--dim);font-size:10px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:2px">${SE_UI.showBlocked ? `👁️ Nascondi le ${BLOCKED_STRATEGIES.length} bloccate da qui` : `👁️ Mostra anche le ${BLOCKED_STRATEGIES.length} bloccate qui (con le performance)`}</button>
   </div>
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).filter(([id]) => SE_UI.showBlocked || !BLOCKED_STRATEGIES.includes(id)).map(([id, s]) => {

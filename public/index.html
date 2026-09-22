@@ -91,7 +91,7 @@
       </div>
       <div class="hright">
         <span id="berr" class="hbadge hw" style="display:none"></span>
-        <button id="btn-set">⚙️</button>
+        <button id="btn-set" aria-label="Impostazioni" title="Impostazioni">⚙️</button>
       </div>
     </div>
   </div>
@@ -350,12 +350,12 @@
     <div class="tp" id="tp-analysis">
       <div id="chat-msgs"></div>
       <div id="qrow"><div class="qi" id="qi"></div></div>
-      <div id="imgprev"><img id="imgthumb" src="" alt=""><span id="imgstat" style="font-size:11px;color:var(--green)">✓ Pronto</span><button id="imgclear" style="margin-left:auto;background:none;border:none;color:var(--border2);font-size:16px;cursor:pointer">✕</button></div>
+      <div id="imgprev"><img id="imgthumb" src="" alt=""><span id="imgstat" style="font-size:11px;color:var(--green)">✓ Pronto</span><button id="imgclear" aria-label="Rimuovi immagine" title="Rimuovi immagine" style="margin-left:auto;background:none;border:none;color:var(--border2);font-size:16px;cursor:pointer">✕</button></div>
       <div id="ibar">
-        <button id="bimg">📷</button>
-        <button id="bnews"><span>📰</span><div class="news-dot"></div></button>
+        <button id="bimg" aria-label="Allega screenshot" title="Allega screenshot">📷</button>
+        <button id="bnews" aria-label="Notizie di mercato" title="Notizie di mercato"><span>📰</span><div class="news-dot"></div></button>
         <textarea id="minput" rows="1" placeholder="Analisi, screenshot, domande..."></textarea>
-        <button id="bsend">▲</button>
+        <button id="bsend" aria-label="Invia" title="Invia">▲</button>
       </div>
     </div>
 
@@ -379,7 +379,7 @@
           <button class="bs" id="btn-analyze" style="color:var(--g)">🧠 Analisi</button>
         </div>
         <!-- Filtri locali: distinti dal report AI -->
-        <div class="workspace-heading"><span>Registro operazioni</span><button class="bs" data-journal-period="all" aria-pressed="true" onclick="setJournalPeriod('all')">Tutti</button><button class="bs" onclick="generateReport(journalPeriod)">Report AI</button></div>
+        <div class="workspace-heading"><span>Registro operazioni</span><button class="bs" data-journal-period="all" aria-pressed="true" onclick="setJournalPeriod('all')">Tutti</button><button class="bs" onclick="generateReport(journalPeriod,this)">Report AI</button></div>
         <div style="display:flex;gap:5px;margin-bottom:10px">
           <button class="bs" data-journal-period="day" aria-pressed="false" id="btn-report-day" style="color:var(--dim);font-size:11px;flex:1">Oggi</button>
           <button class="bs" data-journal-period="week" aria-pressed="false" id="btn-report-week" style="color:var(--dim);font-size:11px;flex:1">7 giorni</button>
@@ -483,6 +483,7 @@
   <input type="file" id="csv-file" accept=".csv,.xlsx,.txt" style="display:none">
   <div style="color:var(--dim);font-size:11px;margin-bottom:8px">Oppure incolla il testo:</div>
   <textarea id="csv-text" rows="4" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--text);font-size:12px;outline:none;font-family:monospace;resize:none;margin-bottom:10px" placeholder="Incolla righe CSV..."></textarea>
+  <div id="csv-err" style="display:none;color:var(--red);font-size:11.5px;line-height:1.5;margin-bottom:8px"></div>
   <button class="bsave" id="btn-csv-go" style="width:100%;margin-bottom:8px">🧠 Analizza con AI</button>
   <button class="scancel" id="btn-csvc">Annulla</button>
 </div></div>
@@ -493,6 +494,7 @@
   <div class="sdrop" id="scr-drop"><div class="sdropico">📸</div><div class="sdrop-t">Screenshot "Cronologia" MT5</div><div class="sdrop-s">TradeFlow legge i trade chiusi e analizza gli errori</div></div>
   <input type="file" id="scr-file" accept="image/*" style="display:none">
   <div id="scr-prev" style="display:none;margin-bottom:10px"><img id="scr-img" style="width:100%;border-radius:8px;max-height:200px;object-fit:contain;background:#050608"></div>
+  <div id="scr-err" style="display:none;color:var(--red);font-size:11.5px;line-height:1.5;margin-bottom:8px"></div>
   <button class="bsave" id="btn-scr-go" style="width:100%;margin-bottom:8px;display:none">🧠 Analizza Trade Chiusi</button>
   <button class="scancel" id="btn-scrc">Annulla</button>
 </div></div>
@@ -546,6 +548,7 @@
       <span id="br-meta" style="font-size:10px;color:var(--dim)"></span>
       <button id="btn-br-refresh" style="background:none;border:1px solid var(--border2);border-radius:6px;padding:4px 9px;color:var(--dim);font-size:10px;cursor:pointer;font-family:inherit">🔃 Ricarica</button>
     </div>
+    <div id="br-status" style="display:none;font-size:12px;color:var(--dim);padding:20px 0;text-align:center"></div>
 
     <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">Confronto roster completo → solo attive</div>
     <div id="br-compare" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px"></div>

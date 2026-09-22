@@ -380,7 +380,7 @@ class RiskManager:
         Ritorna float 0-100 se fresco (<8h), None se stale/offline.
         Il chiamante usa None come segnale di fallback al calcolo locale.
         """
-        import urllib.request, ssl, json as _json
+        import os, urllib.request, ssl, json as _json
         from datetime import datetime, timezone, timedelta
         # Guard: senza un base URL valido urllib solleva ValueError("unknown url
         # type: '/api/db...'") ad ogni ciclo → il chiamante cade sempre sul proxy

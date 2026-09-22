@@ -111,7 +111,12 @@ except ImportError:
 
 # ── CONFIGURAZIONE (Legacy fallback, ora legge da .env) ───────────────
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
-MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
+# Nessun fallback hardcoded: prima c'era una password reale in chiaro nel sorgente
+# (git-tracked) — fail-closed invece, come già fatto per MT5_BOT_SECRET/JWT_SECRET
+# (audit 2026-09-22, confermato che la VPS ha già MT5_PASSWORD in .env).
+MT5_PASSWORD = os.getenv("MT5_PASSWORD") or ""
+if not MT5_PASSWORD:
+    raise RuntimeError("MT5_PASSWORD non impostata — aggiungila a .env prima di avviare il bot.")
 MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 
 SYMBOL       = os.getenv("SYMBOL", "GOLD")
@@ -230,7 +235,10 @@ _layout_score_last: dict = {}                # {key: last_bar_t}
 _layout_score_snap: dict = {}               # {key: status dict}
 
 # Se sei su VPS Standalone, usa http://localhost:3000
-VERCEL_URL   = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app") 
+VERCEL_URL   = os.getenv("VERCEL_URL") or "https://tradeflow-ai-delta.vercel.app"
+# os.getenv(k, default) usa il default SOLO se la chiave manca del tutto — se VERCEL_URL=
+# è presente in .env ma vuota (facile da introdurre modificando il file), ritorna '' e
+# sync_to_vercel() esce con un `return` silenzioso, zero log, zero indizi (audit 2026-09-22).
 MT5_SECRET   = os.getenv("MT5_BOT_SECRET", "")
 
 SYNC_ENABLED = True          # False per disabilitare il sync cloud

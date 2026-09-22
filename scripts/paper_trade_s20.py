@@ -41,12 +41,18 @@ COOLDOWN_S = 2 * 3600
 SESSION = (7, 19)
 P_PRINCIPIO = dict(band=0.25, htf='ema200', sl_atr_k=1.5, tp1='r1', tp2_r=2.0, rr_min=1.0)
 
+# Password reale hardcoded qui prima (git-tracked) — rimossa (audit 2026-09-22,
+# password già esposta nello storico git: da ruotare col broker).
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
-MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
+MT5_PASSWORD = os.getenv("MT5_PASSWORD") or ""
+if not MT5_PASSWORD:
+    raise RuntimeError("MT5_PASSWORD non impostata — aggiungila a .env prima di eseguire questo script.")
 MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 SYMBOL_CANDIDATES = ["GOLD", "XAUUSD", "XAUUSD.m", "XAUUSD_micro"]
 
-VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
+# os.getenv(k, default) usa il default solo se la chiave manca del tutto, non se è
+# presente ma vuota — stesso bug già corretto in mt5-bot.py (audit 2026-09-22).
+VERCEL_URL = os.getenv("VERCEL_URL") or "https://tradeflow-ai-delta.vercel.app"
 MT5_SECRET = os.getenv("MT5_BOT_SECRET", "")
 _SSL_CTX = ssl.create_default_context()
 

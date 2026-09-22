@@ -24,9 +24,13 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-# ── CONFIG (legge da .env, fallback su hardcoded) ───────────────────────────
+# ── CONFIG (legge da .env) ───────────────────────────────────────────────────
+# Password reale hardcoded qui prima (git-tracked) — rimossa (audit 2026-09-22,
+# password già esposta nello storico git: da ruotare col broker).
 MT5_LOGIN    = int(os.getenv("MT5_LOGIN", 1301224666))
-MT5_PASSWORD = os.getenv("MT5_PASSWORD", "Alessandro95!")
+MT5_PASSWORD = os.getenv("MT5_PASSWORD") or ""
+if not MT5_PASSWORD:
+    raise RuntimeError("MT5_PASSWORD non impostata — aggiungila a .env prima di eseguire questo script.")
 MT5_SERVER   = os.getenv("MT5_SERVER", "XMGlobal-MT5 6")
 
 # Candidati simbolo per asset (primo visibile/attivabile vince).

@@ -1,10 +1,6 @@
 {
   "_comment": "Strategie disabilitate a livello di ESECUZIONE LIVE. File git-tracked, editabile SOLO a mano o da scripts/reactivation_check.py. Letto da strategy_selector.is_hard_blocked() (primo check in mt5-bot.quality_gate). NON viene mai toccato da PerformanceTracker. Motivazione: prima del 2026-09-03 il blocco viveva in data/strategy_overrides.json, che il bot riscrive a runtime ed è git-tracked -> sulla VPS il working tree restava dirty e git pull non aggiornava il file, quindi S00/S09/S18 continuavano a tradare. Vedi directives/06_known_issues.md e 07_self_learning_log.md 2026-09-03.",
   "blocked": {
-    "S00_MFKK": {
-      "since": "2026-07-16",
-      "reason": "WR live 13.3% vs baseline 49.4%. V2 confermata morta dallo sprint 2026-09-02 (holdout PF 0.47, 0/4 fold). V3 candidata paper-test in backtests/results/opt_s00_2026-09-02.json."
-    },
     "S09_MFKK_SCALPING": {
       "since": "2026-07-16",
       "reason": "WR live 11.8% vs baseline 36.0%, PF live 0.10. Sprint 2026-09-02: nessuna config con full PF > ~0.75."
@@ -16,10 +12,10 @@
     "S10_OB_FVG_SCALP": {
       "since": "2026-09-17",
       "reason": "Re-backtest 24 mesi (portfolio_backtest.py): full PF 0.829 su appena 22 trade in 2 anni, holdout n=5 non significativo. Validazione regime: zero trade osservati nei suoi optimal_regimes codificati (RANGING/VOLATILE) — spara quasi solo in TREND_UP/DOWN, mai nel regime per cui è configurata. Vedi directives/02_strategies.md 2026-09-17."
-    },
-    "S16_GOLDEN_SQUEEZE": {
-      "since": "2026-09-17",
-      "reason": "Re-backtest 24 mesi: full PF 1.428 (storicamente solida) ma holdout recente PF 0.691 su n=43 (campione non piccolo) — stesso pattern di decadimento full-buono/holdout-cattivo che aveva preceduto il blocco di S00/S18. Decisione utente: bloccare per coerenza col criterio già applicato, in attesa di conferma dal WR live reale prima di un'eventuale riattivazione. Vedi directives/02_strategies.md 2026-09-17."
     }
+  },
+  "_unblocked_2026-09-22": {
+    "S00_MFKK": "Riattivata su conto DEMO (trade_mode=0, verificato) per raccogliere WR/PF live reali invece di continuare a discutere sul backtest. V2 restava bocciata dal backtest realistico (holdout PF 0.47, 0/4 fold, sprint 2026-09-02) — questa riattivazione è un esperimento demo deliberato, non una promozione basata su nuova evidenza statistica. Fix collegato applicato lo stesso giorno: strategy_selector.py sl_atr_mult 1.0->1.5 (era disallineato da risk_guardian, dormiente finché bloccata).",
+    "S16_GOLDEN_SQUEEZE": "Riattivata su conto DEMO (trade_mode=0, verificato). Restava il candidato più solido (5/6 gate passati, fallisce solo DSR per correzione multiple-testing su 1753 trial cumulativi — non un difetto della strategia). scripts/paper_trade_s16.py resta attivo in parallelo per un confronto paper-vs-demo-live. Vedi 07_self_learning_log.md 2026-09-22."
   }
 }

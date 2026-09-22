@@ -102,6 +102,13 @@
     <!-- ── DASHBOARD ── -->
     <div class="tp on" id="tp-dash">
       <div class="dp" id="dash-panel">
+        <!-- Price strip -->
+        <section class="desk-section" id="market-quotes" aria-labelledby="quotes-title">
+          <header class="workspace-heading"><h2 id="quotes-title">Quotazioni</h2><p>Prezzo e variazione giornaliera · tutti i simboli nello stesso aggiornamento</p></header>
+          <div class="price-strip quote-grid"></div>
+          <p class="data-note quote-status">Connessione alla fonte…</p>
+        </section>
+
         <!-- Orbite strategie: nucleo = miglior PF del roster live, pianeti = resto del roster -->
         <div class="orbit-hero" id="orbit-hero">
           <div class="orbit-top">
@@ -136,13 +143,6 @@
             <div class="nb-panel nb-panel--pad nb-stack" id="orbit-detail"></div>
           </div>
         </div>
-
-        <!-- Price strip -->
-        <section class="desk-section" id="market-quotes" aria-labelledby="quotes-title">
-          <header class="workspace-heading"><h2 id="quotes-title">Quotazioni</h2><p>Prezzo e variazione giornaliera · tutti i simboli nello stesso aggiornamento</p></header>
-          <div class="price-strip quote-grid"></div>
-          <p class="data-note quote-status">Connessione alla fonte…</p>
-        </section>
 
         <!-- DXY Correlation -->
 
@@ -582,6 +582,13 @@
   <button class="scancel" id="btn-gnc" style="margin-top:16px">Chiudi</button>
 </div></div>
 
+<!-- MACRO SCORE · quotazioni non tradate (VIX/SPX/NDX/RUT/OIL/yield) -->
+<div class="ovl" id="macrosheet"><div class="sht" style="max-width:640px">
+  <div class="shnd"></div><div class="shtitle">📡 ANALISI QUOTAZIONE</div>
+  <div id="macrosheet-body"></div>
+  <button class="scancel" id="btn-mcc" style="margin-top:16px">Chiudi</button>
+</div></div>
+
 <!-- THE HIVE · nebulosa del roster strategie + knowledge base -->
 <div class="ovl" id="hivesheet"><div class="sht" style="max-width:960px">
   <div class="shnd"></div><div class="shtitle">🐝 THE HIVE</div>
@@ -646,6 +653,7 @@
   <!-- App: init, tabs, overlays, profile -->
   <script src="/modules/lab-engine.js?v=audit1"></script>
   <script src="/modules/laboratory.js?v=audit1"></script>
+  <script src="/modules/macro-score.js?v=quotes2"></script>
   <script src="/modules/market-watch.js?v=quotes2"></script>
   <script src="/app.js?v=quotes2"></script>
 </body>

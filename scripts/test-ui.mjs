@@ -56,10 +56,15 @@ await page.route('**/*',async route=>{
 try {
   await page.goto(base);
   await page.waitForSelector('.saturn-satellite');
-  assert.equal(await page.locator('.saturn-satellite').count(),3);
+  // 5, non più 3: S00_MFKK/S16_GOLDEN_SQUEEZE riattivate in data/hard_blocks.json (2026-09-22,
+  // decisione utente su conto demo) — registrySnapshot() le legge da lì, un roster più grande
+  // è il comportamento corretto, non una regressione.
+  assert.equal(await page.locator('.saturn-satellite').count(),5);
   await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=XAU] .pc-val')?.textContent.includes('4.000'));
   assert.equal(await page.locator('.price-strip').count(),1,'only one quote surface');
-  assert.equal(await page.locator('#market-quotes .pc').count(),13);
+  // 10, non più 13: DXY/EURUSD/GBPUSD tolte dalla griglia visibile (2026-09-22, richiesta
+  // utente) — restano fetchate lato server per il fattore di correlazione, solo non renderizzate.
+  assert.equal(await page.locator('#market-quotes .pc').count(),10);
   assert.equal(await page.locator('.market-watch,#hdr #bxau,#hdr #bxag').count(),0,'no duplicated price areas');
   assert.equal(await page.locator('[data-quote-symbol=XAG] .pc-chg').innerText(),'—');
   const xauBefore=await page.locator('[data-quote-symbol=XAU] .pc-val').innerText();
@@ -75,6 +80,10 @@ try {
   const before=await first.getAttribute('style');
   await page.waitForTimeout(700);
   assert.notEqual(await first.getAttribute('style'),before,'orbits advance');
+  // Scroll esplicito: con 5 satelliti (era 3) la card orbita può eccedere il viewport di
+  // test, boundingBox() darebbe coordinate fuori schermo e il click atterrerebbe altrove
+  // (verificato: colpiva un satellite diverso da quello target — audit 2026-09-22).
+  await page.locator('.saturn-universe').scrollIntoViewIfNeeded();
   const sceneBox=await page.locator('.saturn-universe').boundingBox();
   await page.mouse.move(sceneBox.x+sceneBox.width/2,sceneBox.y+sceneBox.height/2);
   const moonBox=await first.boundingBox();

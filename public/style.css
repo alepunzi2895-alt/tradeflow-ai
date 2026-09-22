@@ -272,6 +272,16 @@ html, body {
 .quote-stale .pc-val { opacity:.65; }
 .quote-status { line-height:1.6; }
 .quote-error { color:var(--yellow); }
+.pc-clickable { cursor:pointer; transition:border-color .15s,background .15s; }
+.pc-clickable:hover,.pc-clickable:focus-visible { border-color:rgba(229,189,108,.45); outline:none; }
+.pc-clickable:active { transform:scale(.98); }
+/* Wash inset invece di background diretto: non tocca lo sfondo a riposo della card
+   (piatto o gradiente su .main), si sovrappone e sfuma senza lasciarla trasparente. */
+@keyframes pc-flash-up { 0%{box-shadow:inset 0 0 0 999px rgba(0,230,118,.28);} 100%{box-shadow:inset 0 0 0 999px rgba(0,230,118,0);} }
+@keyframes pc-flash-down { 0%{box-shadow:inset 0 0 0 999px rgba(255,71,87,.28);} 100%{box-shadow:inset 0 0 0 999px rgba(255,71,87,0);} }
+.pc-flash-up { animation:pc-flash-up 900ms ease-out; }
+.pc-flash-down { animation:pc-flash-down 900ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .pc-flash-up,.pc-flash-down { animation:none; } }
 .system-metrics { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--desk-line);border:1px solid var(--desk-line);border-radius:14px;overflow:hidden;margin:18px 0 10px; }
 .system-metrics>div { background:#080e1bee;padding:14px 18px;display:flex;flex-direction:column;gap:7px;min-width:0; }
 .system-metrics span { color:var(--dim);font-size:11px; }

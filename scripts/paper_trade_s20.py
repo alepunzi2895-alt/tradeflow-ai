@@ -21,6 +21,8 @@ Uso:
   python -X utf8 scripts/paper_trade_s20.py --summary  # solo riepilogo, nessuna nuova rilevazione
 """
 import sys, os, json, argparse, datetime, urllib.request, ssl
+from dotenv import load_dotenv
+load_dotenv()  # mancava — .env non veniva mai letto senza, stesso bug trovato oggi altrove (audit 2026-09-22)
 
 # Parse args PRIMA dell'import: research_s20_fib_v2 → se2 fa `sys.argv = [sys.argv[0]]`
 # all'import per proteggere il proprio argparse, il che azzererebbe i nostri flag.
@@ -203,7 +205,7 @@ def main():
             bt = candles[i]['t']
             if bt in known:
                 continue
-            dt = datetime.datetime.utcfromtimestamp(bt)
+            dt = datetime.datetime.fromtimestamp(bt, tz=datetime.timezone.utc)
             if dt.weekday() == 0:               # niente lunedì
                 continue
             if not (SESSION[0] <= dt.hour < SESSION[1]):
@@ -249,7 +251,7 @@ def main():
         sync_vercel(build_summary(st))
 
     opens = [s for s in st['signals'] if s['status'] == 'open']
-    print(f"S20 paper — {symbol} M5 · {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M')}Z")
+    print(f"S20 paper — {symbol} M5 · {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M')}Z")
     print(f"  nuovi segnali: {new_sigs}   risolti ora: {resolved}   aperti: {len(opens)}   totali: {len(st['signals'])}")
     print(_stats(st['signals']))
     for s in opens:

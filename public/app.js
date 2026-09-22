@@ -179,13 +179,14 @@ document.querySelectorAll('.tb').forEach(btn=>btn.onclick=()=>switchTab(btn.data
 // ── OVERLAYS ────────────────────────────────────────────
 function openOvl(id){document.getElementById(id).classList.add('on');}
 function closeOvl(id){document.getElementById(id).classList.remove('on');}
-['imgsheet','csvsheet','scrsheet','profsheet','blockedsheet','brsheet','genomesheet','hivesheet'].forEach(id=>{
+['imgsheet','csvsheet','scrsheet','profsheet','blockedsheet','brsheet','genomesheet','hivesheet','macrosheet'].forEach(id=>{
   document.getElementById(id).onclick=e=>{if(e.target===document.getElementById(id))closeOvl(id);};
 });
 document.getElementById('btn-blockedc').onclick=()=>closeOvl('blockedsheet');
 document.getElementById('btn-brc').onclick=()=>closeOvl('brsheet');
 document.getElementById('btn-gnc').onclick=()=>closeOvl('genomesheet');
 document.getElementById('btn-hvc').onclick=()=>closeOvl('hivesheet');
+document.getElementById('btn-mcc').onclick=()=>closeOvl('macrosheet');
 
 // ── EVENTS ──────────────────────────────────────────────
 // Safe button wiring - never crash if element missing

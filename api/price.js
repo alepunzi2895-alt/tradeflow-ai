@@ -47,8 +47,13 @@ export default async function handler(req, res) {
       return out.length >= 30 ? out : null;
     }
 
+    // Ticker singolo verificato per i simboli macro della griglia Quotazioni (audit 2026-09-22:
+    // ^TNX già in unità percentuale diretta, non serve scalare; niente equivalente pulito per
+    // US02Y su Yahoo, quello resta fuori — la sua card usa lo spread 10Y-2Y dal prezzo live, non history).
+    const MACRO_TICKERS = { VIX:'^VIX', SPX:'^GSPC', NDX:'^NDX', RUT:'^RUT', OIL:'CL=F', US10Y:'^TNX' };
     // GC=F / YM=F (futures) accettati come fallback SOLO per candles/indicatori tecnici
-    let symbols = asset === 'XAG' ? ['XAGUSD=X', 'SI=F']
+    let symbols = MACRO_TICKERS[asset] ? [MACRO_TICKERS[asset]]
+                  : asset === 'XAG' ? ['XAGUSD=X', 'SI=F']
                   : (asset === 'US30' || asset === 'DJI') ? ['YM=F', '^DJI']
                   : ['XAUUSD=X', 'GC=F'];
     if(req.query.strict === '1')symbols=[asset==='XAG'?'XAGUSD=X':asset==='US30'?'^DJI':'XAUUSD=X'];

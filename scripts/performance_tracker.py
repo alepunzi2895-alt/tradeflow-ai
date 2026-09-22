@@ -258,8 +258,18 @@ class PerformanceTracker:
             wins    = [t for t in recent if t['win']]
             losses  = [t for t in recent if not t['win']]
             gross_p = sum(t['profit'] for t in wins)
-            gross_l = abs(sum(t['profit'] for t in losses)) or 1e-9
+            gross_l = abs(sum(t['profit'] for t in losses))
             total_p = sum(t['profit'] for t in recent)
+            # Con 0 perdite nella finestra (comune a basso n) il vecchio `or 1e-9` produceva
+            # PF assurdi tipo 128830000000.000 invece di "nessuna perdita ancora" — solo
+            # cosmetico (suggest_adjustments()/get_recent_wr_map() non leggono mai 'pf', solo
+            # 'wr'/streak), ma rumore fuorviante nel log del Performance Tracker (2026-09-22).
+            if gross_l > 0:
+                pf_val = round(gross_p / gross_l, 3)
+            elif gross_p > 0:
+                pf_val = float('inf')
+            else:
+                pf_val = 0.0
 
             # Streak corrente (iterazione inversa)
             streak = 0
@@ -277,7 +287,7 @@ class PerformanceTracker:
             stats[sid] = {
                 "n":            len(recent),
                 "wr":           round(len(wins) / len(recent), 4) if recent else 0.0,
-                "pf":           round(gross_p / gross_l, 3),
+                "pf":           pf_val,
                 "total_profit": round(total_p, 2),
                 "avg_profit":   round(total_p / len(recent), 2) if recent else 0.0,
                 "streak":       streak,

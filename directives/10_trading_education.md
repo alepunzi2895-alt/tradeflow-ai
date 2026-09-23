@@ -14,6 +14,15 @@
 > fundamental) sono contenuto introduttivo standard, coperto dalle sezioni sotto.
 >
 > **2026-09-10** — versione iniziale (dopo l'integrazione di S31_LAYOUT_SMART).
+>
+> **2026-09-23** — le 13 sezioni di questo file (1-12 + sintesi) sono state trasformate in
+> altrettante entry della Knowledge Base in-app (richiesta utente: "integrare i PDF nella
+> knowledge base"), invece di ricaricare i 35 PDF grezzi uno per uno (che avrebbe prodotto
+> 35 riassunti generici via il prompt standard di `kb.js` — "estrai regole di trading XAU/USD,
+> conciso" — invece di questa sintesi già cross-referenziata contro il sistema). File generato:
+> `Downloads/tradeflow-knowledge-curriculum-2026-09-23.json`, importabile dal bottone "📥
+> Importa" nel tab Knowledge Base (bottone nuovo, la funzione di import esisteva già ma non
+> era mai raggiungibile dalla UI — vedi `07_self_learning_log.md` stessa data).
 
 ---
 

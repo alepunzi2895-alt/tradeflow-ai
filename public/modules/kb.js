@@ -99,23 +99,38 @@ function exportKb(){
   a.click();URL.revokeObjectURL(url);
 }
 
+// btn-kb-export ha una sua import "sorella" — importKbFromJson() esisteva da tempo ma non era
+// mai wired a nessun bottone (nessun modo di usarla dalla UI). Wiring + fix nello stesso giro
+// 2026-09-23: alert() sostituito con lo stesso #kb-status inline già usato da processKbFile()
+// (mai alert() nella UI custom, regola già applicata ovunque nel resto del modulo) + aggiunta
+// la saveKbToCloud() che processKbFile()/deleteKb() già fanno e che qui mancava.
+document.getElementById('btn-kb-import').onclick=()=>document.getElementById('kb-import-file').click();
+document.getElementById('kb-import-file').onchange=e=>{const f=e.target.files?.[0];if(f)importKbFromJson(f);e.target.value='';};
+
 function importKbFromJson(file){
+  const stat=document.getElementById('kb-status');
   const r=new FileReader();
   r.onload=e=>{
     try{
       const data=JSON.parse(e.target.result);
-      if(data.knowledge&&Array.isArray(data.knowledge)){
-        // Merge with existing, avoid duplicates by name
-        const existing=new Set(kb.map(k=>k.name));
-        const newDocs=data.knowledge.filter(k=>!existing.has(k.name));
-        kb=[...newDocs,...kb];
-        S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
-        P.knowledge=kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6);
-        S.set(K.p,P);
-        renderKb();
-        alert(`✅ ${newDocs.length} documenti importati nella Knowledge Base.`);
-      }
-    }catch(err){alert('❌ File non valido: '+err.message);}
+      if(!data.knowledge||!Array.isArray(data.knowledge)) throw new Error('Formato non riconosciuto (atteso {knowledge:[...]})');
+      // Merge con l'esistente, evita duplicati per nome
+      const existing=new Set(kb.map(k=>k.name));
+      const newDocs=data.knowledge.filter(k=>!existing.has(k.name));
+      kb=[...newDocs,...kb];
+      S.set(K.kb,kb); window.dbSaveUserData && window.dbSaveUserData('kb', kb);
+      P.knowledge=kb.map(k=>`[${escapeHtml(k.name)}]\n${k.summary}`).slice(-6);
+      S.set(K.p,P);
+      renderKb();
+      stat.style.cssText='display:block;background:#081408;border:1px solid #62E6A622;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:var(--green)';
+      stat.textContent=`✓ ${newDocs.length} documenti importati (${data.knowledge.length-newDocs.length} duplicati saltati).${kbSyncEnabled?' Salvataggio personale...':''}`;
+      saveKbToCloud().then(()=>{
+        if(kbSyncEnabled) stat.textContent=`✓ ${newDocs.length} documenti importati e salvati su GitHub ☁️`;
+      });
+    }catch(err){
+      stat.style.cssText='display:block;background:#160c0c;border:1px solid #FF8A8A22;border-radius:7px;padding:7px 10px;margin-bottom:9px;font-size:12px;color:#FF8A8A';
+      stat.textContent='❌ File non valido: '+err.message;
+    }
   };
   r.readAsText(file);
 }

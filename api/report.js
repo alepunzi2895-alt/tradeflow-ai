@@ -3,13 +3,17 @@ import { getDb, savePerformanceSnapshot } from './db.js';
 // Generate trading reports: daily, weekly, monthly
 // Also stores/retrieves trade coaching memory
 
-// Hobby plan: Vercel impone comunque 10s a prescindere (no-op innocuo). Pro+: alza davvero il
-// tetto — un report periodico completo (max_tokens 2000, più sezioni) può superare 8s, prima
-// il timeout interno abortiva per primo producendo "The operation was aborted due to timeout"
-// anche quando Vercel avrebbe lasciato girare più a lungo (audit 2026-09-23).
+// 2026-09-23: alzato fetchT a 55s ipotizzando un piano Vercel Pro+ (maxDuration reale) — sbagliato,
+// vedi directives/08_dev_rules.md ("Execution time: 10s max per function", regola scritta prima di
+// questo audit, mai verificata contro il codice). Su Hobby il cap reale resta 10s A PRESCINDERE da
+// maxDuration: senza un self-abort sotto quella soglia, Vercel uccide la function a metà (504/nessun
+// body) invece del nostro catch pulito — ha rotto Report/Progressi (prompt più pesante dei 4 tipi,
+// il caso più lento) invece di ripararlo. Reverted a 8s (pattern standard del progetto, vedi fetchT
+// in directives/08_dev_rules.md). config.maxDuration lasciato: no-op innocuo su Hobby, utile se il
+// piano viene confermato Pro+ in futuro — ma il fix vero deve restare sotto la fetchT.
 export const config = { maxDuration: 60 };
 
-async function fetchT(url, opts = {}, ms = 55000) {
+async function fetchT(url, opts = {}, ms = 8000) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -155,7 +159,7 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
         system: "Sei TradeFlow AI, coach di trading professionale. Rispondi sempre in italiano. Usa linguaggio costruttivo, orientato alla crescita. Mai 'errori' — usa 'opportunità di miglioramento', 'da ottimizzare', 'area di sviluppo'.",
         messages: [{ role: "user", content: prompt }]
       })
-    }, 55000);
+    }, 8000);
 
     const d = await r.json();
     if (d.error) throw new Error(d.error.message);

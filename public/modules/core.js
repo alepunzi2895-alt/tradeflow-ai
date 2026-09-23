@@ -217,7 +217,13 @@ function compress(file){
 
 // ── API ────────────────────────────────────────────────
 async function api(messages,system){
-  const r=await authFetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,thinking:{type:'disabled'},system:system||buildSys(),messages})});
+  // 1500 token generava spesso oltre 8s (il self-abort server-side di api/chat.js, l'unico modo
+  // di restare sotto il cap reale di Vercel senza sapere con certezza il piano — vedi commento
+  // in api/chat.js) → "This operation was aborted" su Analisi Journal e Chat (audit 2026-09-23,
+  // segnalato dall'utente). Abbassato per stare più affidabilmente sotto quel limite; risposte
+  // più corte ma senza troncamenti a metà frase in caso di timeout. Condiviso da chat.js (tab
+  // Analisi) e journal.js (bottone 🧠 Analisi) — stesso endpoint, stesso vincolo per entrambi.
+  const r=await authFetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:800,thinking:{type:'disabled'},system:system||buildSys(),messages})});
   const d=await r.json();
   // api/chat.js inoltra la risposta di Anthropic così com'è in caso di errore API (d.error =
   // oggetto con .message), ma le proprie eccezioni (timeout fetchT, auth) tornano una stringa

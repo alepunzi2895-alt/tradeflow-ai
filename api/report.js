@@ -154,7 +154,13 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 2000,
+        // 2000 generava spesso oltre 8s (il self-abort qui sotto, l'unico modo di restare sotto
+        // il cap reale di Vercel senza sapere con certezza il piano) → "This operation was
+        // aborted" sul Report AI del Journal (audit 2026-09-23, segnalato dall'utente — stesso
+        // problema del giro precedente, stavolta risolto accorciando invece di alzare i timeout
+        // una terza volta). "coaching" (prompt "max 3 righe") non ne risente, il tetto è comunque
+        // più alto di quanto gli serva.
+        max_tokens: 1000,
         thinking: { type: "disabled" },
         system: "Sei TradeFlow AI, coach di trading professionale. Rispondi sempre in italiano. Usa linguaggio costruttivo, orientato alla crescita. Mai 'errori' — usa 'opportunità di miglioramento', 'da ottimizzare', 'area di sviluppo'.",
         messages: [{ role: "user", content: prompt }]

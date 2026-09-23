@@ -3,7 +3,13 @@ import { getDb, savePerformanceSnapshot } from './db.js';
 // Generate trading reports: daily, weekly, monthly
 // Also stores/retrieves trade coaching memory
 
-async function fetchT(url, opts = {}, ms = 8000) {
+// Hobby plan: Vercel impone comunque 10s a prescindere (no-op innocuo). Pro+: alza davvero il
+// tetto — un report periodico completo (max_tokens 2000, più sezioni) può superare 8s, prima
+// il timeout interno abortiva per primo producendo "The operation was aborted due to timeout"
+// anche quando Vercel avrebbe lasciato girare più a lungo (audit 2026-09-23).
+export const config = { maxDuration: 60 };
+
+async function fetchT(url, opts = {}, ms = 55000) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -149,7 +155,7 @@ Sii specifico, usa i dati. Tono da coach, non da critico.`;
         system: "Sei TradeFlow AI, coach di trading professionale. Rispondi sempre in italiano. Usa linguaggio costruttivo, orientato alla crescita. Mai 'errori' — usa 'opportunità di miglioramento', 'da ottimizzare', 'area di sviluppo'.",
         messages: [{ role: "user", content: prompt }]
       })
-    }, 8000);
+    }, 55000);
 
     const d = await r.json();
     if (d.error) throw new Error(d.error.message);

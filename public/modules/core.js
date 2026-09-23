@@ -219,7 +219,12 @@ function compress(file){
 async function api(messages,system){
   const r=await authFetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,thinking:{type:'disabled'},system:system||buildSys(),messages})});
   const d=await r.json();
-  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+  // api/chat.js inoltra la risposta di Anthropic così com'è in caso di errore API (d.error =
+  // oggetto con .message), ma le proprie eccezioni (timeout fetchT, auth) tornano una stringa
+  // semplice — prima .message su una stringa dava undefined e si finiva sempre nel fallback
+  // JSON.stringify, mostrando all'utente il messaggio vero ma con le virgolette letterali
+  // intorno (es. su timeout — audit 2026-09-23).
+  if(d.error)throw new Error(typeof d.error==='string' ? d.error : (d.error.message||JSON.stringify(d.error)));
   const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
   if(!t)throw new Error('Risposta vuota');
   return t;

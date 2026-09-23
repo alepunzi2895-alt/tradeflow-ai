@@ -1,5 +1,42 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-23 — Motivazioni blocco aggiornate + refresh S32/S33/S34 (score-only)
+
+Richiesta utente: aggiornare le motivazioni delle strategie bloccate con dati correnti, e
+sapere come stanno andando le "solo score" (S32/S33/S34, mai promosse a live).
+
+**Motivazioni blocco** (`data/hard_blocks.json`, `data/strategy_registry.json`) — riverificate
+2026-09-23 con `portfolio_backtest.py` (stesso run del refresh MFKK sopra), testo esistente
+mantenuto e integrato invece che sostituito:
+- **S09_MFKK_SCALPING**: full PF 0.854 (n=112, holdout PF 0.994) — sostanzialmente in pareggio
+  ora, non più il PF 0.10 disastroso di luglio, ma holdout ancora <1: resta bloccata.
+- **S18_RANGE_REVERSAL**: full PF 0.729 (n=214), holdout PF 0.337 con **0/6 mesi profittevoli**
+  — conferma netta, resta bloccata.
+- **S10_OB_FVG_SCALP**: full PF passato da 0.829 (misurato 09-17) a **1.534** oggi, stesso
+  n=22. Uno scarto così ampio sullo stesso campione minuscolo a 6 giorni di distanza è la vera
+  notizia: il numero non è stabile, quindi non è una base né per sbloccarla né per confermare
+  il blocco sui soli numeri — resta bloccata per campione insufficiente, motivazione aggiornata
+  di conseguenza (non più "PF negativo netto").
+- **S20_FIB_CONFLUENCE**: full PF 1.718 (n=106), holdout PF 0.870 — sotto la soglia 1.2 già
+  nota, ora con i numeri espliciti in `strategy_registry.json` invece del testo generico.
+
+**S32/S33/S34 (score-only, no capitale)**: refresh baseline in `scripts/layout_s3x.py` (vedi
+TEST 4 nel docstring del file per il dettaglio fold-by-fold) — verdetto **invariato** per
+tutte e 3, nessuna promuovibile:
+- **S32_ORDERFLOW_SCALP**: morta, PF nudo 0.593, DSR Sharpe negativo (non "non provato",
+  proprio negativo).
+- **S33_TREND_MOMENTUM**: full PF nudo **peggiorato da 1.72 (09-10) a 0.893 oggi** sullo stesso
+  segnale — esattamente il pattern atteso da un fit rumoroso (PBO 1.00 già misurato) invece
+  che da un edge reale, non un miglioramento da inseguire.
+- **S34_VOLUME_AUCTION**: **zero trade** nella finestra live-window di validazione
+  (2026-04-14→07-10), campione (n=33/24 mesi) troppo rado per qualunque conclusione.
+
+Non ri-eseguito `confidence_edge_test()` (il test più pesante, 3000+ setup sintetiche): il
+finding strutturale "confidence score senza potere predittivo" (Spearman ~0 per tutte e 3,
+misurato 2026-09-10) non è il tipo di risultato che una settimana di dati in più ribalta — il
+refresh di `evaluate_s3x()` basta a confermare che restano score-only in dashboard, il bot non
+apre ordini su nessuna delle 3.
+
 ## 🆕 2026-09-23 — Refresh pannello "MFKK AI GOLD BOT": stats ricalcolate + sempre visibile prima del regime
 
 Richiesta utente: le stats aggregate del pannello principale (`BOT_STATS` in `se-render.js`)

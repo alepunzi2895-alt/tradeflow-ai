@@ -3,15 +3,15 @@
   "blocked": {
     "S09_MFKK_SCALPING": {
       "since": "2026-07-16",
-      "reason": "WR live 11.8% vs baseline 36.0%, PF live 0.10. Sprint 2026-09-02: nessuna config con full PF > ~0.75."
+      "reason": "WR live 11.8% vs baseline 36.0%, PF live 0.10 al momento del blocco (2026-07-16). Sprint 2026-09-02: nessuna config con full PF > ~0.75. Riverificato 2026-09-23 (portfolio_backtest.py, dati MT5 freschi): full PF 0.854 (n=112, WR 38.4%, 10/23 mesi profittevoli), holdout PF 0.994 (n=21) — sostanzialmente in pareggio, non più in perdita marcata come a luglio, ma comunque sotto la soglia di promozione (holdout PF <1). Resta bloccata."
     },
     "S18_RANGE_REVERSAL": {
       "since": "2026-09-01",
-      "reason": "WR live 14.3% (6 SL su 7 trade), PF 0.07. Ri-test 2026-09-01 negativo su ogni finestra (M30 standalone PF 0.63, H4 PF 0.20)."
+      "reason": "WR live 14.3% (6 SL su 7 trade), PF 0.07 al momento del blocco. Ri-test 2026-09-01 negativo su ogni finestra (M30 standalone PF 0.63, H4 PF 0.20). Riverificato 2026-09-23 (portfolio_backtest.py): full PF 0.729 (n=214, WR 33.6%, 7/25 mesi profittevoli), holdout PF 0.337 (n=38, WR 21.1%, 0/6 mesi profittevoli — negativa su OGNI mese della finestra holdout). Conferma netta, resta bloccata."
     },
     "S10_OB_FVG_SCALP": {
       "since": "2026-09-17",
-      "reason": "Re-backtest 24 mesi (portfolio_backtest.py): full PF 0.829 su appena 22 trade in 2 anni, holdout n=5 non significativo. Validazione regime: zero trade osservati nei suoi optimal_regimes codificati (RANGING/VOLATILE) — spara quasi solo in TREND_UP/DOWN, mai nel regime per cui è configurata. Vedi directives/02_strategies.md 2026-09-17."
+      "reason": "Re-backtest 24 mesi (portfolio_backtest.py): full PF 0.829 su appena 22 trade in 2 anni, holdout n=5 non significativo. Validazione regime: zero trade osservati nei suoi optimal_regimes codificati (RANGING/VOLATILE) — spara quasi solo in TREND_UP/DOWN, mai nel regime per cui è configurata. Vedi directives/02_strategies.md 2026-09-17. Riverificato 2026-09-23 (stesso script, dati MT5 più freschi): stesso n=22 ma full PF ora 1.534 (holdout n=5, PF 219 — inutilizzabile, troppo pochi trade). Lo scarto 0.829→1.534 sullo stesso campione a 6 giorni di distanza è di per sé il problema: risultato non stabile, non è una base per sbloccarla. Resta bloccata per campione insufficiente (22 trade/24 mesi), non per un verdetto negativo netto."
     }
   },
   "_unblocked_2026-09-22": {

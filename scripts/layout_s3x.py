@@ -78,6 +78,32 @@ profittabilità?") — `confidence_edge_test()`: genera i candidati con parametr
   ordini. Sottoprodotti tenuti: `market_structure.py` (BOS/CHoCH, gap G1), `layout_confidence.py`
   (fattori riusabili per S31/S16 — lì da RI-validare, potrebbero funzionare su un segnale con edge).
 ────────────────────────────────────────────────────────────────────────────────
+TEST 4 (2026-09-23, richiesta utente: "quelle solo score come stanno andando?") — refresh
+baseline con dati MT5 freschi (stesso giorno), `evaluate_s3x()` nudo + full stack, nessuna
+modifica a parametri/logica:
+
+  S32 (M5)  : nudo PF 0.593 (n=318, WR 40.3%, 3/18 mesi+), holdout PF 0.506 (n=73, 0/4 mesi+),
+              live-window n=59 WR 32.2%. Stack: PF 0.610/0.559, stesso quadro. DSR sr=-5.259
+              (Sharpe negativo — non è "non provato", è confermato negativo). INVARIATO: morta.
+  S33 (M30) : nudo PF **0.893** (n=305, WR 39%, 11/24 mesi+, fold positivi 2/4) — sotto 1,
+              PEGGIORATO rispetto al PF 1.72 del 2026-09-10 (stesso segnale nudo, 13 giorni e
+              ~2 settimane di dati in più). Esattamente il pattern atteso da un fit rumoroso
+              (PBO 1.00) invece che da un edge reale: più dati out-of-sample arrivano, più
+              l'apparente vantaggio si assottiglia. Stack: PF 1.089 full / 1.359 holdout, 3/4
+              fold positivi — leggermente meglio ma ancora sottile, DSR comunque non
+              significativo @1753 trial cumulativi. Verdetto invariato: NON promuovibile.
+  S34 (H1)  : nudo PF 2.352 ma n=33 in 24 mesi e **live-window 2026-04-14→07-10: n=0 trade**
+              (zero segnali generati in quella finestra). Fold 1 PF 0.805 (debole), fold 3 PF
+              3.317 — ancora la stessa instabilità fold-a-fold segnalata il 09-10, campione
+              anche più sottile di allora. DSR non calcolabile (holdout troppo corto). Stack:
+              n=20, live-window ancora n=0. INVARIATO: troppo rada per dire alcunché.
+
+  Nessuna delle 3 cambia verdetto. Non ri-eseguito `confidence_edge_test()` (le 3000+ setup
+  sintetiche, la parte più pesante) — il risultato strutturale "confidence score senza potere
+  predittivo" (Spearman ~0 su tutte e 3, TEST 3 sopra) non è il tipo di finding che 1 settimana
+  di dati in più ribalta; il refresh di `evaluate_s3x()` sopra basta a confermare che restano
+  score-only, nessun capitale. Vedi anche directives/02_strategies.md 2026-09-23.
+────────────────────────────────────────────────────────────────────────────────
 """
 import os, sys, importlib.util, datetime
 import numpy as np

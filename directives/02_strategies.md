@@ -1,5 +1,47 @@
 # TradeFlow AI — Strategie Attive
 
+## 🆕 2026-09-23 — Refresh pannello "MFKK AI GOLD BOT": stats ricalcolate + sempre visibile prima del regime
+
+Richiesta utente: le stats aggregate del pannello principale (`BOT_STATS` in `se-render.js`)
+erano ancora quelle del 2026-04-19 (commento in codice: "refresh 2026-07-17" era solo una
+verifica, nessun numero aggiornato — vedi voce 07-17 sotto), con un roster di 6-7 strategie
+ormai superato. Chiesto di ricalcolarle e di rendere il pannello sempre visibile **prima**
+del blocco regime (era invece l'ultimo elemento della vista, dentro un `<details>` collassato
+"Statistiche storiche del sistema").
+
+**Dati**: rifetchati H1/H4/M30/M5 XAU + H4 US30 dallo stesso MT5 (`fetch_mt5_history.py`),
+tutti freschi al 2026-09-23. Poi rilanciato `scripts/portfolio_backtest.py` per intero
+(salvato in `backtests/results/portfolio_2026-09-23.json`) — nessuna logica duplicata, stesso
+script/metodologia introdotti il 09-17.
+
+**Scorcio usato per il pannello**: roster **attivo** (non in `DISABLED_NOW`, fonte
+`strategy_registry.SNAPSHOT` — stessa fonte di `BLOCKED_STRATEGIES` lato JS) e **solo XAU**
+(escluso `S30_DOW_DIP`, che tradea US30 — il pannello è esplicitamente "XAU/USD", stessa
+esclusione già applicata ad `activeList` per la riga regime→strategia). Composizione attuale:
+**S00_MFKK, S16_GOLDEN_SQUEEZE, S17_CONVERGENCE_SCALP, S31_LAYOUT_SMART** (S00/S16 di nuovo
+attive dopo la riattivazione — vedi commit `a5d050c`; S09/S10/S18/S20 restano bloccate, S20
+ora anche via `S20_ENABLED=False`). Calcolo con un piccolo script one-off che riusa
+`run_shared_pool()`/`run_isolated()`/`simulate_shared_pool_concurrency()`/`combined_stats()`
+di `portfolio_backtest.py` tal quali, poi scarta `S30_DOW_DIP` dal mix prima di combinare.
+
+**Nuovi numeri (24 mesi, roster attivo XAU-only)**: 740 trade, WR 38.6%, **PF 1.365**,
+P&L totale +3970.9, Max DD 1092.9 (**20.1%** — convenzione `backtest_combined.py`:
+`max_dd / (1000 + peak_equity)`). Per periodo: 1m +29.6 (37tr) · 6m -244.2 (175tr) ·
+12m +3249.5 (369tr) · 24m +3970.9 (740tr). Per strategia: S17 +2626.8 (n=84, WR 50%),
+S00 +836.1 (n=521, WR 36.1%), S31 +507.4 (n=54, WR 51.9%), S16 +0.6 (n=81, WR 34.6% —
+sostanzialmente in pareggio, coerente con l'holdout debole già notato il 09-17).
+
+**Applicato**: `BOT_STATS` in `se-render.js` aggiornato con questi numeri + commento con
+data/fonte/metodologia (non più un magic-number senza contesto). Il pannello non è più
+dentro un `<details>` collassato in fondo alla vista 'live': ora è sempre visibile e
+renderizzato per primo, prima di `regimeHtml` (rimossa anche `historyExpanded`, il
+tracking dello stato open/closed del vecchio `<details>`, diventato codice morto).
+
+**Non applicato / da tenere presente**: nessun refresh automatico — questi numeri vanno
+ricalcolati a mano (stesso script) ogni volta che il roster attivo cambia (nuovo blocco,
+riattivazione, nuova strategia integrata), altrimenti il pannello torna silenziosamente
+stale come questa volta.
+
 ## 🆕 2026-09-17 — Re-backtest completo del roster + performance combinata + validazione regime
 
 Richiesta utente: ri-backtestare tutte le strategie, tracciare equity curve a 24 mesi,

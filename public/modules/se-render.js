@@ -457,9 +457,13 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // ── MFKK AI GOLD BOT — pannello principale
-  // Stats aggregate sistema (backtest M30 · 25 mesi · 6 strategie · lot=0.01 · $1/punto · 2026-04-19)
-  // Sistema adattivo H1 refresh 2026-07-17 (SL allineato al live + re-tuning confermato, nessun cambio adottato): 1332 trade · WR 40.2% · PF 1.277 · +$33.28/gg · DD $4417.5 · 18/24 mesi+
-  const BOT_STATS = { pnl_1m:1107.5, pnl_6m:1522.1, pnl_12m:4456.3, pnl_24m:8087.0, maxdd:4417.5, maxdd_pct:'38.9%', trades_12m:707, pf:1.277, wr:'40.2%', n_strat:7 };
+  // Stats aggregate ricalcolate 2026-09-23 via scripts/portfolio_backtest.py (dati MT5
+  // freschi stesso giorno) — roster ATTIVO e XAU-only: S00_MFKK, S16_GOLDEN_SQUEEZE,
+  // S17_CONVERGENCE_SCALP, S31_LAYOUT_SMART (esclude S09/S10/S18/S20 bloccate e S30_DOW_DIP,
+  // che tradea US30 non XAU — stessa esclusione di activeList sotto). PF/WR su combined_stats()
+  // 24 mesi; maxdd_pct = max_dd / (1000 + peak equity), convenzione backtest_combined.py.
+  // Da ricalcolare periodicamente (nessun refresh automatico) quando il roster attivo cambia.
+  const BOT_STATS = { pnl_1m:29.6, pnl_6m:-244.2, pnl_12m:3249.5, pnl_24m:3970.9, maxdd:1092.9, maxdd_pct:'20.1%', trades_12m:369, pf:1.365, wr:'38.6%', n_strat:4 };
 
   // Multi-strategy playbook (allineato a REGIME_PRIORITY_M30 del backtester · S18 aggiunto)
   const PLAYBOOK_UI = {
@@ -732,7 +736,6 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
 </div>`;
 
   // Preserva scroll di tutti i container scrollabili prima del rebuild 1s
-  const historyExpanded=!!el.querySelector('.desk-details[open]');
   const _mfp  = document.querySelector('#tp-strategy .mfp');
   const _log  = document.getElementById('se-log-scroll');
   const _hist = document.getElementById('se-hist-scroll');
@@ -751,8 +754,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   </button>
   ${SE_UI.collapsedIndicators ? '' : indicatorsBody}
 </div>` : '';
-  el.innerHTML=statusHtml+(SE_UI.view==='catalog' ? stratCardsHtml : SE_UI.view==='diagnostics' ? guardianHtml+logHtml+indicatorsSection : regimeHtml+pendingHtml+posHtml+histHtml);
-  if(SE_UI.view==='live') el.insertAdjacentHTML('beforeend','<details class="desk-details"'+(historyExpanded?' open':'')+'><summary>Statistiche storiche del sistema</summary>'+botPanelHtml+'</details>');
+  el.innerHTML=statusHtml+(SE_UI.view==='catalog' ? stratCardsHtml : SE_UI.view==='diagnostics' ? guardianHtml+logHtml+indicatorsSection : botPanelHtml+regimeHtml+pendingHtml+posHtml+histHtml);
   const _mfpN  = document.querySelector('#tp-strategy .mfp');
   const _logN  = document.getElementById('se-log-scroll');
   const _histN = document.getElementById('se-hist-scroll');

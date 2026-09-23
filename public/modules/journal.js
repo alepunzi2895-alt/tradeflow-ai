@@ -451,6 +451,96 @@ document.getElementById('btn-report-month').onclick=()=>setJournalPeriod('month'
 document.getElementById('btn-progress').onclick=generateProgress;
 document.getElementById('btn-myfxb-j').onclick=()=>switchTab('myfx');
 
+// Statistiche derivate (Profit Factor, Expectancy, Avg Win/Loss, Max Drawdown, streak, equity
+// curve, ritorno per giorno della settimana) — tutte calcolabili dai campi già loggati
+// (date/result/pnl), nessun nuovo campo nel form. Richiesta utente 2026-09-23 (riferimento:
+// screenshot di un journal di trading più avanzato). Servono i trade in ordine CRONOLOGICO
+// (journalRows() li ordina più-recente-primo per la lista) — .reverse() su un array già
+// ordinato per data dà l'ordine ascendente corretto (stesso giorno: ordine di inserimento,
+// il modello dati ha solo la data, non l'ora).
+function computeAdvJournalStats(visible){
+  const chrono=visible.slice().reverse();
+  const withResult=chrono.filter(e=>e.result==='WIN'||e.result==='LOSS');
+  if(!withResult.length) return null;
+  const wins=chrono.filter(e=>e.result==='WIN');
+  const losses=chrono.filter(e=>e.result==='LOSS');
+  const grossWin=wins.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
+  const grossLoss=Math.abs(losses.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0));
+  const pf=grossLoss>0?grossWin/grossLoss:(grossWin>0?Infinity:0);
+  const avgWin=wins.length?grossWin/wins.length:0;
+  const avgLoss=losses.length?-grossLoss/losses.length:0;
+  const totalPnl=chrono.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
+  const expectancy=totalPnl/chrono.length;
+
+  let cum=0,peak=0,maxDD=0;const curve=[];
+  chrono.forEach(e=>{cum+=(parseFloat(e.pnl)||0);curve.push(cum);peak=Math.max(peak,cum);maxDD=Math.max(maxDD,peak-cum);});
+
+  // Streak = run più recente di risultati uguali, contando all'indietro dall'ultimo trade
+  // (in ordine cronologico). Un BE o un trade senza risultato lo interrompe (non è né W né L).
+  let streak=0,streakType=null;
+  for(let i=chrono.length-1;i>=0;i--){
+    const r=chrono[i].result;
+    if(r!=='WIN'&&r!=='LOSS')break;
+    if(streakType===null){streakType=r;streak=1;}
+    else if(r===streakType)streak++;
+    else break;
+  }
+
+  const DOW=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const dow=DOW.map(lbl=>({lbl,pnl:0,n:0}));
+  chrono.forEach(e=>{
+    const d=new Date(e.date+'T00:00:00');
+    if(isNaN(d.getTime()))return;
+    dow[d.getDay()].pnl+=(parseFloat(e.pnl)||0);dow[d.getDay()].n++;
+  });
+
+  return {pf,avgWin,avgLoss,expectancy,maxDD,streak,streakType,curve,dow};
+}
+
+function renderJournalAdvanced(visible){
+  const el=document.getElementById('jadv');
+  if(!el)return;
+  const s=computeAdvJournalStats(visible);
+  if(!s){el.innerHTML='';return;}
+
+  const cards=[
+    {l:'Profit Factor',v:s.pf===Infinity?'∞':s.pf.toFixed(2),c:s.pf>=1?'var(--green)':'var(--red)'},
+    {l:'Expectancy',v:`${s.expectancy>=0?'+':''}${s.expectancy.toFixed(0)}$`,c:s.expectancy>=0?'var(--green)':'var(--red)'},
+    {l:'Avg Win',v:`+${s.avgWin.toFixed(0)}$`,c:'var(--green)'},
+    {l:'Avg Loss',v:`${s.avgLoss.toFixed(0)}$`,c:'var(--red)'},
+    {l:'Max Drawdown',v:`${s.maxDD>0?'-':''}${s.maxDD.toFixed(0)}$`,c:s.maxDD>0?'var(--red)':'var(--dim)'},
+    {l:'Streak',v:s.streakType?`${s.streak} ${s.streakType==='WIN'?'Vittorie':'Sconfitte'}`:'—',c:s.streakType==='WIN'?'var(--green)':s.streakType==='LOSS'?'var(--red)':'var(--dim)'},
+  ];
+
+  const maxAbsDow=Math.max(1,...s.dow.map(d=>Math.abs(d.pnl)));
+  const dowBars=s.dow.map(d=>{
+    const h=d.n?Math.max(4,Math.round(Math.abs(d.pnl)/maxAbsDow*44)):2;
+    const col=d.n===0?'var(--border2)':d.pnl>=0?'var(--green)':'var(--red)';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-size:8px;color:var(--dim)">${d.n?(d.pnl>=0?'+':'')+d.pnl.toFixed(0):''}</div>
+      <div style="width:100%;max-width:22px;height:44px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${h}px;background:${col};border-radius:3px 3px 0 0;opacity:${d.n?0.85:0.4}"></div>
+      </div>
+      <div style="font-size:8px;color:var(--dim);font-weight:700">${d.lbl}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div style="font-size:9px;color:var(--border2);letter-spacing:.1em;margin:14px 0 7px">STATISTICHE AVANZATE</div>
+    <div class="sgrid" style="margin-bottom:10px">
+      ${cards.map(c=>`<div class="sc"><div class="sv" style="color:${c.c};font-size:16px">${escapeHtml(String(c.v))}</div><div class="sl">${escapeHtml(c.l)}</div></div>`).join('')}
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:6px">EQUITY CURVE</div>
+      ${s.curve.length>1?seEquitySpark(s.curve,'Journal equity curve'):'<div style="font-size:10px;color:var(--dim);text-align:center;padding:8px">Servono almeno 2 trade con risultato</div>'}
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.08em;margin-bottom:8px">RITORNO PER GIORNO DELLA SETTIMANA</div>
+      <div style="display:flex;gap:4px">${dowBars}</div>
+    </div>
+  `;
+}
+
 function renderJournal(){
   const visible=journalRows();
   const wins=visible.filter(e=>e.result==='WIN').length;
@@ -470,6 +560,7 @@ function renderJournal(){
       <div class="sl">${s.l}</div>
     </div>
   `).join('');
+  renderJournalAdvanced(visible);
 
   const eb=document.getElementById('ebox');const et=document.getElementById('etags');
   if(P.errors?.length){

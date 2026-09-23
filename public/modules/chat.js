@@ -57,6 +57,9 @@ function hideDots(){document.getElementById('dots')?.remove();}
 
 // Ricostruisce la lista messaggi raggruppandoli per turno (domanda + risposta), dal più vecchio al più recente:
 // ogni volta che parte un nuovo turno viene messo in cima, così alla fine il più recente resta in alto.
+// (Lo stato "primo accesso" è già gestito da app.js: history vuota → bubble di benvenuto reale
+// con onboarding Dashboard/Analisi/Journal, non un placeholder — provato qui e poi tolto perché
+// duplicava quello, vedi 07_self_learning_log.md 2026-09-23.)
 function renderHistoryMessages(msgs){
   let turn=null;
   (msgs||[]).forEach(m=>{

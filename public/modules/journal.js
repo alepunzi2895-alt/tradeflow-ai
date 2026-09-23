@@ -66,7 +66,22 @@ document.getElementById('btn-fcan').onclick=()=>document.getElementById('tform')
 // CSV Import
 document.getElementById('btn-import').onclick=()=>openOvl('csvsheet');
 document.getElementById('btn-csvc').onclick=()=>closeOvl('csvsheet');
-async function handleCsvFile(f){ if(!f)return; document.getElementById('csv-text').value=(await f.text()).slice(0,3000); }
+// L'AI analizza solo i primi CSV_ANALYZE_LIMIT caratteri (limite prompt) — prima il taglio
+// avveniva in silenzio due volte (3000 al caricamento, poi 2000 all'invio) senza dirlo
+// all'utente, che poteva credere fosse stato letto l'intero export (audit 2026-09-18).
+const CSV_ANALYZE_LIMIT=2000;
+function updateCsvCounter(){
+  const len=document.getElementById('csv-text').value.length;
+  const counter=document.getElementById('csv-counter');
+  if(len>CSV_ANALYZE_LIMIT){
+    counter.style.display='block';
+    counter.textContent=`${len.toLocaleString('it-IT')} caratteri incollati — l'AI analizza solo i primi ${CSV_ANALYZE_LIMIT.toLocaleString('it-IT')} (~15-25 righe tipiche di un export broker)`;
+  }else{
+    counter.style.display='none';
+  }
+}
+document.getElementById('csv-text').addEventListener('input',updateCsvCounter);
+async function handleCsvFile(f){ if(!f)return; document.getElementById('csv-text').value=(await f.text()).slice(0,3000); updateCsvCounter(); }
 const csvDrop=document.getElementById('csv-drop');
 csvDrop.onclick=()=>document.getElementById('csv-file').click();
 document.getElementById('csv-file').onchange=async e=>{await handleCsvFile(e.target.files?.[0]);e.target.value='';};
@@ -81,7 +96,7 @@ document.getElementById('btn-csv-go').onclick=async()=>{
   const btn=document.getElementById('btn-csv-go');btn.textContent='⏳...';btn.disabled=true;
   const err=document.getElementById('csv-err');err.style.display='none';
   try{
-    const reply=await api([{role:'user',content:`Analizza storico trade:\n\n${text.slice(0,2000)}\n\nIgnora Balance/Credit/Deposit/Withdrawal. Solo trade reali. Statistiche, pattern errori, 3 azioni concrete.`}],
+    const reply=await api([{role:'user',content:`Analizza storico trade:\n\n${text.slice(0,CSV_ANALYZE_LIMIT)}\n\nIgnora Balance/Credit/Deposit/Withdrawal. Solo trade reali. Statistiche, pattern errori, 3 azioni concrete.`}],
       `Sei TradeFlow AI Journal Coach. Italiano. Profilo: ${P.name}.`);
     closeOvl('csvsheet');showAiResult(reply);autoLearn(reply);
   }catch(e){

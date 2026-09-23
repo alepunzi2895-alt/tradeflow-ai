@@ -140,10 +140,11 @@ async function analyzeMfxAccount(accountId){
     }
     // MyFxBook restituisce il campo 'action' ("Buy"/"Sell"), non 'type' — vedi anche importMfxToJournal()
     const SKIP_TYPES=['deposit','withdrawal','credit','balance','bonus','rebate','commission'];
-    const trades=(d.history||[]).filter(t=>{
+    const allTrades=(d.history||[]).filter(t=>{
       const act=String(t.action||t.type||'').toLowerCase();
       return t.symbol && act && !SKIP_TYPES.some(s=>act.includes(s));
-    }).slice(0,30);
+    });
+    const trades=allTrades.slice(0,30);
     if(!trades.length){
       if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}
       wrap.insertAdjacentHTML('beforeend', `<div style="color:var(--dim);font-size:12px;margin-top:8px">Nessun trade reale trovato nello storico MyFxBook di questo account.</div>`);
@@ -155,9 +156,16 @@ async function analyzeMfxAccount(accountId){
     const reply=await api([{role:'user',content:`Analizza operatività reale di ${P.name} su MyFxBook (solo trade chiusi reali, ignora depositi/prelievi):\n${sum}\n${memCtx}\n\nUsa SOLO i numeri riportati sopra, non inventare dati. Calcola win rate, P&L totale e RR medio dai trade forniti. Individua il pattern d'errore più ricorrente con l'evidenza numerica che lo dimostra. Confronta con la strategia target di ${P.name} (TP1 ${P.tp1}R, TP2 ${P.tp2}R, rischio ${P.risk}%/trade). Dai 3 azioni concrete e specifiche da applicare da subito (niente consigli generici tipo "sii più disciplinato"). Chiudi con Score Disciplina X/10 motivato in una frase.`}],
       `Sei TradeFlow AI Coach. Italiano. Tono diretto, concreto, onesto. Profilo: ${P.name}. Aree di sviluppo note: ${P.errors?.length?P.errors.join(', '):'nessuna'}.`);
     const box=document.createElement('div');box.className='aib';box.style.marginTop='10px';
-    box.innerHTML='<div class="ait">🧠 ANALISI MYFXBOOK</div>';
+    // Il limite dei 30 trade non era mai dichiarato: lo "Score Disciplina" sembrava coprire
+    // tutto lo storico ma in realtà guardava solo gli ultimi 30 (audit 2026-09-18).
+    box.innerHTML=`<div class="ait">🧠 ANALISI MYFXBOOK</div>${allTrades.length>30?`<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px">Basata sugli ultimi 30 trade su ${allTrades.length} totali nello storico</div>`:''}`;
     box.appendChild(md(reply));wrap.appendChild(box);autoLearn(reply);
     pushAnalysisMemory(reply);
     if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}
-  }catch(e){if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}alert('Errore: '+e.message);}
+  }catch(e){
+    if(btn){btn.textContent='🧠 Analizza Operatività';btn.disabled=false;}
+    // Mai alert() qui: rompe il thread JS nello stesso posto in cui il resto del flusso
+    // (MFX login, "nessun trade trovato" sopra) usa già un inserimento inline (audit 2026-09-18).
+    wrap.insertAdjacentHTML('beforeend', `<div style="color:#FF8A8A;font-size:12px;margin-top:8px">⚠️ Errore: ${escapeHtml(e.message)}</div>`);
+  }
 }

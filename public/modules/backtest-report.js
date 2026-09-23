@@ -195,7 +195,7 @@ function brRenderRegime(){
       rows += `<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);padding:3px 0;border-bottom:1px solid var(--border)">
         <span style="color:var(--text)">${reg}</span><span>n=${s.n}</span><span>PF ${Math.min(s.pf,99.9).toFixed(2)}</span>
         <span style="color:${s.pnl>=0?'var(--green)':'var(--red)'}">${brFmt(s.pnl)}</span>
-        <span style="color:${ok?'var(--green)':'var(--yellow)'}">${ok?'✓':'⚠ fuori config'}</span>
+        <span style="color:${ok?'var(--green)':'var(--yellow)'}" title="${ok?'Regime tra quelli configurati come ottimali per questa strategia':'Regime FUORI dalla configurazione ottimale — non dice se qui ha fatto profitto o perdita, solo che spara dove non dovrebbe'}">${ok?'✓ regime atteso':'⚠ regime inatteso'}</span>
       </div>`;
     });
   });
@@ -325,7 +325,11 @@ function gnScore(info, regime){
   const score = Math.round((consistency*0.30 + durability*0.30 + coverage*0.25 + sample*0.15) * 100);
   let tier, tierColor;
   if(score>=70){ tier='TIER 1 · Credibile'; tierColor='var(--green)'; }
-  else if(score>=45){ tier='TIER 2 · Da confermare'; tierColor='var(--yellow)'; }
+  // Ciano invece di --yellow: alla dimensione di un badge era troppo vicino a --nb-accent
+  // (il gold di brand, onnipresente nel resto del pannello) — due ori diversi fianco a fianco
+  // (audit 2026-09-18). Stesso ciano già usato da dashboard.js::orbitTier() per il tier
+  // intermedio "BUONA" — stesso problema, stessa soluzione, ora coerenti tra loro.
+  else if(score>=45){ tier='TIER 2 · Da confermare'; tierColor='var(--nb-cyan)'; }
   else { tier='TIER 3 · Fragile'; tierColor='var(--red)'; }
   return {score, tier, tierColor, consistency, durability, coverage, sample, regimeNote};
 }
@@ -399,7 +403,12 @@ function gnRender(key){
   const meta = (typeof SE!=='undefined' && SE.strategies?.[key]) || {};
   const regime = brData.regime_validation?.[key];
   const s = gnScore(info, regime);
-  const eqCurve = info.equity_curve || brData.equity_curves?.[key];
+  // brData.equity_curves[key] prima: un "🔄 Backtest" on-demand riuscito lo aggiorna (vedi
+  // brRunBacktest) senza toccare info.equity_curve, che resterebbe stale fino al prossimo
+  // reload — stessa precedenza già corretta in brStrategySeries(), prima invertita qui
+  // (poteva mostrare una curva diversa da quella della card per la stessa strategia,
+  // audit 2026-09-18/fix 2026-09-23).
+  const eqCurve = brData.equity_curves?.[key] || info.equity_curve;
   const boot = gnBootstrap(eqCurve);
   const periods = gnPeriodCols(eqCurve);
   const disabled = (brData.disabled||[]).includes(key);

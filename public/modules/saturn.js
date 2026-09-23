@@ -21,13 +21,20 @@ const SaturnScene = (() => {
   }
   function paint() {
     const count = satellites.length;
+    // left/top animati ogni frame forzano layout reflow; transform è compositato dalla GPU
+    // e non lo tocca — stesso posizionamento, letto in translate() invece che riscritto in
+    // left/top percentuale (audit 2026-09-18). left:50%/top:50% ora fissi via CSS, il
+    // punto orbitale diventa un secondo translate in px, misurato sul contenitore reale.
+    const rect = scene ? scene.getBoundingClientRect() : null;
+    const cw = rect?.width || 600, ch = rect?.height || 360;
     satellites.forEach((node,i) => {
       const angle = i*Math.PI*2/Math.max(count,1) + .35 + elapsed*(.10-i*.006);
       const rx = 192 + (i%3)*21, ry = 78 + (i%3)*16;
       const x = Math.cos(angle)*rx, y = Math.sin(angle)*ry, tilt = -Math.PI/20;
       const px = x*Math.cos(tilt)-y*Math.sin(tilt), py=x*Math.sin(tilt)+y*Math.cos(tilt);
-      node.style.left = (50 + px/6)+'%'; node.style.top = (50 + py/3.6)+'%';
-      node.style.setProperty('--depth', (1+Math.sin(angle)*.09).toFixed(3));
+      const depth = (1+Math.sin(angle)*.09).toFixed(3);
+      const offX = (px/6/100*cw).toFixed(2), offY = (py/3.6/100*ch).toFixed(2);
+      node.style.transform = `translate(-50%,-50%) translate(${offX}px,${offY}px) scale(${depth})`;
       node.style.zIndex = Math.sin(angle)<0?'2':'6';
     });
   }

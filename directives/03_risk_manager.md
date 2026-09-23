@@ -58,6 +58,7 @@ composite = strategy_confidence × 0.50
 | Daily loss > 3% equity | Halt trading | automatico a nuovo giorno (`state.pnl_today`) |
 | Weekly drawdown > 5% | Halt trading (solo strategie XAU via `get_order_params`) | quando la somma P&L rolling 7gg rientra sopra −5% |
 | 5 consecutive losses (perdite reali, non BE/scratch) | Halt trading | **a nuovo giorno UTC** (`_cl_day` in `is_circuit_broken`) o su un trade in profitto |
+| Weekly drawdown > 6% (realized + floating vs balance-weekly) | Blocca il nuovo ordine | `execution_safety.py::guard_entry()` — controllo **indipendente e separato** dalla riga sopra, non le stesse soglie riconciliate: 5% in `risk_guardian.py` (solo XAU, calcolo rolling 7gg), 6% qui (tutti i simboli, calcolo realized+floating vs balance). Entrambi attivi in parallelo, mai unificati (audit 2026-09-18). |
 
 > ⚠️ **2026-09-07**: fino a questa data `is_circuit_broken()`/`record_trade_result()` erano definite in
 > `risk_guardian.py` ma **mai chiamate da `mt5-bot.py`** — la tabella sopra descriveva un comportamento
@@ -99,7 +100,9 @@ finché non si decide se/come integrarlo in monitoraggio automatico. Baseline 20
 ~3057 barre): corr 20-barre 0.53, 60-barre 0.36, media storica ~0.18-0.19 — nessun regime
 elevato al momento.
 
-> **Limite posizioni**: `MAX_OPEN_ORDERS = 6` (max 1 per strategia × 6 strategie attive). Il limite è per strategia, non globale.
+> **Limite posizioni** (aggiornato 2026-09-23, era stale dal commit di hardening f58ebd8 mai riconciliato in questa direttiva — vedi audit 2026-09-18): due limiti indipendenti, non uno solo.
+> 1. `mt5-bot.py::MAX_OPEN_ORDERS = 2` (era 6, ridotto per contenere l'esposizione) — posizioni XAU/US30 contemporanee nel loop principale del bot.
+> 2. `execution_safety.py::guard_entry()` — guardia indipendente **account-wide**, blocca qualunque nuovo ordine se `len(mt5.positions_get()) >= 3` a prescindere da strategia/simbolo. Non è "per strategia, non globale" come diceva questa riga prima — è l'opposto: un tetto globale in più, sopra al limite per-loop.
 > **Correlazione direzionale** (fix 2026-05-12): `has_position_in_direction()` blocca qualsiasi nuovo ordine nella stessa direzione di una posizione già aperta — mai più di 1 BUY o 1 SELL aperto contemporaneamente, indipendentemente dalla strategia.
 > **Race condition fix**: `has_position_in_direction()` controlla `_strategy_order_tickets` in-memory prima di MT5 per essere immune alla latenza post-`place_order()` (~500ms).
 

@@ -452,9 +452,16 @@ function renderLayoutStratCard(key, d){
   }
   const ts = (su && su.bar_utc) || (d && d.synced_at);
   const tstr = ts ? new Date(ts).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  // Prima l'unico segno che distingueva una card "solo score" (S32/S33/S34, nessun ordine
+  // reale) da una live (S31) era una riga di 8px nel footer — stesso anello/UI altrimenti,
+  // facile scambiarle per tutte tradabili a colpo d'occhio (audit 2026-09-18). Badge vicino
+  // al titolo, dimensione normale, stesso posto per tutte le card.
+  const liveBadge = meta.live
+    ? '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(0,230,118,.12);color:var(--green);white-space:nowrap">📡 LIVE</span>'
+    : '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(138,111,196,.15);color:#b79ce6;white-space:nowrap">🔬 SOLO SCORE</span>';
   return '<div class="mfkk-card">'
     + '<div class="mfkk-header"><div class="mfkk-title">'+meta.layout.toUpperCase()+' · '+key+' <span style="color:var(--dim);font-weight:400">'+meta.tf+'</span></div>'
-    + '<div style="font-size:9px;color:var(--dim);font-family:monospace">'+tstr+'</div></div>'
+    + '<div style="display:flex;align-items:center;gap:8px">'+liveBadge+'<span style="font-size:9px;color:var(--dim);font-family:monospace">'+tstr+'</span></div></div>'
     + '<div style="font-size:8px;color:#666;margin:-4px 0 9px;line-height:1.4">'+meta.name+' — '+meta.inds+'</div>'
     + '<div class="mfkk-dir-btns" style="margin-bottom:10px">'
     + '<div class="mfkk-dir'+(bias==='buy'?' on-buy':'')+'" style="cursor:default">▲ BUY</div>'
@@ -1282,6 +1289,8 @@ if(!navigator.mediaDevices?.getDisplayMedia){
 document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=>{
   console.log('[chart-analyze] click');
   const btn=document.getElementById('btn-chart-analyze');
+  const errEl=document.getElementById('chart-analyze-err');
+  if(errEl) errEl.style.display='none';
   const oldTxt=btn.textContent;btn.textContent='⏳ Scegli la finestra/tab da condividere...';btn.disabled=true;
   try{
     const img=await captureChartScreenshot();
@@ -1295,10 +1304,12 @@ document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=
     console.error('[chart-analyze] errore:', e.name, e.message);
     // NotAllowedError scatta sia se l'utente annulla il popup di condivisione, sia se il permesso
     // è bloccato dal browser — mostriamo comunque un feedback minimo, mai il silenzio totale.
+    // Mai alert() qui: rompe la UI custom proprio nel punto più in vista della Dashboard
+    // (audit 2026-09-18) — un div inline accanto al bottone, coerente col resto dell'app.
     if(e.name==='NotAllowedError'){
       console.log('[chart-analyze] permesso di condivisione schermo negato o popup annullato dall\'utente.');
-    }else{
-      alert('Errore cattura schermo: '+e.message);
+    }else if(errEl){
+      errEl.textContent='⚠️ Errore cattura schermo: '+e.message;errEl.style.display='block';
     }
   }
   btn.textContent=oldTxt;btn.disabled=false;

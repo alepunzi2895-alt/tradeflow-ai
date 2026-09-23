@@ -4,13 +4,8 @@
  */
 
 const SE = {
-  maxTrades: 10,
-  cooldownMin: 30,
   extremeMult: 3.5,
   session: { start: 0, end: 24 },
-  // Soglie qualità minima per mostrare bottone MT5 (evita segnali deboli)
-  minQuality: { S00_MFKK: 75, S05_MFKK_INTRADAY: 0, default: 0 },
-  _autoExecuted: new Set(),  // mantenuto per compatibilità (non usato)
   strategies: {
     // ── STRATEGIE ATTIVE [BACKTEST MT5 GOLD · lot 0.01 · $1/punto] ──
     // Refresh 2026-07-17: SL allineato al live (1.5×ATR, era 1.0-1.2× nel backtester — vedi 07_self_learning_log.md)

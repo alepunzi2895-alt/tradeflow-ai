@@ -338,6 +338,7 @@
             <span style="font-size:11px;color:var(--dim);font-weight:600">📊 Grafico Live</span>
             <button id="btn-chart-analyze" style="background:linear-gradient(135deg,var(--g),var(--g2));border:none;border-radius:7px;padding:7px 12px;color:#000;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">📷 Analizza Grafico</button>
           </div>
+          <div id="chart-analyze-err" style="display:none;color:var(--red);font-size:11px;line-height:1.5;padding:0 10px 8px;background:var(--card)"></div>
           <div class="tradingview-widget-container" style="height:calc(100vh - 140px); min-height:500px">
             <div id="tv-chart-widget" style="height:100%"></div>
           </div>
@@ -482,7 +483,8 @@
   <div class="sdrop" id="csv-drop"><div class="sdropico">📋</div><div class="sdrop-t">Carica CSV storico MT5</div><div class="sdrop-s">Export MT4/MT5 · MyFxBook CSV</div></div>
   <input type="file" id="csv-file" accept=".csv,.xlsx,.txt" style="display:none">
   <div style="color:var(--dim);font-size:11px;margin-bottom:8px">Oppure incolla il testo:</div>
-  <textarea id="csv-text" rows="4" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--text);font-size:12px;outline:none;font-family:monospace;resize:none;margin-bottom:10px" placeholder="Incolla righe CSV..."></textarea>
+  <textarea id="csv-text" rows="4" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--text);font-size:12px;outline:none;font-family:monospace;resize:none" placeholder="Incolla righe CSV..."></textarea>
+  <div id="csv-counter" style="display:none;color:var(--dim);font-size:10.5px;margin:4px 0 6px"></div>
   <div id="csv-err" style="display:none;color:var(--red);font-size:11.5px;line-height:1.5;margin-bottom:8px"></div>
   <button class="bsave" id="btn-csv-go" style="width:100%;margin-bottom:8px">🧠 Analizza con AI</button>
   <button class="scancel" id="btn-csvc">Annulla</button>

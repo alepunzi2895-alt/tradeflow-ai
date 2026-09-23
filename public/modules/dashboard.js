@@ -1279,25 +1279,33 @@ async function captureChartScreenshot(){
   }
 }
 
-// iOS Safari non implementa getDisplayMedia: prima il bottone restava visibile e falliva solo
-// al tap con un alert() — su mobile (la piattaforma principale dell'app) sembrava rotto senza
-// spiegazione finché non si provava (audit 2026-09-18). Meglio dirlo subito, al mount.
-if(!navigator.mediaDevices?.getDisplayMedia){
-  const chartBtn=document.getElementById('btn-chart-analyze');
-  if(chartBtn){ chartBtn.textContent='📷 Cattura schermo non supportata su questo browser'; chartBtn.disabled=true; chartBtn.title='Richiede desktop o un browser con supporto alla condivisione schermo (non disponibile su iOS Safari).'; }
-}
+// getDisplayMedia (Screen Capture API) è desktop-only per spec — nessun browser mobile la
+// implementa, non solo iOS Safari. Prima il bottone si auto-disabilitava al mount con "prova da
+// desktop": un vicolo cieco sulla piattaforma principale dell'app (mobile-first, vedi
+// 08_dev_rules.md), segnalato dall'utente ("da mobile non mi fa fare analizza grafico",
+// 2026-09-23). Ora invece apre lo stesso imgsheet già usato per allegare uno screenshot in
+// Analisi (Libreria Foto/Fotocamera/URL/incolla, incluso il tip iOS "Screenshot → tieni premuto
+// → Incolla") — stesso risultato finale (un'immagine del grafico analizzata dall'AI), solo via
+// cattura manuale dell'utente invece che automatica via compositing schermo.
 document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=>{
   console.log('[chart-analyze] click');
   const btn=document.getElementById('btn-chart-analyze');
   const errEl=document.getElementById('chart-analyze-err');
   if(errEl) errEl.style.display='none';
+  const asset=window.activeAsset||'XAU';
+  const promptText=`Analizza questo grafico ${asset}/USD live: struttura, setup, confluenze, manipulation score 1-10, entry/SL/TP1/TP2 se c'è un setup valido.`;
+  if(!navigator.mediaDevices?.getDisplayMedia){
+    document.getElementById('minput').value=promptText;
+    switchTab('analysis');
+    openOvl('imgsheet');
+    return;
+  }
   const oldTxt=btn.textContent;btn.textContent='⏳ Scegli la finestra/tab da condividere...';btn.disabled=true;
   try{
     const img=await captureChartScreenshot();
     console.log('[chart-analyze] screenshot catturato, dimensione b64:', img?.b64?.length);
     setImg(img);
-    const asset=window.activeAsset||'XAU';
-    document.getElementById('minput').value=`Analizza questo grafico ${asset}/USD live: struttura, setup, confluenze, manipulation score 1-10, entry/SL/TP1/TP2 se c'è un setup valido.`;
+    document.getElementById('minput').value=promptText;
     switchTab('analysis');
     await send();
   }catch(e){

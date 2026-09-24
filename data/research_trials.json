@@ -1,5 +1,5 @@
 {
-  "total": 1791,
+  "total": 1793,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -288,6 +288,14 @@
       "asset": "XAU",
       "strategy_id": "HIGH_WR_DEMO",
       "note": "dimostrazione schema alto win rate (TP piccolo/SL largo) M5 RSI2_TREND (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T15:20:12Z",
+      "n_trials": 2,
+      "cumulative_after": 1793,
+      "asset": "XAU",
+      "strategy_id": "ASIA_BREAK",
+      "note": "gestione parziale 1R+BE su ASIA_BREAK e ASIA_BREAK_ALL (2026-09-24)"
     }
   ]
 }

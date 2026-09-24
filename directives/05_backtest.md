@@ -243,3 +243,24 @@ Robustezza di ASIA_BREAK, nessun parametro cambiato (`--robust`):
 Verdetto: miglior candidato scalp mai trovato nel progetto; non promuovibile per il gate DSR, candidabile a test demo isolato.
 
 **Schema "win rate > 90%" (richiesta utente, dimostrazione, 3 trial)**: ingressi RSI2_TREND M5, TP piccolo e SL largo, cost model ON. TP 0.3 / SL 3 ATR: WR 89.7%, PF 0.67. TP 0.5 / SL 3: WR 86.1%, PF 0.85. TP 0.3 / SL 5: **WR 94.4%, PF 0.80**. Vincita media circa $1.2 contro perdita media $16-26: spread e slippage (circa $0.45 a trade) si mangiano gran parte di ogni piccola vincita, e le poche perdite cancellano tutto. Win rate alto ≠ profitto.
+
+**ASIA_BREAK — gestione parziale** (`--partial`, 2 trial): metà a 1R, stop del resto in pareggio, resto a 2R.
+
+| M5 | Standard 2R | Parziale 1R+BE |
+|---|---|---|
+| ASIA_BREAK (filtro D1) | WR 42.6% PF 1.86, fold 0.81/0.58/1.44/11.6 | WR 56.4% PF 1.70 |
+| **ASIA_BREAK_ALL (senza filtro)** | WR 40.3% PF 1.50 | **WR 55.5% PF 1.61, holdout PF 1.68 WR 61.5%, fold 1.19/1.31/1.73/1.86 (4/4), 13/18 mesi** |
+
+Su M15 (24m): ALL parziale WR 54.0% PF 1.56, holdout WR 70.6% PF 2.29. La parziale alza il win rate di circa 13-15 punti e costa 0.1-0.2 di PF; su M5 rende i fold della versione senza filtro tutti > 1.
+
+## 2026-09-24 — Combo di portafoglio (`scripts/research_combo.py`)
+
+Periodo comune da 2025-04-28 (inizio M5), pool condiviso S16/S00 V3/S17 con MAX_OPEN_ORDERS=2, S31 e ASIA_BREAK isolate.
+
+| Combo | Trade/giorno lav. | WR | PF | DD | Mesi + |
+|---|---|---|---|---|---|
+| A roster (S16+S00 V3+S17+S31) | 0.63 | 48.0% | 1.94 | 739 | 11/17 |
+| B A + ASIA_BREAK D1 parziale | 0.88 | 50.5% | 1.89 | 493 | 10/17 |
+| **C A + ASIA_BREAK_ALL parziale** | **1.16** | **51.5%** | **1.83** | **565** | **12/18** |
+
+S30 (US30, a parte): 91 trade nel periodo, PF 1.19. ASIA_BREAK aggiunge frequenza **e** riduce il drawdown del portafoglio (decorrelata dalle strategie H1/H4).

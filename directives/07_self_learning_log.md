@@ -178,3 +178,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Scalping: 3 ipotesi nuove + Pine utente XAU Scalper Cloud v3 su M5, nessun edge (vedi `05_backtest.md` 2026-09-24). Il pullback sulla nuvola è l'unica parte in pareggio.
 - Round 3 scalper: filtro direzione D1 (idea utente), migliore sul train crolla sull'holdout, PBO 0.80. Nessun edge.
 - ASIA_BREAK (rottura range asiatico nella direzione D1, M5/M15): PF 1.8 train, 2.1 holdout, 1.8 su M15 24m, regge costi ×2. Primo candidato scalp credibile; DSR non significativo.
+- Combo C (roster + ASIA_BREAK_ALL con parziale 1R+BE): circa 1.2 trade/giorno XAU, PF 1.83, DD 565 < roster da solo (739). Vedi `05_backtest.md`.

@@ -220,3 +220,5 @@ Verdetto: **nessun edge**. Il reversal Bollinger è la parte in perdita; il pull
 | Pine completo + D1 EMA20 | 6.1 | PF 0.95 | PF 0.99 |
 
 Il filtro D1 alza di poco il trend-only, ma la migliore sul TRAIN crolla sull'holdout (PF 1.15 → 0.86), PBO 0.80, DSR non significativo. La versione EMA20 è stabile ma in pareggio (~1.05, circa +$0.5 a trade dopo i costi). Non salva i reversal. Nessun edge, nulla integrato.
+
+**Stagionalità oraria XAU M15 (esplorativa, 2026-09-24)**: rendimento medio per ora broker (UTC+3), primo anno contro secondo anno. **Nessuna ora ha una direzione stabile e significativa in entrambi gli anni** (|t| > 2 in entrambi: zero). Le ore asiatiche 00-03 broker sono positive in tutti e due gli anni ma deboli, coerenti col trend rialzista di fondo dell'oro, non con un effetto orario sfruttabile.

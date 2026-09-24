@@ -76,3 +76,18 @@ Le letture del conto richiedono un operatore o un utente esplicitamente autorizz
 - Strumenti `core:false`: confidence e MFKK mostrano un avviso invece di punteggi calcolati con soglie dell'oro; `dashContext.confidence=null` per non passarlo all'AI.
 - Ticker verificati il 2026-09-24: OANDA per i forex; per gli indici lo scanner non restituisce i CFD OANDA/FOREXCOM/PEPPERSTONE/CAPITALCOM → `SP:SPX`, `NASDAQ:NDX`, `OANDA:DE30EUR`/`TVC:DEU40`, `TVC:UKX`, `TVC:NI225`. Nomi MT5 XMGlobal: `US500Cash`, `US100Cash`, `GER40Cash`, `UK100Cash`, `JP225Cash`, forex senza suffisso.
 - I nomi MyFxBook degli indici (`SPX500`, `NAS100`, `GER30`, `UK100`, `JPN225`) non sono verificati: se il simbolo non c'è, il pannello lo dice invece di mostrare numeri.
+
+
+## Scheda strumento ("memoria per coppia", 2026-09-24)
+
+`scripts/instrument_profile.py` (eseguito dal worker: al primo avvio, poi se la cache ha più di 24h, e su richiesta col bottone "↻ Aggiorna" della scheda → job `kind='profile'`) calcola per ogni strumento del registro:
+- **Contratto dal broker** (MT5 `symbol_info`): simbolo, cifre, contract size, lotto min/step, swap.
+- **Costi reali**: spread mediano e p90 degli ultimi 30 giorni dalla colonna `spread` delle barre H1 MT5, e **costo/ATR H1**. Soglie: < 5% basso, 5-15% medio, > 15% alto (scalp sconsigliato). Primo calcolo (2026-09-24): XAU 2,3%, NAS100 2,8%, JP225 2,9%, GER40 3,3%, US500 4,4%, US30 4,5%, USDJPY 8,7%, UK100 8,9%, GBPUSD 10,5%, EURUSD 12,3%, XAG 15,8%, USDCHF 16,6%, AUDUSD 20,0%, USDCAD 27,3%, NZDUSD 27,8%.
+- **Volatilità**: ATR(14) D1, range medio giornaliero % 90g, 3 ore broker con range H1 medio più ampio.
+- **Correlazioni** dei rendimenti giornalieri (90 giorni e 1 anno, date comuni).
+- **COT CFTC** (`publicreporting.cftc.gov`, legacy futures-only, non-commercial): netto, % open interest, variazione settimanale, segno invertito per USD/xxx (campo `cot` del registro). GER40/UK100 senza contratto CFTC; Nikkei CFTC fermo a marzo 2026 → escluso.
+- **Ricerca già fatta**: somma trial e ultime note da `data/research_trials.json` per asset.
+Pubblicata con `profiles_push` (doc `system/instrument_profiles`, circa 23 KB), letta dalla scheda in dashboard (`modules/instrument-card.js`). News: calendario esistente filtrato per le valute dello strumento (calendario esteso a CHF/CAD/NZD). Note personali: doc `inst_notes` sull'account.
+Anche `_rates()` usa tentativi con controllo di completezza (simboli appena attivati: GBPUSD/USDJPY davano correlazioni sbagliate al primo giro).
+
+**Fattore COT del confidence score: morto.** `loadCotData()` cerca `d.cot`, ma `type=cot` restituisce il file senza quella chiave, quindi `window._cotData` non viene mai valorizzato e il fattore resta sempre 50; il file `data/cot_data.json` era comunque un seed fermo a marzo 2026. Non collegato ai dati CFTC reali senza conferma dell'utente (cambierebbe il punteggio).

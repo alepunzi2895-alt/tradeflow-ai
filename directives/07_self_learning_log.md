@@ -183,3 +183,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - MyFxBook: sessione lato server + credenziali cifrate opzionali ("Ricorda l'accesso"), relogin automatico, sentiment per qualunque simbolo; vedi `06_known_issues.md` 2026-09-24.
 - Registro strumenti public/instruments.json (forex major + indici), selettore Altri…, griglia Forex e indici, pannelli MFKK/confidence onesti per i non-core; 3 bug latenti fixati (vedi 06_known_issues.md).
 - Storici MT5 on-demand (Laboratorio → worker → data/history/) + worker avviato automaticamente dal bot, una sola istanza (porta-lucchetto). Vedi 04_bot_operations.md.
+- Scheda strumento (instrument_profile.py sul worker + instrument-card.js): costi reali dal broker, costo/ATR, volatilità/orari, correlazioni, COT CFTC, ricerca, news per valuta, note. Trovato: fattore COT del confidence morto (seed di marzo, chiave sbagliata).

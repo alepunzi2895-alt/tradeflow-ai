@@ -130,7 +130,7 @@ async function login(db, body) {
 
 async function saveUserData(db, body) {
   const { user_id, doc_type, payload } = body;
-  if (!['chat','kb','mfx','amem','mem','lab'].includes(doc_type)) throw fail(400, 'Tipo documento non consentito');
+  if (!['chat','kb','mfx','amem','mem','lab','inst_notes'].includes(doc_type)) throw fail(400, 'Tipo documento non consentito');
   if (payload != null && (typeof payload !== 'string' || payload.length > 1_000_000)) throw fail(400, 'Documento non valido');
   await db.execute({
     sql: `INSERT INTO user_data (id, user_id, doc_type, payload, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -440,13 +440,16 @@ const ACTIONS = {
   history_cmd_push:     (db, body) => jobs.enqueueHistory(db, body),
   worker_status_push:   (db, body) => jobs.workerStatusPush(db, body),
   worker_status_get:    (db)       => jobs.workerStatusGet(db),
+  profile_cmd_push:     (db, body) => jobs.enqueueProfile(db, body),
+  profiles_push:        (db, body) => jobs.profilesPush(db, body),
+  profiles_get:         (db)       => jobs.profilesGet(db),
   hard_blocks_load:     ()         => hardBlocksLoad(),
   hard_blocks_toggle:   (db, body) => hardBlocksToggle(db, body),
 };
 
-const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push','worker_status_push']);
+const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push','worker_status_push','profiles_push']);
 const READ_ACTIONS = new Set(['strategy_registry','mt5_get','auto_trade_get','s20_paper_get','strat_live_get','backtest_report_get','hard_blocks_load']);
-const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','patch_db']);
+const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','profile_cmd_push','patch_db']);
 
 export function createHandler(dbFactory = getDb) {
   return async function handler(req, res) {

@@ -165,6 +165,7 @@ window.switchAsset = function(asset) {
   // NB: era "fetchSentiment" — funzione inesistente, la guardia typeof la rendeva un no-op silenzioso
   // (il pannello restava sui placeholder "—" finché non capitava per caso il prossimo giro periodico).
   if (typeof loadSentimentOnly === 'function') loadSentimentOnly();
+  if (typeof window.renderInstrumentCard === 'function') window.renderInstrumentCard();
 };
 
 // ── BACKUP / RESTORE ─────────────────────────────────────

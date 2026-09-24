@@ -102,9 +102,45 @@ def handle_history(cmd):
         except Exception as e: print(f"[backtest_worker] indice non pubblicato: {e}")
 
 
+PROFILE_MAX_AGE_H = 24
+
+
+def refresh_profiles(reason):
+    """Schede strumento (instrument_profile.py) → dashboard. Ritorna il riepilogo o l'errore."""
+    import instrument_profile
+    t0 = time.time()
+    res = instrument_profile.build_profiles(mt5_ready())
+    push('profiles_push', {'profiles': res}, timeout=30)
+    print(f"[backtest_worker] ✓ schede strumento aggiornate ({reason}): {len(res['instruments'])} strumenti "
+          f"in {time.time() - t0:.0f}s")
+    return {'instruments': len(res['instruments']), 'generated_at': res['generated_at'],
+            'computed_in_s': round(time.time() - t0, 1)}
+
+
+def maybe_refresh_profiles():
+    import instrument_profile
+    age = instrument_profile.cached_age_hours()
+    if age is None or age >= PROFILE_MAX_AGE_H:
+        try:
+            refresh_profiles('giornaliero' if age is not None else 'primo avvio')
+        except Exception as e:
+            print(f"[backtest_worker] schede strumento non aggiornate: {e}")
+
+
+def handle_profile(cmd):
+    try:
+        result = refresh_profiles('richiesta dalla dashboard')
+    except Exception as e:
+        traceback.print_exc(); result = {'error': str(e)}
+    push('backtest_result_push', {'strategy_id': 'PROFILE', 'request_id': cmd.get('request_id'),
+                                  'lease_token': cmd.get('lease_token'), 'result': result}, timeout=30)
+
+
 def handle_command(cmd):
     if cmd.get('kind') == 'history':
         return handle_history(cmd)
+    if cmd.get('kind') == 'profile':
+        return handle_profile(cmd)
     sid = cmd.get('strategy_id')
     print(f"[backtest_worker] richiesta ricevuta: {sid} (chiesta alle {cmd.get('requested_at')})")
     if sid not in ALL_IDS:
@@ -137,7 +173,11 @@ def main():
         return
     print(f"[backtest_worker] avviato — polling ogni {args.interval}s. Ctrl+C per fermare.")
     last_beat = 0.0
+    last_profile_check = 0.0
     while True:
+        if time.time() - last_profile_check >= 3600:      # controllo orario, ricalcolo se > 24h
+            last_profile_check = time.time()
+            maybe_refresh_profiles()
         if time.time() - last_beat >= HEARTBEAT_S:
             try:
                 push_status(); last_beat = time.time()

@@ -21,7 +21,17 @@ const browser=await chromium.launch({headless:true});
 const errors=[];
 let quoteRequests=0, quoteFailure=false, statsDenied=false;
 const sentimentAssets=[], indicatorAssets=[]; let mfxLoginBody=null, mfxConnected=true;
-let histBody=null, histPolls=0, histDenied=false; const histIndex={datasets:{GER40_M15:{instrument:'GER40',label:'GER40',tf:'M15',bars:45439,from:'2024-09-24 17:45',to:'2026-09-24 17:30',fetched_at:new Date().toISOString(),truncated:false}}};
+let histBody=null, histPolls=0, histDenied=false, notesSaved=null, profileJobs=0, profilePolls=0;
+const PROFILES={generated_at:new Date(Date.now()-3*3600000).toISOString(),instruments:{
+  XAU:{id:'XAU',label:'XAU/USD',name:'Oro',type:'metal',ccy:['XAU','USD'],broker:{symbol:'GOLD',digits:2,contract_size:100,volume_min:.01,volume_step:.01,swap_long:-50.1,swap_short:20.3},
+    costs:{spread_median:.4,spread_p90:.6,spread_now:.35,atr_h1:17.4,cost_pct_atr_h1:2.3},volatility:{atr_d1:98.2,adr_pct_90d:2.35,active_hours_broker:[16,15,17]},
+    correlations:{most_positive:[{id:'XAG',r90:.9},{id:'AUDUSD',r90:.65}],most_negative:[{id:'USDCHF',r90:-.5}]},
+    cot:{report_date:'2026-09-15',net:230338,net_pct_oi:56.2,week_change:-4210,bias:'long',inverted:false,stale:false,market:'Gold COMEX'},
+    research:{trials:1805,recent:[{ts:'2026-09-24',strategy:'ASIA_BREAK',note:'gestione parziale 1R+BE'}]}},
+  EURUSD:{id:'EURUSD',label:'EUR/USD',name:'Euro / Dollaro',type:'fx',ccy:['EUR','USD'],broker:{symbol:'EURUSD',digits:5,contract_size:100000,volume_min:.01,volume_step:.01,swap_long:-7.1,swap_short:2.2},
+    costs:{spread_median:.00016,spread_p90:.0002,spread_now:.00015,atr_h1:.0013,cost_pct_atr_h1:12.3},volatility:{atr_d1:.0061,adr_pct_90d:.46,active_hours_broker:[15,17,16]},
+    correlations:{most_positive:[{id:'GBPUSD',r90:.84}],most_negative:[{id:'USDCHF',r90:-.87}]},
+    cot:{report_date:'2026-09-15',net:-26993,net_pct_oi:-2.9,week_change:1200,bias:'neutral',inverted:false,stale:false,market:'Euro FX CME'},research:{trials:0,recent:[]}}}}; const histIndex={datasets:{GER40_M15:{instrument:'GER40',label:'GER40',tf:'M15',bars:45439,from:'2024-09-24 17:45',to:'2026-09-24 17:30',fetched_at:new Date().toISOString(),truncated:false}}};
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 page.setDefaultTimeout(8000);
 page.on('pageerror',e=>errors.push(e.message));
@@ -40,6 +50,10 @@ await page.route('**/*',async route=>{
   if(b.action==='get_user_data')json={ok:true,data:[{doc_type:'mfx',payload:JSON.stringify({session:'fixture-session',email:'test@example.test',pass:'legacy-test-password'})}]};
   if(b.action==='get_trades')json={ok:true,trades:[]};
   if(b.action==='strategy_registry')json={ok:true,data:registrySnapshot()};
+  if(b.action==='profiles_get')json={ok:true,data:PROFILES};
+  if(b.action==='save_user_data'&&b.doc_type==='inst_notes')notesSaved=JSON.parse(b.payload);
+  if(b.action==='profile_cmd_push'){profileJobs++;profilePolls=0;json={ok:true,request_id:'prof-1'};}
+  if(b.action==='backtest_result_get'&&b.request_id==='prof-1'){profilePolls++;json=profilePolls<2?{ok:true,status:'running'}:{ok:true,status:'done',data:{instruments:15}};}
   if(b.action==='worker_status_get')json={ok:true,data:{seen_at:new Date().toISOString(),host:'VPS-TEST',history:histIndex}};
   if(b.action==='history_cmd_push'){
     if(histDenied){await route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({ok:false,error:'Operazione riservata: configurare ADMIN_USER_IDS'})});return;}
@@ -149,6 +163,24 @@ try {
   assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'failed refresh retains the last value with a stale label');
   assert.match(await page.locator('.quote-status').innerText(),/Fonte non disponibile/);
   quoteFailure=false;await page.evaluate(()=>loadPrices());
+  // Scheda strumento dell'asset attivo: costi, COT, correlazioni cliccabili, note, aggiornamento.
+  await page.waitForFunction(()=>/Costo \/ ATR H1/.test(document.querySelector('#inst-card')?.textContent||''));
+  assert.match(await page.locator('#inst-title').innerText(),/XAU\/USD/);
+  assert.match(await page.locator('#inst-card').innerText(),/2,3%/);
+  assert.match(await page.locator('#inst-card').innerText(),/56,2% OI · long/);
+  assert.match(await page.locator('#inst-card').innerText(),/1805/);
+  await page.fill('#inst-notes','Reagisce forte al CPI');
+  await page.waitForFunction(()=>/Salvate sul tuo account/.test(document.querySelector('.inst-note-status')?.textContent||''));
+  assert.equal(notesSaved.XAU,'Reagisce forte al CPI');
+  await page.locator('#inst-card .inst-refresh').click();
+  await page.waitForFunction(()=>/Schede aggiornate/.test(document.querySelector('#inst-card .inst-job')?.textContent||''),null,{timeout:15000});
+  assert.equal(profileJobs,1);
+  await page.locator('#inst-card').screenshot({path:'artifacts/instrument-card-desktop.png'});
+  await page.locator('#inst-card [data-switch=AUDUSD]').click();
+  await page.waitForFunction(()=>/AUD\/USD/.test(document.querySelector('#inst-title')?.textContent||''));
+  assert.match(await page.locator('#inst-card').innerText(),/non ancora calcolata/,'strumento senza scheda: messaggio, niente numeri');
+  await page.locator('#asset-seg [data-asset=XAU]').click();
+
   // Registro strumenti: griglia forex/indici, menu "Altri…", pannelli MFKK/confidence onesti.
   const REG=JSON.parse(fs.readFileSync('public/instruments.json','utf8')).instruments;
   await page.waitForFunction(n=>document.querySelectorAll('#fx-quotes .pc').length===n,REG.filter(i=>!i.core).length);
@@ -161,6 +193,9 @@ try {
   await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='35%');
   assert.equal(await page.locator('#conf-card').evaluate(e=>e.classList.contains('asset-unavailable')),true);
   assert.match(await page.locator('#conf-card .asset-note').innerText(),/EUR\/USD/);
+  await page.waitForFunction(()=>/EUR\/USD/.test(document.querySelector('#inst-title')?.textContent||''));
+  assert.match(await page.locator('#inst-card').innerText(),/12,3%/);
+  assert.match(await page.locator('#inst-card').innerText(),/scalp solo con target ampi/);
   assert.equal(await page.locator('#mfkk-card').evaluate(e=>e.classList.contains('asset-unavailable')),true);
   await page.waitForTimeout(300);
   assert.ok(!indicatorAssets.slice(indBefore).includes('EURUSD'),'nessun indicatore MFKK chiesto per uno strumento non core');
@@ -250,5 +285,5 @@ try {
   await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
   assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, private system stats, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, instrument card, private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

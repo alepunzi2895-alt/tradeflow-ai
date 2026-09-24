@@ -36,7 +36,7 @@ for(const secret of [undefined,'too-short']){
 }
 process.env.JWT_SECRET=configuredJwt;
 assert.equal((await call(undefined,{},undefined,'GET')).status,200);
-for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','patch_db'])assert.equal((await call(action)).status,401,action);
+for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','profile_cmd_push','profiles_get','patch_db'])assert.equal((await call(action)).status,401,action);
 assert.equal((await call('admin_reset',{email:'alice@example.test',password:'attacker'})).status,410);
 assert.equal((await call('mt5_command_push',{command:{direction:'buy'}},'alice')).status,410);
 assert.equal((await call('auto_trade_set',{enabled:true},'bob')).status,403);
@@ -92,5 +92,12 @@ await jobs.complete(db,{...hc,result:{instrument:'EURUSD',tf:'M15',bars:49535}})
 assert.equal((await jobs.result(db,{request_id:hq.request_id,user_id:'alice'})).data.bars,49535);
 await jobs.workerStatusPush(db,{host:'vps',history:{datasets:{EURUSD_M15:{bars:49535}}}});
 assert.equal((await jobs.workerStatusGet(db)).data.history.datasets.EURUSD_M15.bars,49535);
+// Schede strumento: una sola richiesta in coda alla volta, pubblicazione validata, lettura.
+const p1=await jobs.enqueueProfile(db,{user_id:'alice'}),p2=await jobs.enqueueProfile(db,{user_id:'alice'});
+assert.equal(p2.request_id,p1.request_id);assert.equal(p2.already,true);
+const pc=(await jobs.claim(db)).command;assert.equal(pc.kind,'profile');
+await assert.rejects(jobs.profilesPush(db,{profiles:{}}),/mancanti/);
+await jobs.profilesPush(db,{profiles:{generated_at:'2026-09-24T18:00:00Z',instruments:{XAU:{id:'XAU'}}}});
+assert.equal((await jobs.profilesGet(db)).data.instruments.XAU.id,'XAU');
 assert.equal((await call('strategy_registry',{},'alice')).data.data.strategies.S20_FIB_CONFLUENCE.status,'disabled');
 db.close();try{for(const name of ['test.db','test.db-shm','test.db-wal'])fs.rmSync(path.join(temp,name),{force:true});fs.rmdirSync(temp);}catch(e){if(!['EPERM','EBUSY'].includes(e.code))throw e;}console.log('Security, ownership, import rollback, KB isolation, quotas and atomic jobs: passed');

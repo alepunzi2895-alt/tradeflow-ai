@@ -287,6 +287,7 @@ async function loadSlowData(){
   const cd=await fetchJSON('/api/market?type=calendar',9000);
   if(cd?.ok && Array.isArray(cd.events)){
     dashContext.calendar=cd.events;updateCalendar(cd.events);
+    if(typeof window.renderInstrumentCard==='function')window.renderInstrumentCard();
     if(cd.stale)document.getElementById('cal-events').insertAdjacentHTML('afterbegin','<p class="data-note">Ultimi dati disponibili · fonte temporaneamente offline</p>');
   }else{
     document.getElementById('cal-next').style.display='none';

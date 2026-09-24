@@ -1045,3 +1045,22 @@ html,body { font-weight:400;letter-spacing:.005em; }
   #tabs-wrapper{align-self:start;position:sticky;top:110px}
   #orbit-stage.nb-stage-wrap{height:210px}
 }
+
+/* Scheda strumento (2026-09-24) */
+.inst-card { grid-column: 1 / -1; border:1px solid var(--desk-line,#2a3446); border-radius:16px; padding:18px; background:var(--card); }
+.inst-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+.inst-head h3 { margin:4px 0; font-size:18px; font-weight:500; }
+.inst-head h3 small { color:var(--dim); font-size:12px; font-weight:400; margin-left:6px; }
+.inst-refresh { background:#182333; border:1px solid #39455a; border-radius:8px; color:var(--text); padding:6px 10px; font-size:12px; cursor:pointer; white-space:nowrap; }
+.inst-refresh:disabled { opacity:.5; }
+.inst-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:12px; }
+.inst-sec { border-top:1px solid var(--desk-line,#2a3446); padding-top:10px; min-width:0; }
+.inst-sec h4 { margin:0 0 8px; font-size:12px; font-weight:600; color:var(--g); letter-spacing:.03em; }
+.inst-kv { display:flex; justify-content:space-between; gap:10px; font-size:12px; padding:3px 0; }
+.inst-kv span { color:var(--dim); } .inst-kv b { font-weight:500; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.inst-kv b.inst-high { color:#FF8A8A; }
+.inst-chips { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; }
+.inst-chip { background:#182333; border:1px solid #39455a; border-radius:14px; color:var(--text); font-size:11px; padding:4px 9px; cursor:pointer; }
+.inst-chip b { font-weight:600; margin-left:3px; font-variant-numeric:tabular-nums; }
+.inst-sec textarea { width:100%; box-sizing:border-box; background:#080f19; color:var(--text); border:1px solid var(--desk-line,#2a3446); border-radius:9px; padding:10px; font:inherit; font-size:12px; resize:vertical; }
+@media(max-width:600px){ .inst-card{padding:14px} .inst-head{flex-direction:column} }

@@ -100,7 +100,8 @@ export default async function handler(req, res) {
       if (Array.isArray(raw)) {
         const important = raw.filter(e => {
           const country = (e.currency || e.country || "").toUpperCase();
-          return ["USD","EUR","GBP","JPY","AUD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
+          // + CHF/CAD/NZD per le coppie major del registro strumenti (2026-09-24)
+          return ["USD","EUR","GBP","JPY","AUD","CHF","CAD","NZD"].includes(country) && (e.impact === "High" || e.impact === "Medium");
         });
         events = important.map(e => ({
           id: e.id || Math.random().toString(36).substr(2, 9),

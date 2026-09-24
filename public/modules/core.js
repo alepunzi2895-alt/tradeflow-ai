@@ -131,6 +131,7 @@ async function syncStateFromCloud() {
           S.set(K.mfx, mfxSession);
         }
         if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
+        if (row.doc_type === 'inst_notes' && typeof window.setInstrumentNotes === 'function') window.setInstrumentNotes(payload);
         if (row.doc_type === 'mem') { tradeMemory = payload; S.set(K.mem, tradeMemory); }
       } catch(e) { console.error('Sync error parsing', row.doc_type, e); }
     });

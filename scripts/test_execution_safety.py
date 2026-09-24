@@ -1,17 +1,20 @@
 import unittest
 from types import SimpleNamespace as NS
 from datetime import datetime,timezone
-from execution_safety import floor_volume,guard_entry,OrderRejected
+from execution_safety import floor_volume,guard_entry,OrderRejected,broker_utc_offset
 from risk_guardian import RiskGuardian
 
 NOW=datetime(2026,9,18,12,tzinfo=timezone.utc)
+# MT5 riporta i tempi in ORA DEL SERVER del broker (XM: EET/EEST, +3h d'estate) — il mock ora lo
+# riproduce (prima usava l'ora UTC e non poteva vedere il bug "Quotazione scaduta" su ogni ordine).
+SRV=NOW.timestamp()+3*3600
 
 class Broker:
     ORDER_TYPE_BUY=0
     ORDER_TYPE_SELL=1
     def __init__(self):
         self.account=NS(equity=1000.,balance=1000.,margin_free=900.)
-        self.positions=[];self.deals=[];self.tick=NS(time=NOW.timestamp())
+        self.positions=[];self.deals=[];self.tick=NS(time=SRV)
     def account_info(self):return self.account
     def symbol_info(self,symbol):return NS(volume_min=.01,volume_max=10.,volume_step=.01)
     def symbol_info_tick(self,symbol):return self.tick
@@ -36,10 +39,28 @@ class Safety(unittest.TestCase):
     def test_disabled_stale_unknown(self):
         for enabled in [False]:
             with self.assertRaises(OrderRejected):guard_entry(self.b,self.req,enabled,now=NOW)
-        self.b.tick.time-=90
+        self.b.tick.time-=300
         with self.assertRaisesRegex(OrderRejected,'scaduta'):guard_entry(self.b,self.req,True,now=NOW)
+    def test_broker_server_time(self):
+        # Tick fresco in ora del server (+3h) accettato, anche con l'orologio del PC avanti di 109 s.
+        self.req['sl']=2490
+        self.assertEqual(guard_entry(self.b,self.req,True,now=NOW)['volume'],.01)
+        self.b.tick.time=SRV-109
+        self.assertEqual(guard_entry(self.b,self.req,True,now=NOW)['volume'],.01)
+        # Tick in ora UTC "vera" (3 ore indietro rispetto al server) = vecchio di 3 ore → rifiutato.
+        self.b.tick.time=NOW.timestamp()
+        with self.assertRaisesRegex(OrderRejected,'scaduta'):guard_entry(self.b,self.req,True,now=NOW)
+        # Weekend: quotazione ferma da 2 giorni esatti non viene scambiata per fresca.
+        self.b.tick.time=SRV-2*86400
+        with self.assertRaisesRegex(OrderRejected,'scaduta'):guard_entry(self.b,self.req,True,now=NOW)
+    def test_dst_offsets(self):
+        self.assertEqual(broker_utc_offset(datetime(2026,9,18,12,tzinfo=timezone.utc)),3*3600)
+        self.assertEqual(broker_utc_offset(datetime(2026,12,1,12,tzinfo=timezone.utc)),2*3600)
+        self.assertEqual(broker_utc_offset(datetime(2026,3,29,0,59,tzinfo=timezone.utc)),2*3600)   # ultima domenica di marzo 2026 = 29
+        self.assertEqual(broker_utc_offset(datetime(2026,3,29,1,0,tzinfo=timezone.utc)),3*3600)
+        self.assertEqual(broker_utc_offset(datetime(2026,10,25,1,0,tzinfo=timezone.utc)),2*3600)   # ultima domenica di ottobre 2026 = 25
     def test_all_account_losses_count(self):
-        self.b.deals=[NS(type=0,time=NOW.timestamp()-1,profit=-40.,commission=-1.,swap=0.)]
+        self.b.deals=[NS(type=0,time=SRV-1,profit=-40.,commission=-1.,swap=0.)]
         with self.assertRaisesRegex(OrderRejected,'giornaliero'):guard_entry(self.b,self.req,True,now=NOW)
     def test_position_without_stop(self):
         self.b.positions=[NS(sl=0)]

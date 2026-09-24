@@ -185,3 +185,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Storici MT5 on-demand (Laboratorio → worker → data/history/) + worker avviato automaticamente dal bot, una sola istanza (porta-lucchetto). Vedi 04_bot_operations.md.
 - Scheda strumento (instrument_profile.py sul worker + instrument-card.js): costi reali dal broker, costo/ATR, volatilità/orari, correlazioni, COT CFTC, ricerca, news per valuta, note. Trovato: fattore COT del confidence morto (seed di marzo, chiave sbagliata).
 - Composer di strategie: regole del Laboratorio → specifica JSON → worker (dati MT5, spread reale per barra, uscite strutturate, criteri di promozione con esito). Parità JS/Python verificata. Vedi 05_backtest.md.
+- CRITICO: guard_entry rifiutava ogni ordine dal 18/09 (tick.time MT5 in ora broker +3h vs UTC). Fix con broker_utc_offset (EET/EEST) + tolleranza 180 s. Vedi 06_known_issues.md.

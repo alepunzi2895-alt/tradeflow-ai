@@ -4,8 +4,33 @@ Loss calculations use MT5's account-currency contract conversion, not a fixed
 USD/point assumption. Unknown inputs fail closed; reductions/closures are separate.
 """
 import math
+import os
 from decimal import Decimal, ROUND_FLOOR
 from datetime import datetime, timezone, timedelta
+
+# Freschezza della quotazione: MT5 riporta tick.time e deal.time in ORA DEL SERVER del broker,
+# non in UTC. Fix 2026-09-24: il controllo originale (-5 ≤ now − tick.time ≤ 60, dal 2026-09-18)
+# confrontava UTC con ora broker (XM = UTC+3 d'estate) → ogni nuovo ordine veniva rifiutato come
+# "Quotazione scaduta". Ora il tempo del tick è riportato in UTC con il fuso del broker.
+STALE_TOLERANCE_S = 180     # tollera ~3 min di scarto dell'orologio del PC (misurato: 109 s su questo PC)
+
+
+def _last_sunday(year, month):
+    d = datetime(year, month + 1, 1, tzinfo=timezone.utc) - timedelta(days=1) if month < 12 else datetime(year, 12, 31, tzinfo=timezone.utc)
+    return d - timedelta(days=(d.weekday() + 1) % 7)
+
+
+def broker_utc_offset(now):
+    """Secondi da sommare all'UTC per ottenere l'ora del server del broker.
+    BROKER_UTC_OFFSET (ore) nel .env ha la precedenza; altrimenti EET/EEST (XM e molti broker MT5):
+    +3h tra l'ultima domenica di marzo e l'ultima di ottobre (01:00 UTC), altrimenti +2h.
+    Calcolato a mano: zoneinfo su Windows richiede il pacchetto tzdata, che può mancare."""
+    env = os.getenv('BROKER_UTC_OFFSET')
+    if env not in (None, ''):
+        return float(env) * 3600
+    start = _last_sunday(now.year, 3).replace(hour=1)
+    end = _last_sunday(now.year, 10).replace(hour=1)
+    return 3 * 3600 if start <= now < end else 2 * 3600
 
 
 class OrderRejected(ValueError):
@@ -31,8 +56,10 @@ def guard_entry(mt5, request, enabled, max_risk=.02, portfolio_risk=.04, now=Non
     now = now or datetime.now(timezone.utc)
     if not account or not info or not tick or not math.isfinite(account.equity) or account.equity <= 0:
         raise OrderRejected('Conto o simbolo non disponibili')
-    if not -5 <= now.timestamp()-tick.time <= 60:
-        raise OrderRejected('Quotazione scaduta')
+    offset = broker_utc_offset(now)
+    age = now.timestamp() + offset - tick.time
+    if not -STALE_TOLERANCE_S <= age <= STALE_TOLERANCE_S:
+        raise OrderRejected(f'Quotazione scaduta ({age:.0f}s)')
     buy = request['type'] == mt5.ORDER_TYPE_BUY
     price, sl, tp = (request[k] for k in ('price','sl','tp'))
     if not all(math.isfinite(v) and v > 0 for v in (price,sl,tp)):
@@ -61,7 +88,7 @@ def guard_entry(mt5, request, enabled, max_risk=.02, portfolio_risk=.04, now=Non
     traded = [d for d in deals if d.type in (mt5.ORDER_TYPE_BUY,mt5.ORDER_TYPE_SELL)]
     def realized(rows):
         return sum(d.profit + d.commission + d.swap + getattr(d,'fee',0.) for d in rows)
-    daily = realized([d for d in traded if d.time >= midnight.timestamp()])
+    daily = realized([d for d in traded if d.time - offset >= midnight.timestamp()])
     weekly = realized(traded)
     floating = account.equity-account.balance
     if daily+floating <= -.03*max(account.balance-daily,1):

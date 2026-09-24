@@ -156,3 +156,11 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Nel backtest, trailing calcolato con la chiusura della barra applicato retroattivamente alla barra stessa: corretto ordine temporale e aggiunti test di causalità. US30 include posizioni esclusive e time-stop coerente (18 barre).
 - I pulsanti orbitanti ereditavano `button:active {transform:scale(...)}`, perdendo la traslazione al mousedown e spostandosi prima del click. Override specifico conserva la posizione; test browser desktop/mobile.
 - Risultati, limiti residui e migrazione: `11_audit_and_release.md` e `backtests/results/audit_2026-09-18/README.md`. Nessuna nuova strategia promossa.
+
+## 2026-09-24 — Bot fermo dal 16/09: S00/S16 sbloccate ma ancora bloccate sulla VPS
+
+- Sintomo: ultimo trade 2026-09-16 16:00; bot running, auto-trade ON, no circuit breaker. Il selector in TREND_DOWN sceglieva S17@H4 con score 37 (penalità ATR% 0.32 < 0.60), invece di S16/S00 attese a ~88 in quel regime.
+- Causa: `PerformanceTracker.auto_apply_adjustments()` (ogni barra H1) copia le voci di `hard_blocks.json` in `strategy_overrides.json` come `type:"hard_block"`, `score_mult:0.0`. Un ramo di compatibilità conservava poi **per sempre** le voci `hard_block` anche dopo la loro rimozione da `hard_blocks.json`. In più `_hard_blocks` veniva letto solo in `__init__`. Risultato: S16 (bloccata 17→22/09) e S00 (voce legacy del 03/09) restavano con score 0 nel selector e in `quality_gate`/`is_hard_blocked` anche dopo lo sblocco del 22/09. Il registry in dashboard le mostrava comunque "eligible" perché legge solo `hard_blocks.json`.
+- Con S10 bloccata e S20 disabilitata dal 17/09, restavano attive solo S17 (H4, poche entrate e penalizzata con ATR basso), S31 (circa 2 trade al mese) e S30 (US30, rara), quindi di fatto nessun trade.
+- Fix: rimosso il ramo di compatibilità; `hard_blocks.json` riletto a ogni chiamata. Verificato su file temporanei: la voce legacy S00 viene rimossa e lo sblocco di S16 ha effetto senza riavvio; `test_execution_safety.py` passa (11/11).
+- Serve sulla VPS: `git pull` + riavvio del bot. Alla prima barra H1 `strategy_overrides.json` viene riscritto senza S00/S16.

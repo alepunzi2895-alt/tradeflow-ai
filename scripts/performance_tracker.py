@@ -375,6 +375,9 @@ class PerformanceTracker:
         Applica suggerimenti → strategy_overrides.json.
         Ritorna lista dei cambiamenti significativi (|Δmult| ≥ 0.15).
         """
+        # Rilettura ad ogni chiamata (ogni barra H1): uno sblocco in hard_blocks.json
+        # deve avere effetto senza riavviare il bot — fix 2026-09-24.
+        self._hard_blocks = _load_hard_blocks()
         suggestions   = self.suggest_adjustments()
         new_overrides = {}
         changes       = []
@@ -385,8 +388,11 @@ class PerformanceTracker:
         # strategy_overrides.json (che qui viene riscritto) e (a) un dry-run poteva
         # ribaltarlo a type:"normal", (b) sulla VPS il file dirty impediva a git pull
         # di ripristinarlo. Ora ogni sid in hard_blocks.json è forzato a score_mult 0.0
-        # a prescindere dallo stato precedente del file. Compat: si preservano anche le
-        # vecchie entry type=="hard_block" non ancora migrate.
+        # a prescindere dallo stato precedente del file.
+        # Fix 2026-09-24: rimosso il "compat" che preservava le vecchie entry
+        # type=="hard_block" non presenti in hard_blocks.json — le rendeva eterne:
+        # S00/S16 sbloccate il 2026-09-22 restavano score_mult 0.0 sulla VPS e il bot
+        # non apriva più trade. Ora hard_blocks.json è l'unica fonte dei blocchi sticky.
         for sid, meta in self._hard_blocks.items():
             new_overrides[sid] = {
                 "score_mult": 0.0,
@@ -394,9 +400,6 @@ class PerformanceTracker:
                 "reason":     meta.get("reason", "hard_blocks.json"),
                 "updated_at": datetime.datetime.utcnow().isoformat(),
             }
-        for sid, ov in self._overrides.items():
-            if ov.get("type") == "hard_block" and sid not in new_overrides:
-                new_overrides[sid] = ov
 
         for s in suggestions:
             sid   = s["strategy_id"]

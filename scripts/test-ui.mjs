@@ -21,7 +21,7 @@ const browser=await chromium.launch({headless:true});
 const errors=[];
 let quoteRequests=0, quoteFailure=false, statsDenied=false;
 const sentimentAssets=[], indicatorAssets=[]; let mfxLoginBody=null, mfxConnected=true;
-let specBody=null, specPolls=0, specRejected=false, histBody=null, histPolls=0, histDenied=false, notesSaved=null, profileJobs=0, profilePolls=0;
+let promoteBody=null, promoteReject=false, labItems=[], labSet=null, specBody=null, specPolls=0, specRejected=false, histBody=null, histPolls=0, histDenied=false, notesSaved=null, profileJobs=0, profilePolls=0;
 const PROFILES={generated_at:new Date(Date.now()-3*3600000).toISOString(),instruments:{
   XAU:{id:'XAU',label:'XAU/USD',name:'Oro',type:'metal',ccy:['XAU','USD'],broker:{symbol:'GOLD',digits:2,contract_size:100,volume_min:.01,volume_step:.01,swap_long:-50.1,swap_short:20.3},
     costs:{spread_median:.4,spread_p90:.6,spread_now:.35,atr_h1:17.4,cost_pct_atr_h1:2.3},volatility:{atr_d1:98.2,adr_pct_90d:2.35,active_hours_broker:[16,15,17]},
@@ -61,6 +61,13 @@ await page.route('**/*',async route=>{
     full:{n:141,pf:1.51,wr:54.6},holdout:{n:30,pf:1.88,wr:56},costs2:{n:141,pf:1.43,wr:52},folds:[{n:28,pf:.97},{n:28,pf:1.0},{n:28,pf:1.32},{n:27,pf:1.88}],
     net_r:31.2,max_dd_r:7.1,avg_r:.221,dsr:{sr:1.1,p:.31,significant:false},num_trials:1806,equity_r:[1,0,2,3,2,5,8,7,11],
     gates:[['sample',1],['pf_full',1],['holdout',1],['folds',1],['costs2',1],['recovery',1],['dsr',0]].map(([id,ok])=>({id,label:'criterio '+id,ok:!!ok}))}};}
+  if(b.action==='lab_promote'){
+    if(promoteReject){await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({ok:false,error:'Al massimo 3 strategie del laboratorio attive'})});return;}
+    promoteBody=b;const item={id:'LAB_ABC123',name:specBody?.name,spec:specBody,lot:b.lot,status:'active',expected:{pf:1.51,wr:54.6,trades_per_month:6.1}};labItems=[item];json={ok:true,item};
+  }
+  if(b.action==='lab_strategies_get')json={ok:true,items:labItems};
+  if(b.action==='strat_live_get'&&b.key==='LAB_ABC123')json={ok:true,data:{overall:{n:3,pf:1.2,wr:66.7,pnl:12.5}}};
+  if(b.action==='lab_strategy_set'){labSet=b;labItems=labItems.map(x=>x.id===b.id?{...x,status:b.status,status_reason:b.status==='paused'?'Pausa manuale':null}:x);json={ok:true};}
   if(b.action==='spec_runs_get')json={ok:true,runs:specBody?[{request_id:'spec-1',status:'done',spec:specBody,summary:{verdict:'CANDIDATA DEMO',n:141,pf:1.51,holdout_pf:1.88,net_r:31.2}}]:[]};
   if(b.action==='save_user_data'&&b.doc_type==='inst_notes')notesSaved=JSON.parse(b.payload);
   if(b.action==='profile_cmd_push'){profileJobs++;profilePolls=0;json={ok:true,request_id:'prof-1'};}
@@ -290,6 +297,22 @@ try {
   await page.waitForFunction(()=>/CANDIDATA DEMO/.test(document.querySelector('#lab-comp-runlist')?.textContent||''));
   await page.locator('#lab-comp-result').screenshot({path:'artifacts/lab-composer-result.png'});
   await page.locator('#lab-comp').screenshot({path:'artifacts/lab-composer-form.png'});
+  // Promozione sul bot (demo): prima un rifiuto dal server (il bottone torna attivo), poi conferma,
+  // lotto, elenco "Sul bot", pausa. Dopo una promozione riuscita il bottone resta disabilitato.
+  promoteReject=true;page.once('dialog',d=>d.accept());
+  await page.locator('#lab-promote-go').click();
+  await page.waitForFunction(()=>/Al massimo 3/.test(document.querySelector('#lab-bot-msg')?.textContent||''));
+  promoteReject=false;
+  page.once('dialog',d=>d.accept());
+  await page.locator('#lab-promote-go').click();
+  await page.waitForFunction(()=>/LAB_ABC123 sul bot/.test(document.querySelector('#lab-bot-msg')?.textContent||''));
+  assert.deepEqual({r:promoteBody.request_id,l:promoteBody.lot},{r:'spec-1',l:.01});
+  await page.waitForFunction(()=>/LAB_ABC123[\s\S]*attiva[\s\S]*Dal vivo: 3 trade/.test(document.querySelector('#lab-bot-list')?.textContent||''));
+  await page.locator('#lab-bot [data-lab-act=paused]').click();
+  await page.waitForFunction(()=>/in pausa/.test(document.querySelector('#lab-bot-list')?.textContent||''));
+  assert.deepEqual({id:labSet.id,s:labSet.status},{id:'LAB_ABC123',s:'paused'});
+  await page.locator('#lab-bot').screenshot({path:'artifacts/lab-on-bot.png'});
+  assert.equal(await page.locator('#lab-promote-go').isDisabled(),true,'niente doppia promozione');
   specRejected=true;await page.locator('#lab-comp-go').click();
   await page.waitForFunction(()=>/Target/.test(document.querySelector('#lab-comp-job')?.textContent||''));
   specRejected=false;
@@ -318,5 +341,5 @@ try {
   await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
   assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, instrument card, strategy composer, private system stats, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, instrument card, strategy composer + promotion to bot (demo), private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

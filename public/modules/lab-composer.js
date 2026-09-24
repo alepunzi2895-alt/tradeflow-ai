@@ -45,7 +45,9 @@
   const out=document.createElement('section');out.className='lab-block';out.id='lab-comp-result';out.setAttribute('aria-live','polite');
   out.innerHTML='<span class="nb-lbl">Validazione sul worker</span><h2>Criteri di promozione</h2><p class="data-note">Componi le regole e premi “Valida sul worker”: qui vedrai quali criteri supera e l’esito.</p>';
   const runs=document.createElement('section');runs.className='lab-block';runs.id='lab-comp-runs';runs.innerHTML='<h2>Validazioni recenti</h2><div id="lab-comp-runlist" class="data-note">—</div>';
-  aside?.prepend(out); out.after(runs);
+  const onbot=document.createElement('section');onbot.className='lab-block';onbot.id='lab-bot';
+  onbot.innerHTML='<h2>Sul bot (demo)</h2><p class="data-note">Strategie del Laboratorio eseguite dal bot con lo stesso interprete del backtest. Solo conto demo, lotto fisso, al massimo 3 attive; pausa automatica se i risultati dal vivo si allontanano da quelli attesi.</p><div id="lab-bot-list" class="data-note">—</div><p id="lab-bot-msg" class="data-note" role="status"></p>';
+  aside?.prepend(out); out.after(onbot); onbot.after(runs);
   const $=id=>document.getElementById(id);
   let profiles=null, polling=null;
 
@@ -85,7 +87,7 @@
         take_r:Number($('lab-comp-take').value),partial:$('lab-comp-partial').checked?{at_r:1,fraction:.5}:null,
         time_stop_bars:$('lab-comp-time').value?Number($('lab-comp-time').value):null},max_trades_per_day:10};
   }
-  function renderResult(r,sp){
+  function renderResult(r,sp,requestId){
     if(r.error){out.innerHTML=`<span class="nb-lbl">Validazione sul worker</span><h2>Non eseguita</h2><p class="data-note" style="color:var(--red)">${esc(r.error)}</p>`;return;}
     const vcol=r.verdict==='PROMUOVIBILE'?'var(--green)':r.verdict==='CANDIDATA DEMO'?'#F4B860':'var(--red)';
     const row=(l,s)=>`<tr><td>${l}</td><td>${s?.n??'—'}</td><td>${num(s?.pf)}</td><td>${s?.wr!=null?num(s.wr,1)+'%':'—'}</td></tr>`;
@@ -98,7 +100,55 @@
         ${row('Tutto il periodo',r.full)}${row('Ultimi mesi (mai usati)',r.holdout)}${row('Costi raddoppiati',r.costs2)}</tbody></table>
       <p class="data-note">Walk-forward: ${r.folds.map(f=>num(f.pf)).join(' · ')||'—'} · risultato ${num(r.net_r,1)}R, drawdown max ${num(r.max_dd_r,1)}R, media ${num(r.avg_r,3)}R a trade · test di significatività ${r.dsr?`p=${num(r.dsr.p,3)} ${r.dsr.significant?'✓':'✗'}`:'n/d'} su ${Number(r.num_trials).toLocaleString('it-IT')} tentativi totali</p>
       ${path}
-      <p class="data-note">${r.verdict==='PROMUOVIBILE'?'Supera tutti i criteri: può diventare candidata per il bot (passo successivo).':r.verdict==='CANDIDATA DEMO'?'Supera i criteri pratici ma non il test di significatività: come S35, può andare solo in demo a lotto fisso.':'Non supera i criteri: non va sul conto. Le barre ✗ dicono dove intervenire, ma ogni nuova variante conta come tentativo.'}</p>`;
+      <p class="data-note">${r.verdict==='PROMUOVIBILE'?'Supera tutti i criteri: può diventare candidata per il bot (passo successivo).':r.verdict==='CANDIDATA DEMO'?'Supera i criteri pratici ma non il test di significatività: come S35, può andare solo in demo a lotto fisso.':'Non supera i criteri: non va sul conto. Le barre ✗ dicono dove intervenire, ma ogni nuova variante conta come tentativo.'}</p>
+      ${promoteBlock(r,sp,requestId)}`;
+    out.querySelector('#lab-promote-go')?.addEventListener('click',promote);
+  }
+  function promoteBlock(r,sp,requestId){
+    if(!requestId||!['PROMUOVIBILE','CANDIDATA DEMO'].includes(r.verdict))return '';
+    const partial=!!sp?.exit?.partial, def=partial?0.02:0.01;
+    const opts=[0.01,0.02,0.03,0.04,0.05].map(l=>`<option value="${l}"${l===def?' selected':''}>${l.toFixed(2)}</option>`).join('');
+    return `<div class="lab-promote"><label>Lotto fisso<select id="lab-promote-lot">${opts}</select></label>
+      <button type="button" id="lab-promote-go" data-req="${esc(requestId)}">Metti in demo sul bot</button></div>
+      <p class="data-note">Il bot la eseguirà solo su conto demo, con i controlli di sicurezza di ogni ordine (max 3 posizioni sul conto, rischio per trade e complessivo).${partial?' Con la chiusura parziale serve almeno 0,02.':''}</p>`;
+  }
+  async function promote(e){
+    const btn=e.currentTarget,msg=$('lab-bot-msg'),lot=$('lab-promote-lot').value;
+    if(!confirm('Mettere questa strategia sul bot, in demo, a lotto fisso '+lot+'?'))return;
+    btn.disabled=true;
+    try{
+      const res=await authFetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(8000),body:JSON.stringify({action:'lab_promote',request_id:btn.dataset.req,lot:Number(lot)})});
+      const r=await res.json();if(!res.ok||!r.ok)throw Error(r.error||'Promozione non riuscita');
+      msg.style.color='var(--green)';msg.textContent='✓ '+r.item.id+' sul bot: parte al prossimo segnale (il bot rilegge l’elenco ogni minuto).';
+      loadBot();
+    }catch(err){msg.style.color='var(--red)';msg.textContent='✗ '+err.message;btn.disabled=false;}
+  }
+  async function loadBot(){
+    const d=await dbLoad('lab_strategies_get',{},6000),list=$('lab-bot-list');
+    const items=(d?.items||[]).filter(x=>x.status!=='retired');
+    if(!items.length){list.textContent='Nessuna strategia del Laboratorio sul bot.';return;}
+    const live=await Promise.all(items.map(x=>dbLoad('strat_live_get',{key:x.id},6000)));
+    list.innerHTML=items.map((x,i)=>{
+      const L=live[i]?.data?.overall,e=x.expected||{};
+      const st=x.status==='active'?'<b style="color:var(--green)">attiva</b>'
+        :'<b style="color:#F4B860">in pausa</b>'+(x.status_reason?' · '+esc(x.status_reason):'')+(x.paused_by==='bot'?' (automatica)':'');
+      const liveTxt=L?`${L.n} trade · PF ${num(L.pf)} · WR ${num(L.wr,1)}% · ${num(L.pnl)}`:'nessun trade ancora';
+      const act=x.status==='active'?`<button type="button" data-lab-act="paused" data-id="${esc(x.id)}">Pausa</button>`:`<button type="button" data-lab-act="active" data-id="${esc(x.id)}">Riprendi</button>`;
+      return `<div class="lab-bot-item"><div><b>${esc(x.id)}</b> · ${esc(x.name)} · ${esc(instrumentLabel(x.spec?.instrument))} ${esc(x.spec?.tf)} ${esc(x.spec?.direction)} · lotto ${num(x.lot)}</div>
+        <div>${st}</div>
+        <div>Atteso: PF ${num(e.pf)} · WR ${num(e.wr,1)}% · ~${num(e.trades_per_month,1)} trade/mese — Dal vivo: ${liveTxt}</div>
+        <div class="lab-bot-actions">${act}<button type="button" data-lab-act="retired" data-id="${esc(x.id)}">Ritira</button></div></div>`;
+    }).join('');
+    list.querySelectorAll('[data-lab-act]').forEach(b=>b.addEventListener('click',async()=>{
+      const act=b.dataset.labAct,msg=$('lab-bot-msg');
+      if(act==='retired'&&!confirm('Ritirare '+b.dataset.id+'? Le posizioni aperte restano gestite da MT5 con i loro stop e target.'))return;
+      b.disabled=true;
+      try{
+        const res=await authFetch('/api/db',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(8000),body:JSON.stringify({action:'lab_strategy_set',id:b.dataset.id,status:act})});
+        const r=await res.json();if(!res.ok||!r.ok)throw Error(r.error||'Operazione non riuscita');
+        msg.style.color='var(--green)';msg.textContent='✓ '+b.dataset.id+': '+(act==='active'?'riattivata':act==='paused'?'in pausa':'ritirata');loadBot();
+      }catch(err){msg.style.color='var(--red)';msg.textContent='✗ '+err.message;b.disabled=false;}
+    }));
   }
   async function loadRuns(){
     const d=await dbLoad('spec_runs_get',{},6000);
@@ -113,7 +163,7 @@
       $('lab-comp-stopA').value=st.type==='atr'?st.mult:st.type==='donchian'?st.period:st.value;$('lab-comp-stopB').value=st.type==='atr'?st.period:st.type==='donchian'?st.buffer_atr:'';
       $('lab-comp-take').value=sp.exit.take_r;$('lab-comp-partial').checked=!!sp.exit.partial;$('lab-comp-time').value=sp.exit.time_stop_bars??'';
       $('lab-comp-from').value=sp.session?.from??'';$('lab-comp-to').value=sp.session?.to??'';hint();
-      dbLoad('backtest_result_get',{request_id:d.runs[+b.dataset.run].request_id},6000).then(r=>{if(r?.status==='done'&&r.data)renderResult(r.data,sp);});
+      const rid=d.runs[+b.dataset.run].request_id;dbLoad('backtest_result_get',{request_id:rid},6000).then(r=>{if(r?.status==='done'&&r.data)renderResult(r.data,sp,rid);});
     }));
   }
   $('lab-comp-go').addEventListener('click',async()=>{
@@ -128,7 +178,7 @@
       const t0=Date.now();if(polling)clearInterval(polling);
       const tick=async()=>{
         const d=await dbLoad('backtest_result_get',{request_id:r.request_id},6000);const s=Math.round((Date.now()-t0)/1000);
-        if(d?.status==='done'||d?.status==='failed'){clearInterval(polling);polling=null;btn.disabled=false;job.textContent=d.status==='done'?`Completata in ${s}s`:'';renderResult(d.data||{error:'Validazione non riuscita'},r.spec);loadRuns();return;}
+        if(d?.status==='done'||d?.status==='failed'){clearInterval(polling);polling=null;btn.disabled=false;job.textContent=d.status==='done'?`Completata in ${s}s`:'';renderResult(d.data||{error:'Validazione non riuscita'},r.spec,r.request_id);loadRuns();return;}
         job.textContent=d?.status==='running'?`Il worker sta scaricando i dati e validando… (${s}s)`:`In coda (${s}s): parte appena il worker la prende`;
         if(s>900){clearInterval(polling);polling=null;btn.disabled=false;job.textContent='Nessuna risposta dal worker dopo 15 minuti: è acceso? (parte insieme al bot)';}
       };
@@ -138,5 +188,5 @@
   $('lab-comp-stop').addEventListener('change',()=>{const t=$('lab-comp-stop').value;$('lab-comp-stopA').value=t==='atr'?1.5:t==='donchian'?20:1;$('lab-comp-stopB').value=t==='atr'?14:.3;stopLabels();});
   $('lab-comp-inst').addEventListener('change',hint);$('lab-comp-tf').addEventListener('change',hint);
   stopLabels();renderTemplates();fillInst();window.instrumentsReady?.then(fillInst);
-  document.querySelector('[data-tab=lab]')?.addEventListener('click',async()=>{loadRuns();if(!profiles){const d=await dbLoad('profiles_get',{},8000);if(d?.ok){profiles=d.data;hint();}}});
+  document.querySelector('[data-tab=lab]')?.addEventListener('click',async()=>{loadRuns();loadBot();if(!profiles){const d=await dbLoad('profiles_get',{},8000);if(d?.ok){profiles=d.data;hint();}}});
 })();

@@ -1,5 +1,6 @@
 import { registrySnapshot } from '../lib/strategy-registry.js';
 import * as jobs from '../lib/backtest-jobs.js';
+import * as labs from '../lib/lab-strategies.js';
 // TradeFlow AI — api/db.js
 // Universal Turso DB gateway for all CRUD operations, Auth, and external Service Proxying (KB, MyFxBook).
 // Consolidated to stay under Vercel Hobby plan limits.
@@ -445,13 +446,17 @@ const ACTIONS = {
   profiles_get:         (db)       => jobs.profilesGet(db),
   spec_cmd_push:        (db, body) => jobs.enqueueSpec(db, body),
   spec_runs_get:        (db, body) => jobs.specRuns(db, body),
+  lab_promote:          (db, body) => labs.promote(db, body),
+  lab_strategy_set:     (db, body) => labs.setStatus(db, body),
+  lab_strategies_get:   (db)       => labs.list(db),
+  lab_autopause:        (db, body) => labs.autopause(db, body),
   hard_blocks_load:     ()         => hardBlocksLoad(),
   hard_blocks_toggle:   (db, body) => hardBlocksToggle(db, body),
 };
 
-const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push','worker_status_push','profiles_push']);
-const READ_ACTIONS = new Set(['strategy_registry','mt5_get','auto_trade_get','s20_paper_get','strat_live_get','backtest_report_get','hard_blocks_load']);
-const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','profile_cmd_push','spec_cmd_push','patch_db']);
+const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push','worker_status_push','profiles_push','lab_autopause']);
+const READ_ACTIONS = new Set(['strategy_registry','mt5_get','auto_trade_get','s20_paper_get','strat_live_get','backtest_report_get','hard_blocks_load','lab_strategies_get']);
+const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','profile_cmd_push','spec_cmd_push','lab_promote','lab_strategy_set','patch_db']);
 
 export function createHandler(dbFactory = getDb) {
   return async function handler(req, res) {

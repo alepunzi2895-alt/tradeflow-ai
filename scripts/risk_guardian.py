@@ -522,7 +522,7 @@ class RiskGuardian:
                 continue
             # S20_FIB_CONFLUENCE, S31_LAYOUT_SMART e S35_ASIA_BREAK sono gestite interamente dai
             # propri blocchi in mt5-bot.py (SL strutturale + parziale + BE). RiskGuardian non le tocca.
-            if pos.comment and ('S20' in pos.comment or 'S31' in pos.comment or 'S35' in pos.comment):
+            if pos.comment and any(k in pos.comment for k in ('S20', 'S31', 'S35', 'LAB_')):   # LAB_ = strategie del Laboratorio (lab_live.py)
                 continue
             open_tickets.add(pos.ticket)
 

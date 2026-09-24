@@ -8,6 +8,7 @@ import {createClient} from '@libsql/client';
 import {createHandler} from '../api/db.js';
 import {requireUser,requireOperator,rateLimit} from '../lib/security.js';
 import * as jobs from '../lib/backtest-jobs.js';
+import * as labs from '../lib/lab-strategies.js';
 
 process.env.JWT_SECRET='unit-test-secret-only-never-for-deployment';
 process.env.MT5_BOT_SECRET='unit-test-service';
@@ -36,7 +37,7 @@ for(const secret of [undefined,'too-short']){
 }
 process.env.JWT_SECRET=configuredJwt;
 assert.equal((await call(undefined,{},undefined,'GET')).status,200);
-for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','profile_cmd_push','profiles_get','spec_cmd_push','spec_runs_get','patch_db'])assert.equal((await call(action)).status,401,action);
+for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','profile_cmd_push','profiles_get','spec_cmd_push','spec_runs_get','lab_promote','lab_strategy_set','lab_strategies_get','patch_db'])assert.equal((await call(action)).status,401,action);
 assert.equal((await call('admin_reset',{email:'alice@example.test',password:'attacker'})).status,410);
 assert.equal((await call('mt5_command_push',{command:{direction:'buy'}},'alice')).status,410);
 assert.equal((await call('auto_trade_set',{enabled:true},'bob')).status,403);
@@ -112,5 +113,26 @@ const sc=(await jobs.claim(db)).command;assert.equal(sc.kind,'spec');assert.equa
 await jobs.complete(db,{...sc,result:{verdict:'BOCCIATA',full:{n:107,pf:.838},holdout:{pf:.63},net_r:-10}});
 const runs=(await jobs.specRuns(db,{user_id:'alice'})).runs;assert.equal(runs[0].summary.verdict,'BOCCIATA');
 assert.equal((await jobs.specRuns(db,{user_id:'bob'})).runs.length,0,'storico per utente');
+// Promozione sul bot: solo validazioni proprie, completate e con esito adeguato; limiti di lotto e di numero.
+await assert.rejects(labs.promote(db,{user_id:'alice',request_id:sq.request_id,lot:.02}),/BOCCIATA/);
+await assert.rejects(labs.promote(db,{user_id:'bob',request_id:sq.request_id,lot:.02}),/non trovata/);
+async function passedSpec(user,partial=false){const q=await jobs.enqueueSpec(db,{user_id:user,spec:{...goodSpec,exit:{...goodSpec.exit,partial:partial?{at_r:1,fraction:.5}:null}}});
+  const c=(await jobs.claim(db)).command;await jobs.complete(db,{...c,result:{verdict:'CANDIDATA DEMO',full:{n:150,pf:1.4,wr:52},holdout:{pf:1.3},costs2:{pf:1.2},avg_r:.2}});return q.request_id;}
+const pending=await jobs.enqueueSpec(db,{user_id:'alice',spec:goodSpec});
+await assert.rejects(labs.promote(db,{user_id:'alice',request_id:pending.request_id,lot:.02}),/non completata/);
+await jobs.claim(db);
+const withPartial=await passedSpec('alice',true);
+await assert.rejects(labs.promote(db,{user_id:'alice',request_id:withPartial,lot:.01}),/almeno 0,02/);
+await assert.rejects(labs.promote(db,{user_id:'alice',request_id:withPartial,lot:.5}),/Lotto/);
+const pr=await labs.promote(db,{user_id:'alice',request_id:withPartial,lot:.02,spec:{evil:1},expected:{pf:99}});
+assert.equal(pr.item.expected.pf,1.4,'numeri attesi dal DB, non dalla richiesta');assert.equal(pr.item.spec.instrument,'XAU');assert.match(pr.item.id,/^LAB_[0-9A-F]{6}$/);
+await assert.rejects(labs.promote(db,{user_id:'alice',request_id:withPartial,lot:.02}),/già sul bot/);
+await labs.promote(db,{user_id:'alice',request_id:await passedSpec('alice'),lot:.01});
+await labs.promote(db,{user_id:'alice',request_id:await passedSpec('alice'),lot:.01});
+await assert.rejects(labs.promote(db,{user_id:'alice',request_id:await passedSpec('alice'),lot:.01}),/Al massimo 3/);
+assert.equal((await labs.autopause(db,{id:pr.item.id,reason:'PF live 0,6 dopo 20 trade'})).changed,true);
+const listed=(await labs.list(db)).items.find(x=>x.id===pr.item.id);assert.equal(listed.status,'paused');assert.equal(listed.paused_by,'bot');
+await labs.setStatus(db,{id:pr.item.id,status:'retired'});
+await assert.rejects(labs.setStatus(db,{id:pr.item.id,status:'active'}),/ritirata/);
 assert.equal((await call('strategy_registry',{},'alice')).data.data.strategies.S20_FIB_CONFLUENCE.status,'disabled');
 db.close();try{for(const name of ['test.db','test.db-shm','test.db-wal'])fs.rmSync(path.join(temp,name),{force:true});fs.rmdirSync(temp);}catch(e){if(!['EPERM','EBUSY'].includes(e.code))throw e;}console.log('Security, ownership, import rollback, KB isolation, quotas and atomic jobs: passed');

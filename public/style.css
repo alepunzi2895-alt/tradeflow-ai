@@ -1075,3 +1075,10 @@ html,body { font-weight:400;letter-spacing:.005em; }
 .lab-comp-t span { color:var(--dim); font-size:11px; line-height:1.5; }
 .lab-gates { list-style:none; padding:0; margin:12px 0; font-size:13px; line-height:1.9; }
 .lab-gates li.ok { color:var(--green); } .lab-gates li.ko { color:#FF8A8A; }
+
+.lab-promote { display:flex; gap:10px; align-items:flex-end; margin-top:12px; }
+.lab-promote label { margin:0 !important; flex:0 0 110px; }
+.lab-block .lab-promote button { background:var(--g); color:#141822; border:0; font-weight:600; }
+.lab-bot-item { border-top:1px solid var(--desk-line); padding:10px 0; display:grid; gap:4px; font-size:12px; line-height:1.6; color:var(--text); }
+.lab-bot-actions { display:flex; gap:8px; }
+.lab-block .lab-bot-actions button { padding:5px 10px; font-size:12px; }

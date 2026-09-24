@@ -1316,6 +1316,29 @@ def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
 # propria. Se è già attivo (bot riavviato), la nuova copia trova occupata la porta-lucchetto
 # del worker ed esce da sola. Il worker è un processo separato: un suo errore non tocca il bot.
 # Disattivabile con WORKER_AUTOSTART=0 in .env.
+# ── Strategie del Laboratorio promosse sul bot (2026-09-24) ─────────────────
+# scripts/lab_live.py: stesso interprete del backtest (strategy_spec), SOLO conto demo, lotto fisso,
+# ogni ingresso passa da guard_entry, pausa automatica se il live diverge dal backtest.
+# Disattivabile con LAB_ENABLED=0 in .env.
+lab_runner = None
+
+def init_lab_runner():
+    global lab_runner
+    if os.getenv('LAB_ENABLED', '1') == '0':
+        log.info("Strategie del Laboratorio: disattivate (LAB_ENABLED=0)"); return
+    try:
+        import lab_live, vercel_push
+        lab_runner = lab_live.LabRunner(
+            mt5, get_fn=vercel_push.get, push_fn=lambda a, p: vercel_push.push(a, p, timeout=10), log=log, magic=MAGIC,
+            entry_allowed=lambda: _ENTRY_PERMISSION['enabled'] and time.time() - _ENTRY_PERMISSION['updated'] < 65,
+            dry_run=DRY_RUN)
+        lab_runner.refresh(force=True)
+        log.info(f"Strategie del Laboratorio: {len(lab_runner.items)} attive · "
+                 f"{'conto DEMO' if lab_runner.is_demo() else 'conto NON demo → restano ferme'}")
+    except Exception as e:
+        lab_runner = None
+        log.warning(f"Strategie del Laboratorio non avviate: {e}")
+
 def ensure_worker():
     if os.getenv('WORKER_AUTOSTART', '1') == '0':
         log.info("Worker backtest/storici: avvio automatico disattivato (WORKER_AUTOSTART=0)")
@@ -2373,6 +2396,7 @@ def run():
                  f"cooldown SL condivisi · {len(_s20_state)} posizioni in gestione")
 
     ensure_worker()
+    init_lab_runner()
 
     # S35_ASIA_BREAK (blocco isolato M5): ripristina stato + riadotta posizioni aperte
     if S35_ENABLED:
@@ -2643,6 +2667,11 @@ def run():
                     ls_push_stats(trades_data)
                 if S35_ENABLED:
                     s35_push_stats(trades_data)
+                if lab_runner is not None:
+                    try:
+                        lab_runner.push_stats(trades_data)
+                    except Exception as _lab_err:
+                        log.debug(f"[LAB] stats: {_lab_err}")
                 if US30_ENABLED:
                     us30_push_stats(trades_data)
                 if LAYOUT_SCORE_ENABLED:
@@ -3679,6 +3708,13 @@ def run():
                                      pnl_today=pnl_today_real)
                 except Exception as _s20_err:
                     log.warning(f"[S20] errore ciclo: {_s20_err}")
+
+            # ── Strategie del Laboratorio (solo demo) ──
+            if lab_runner is not None:
+                try:
+                    lab_runner.tick(auto_trade_enabled, current_news_risk.get('paused', False))
+                except Exception as _lab_err:
+                    log.warning(f"[LAB] errore ciclo: {_lab_err}")
 
             # ── S35_ASIA_BREAK — segnale M5 proprio, blocco isolato ──
             if S35_ENABLED:

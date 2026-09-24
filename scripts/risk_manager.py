@@ -246,7 +246,7 @@ class RiskManager:
         for pos in positions:
             if pos.magic != magic:
                 continue
-            if pos.comment and 'S35' in pos.comment:   # gestita dal blocco S35 in mt5-bot.py
+            if pos.comment and ('S35' in pos.comment or 'LAB_' in pos.comment):   # gestite dai propri blocchi (S35, lab_live.py)
                 continue
 
             ticket  = pos.ticket

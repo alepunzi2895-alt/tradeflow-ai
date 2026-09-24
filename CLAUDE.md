@@ -92,6 +92,7 @@ scripts/
   install_git_hooks.py — setup one-time hook pre-commit
   obsidian_export.py  — export locale → vault Obsidian (secondo cervello): Journal/Genomi/Knowledge/AI-Log come .md con frontmatter + [[wikilink]]. Legge via /api/db (stesso pattern HTTP di mt5-bot.py/daily_maintenance.py, MAI da api/*.js — Vercel è read-only su disco). Score "Genoma" replica gnScore() di backtest-report.js, tenerli allineati. Config: OBSIDIAN_VAULT_PATH + OBSIDIAN_USER_ID in .env locale (mai su Vercel)
   strategy_spec.py   — COMPOSER: interprete delle specifiche JSON del Laboratorio (stesse formule di public/modules/lab-engine.js, parità in test_strategy_spec.py), costi da spread reale per barra, criteri di promozione (GATES) → PROMUOVIBILE / CANDIDATA DEMO / BOCCIATA. Eseguito dal worker (job kind='spec'); ogni run = 1 trial
+  lab_live.py        — strategie del Laboratorio promosse sul bot: SOLO conto demo, lotto fisso, guard_entry su ogni ingresso, pausa automatica se il live diverge (registro system/lab_strategies)
   history_store.py / instrument_profile.py — storici MT5 on-demand (data/history/, gitignored) e schede strumento, usati dal worker
   opt_harness.py     — fitness condivisa per sprint ottimizzazione: evaluate/is_promotable/dsr_check/pbo_check
   research_trials.py — registro cumulativo trial di ricerca (data/research_trials.json) — SEMPRE usarlo per num_trials in dsr_check, mai un numero a mano

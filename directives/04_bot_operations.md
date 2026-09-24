@@ -125,6 +125,16 @@ Prima strategia su un asset diverso da XAU. Mean-reversion azionaria (Connors RS
 
 **Per disattivare**: `US30_ENABLED = False` in `mt5-bot.py`. Le posizioni aperte restano gestite da MT5 (SL/TP). **Serve `US30Cash` visibile in Market Watch** sul terminal della VPS (il bot lo attiva via `symbol_select`, ma il terminal deve avere accesso al simbolo).
 
+## Strategie del Laboratorio sul bot — `scripts/lab_live.py` (2026-09-24 →)
+
+- **Promozione** (Laboratorio → esito del composer → "Metti in demo sul bot"): `lab_promote` (operatore) accetta SOLO una validazione `kind='spec'` dell'utente, completata, con esito PROMUOVIBILE o CANDIDATA DEMO; specifica e numeri attesi vengono dal DB, non dalla richiesta. Lotto fisso 0,01–0,05 (≥ 0,02 con chiusura parziale), massimo 3 attive. Registro in `user_data system/lab_strategies`; `lab_strategy_set` per pausa, ripresa o ritiro.
+- **Esecuzione** (`LabRunner`, creato da `init_lab_runner()` all'avvio del bot, `tick()` nel ciclo principale): rilegge il registro ogni 60s; per ogni strategia attiva, a ogni nuova candela chiusa del suo timeframe calcola il segnale con `strategy_spec.signals` (stesso interprete del backtest), stop e target come `strategy_spec.simulate`, e invia l'ordine a lotto fisso sul simbolo broker del registro strumenti. Una posizione per strategia, max trade al giorno della specifica.
+- **Sicurezza**: **solo conto DEMO** (`trade_mode == ACCOUNT_TRADE_MODE_DEMO`, altrimenti nulla e un avviso nel log); ogni ingresso passa da `execution_safety.guard_entry` (limite 3 posizioni sul conto, rischio per trade e complessivo, circuit breaker, quotazione fresca); rispetta toggle auto-trade e pausa news; esclusa dal lifecycle generico di RiskGuardian/RiskManager (commento `LAB_`). Commento ordine `TF-AI LAB_XXXXXX` = 16 caratteri, il massimo che MT5 conserva.
+- **Gestione**: parziale a `at_r` con volume arrotondato allo step del broker + stop a pareggio; uscita a tempo dopo `time_stop_bars` candele del suo timeframe; stop e target restano sul server MT5.
+- **Pausa automatica** (`push_stats` a ogni sync, `lab_autopause`): 8 perdite di fila, oppure dopo 20 trade PF dal vivo < 0,8 o win rate più basso di 15 punti rispetto all'atteso. Statistiche dal vivo via `strat_live_push` (chiave = id), mostrate in "Sul bot" accanto a quelle attese.
+- Stato: `data/lab_live_state.json` (gitignored). Disattivare: `LAB_ENABLED=0` nel `.env`.
+- Test: `scripts/test_lab_live.py` (MT5 finto in ora server): conto reale ignorato, ordine corretto a 2R, niente duplicati sulla stessa candela, auto-trade spento e limite posizioni, parziale + pareggio una sola volta, uscita a tempo, pausa dopo 8 perdite.
+
 ## Worker backtest/storici — avviato dal bot (2026-09-24 →)
 
 - `mt5-bot.py` all'avvio chiama `ensure_worker()`: apre `scripts/backtest_worker.py` in una **finestra separata** (così i suoi log si vedono). Basta avviare il bot come sempre.

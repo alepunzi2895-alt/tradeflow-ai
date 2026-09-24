@@ -23,7 +23,7 @@
       <details class="lab-block"><summary>Esplora gli indicatori</summary><p class="data-note">Valori sull’ultima candela caricata · periodo 14, MACD 12/26/9. Volume disponibile solo se presente nel dataset.</p><div id="lab-indicators">Carica un dataset.</div></details>
       <section class="lab-block"><h2>Esperimenti salvati</h2><p class="data-note">Ultimi 20 su questo browser. Esporta il risultato per conservarlo.</p><div id="lab-history"></div></section></aside></div></div>`;
   document.getElementById('cont').append(panel);
-  const nav=document.createElement('button');nav.className='tb';nav.dataset.tab='lab';nav.innerHTML='<span class="ti">◉</span><span class="tl">Laboratorio</span>';document.getElementById('tabs').append(nav);
+  const nav=document.createElement('button');nav.className='tb';nav.dataset.tab='lab';nav.innerHTML='<span class="ti">⚗️</span><span class="tl">Laboratorio</span>';document.getElementById('tabs').append(nav);
   const el=id=>document.getElementById('lab-'+id);let data=null,meta=null,last=null,history=[];
   try{history=JSON.parse(localStorage.getItem('tf_lab_history')||'[]');if(!Array.isArray(history))history=[];}catch{}
   const options=()=>Object.entries(LabEngine.catalog).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');

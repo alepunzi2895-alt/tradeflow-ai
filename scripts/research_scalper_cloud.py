@@ -27,6 +27,7 @@ verifica sull'holdout.
 
 USO: python -X utf8 scripts/research_scalper_cloud.py            # round 1
      python -X utf8 scripts/research_scalper_cloud.py --round2   # round 2 su V1_TREND
+     python -X utf8 scripts/research_scalper_cloud.py --round3   # round 3: solo nella direzione D1
 """
 import datetime
 import os
@@ -85,6 +86,27 @@ def indicators(candles):
                 hh=hh, ll=ll, sw_hi=sw_hi, sw_lo=sw_lo, atr=atr)
 
 
+def d1_bias(candles):
+    """Bias giornaliero causale per ogni barra M5, SOLO da giorni già chiusi (giorno = data
+    broker, stessa convenzione del resto del progetto). Ritorna due array in {+1,-1,0}:
+      ema : chiusura di ieri sopra/sotto la EMA20 delle chiusure giornaliere fino a ieri
+      prev: candela di ieri verde/rossa"""
+    days = [datetime.datetime.fromtimestamp(c['t'], datetime.timezone.utc).date() for c in candles]
+    order, d_open, d_close = [], {}, {}
+    for c, d in zip(candles, days):
+        if d not in d_open:
+            order.append(d); d_open[d] = c['o']
+        d_close[d] = c['c']
+    closes = np.array([d_close[d] for d in order]); e20 = ema(closes, 20)
+    by_ema, by_prev = {}, {}
+    for k, d in enumerate(order):
+        if k < 21: by_ema[d] = by_prev[d] = 0; continue
+        y = order[k - 1]
+        by_ema[d] = 1 if closes[k - 1] > e20[k - 1] else -1
+        by_prev[d] = 1 if d_close[y] > d_open[y] else (-1 if d_close[y] < d_open[y] else 0)
+    return np.array([by_ema[d] for d in days]), np.array([by_prev[d] for d in days])
+
+
 def signal(I, i, use_trend=True, use_rev=True):
     o, h, l, c = I['o'], I['h'], I['l'], I['c']
     e0, bull = I['e0'][i], I['e0'][i] > I['e4'][i]
@@ -109,7 +131,7 @@ VARIANTS = {
 }
 
 
-def run(candles, I, use_trend=True, use_rev=True, session=None, swing_sl=False, htf=False, adx_min=None):
+def run(candles, I, use_trend=True, use_rev=True, session=None, swing_sl=False, htf=False, adx_min=None, d1=None):
     trades = []; day_n = defaultdict(int); busy_until = -1; n = len(candles)
     for i in range(300, n - 1):
         if i <= busy_until: continue
@@ -122,6 +144,7 @@ def run(candles, I, use_trend=True, use_rev=True, session=None, swing_sl=False, 
         if not d: continue
         if htf and (d == 'buy') != bool(I['htf_bull'][i]): continue
         if adx_min is not None and not (I['adx'][i] >= adx_min): continue
+        if d1 and I['d1_' + d1][i] != (1 if d == 'buy' else -1): continue
         buy = d == 'buy'; atr = I['atr'][i]
         if swing_sl:
             sl = I['sw_lo'][i] - 0.3 * atr if buy else I['sw_hi'][i] + 0.3 * atr
@@ -154,13 +177,23 @@ VARIANTS_R2 = {
 }
 
 
+# Round 3 (idea utente): scalp M5 solo nella direzione giornaliera D1.
+VARIANTS_R3 = {
+    'R3_V1_D1EMA':  dict(use_rev=False, d1='ema'),
+    'R3_V1_D1PREV': dict(use_rev=False, d1='prev'),
+    'R3_V0_D1EMA':  dict(d1='ema'),
+}
+
+
 def main():
     candles, _ = OH._data_for(TF)
     I = indicators(candles)
+    I['d1_ema'], I['d1_prev'] = d1_bias(candles)
     round2 = '--round2' in sys.argv
-    variants = VARIANTS_R2 if round2 else VARIANTS
+    round3 = '--round3' in sys.argv
+    variants = VARIANTS_R3 if round3 else VARIANTS_R2 if round2 else VARIANTS
     num_trials = RT.record_trials(len(variants), asset='XAU', strategy_id='SCALPER_CLOUD',
-                                  note=('round2 su V1_TREND' if round2 else 'Pine utente XAU Scalper Cloud v3 su M5: port + 4 varianti fisse') + ' (2026-09-24)')
+                                  note=('round3 filtro direzione D1 (idea utente)' if round3 else 'round2 su V1_TREND' if round2 else 'Pine utente XAU Scalper Cloud v3 su M5: port + 4 varianti fisse') + ' (2026-09-24)')
     print(f"M5: {len(candles)} candele · trial cumulativi {num_trials}\n")
     results = {}
     for name, kw in variants.items():

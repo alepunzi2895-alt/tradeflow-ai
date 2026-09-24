@@ -1,5 +1,5 @@
 {
-  "total": 1779,
+  "total": 1782,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -256,6 +256,14 @@
       "asset": "XAU",
       "strategy_id": "SCALPER_CLOUD",
       "note": "round2 su V1_TREND (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T14:30:16Z",
+      "n_trials": 3,
+      "cumulative_after": 1782,
+      "asset": "XAU",
+      "strategy_id": "SCALPER_CLOUD",
+      "note": "round3 filtro direzione D1 (idea utente) (2026-09-24)"
     }
   ]
 }

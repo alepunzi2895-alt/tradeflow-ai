@@ -176,3 +176,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Seguito: S00 V3 con le regole dell'utente (ADX 25, DI che si allargano, MACD cross/pre-flip, CCI 40/60), vedi `05_backtest.md`. Nessuna variante promuovibile; PULL@H1 pulita ma circa 2 trade/mese.
 - S00 V3 pullback messa live solo H1 su demo (scelta utente), vedi `02_strategies.md` 2026-09-24. Serve git pull + riavvio bot sulla VPS.
 - Scalping: 3 ipotesi nuove + Pine utente XAU Scalper Cloud v3 su M5, nessun edge (vedi `05_backtest.md` 2026-09-24). Il pullback sulla nuvola è l'unica parte in pareggio.
+- Round 3 scalper: filtro direzione D1 (idea utente), migliore sul train crolla sull'holdout, PBO 0.80. Nessun edge.

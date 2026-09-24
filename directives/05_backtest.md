@@ -210,3 +210,13 @@ Verdetto: nessuna variante promuovibile (holdout sotto BASE, DSR n/d o non signi
 | R2 V1 + trend H1 + SL swing | 2.4 | PF 0.90 | PF 1.20 |
 
 Verdetto: **nessun edge**. Il reversal Bollinger è la parte in perdita; il pullback sulla nuvola a favore del trend è in pareggio dopo i costi. Nessun filtro migliora il TRAIN; gli holdout > 1 di R2 sono smentiti dal train sotto 1. DSR non significativo (1779 trial cumulativi). Nulla integrato nel bot.
+
+**Round 3 (idea utente): scalp M5 solo nella direzione D1** (`--round3`, bias da giorni già chiusi, 3 trial):
+
+| Variante | Trade/g | TRAIN | HOLDOUT (da giu 2026) |
+|---|---|---|---|
+| V1 + D1 EMA20 (chiusura ieri sopra/sotto EMA20 D1) | 1.7 | PF 1.05 +196 | PF 1.05 +47 |
+| V1 + D1 candela di ieri verde/rossa | 1.6 | **PF 1.15** +704, fold 4/4 > 1 | PF 0.86 −173 |
+| Pine completo + D1 EMA20 | 6.1 | PF 0.95 | PF 0.99 |
+
+Il filtro D1 alza di poco il trend-only, ma la migliore sul TRAIN crolla sull'holdout (PF 1.15 → 0.86), PBO 0.80, DSR non significativo. La versione EMA20 è stabile ma in pareggio (~1.05, circa +$0.5 a trade dopo i costi). Non salva i reversal. Nessun edge, nulla integrato.

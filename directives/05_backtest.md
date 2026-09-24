@@ -264,3 +264,9 @@ Periodo comune da 2025-04-28 (inizio M5), pool condiviso S16/S00 V3/S17 con MAX_
 | **C A + ASIA_BREAK_ALL parziale** | **1.16** | **51.5%** | **1.83** | **565** | **12/18** |
 
 S30 (US30, a parte): 91 trade nel periodo, PF 1.19. ASIA_BREAK aggiunge frequenza **e** riduce il drawdown del portafoglio (decorrelata dalle strategie H1/H4).
+
+**Scalper Cloud M5 — filtro orario (`scripts/research_scalper_cloud_hours.py`, 3 trial)**: ore scelte solo sul TRAIN (PF ≥ 1.2, n ≥ 30), verificate sull'holdout.
+- Script completo: ore 05/07/14/18/21, TRAIN PF 1.60 → **HOLDOUT PF 0.67** (tipico falso positivo da selezione).
+- Solo pullback: una sola ora (08), 11 trade in holdout, non valutabile.
+- Solo reversal: ore 03/07/13/14/16. Filtro a posteriori TRAIN 1.25 / HOLDOUT 1.27, ma con il filtro applicato davvero all'ingresso (`--verify`): full PF 1.11, TRAIN 1.08, holdout 1.23, fold 0.77/0.94/1.02/1.39, 3.9 trade/giorno, **costi ×2 → PF 1.01**, ora 14 in perdita, DSR non significativo.
+Verdetto: il filtro orario porta il reversal da perdita (0.91) a leggermente positivo, ma il margine sta tutto nell'ultimo periodo e sparisce con costi realistici un po' peggiori (rischio medio solo $9 a trade). Non integrato.

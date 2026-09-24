@@ -131,7 +131,7 @@ VARIANTS = {
 }
 
 
-def run(candles, I, use_trend=True, use_rev=True, session=None, swing_sl=False, htf=False, adx_min=None, d1=None):
+def run(candles, I, use_trend=True, use_rev=True, session=None, swing_sl=False, htf=False, adx_min=None, d1=None, hours=None):
     trades = []; day_n = defaultdict(int); busy_until = -1; n = len(candles)
     for i in range(300, n - 1):
         if i <= busy_until: continue
@@ -139,6 +139,7 @@ def run(candles, I, use_trend=True, use_rev=True, session=None, swing_sl=False, 
         day = dt.strftime('%Y-%m-%d')
         if day_n[day] >= MAX_PER_DAY: continue
         if session and not (session[0] <= dt.hour < session[1]): continue
+        if hours is not None and dt.hour not in hours: continue
         if np.isnan(I['atr'][i]) or np.isnan(I['hh'][i - 1]) or np.isnan(I['bbl'][i - 1]): continue
         d = signal(I, i, use_trend, use_rev)
         if not d: continue

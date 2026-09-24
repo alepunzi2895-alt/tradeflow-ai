@@ -1,5 +1,5 @@
 {
-  "total": 1793,
+  "total": 1796,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -296,6 +296,14 @@
       "asset": "XAU",
       "strategy_id": "ASIA_BREAK",
       "note": "gestione parziale 1R+BE su ASIA_BREAK e ASIA_BREAK_ALL (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T16:31:03Z",
+      "n_trials": 3,
+      "cumulative_after": 1796,
+      "asset": "XAU",
+      "strategy_id": "SCALPER_CLOUD",
+      "note": "filtro orario scelto sul TRAIN (PF>=1.2, n>=30) per V0/V1/V2 (2026-09-24)"
     }
   ]
 }

@@ -190,3 +190,23 @@ Regole: ADX ≥ 25; DI dominante con spread ≥ 10 (o 15) e in crescita rispetto
 
 M30: PULL in perdita (holdout PF 0.28-0.59), MOM full PF 1.6-1.8 ma holdout < 1; PBO M30 0.67.
 Verdetto: nessuna variante promuovibile (holdout sotto BASE, DSR n/d o non significativo). La lettura MOM su H1 è da scartare. PULL su H1 è la più pulita (DD ÷6) ma fa circa 2 trade al mese: campione troppo piccolo per validarla e non risolve la scarsità di trade. Il comportamento opposto tra H1 e M30 indica fragilità. `signals.py` invariato.
+
+## 2026-09-24 — Scalping multi-trade/giorno: 3 ipotesi + Pine utente "XAU Scalper Cloud v3"
+
+**Ipotesi nuove** (`scripts/research_scalp_2026_09_24.py`, parametri fissi, 6 trial): ASIA_FADE (fade Bollinger 0-6 con ADX<20), RSI2_TREND (RSI(2) nel trend EMA50/200), EXPANSION (continuazione dopo candela > 2 ATR). Tutte in perdita su M15 (PF 0.77-0.94) e su M5 (PF 0.69-0.88), 0-2/4 fold. Scartate.
+
+**Pine utente su M5** (`scripts/research_scalper_cloud.py`): port fedele (ribbon EMA20-50, pullback su EMA20 + MACD, reversal Bollinger vicino agli estremi Donchian 55, SL Donchian ± 0.3 ATR, TP 2R), una posizione alla volta, cost model e `simulate_exit` del motore. 9 trial in due giri, selezione solo sul TRAIN.
+
+| Variante | Trade/g | TRAIN | HOLDOUT (da giu 2026) |
+|---|---|---|---|
+| V0 Pine fedele | 8.1 | PF 0.90 −1418 | PF 0.89 −382 |
+| V1 solo trend (pullback nuvola) | 2.2 | **PF 1.04** +248 | PF 1.02 +29 |
+| V2 solo reversal | 9.5 | PF 0.91 | PF 0.85 |
+| V3 sessione 8-20 | 5.9 | PF 0.87 | PF 0.86 |
+| V4 SL swing 10 barre | 9.6 | PF 0.93 | PF 0.94 |
+| R2 V1 + trend H1 | 1.6 | PF 0.97 | PF 1.07 |
+| R2 V1 + ADX ≥ 20 | 1.5 | PF 0.99 | PF 1.26 |
+| R2 V1 + sessione | 1.6 | PF 0.94 | PF 0.90 |
+| R2 V1 + trend H1 + SL swing | 2.4 | PF 0.90 | PF 1.20 |
+
+Verdetto: **nessun edge**. Il reversal Bollinger è la parte in perdita; il pullback sulla nuvola a favore del trend è in pareggio dopo i costi. Nessun filtro migliora il TRAIN; gli holdout > 1 di R2 sono smentiti dal train sotto 1. DSR non significativo (1779 trial cumulativi). Nulla integrato nel bot.

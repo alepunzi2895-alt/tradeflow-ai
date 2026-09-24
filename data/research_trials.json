@@ -1,5 +1,5 @@
 {
-  "total": 1764,
+  "total": 1779,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -232,6 +232,30 @@
       "asset": "XAU",
       "strategy_id": "S00_MFKK",
       "note": "S00 V3 regole utente ADX25/DI widening/MACD cross-preflip/CCI 40-60 (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T14:24:08Z",
+      "n_trials": 6,
+      "cumulative_after": 1770,
+      "asset": "XAU",
+      "strategy_id": "SCALP_NEW",
+      "note": "scalping 2026-09-24: ASIA_FADE/RSI2_TREND/EXPANSION × M15/M5, param fissi"
+    },
+    {
+      "ts": "2026-09-24T14:26:45Z",
+      "n_trials": 5,
+      "cumulative_after": 1775,
+      "asset": "XAU",
+      "strategy_id": "SCALPER_CLOUD",
+      "note": "Pine utente XAU Scalper Cloud v3 su M5: port + 4 varianti fisse (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T14:27:37Z",
+      "n_trials": 4,
+      "cumulative_after": 1779,
+      "asset": "XAU",
+      "strategy_id": "SCALPER_CLOUD",
+      "note": "round2 su V1_TREND (2026-09-24)"
     }
   ]
 }

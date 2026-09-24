@@ -1,5 +1,5 @@
 {
-  "total": 1753,
+  "total": 1756,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -216,6 +216,14 @@
       "asset": "XAUUSD+US30",
       "strategy_id": "ROSTER_AUDIT",
       "note": "9 frozen baselines; no optimization; previously used history; chronological diagnostic only"
+    },
+    {
+      "ts": "2026-09-24T13:56:00Z",
+      "n_trials": 3,
+      "cumulative_after": 1756,
+      "asset": "XAU",
+      "strategy_id": "S00_MFKK",
+      "note": "fallback S00 in TREND_DOWN/UP accanto a S16 H1 (2026-09-24)"
     }
   ]
 }

@@ -161,3 +161,17 @@ Lo StrategySelector usa questi valori per lo scoring (`best_PF × best_WR` deter
 ## Audit 2026-09-18
 
 Nuovo riferimento offline: backtests/results/audit_2026-09-18/report.json. Stop da chiusura applicato dalla barra successiva, gap e timeout contabilizzati, US30 una posizione e time-stop 18 barre. Le metriche precedenti non sono direttamente confrontabili. Nessuna promozione automatica: campioni insufficienti o DSR non significativo.
+
+## 2026-09-24 — S00 come fallback H1 in TREND_DOWN (`scripts/research_s00_trend_fallback.py`)
+
+Dati MT5 H1 freschi (24 mesi, fino al 2026-09-24), holdout da 2026-04-02, trade S00 aggiunti solo se S16 non ha una posizione aperta. 3 varianti registrate in `research_trials` (1756 cumulativi).
+
+| Variante | Full | Holdout |
+|---|---|---|
+| A solo S16 (live) | n=237 PF 1.79 +1887 DD 514, 16/24 mesi+ | n=41 PF 0.94 −47 |
+| B S16 + S00 in TREND_DOWN | n=661 PF 1.12 +1288 DD 1963, 12/24 | n=153 PF 1.34 +735 |
+| C S16 + S00 in TREND_DOWN+UP | n=863 PF 1.20 +2586 DD 1941, 15/24 | n=216 PF 1.62 +1733 |
+| Solo trade S00 aggiunti in B (tutti SELL) | n=424 PF 0.93 −599 DD 1942, 8/23 | n=112 PF 1.56 +783, 5/6 |
+
+Fold B: 0.95 / 0.90 / 1.47 / 1.01. DSR sui trade aggiunti: non significativo.
+Verdetto: **non promuovibile**. Su 24 mesi i SELL di S00 in TREND_DOWN perdono (PF 0.93) e quadruplicano il drawdown; il guadagno è concentrato negli ultimi 6 mesi. Nessuna modifica al bot.

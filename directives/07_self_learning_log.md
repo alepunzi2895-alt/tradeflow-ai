@@ -172,3 +172,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Punto strutturale: in TREND_DOWN S16 può vendere solo come contro-trend dentro un H4 rialzista (filtro V4). Con H1 e H4 entrambi ribassisti, come ora, S16 di fatto non può vendere. S00 ha dato SELL il 23/09 (16-19) e il 24/09 13:00, ma in TREND_DOWN il selector sceglie una sola strategia H1 (S16), quindi S00 non viene valutata.
 - Nessuna modifica alla logica di trading: il comportamento è coerente col codice. Eventuale fallback S00 in TREND_DOWN è una decisione di strategia da validare in backtest prima.
 - Nota diagnostica: `last_logs` nel payload è pieno di righe "MT5 history"/"Sync" ogni 20s; le righe utili ("Nessun segnale primario H1") ne vengono spinte fuori.
+- Seguito (stesso giorno): testato S00 come riserva di S16 in TREND_DOWN, vedi `05_backtest.md` 2026-09-24. Su 24 mesi perde (PF 0.93, DD ×4), positivo solo nel holdout 2026. Non promosso, bot invariato.

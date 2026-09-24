@@ -13,9 +13,17 @@ e aggiorna la card di quella strategia.
 Nessuna logica duplicata: riusa evaluate_one() da portfolio_backtest.py (stessa funzione
 usata dal run completo/giornaliero).
 
-USO (lascialo aperto in un terminale, come mt5-bot.py):
+USO: parte da solo all'avvio di mt5-bot.py (2026-09-24, in una finestra dedicata; disattivabile
+con WORKER_AUTOSTART=0 in .env). Si può anche lanciare a mano:
     python -X utf8 scripts/backtest_worker.py
     python -X utf8 scripts/backtest_worker.py --interval 10   (polling ogni 10s, default 15)
+
+Una sola istanza per macchina: il worker occupa la porta locale WORKER_LOCK_PORT (127.0.0.1);
+una seconda copia (es. bot riavviato) la trova occupata ed esce subito.
+
+2026-09-24: gestisce anche i job kind='history' (storici MT5 on-demand dal Laboratorio, via
+history_store.py) e pubblica ogni ~60s uno heartbeat + l'indice degli storici scaricati
+(worker_status_push), così la dashboard sa se il worker è vivo.
 """
 import argparse
 import os
@@ -26,6 +34,9 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+import socket
+from dotenv import load_dotenv
+load_dotenv(os.path.join(HERE, '..', '.env'))   # prima mancava: lanciato da solo non aveva MT5_BOT_SECRET
 
 from portfolio_backtest import evaluate_one
 from vercel_push import push
@@ -35,7 +46,65 @@ ALL_IDS = ['S00_MFKK', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUE
            'S31_LAYOUT_SMART', 'S30_DOW_DIP']
 
 
+WORKER_LOCK_PORT = int(os.getenv('WORKER_LOCK_PORT', '47391'))
+HEARTBEAT_S = 60
+_mt5 = None
+
+
+def acquire_single_instance():
+    """Lucchetto via porta locale: se un altro worker è già attivo, ritorna None."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(('127.0.0.1', WORKER_LOCK_PORT))
+        s.listen(1)
+        return s
+    except OSError:
+        s.close()
+        return None
+
+
+def mt5_ready():
+    """Connessione MT5 lazy (solo quando serve un job di storico). Stesso terminale del bot:
+    la libreria MetaTrader5 supporta più processi Python collegati allo stesso terminale."""
+    global _mt5
+    if _mt5 is None:
+        import MetaTrader5 as mt5
+        if not mt5.initialize():
+            raise RuntimeError(f'MT5 initialize() fallito: {mt5.last_error()} — MT5 è aperto?')
+        _mt5 = mt5
+    return _mt5
+
+
+def push_status():
+    import history_store
+    push('worker_status_push', {'host': socket.gethostname(), 'history': history_store.load_index()}, timeout=15)
+
+
+def handle_history(cmd):
+    import history_store
+    p = cmd.get('params') or {}
+    print(f"[backtest_worker] storico richiesto: {p.get('instrument')} {p.get('tf')} {p.get('days')}gg")
+    try:
+        t0 = time.time()
+        result = history_store.download(mt5_ready(), p.get('instrument'), p.get('tf'), p.get('days', 365))
+        result['computed_in_s'] = round(time.time() - t0, 1)
+    except Exception as e:
+        traceback.print_exc()
+        result = {'error': str(e)}
+    push('backtest_result_push', {'strategy_id': 'HISTORY', 'request_id': cmd.get('request_id'),
+                                  'lease_token': cmd.get('lease_token'), 'result': result}, timeout=30)
+    if result.get('error'):
+        print(f"[backtest_worker] ✗ storico: {result['error']}")
+    else:
+        print(f"[backtest_worker] ✓ {result['instrument']} {result['tf']}: {result['bars']} barre "
+              f"{result['from']} → {result['to']}" + (f" · {result['note']}" if result.get('note') else ''))
+        try: push_status()
+        except Exception as e: print(f"[backtest_worker] indice non pubblicato: {e}")
+
+
 def handle_command(cmd):
+    if cmd.get('kind') == 'history':
+        return handle_history(cmd)
     sid = cmd.get('strategy_id')
     print(f"[backtest_worker] richiesta ricevuta: {sid} (chiesta alle {cmd.get('requested_at')})")
     if sid not in ALL_IDS:
@@ -62,8 +131,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--interval', type=int, default=15, help='Secondi tra un poll e il successivo')
     args = ap.parse_args()
+    lock = acquire_single_instance()
+    if lock is None:
+        print(f"[backtest_worker] già attivo su questa macchina (porta {WORKER_LOCK_PORT} occupata) — esco.")
+        return
     print(f"[backtest_worker] avviato — polling ogni {args.interval}s. Ctrl+C per fermare.")
+    last_beat = 0.0
     while True:
+        if time.time() - last_beat >= HEARTBEAT_S:
+            try:
+                push_status(); last_beat = time.time()
+            except Exception as e:
+                print(f"[backtest_worker] heartbeat fallito: {e}")
+                last_beat = time.time()
         try:
             d = push('backtest_cmd_get', {}, timeout=10)
         except Exception as e:

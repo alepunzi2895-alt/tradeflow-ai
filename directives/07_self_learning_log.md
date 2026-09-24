@@ -182,3 +182,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - S35_ASIA_BREAK integrata nel bot come blocco isolato M5 (lotto 0.03, demo). Parità verificata: 41/41 ingressi del bot = backtest. Serve git pull + riavvio VPS.
 - MyFxBook: sessione lato server + credenziali cifrate opzionali ("Ricorda l'accesso"), relogin automatico, sentiment per qualunque simbolo; vedi `06_known_issues.md` 2026-09-24.
 - Registro strumenti public/instruments.json (forex major + indici), selettore Altri…, griglia Forex e indici, pannelli MFKK/confidence onesti per i non-core; 3 bug latenti fixati (vedi 06_known_issues.md).
+- Storici MT5 on-demand (Laboratorio → worker → data/history/) + worker avviato automaticamente dal bot, una sola istanza (porta-lucchetto). Vedi 04_bot_operations.md.

@@ -1311,6 +1311,28 @@ def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
     _s20_last_entry_ts = time.time()
     _s20_save_state()
 
+# ── Worker backtest/storici: avviato insieme al bot (2026-09-24) ─────────────
+# Evita di doverlo lanciare a mano: il bot apre scripts/backtest_worker.py in una finestra
+# propria. Se è già attivo (bot riavviato), la nuova copia trova occupata la porta-lucchetto
+# del worker ed esce da sola. Il worker è un processo separato: un suo errore non tocca il bot.
+# Disattivabile con WORKER_AUTOSTART=0 in .env.
+def ensure_worker():
+    if os.getenv('WORKER_AUTOSTART', '1') == '0':
+        log.info("Worker backtest/storici: avvio automatico disattivato (WORKER_AUTOSTART=0)")
+        return
+    try:
+        import subprocess
+        worker = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backtest_worker.py')
+        kw = {'cwd': os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')}
+        if os.name == 'nt':
+            kw['creationflags'] = subprocess.CREATE_NEW_CONSOLE
+        else:
+            kw['start_new_session'] = True
+        subprocess.Popen([sys.executable, '-X', 'utf8', worker], **kw)
+        log.info("Worker backtest/storici avviato in una finestra separata (se era già attivo, la copia nuova esce da sola)")
+    except Exception as e:
+        log.warning(f"Worker backtest/storici non avviato: {e} — lancialo a mano: python -X utf8 scripts/backtest_worker.py")
+
 # ── S35_ASIA_BREAK — M5, blocco isolato (entry + parziale 1R/BE + time-stop) ──
 def _s35_load_state():
     global _s35_state, _s35_used
@@ -2349,6 +2371,8 @@ def run():
         s20_rebuild_from_open()
         log.info(f"S20_FIB_CONFLUENCE attiva — M5 · sizing RiskGuardian ×{S20_LOT_MULT} · "
                  f"cooldown SL condivisi · {len(_s20_state)} posizioni in gestione")
+
+    ensure_worker()
 
     # S35_ASIA_BREAK (blocco isolato M5): ripristina stato + riadotta posizioni aperte
     if S35_ENABLED:

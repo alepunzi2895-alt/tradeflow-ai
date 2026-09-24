@@ -21,6 +21,7 @@ const browser=await chromium.launch({headless:true});
 const errors=[];
 let quoteRequests=0, quoteFailure=false, statsDenied=false;
 const sentimentAssets=[], indicatorAssets=[]; let mfxLoginBody=null, mfxConnected=true;
+let histBody=null, histPolls=0, histDenied=false; const histIndex={datasets:{GER40_M15:{instrument:'GER40',label:'GER40',tf:'M15',bars:45439,from:'2024-09-24 17:45',to:'2026-09-24 17:30',fetched_at:new Date().toISOString(),truncated:false}}};
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 page.setDefaultTimeout(8000);
 page.on('pageerror',e=>errors.push(e.message));
@@ -39,6 +40,17 @@ await page.route('**/*',async route=>{
   if(b.action==='get_user_data')json={ok:true,data:[{doc_type:'mfx',payload:JSON.stringify({session:'fixture-session',email:'test@example.test',pass:'legacy-test-password'})}]};
   if(b.action==='get_trades')json={ok:true,trades:[]};
   if(b.action==='strategy_registry')json={ok:true,data:registrySnapshot()};
+  if(b.action==='worker_status_get')json={ok:true,data:{seen_at:new Date().toISOString(),host:'VPS-TEST',history:histIndex}};
+  if(b.action==='history_cmd_push'){
+    if(histDenied){await route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({ok:false,error:'Operazione riservata: configurare ADMIN_USER_IDS'})});return;}
+    histBody=b;histPolls=0;json={ok:true,request_id:'hist-1'};
+  }
+  if(b.action==='backtest_result_get'&&b.request_id==='hist-1'){
+    histPolls++;
+    const done={instrument:'EURUSD',label:'EUR/USD',tf:'M15',bars:49535,from:'2024-09-24 17:45',to:'2026-09-24 17:30',fetched_at:new Date().toISOString(),truncated:false};
+    if(histPolls>=3)histIndex.datasets.EURUSD_M15=done;
+    json=histPolls<2?{ok:true,status:'queued'}:histPolls<3?{ok:true,status:'running'}:{ok:true,status:'done',data:done};
+  }
   if(b.action==='mt5_get'){
     if(statsDenied){await route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({ok:false,error:'Accesso non abilitato'})});return;}
     json={ok:true,data:{account:{equity:10000,balance:9900,currency:'USD'},positions:[],trades:[{profit:10},{profit:-5},{profit:15}],bot_status:{running:true,pnl_today:25,registry:registrySnapshot()},synced_at:new Date().toISOString()}};
@@ -198,6 +210,21 @@ try {
   await page.locator('#lab-file').setInputFiles({name:'fixture-ohlc.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(candles))});
   await page.locator('#lab-form [type=submit]').click();
   await page.waitForFunction(()=>document.querySelector('#lab-result')?.textContent.includes('Esperimento completato'));
+  // Storici MT5 on-demand: worker attivo, richiesta, avanzamento, indice aggiornato.
+  await page.waitForFunction(()=>/Worker attivo su VPS-TEST/.test(document.querySelector('#lab-hist-worker')?.textContent||''));
+  assert.equal(await page.locator('#lab-hist-list tbody tr').count(),1);
+  assert.ok(await page.locator('#lab-hist-inst option[value=EURUSD]').count(),'strumenti dal registro');
+  await page.selectOption('#lab-hist-inst','EURUSD');await page.selectOption('#lab-hist-tf','M15');
+  await page.locator('#lab-hist-go').click();
+  await page.waitForFunction(()=>/In coda|Download in corso/.test(document.querySelector('#lab-hist-job')?.textContent||''));
+  await page.waitForFunction(()=>/✓ EUR\/USD M15: 49\.535 barre/.test(document.querySelector('#lab-hist-job')?.textContent||''),null,{timeout:15000});
+  assert.deepEqual({i:histBody.instrument,tf:histBody.tf,d:histBody.days},{i:'EURUSD',tf:'M15',d:730});
+  await page.waitForFunction(()=>document.querySelectorAll('#lab-hist-list tbody tr').length===2);
+  histDenied=true;
+  await page.locator('#lab-hist-go').click();
+  await page.waitForFunction(()=>/Operazione riservata/.test(document.querySelector('#lab-hist-job')?.textContent||''));
+  assert.equal(await page.locator('#lab-hist-go').isDisabled(),false,'dopo un errore si può riprovare');
+  await page.locator('#lab-hist').screenshot({path:'artifacts/lab-history-desktop.png'});
   await page.locator('[data-tab=dash]').click();
   await page.setViewportSize({width:390,height:844});
   await page.locator('#orbit-stage').scrollIntoViewIfNeeded();
@@ -223,5 +250,5 @@ try {
   await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
   assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, private system stats, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

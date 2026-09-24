@@ -36,7 +36,7 @@ for(const secret of [undefined,'too-short']){
 }
 process.env.JWT_SECRET=configuredJwt;
 assert.equal((await call(undefined,{},undefined,'GET')).status,200);
-for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','patch_db'])assert.equal((await call(action)).status,401,action);
+for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','patch_db'])assert.equal((await call(action)).status,401,action);
 assert.equal((await call('admin_reset',{email:'alice@example.test',password:'attacker'})).status,410);
 assert.equal((await call('mt5_command_push',{command:{direction:'buy'}},'alice')).status,410);
 assert.equal((await call('auto_trade_set',{enabled:true},'bob')).status,403);
@@ -80,5 +80,17 @@ await jobs.complete(db,{...cmd,result:{full:{pf:1.2}}});
 assert.equal((await jobs.result(db,{request_id:cmd.request_id,user_id:'alice'})).data.full.pf,1.2);
 assert.equal((await jobs.result(db,{request_id:cmd.request_id,user_id:'bob'})).data,null);
 await assert.rejects(jobs.complete(db,{...cmd,result:{}}),/completata/);
+// Storici MT5 on-demand: validazione, stessa coda, kind/params al worker, heartbeat.
+await assert.rejects(jobs.enqueueHistory(db,{user_id:'alice',instrument:'FOOBAR',tf:'H1',days:365}),/registro/);
+await assert.rejects(jobs.enqueueHistory(db,{user_id:'alice',instrument:'EURUSD',tf:'H2',days:365}),/Timeframe/);
+await assert.rejects(jobs.enqueueHistory(db,{user_id:'alice',instrument:'EURUSD',tf:'H1',days:99999}),/Periodo/);
+const hq=await jobs.enqueueHistory(db,{user_id:'alice',instrument:'eurusd',tf:'m15',days:730});
+const hc=(await jobs.claim(db)).command;
+assert.equal(hc.request_id,hq.request_id);assert.equal(hc.kind,'history');
+assert.deepEqual(hc.params,{instrument:'EURUSD',tf:'M15',days:730});
+await jobs.complete(db,{...hc,result:{instrument:'EURUSD',tf:'M15',bars:49535}});
+assert.equal((await jobs.result(db,{request_id:hq.request_id,user_id:'alice'})).data.bars,49535);
+await jobs.workerStatusPush(db,{host:'vps',history:{datasets:{EURUSD_M15:{bars:49535}}}});
+assert.equal((await jobs.workerStatusGet(db)).data.history.datasets.EURUSD_M15.bars,49535);
 assert.equal((await call('strategy_registry',{},'alice')).data.data.strategies.S20_FIB_CONFLUENCE.status,'disabled');
 db.close();try{for(const name of ['test.db','test.db-shm','test.db-wal'])fs.rmSync(path.join(temp,name),{force:true});fs.rmdirSync(temp);}catch(e){if(!['EPERM','EBUSY'].includes(e.code))throw e;}console.log('Security, ownership, import rollback, KB isolation, quotas and atomic jobs: passed');

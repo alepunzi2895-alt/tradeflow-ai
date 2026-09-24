@@ -125,6 +125,16 @@ Prima strategia su un asset diverso da XAU. Mean-reversion azionaria (Connors RS
 
 **Per disattivare**: `US30_ENABLED = False` in `mt5-bot.py`. Le posizioni aperte restano gestite da MT5 (SL/TP). **Serve `US30Cash` visibile in Market Watch** sul terminal della VPS (il bot lo attiva via `symbol_select`, ma il terminal deve avere accesso al simbolo).
 
+## Worker backtest/storici — avviato dal bot (2026-09-24 →)
+
+- `mt5-bot.py` all'avvio chiama `ensure_worker()`: apre `scripts/backtest_worker.py` in una **finestra separata** (così i suoi log si vedono). Basta avviare il bot come sempre.
+- **Una sola istanza**: il worker occupa la porta locale `127.0.0.1:WORKER_LOCK_PORT` (default 47391). Riavviando il bot la copia nuova la trova occupata ed esce subito ("già attivo"). Se il worker si chiude, il prossimo avvio del bot lo riapre.
+- Disattivare: `WORKER_AUTOSTART=0` nel `.env`. Lanciarlo a mano: `python -X utf8 scripts/backtest_worker.py`.
+- Il worker ora carica `.env` da solo (prima no: lanciato da solo non aveva `MT5_BOT_SECRET`).
+- Gestisce: backtest on-demand (bottone "Lancia backtest") e **storici MT5 on-demand** (Laboratorio → Storici MT5): `history_cmd_push` (azione operatore: serve l'utente in `ADMIN_USER_IDS`) → coda `backtest_jobs` con `kind='history'` → `history_store.download()` → `data/history/{id}_{tf}.json` (gitignored) + `data/history/index.json`.
+- Heartbeat ogni 60s (`worker_status_push`, doc `system/worker_status`) con l'indice dei dataset: il Laboratorio mostra "Worker attivo · ultimo segnale …" o "non attivo".
+- Qualità degli storici: MT5 scarica lo storico in modo asincrono quando un simbolo viene attivato (prime risposte di poche ore) → fino a 6 tentativi; un buco > 4 giorni nei dati (risposta parziale del terminale) viene tagliato e segnalato; il limite "Max bars in chart" (~100k) tronca M1/M5 su periodi lunghi → `truncated` + nota nel riepilogo.
+
 ## S35_ASIA_BREAK — scalp M5 rottura range asiatico, blocco isolato (2026-09-24 →)
 
 - **Regole** (`signals.asia_break_scan`, orari broker): range asiatico 02:00-10:00; tra 10:00 e 14:00 una candela M5 chiusa oltre il massimo (BUY) o il minimo (SELL). SL a metà range, TP 2R. Un trade per lato al giorno, una posizione S35 alla volta.

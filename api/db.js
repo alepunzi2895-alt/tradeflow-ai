@@ -437,13 +437,16 @@ const ACTIONS = {
   backtest_cmd_get:     (db, body) => jobs.claim(db),
   backtest_result_push: (db, body) => jobs.complete(db, body),
   backtest_result_get:  (db, body) => jobs.result(db, body),
+  history_cmd_push:     (db, body) => jobs.enqueueHistory(db, body),
+  worker_status_push:   (db, body) => jobs.workerStatusPush(db, body),
+  worker_status_get:    (db)       => jobs.workerStatusGet(db),
   hard_blocks_load:     ()         => hardBlocksLoad(),
   hard_blocks_toggle:   (db, body) => hardBlocksToggle(db, body),
 };
 
-const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push']);
+const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push','worker_status_push']);
 const READ_ACTIONS = new Set(['strategy_registry','mt5_get','auto_trade_get','s20_paper_get','strat_live_get','backtest_report_get','hard_blocks_load']);
-const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','patch_db']);
+const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','patch_db']);
 
 export function createHandler(dbFactory = getDb) {
   return async function handler(req, res) {

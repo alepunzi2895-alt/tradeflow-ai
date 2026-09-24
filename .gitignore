@@ -32,3 +32,4 @@ data/telegram_session.session-journal
 # Local browser verification screenshots
 artifacts/
 data/research_trials.json.lock
+data/history/

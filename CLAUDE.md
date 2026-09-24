@@ -21,6 +21,8 @@ python scripts/strategy-engine-v2.py --file data/xauusd_m30_mt5.json --rm
 
 # Fetch dati freschi
 python scripts/fetch_mt5_history.py --tf M30  # → data/xauusd_m30_mt5.json
+# Storici di qualunque strumento del registro: dal Laboratorio (Storici MT5) → worker → data/history/
+# Il worker (scripts/backtest_worker.py) parte da solo con mt5-bot.py (WORKER_AUTOSTART=0 per disattivarlo)
 
 # Setup one-time (dopo ogni git clone) — pre-commit AI review hook
 python scripts/install_git_hooks.py

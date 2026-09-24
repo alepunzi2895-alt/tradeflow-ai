@@ -93,7 +93,9 @@ RECENT_DAYS_WINDOW  = 90     # giorni per analisi recente
 # ── Trade Silence Check (Step 4) ──────────────────────────────────────────────
 # Stesso default di mt5-bot.py — history reale letta via Vercel/Turso (action mt5_get),
 # non dal file locale mt5-trades.json (dimostratosi inaffidabile, vedi _fetch_recent_trades_from_vercel).
-VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
+# `or` e non il default di getenv: sulla VPS il .env ha VERCEL_URL= vuoto (come già gestito in mt5-bot.py);
+# con getenv(k, default) l'URL diventava "" → "unknown url type: '/api/db'" (worker e Laboratorio muti, 2026-09-24).
+VERCEL_URL = (os.getenv("VERCEL_URL") or "https://tradeflow-ai-delta.vercel.app").rstrip("/")
 
 # Mapping strategy_id → nome funzione segnale in signals.py (per raccolta contesto AI)
 STRATEGY_SIGNAL_FN = {

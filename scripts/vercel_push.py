@@ -22,7 +22,9 @@ try:
 except ImportError:
     _SSL_CTX = ssl.create_default_context()
 
-VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
+# `or` e non il default di getenv: sulla VPS il .env ha VERCEL_URL= vuoto (come già gestito in mt5-bot.py);
+# con getenv(k, default) l'URL diventava "" → "unknown url type: '/api/db'" (worker e Laboratorio muti, 2026-09-24).
+VERCEL_URL = (os.getenv("VERCEL_URL") or "https://tradeflow-ai-delta.vercel.app").rstrip("/")
 MT5_SECRET = os.getenv("MT5_BOT_SECRET", "")
 
 

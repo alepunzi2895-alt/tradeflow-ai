@@ -21,7 +21,7 @@ const browser=await chromium.launch({headless:true});
 const errors=[];
 let quoteRequests=0, quoteFailure=false, statsDenied=false;
 const sentimentAssets=[], indicatorAssets=[]; let mfxLoginBody=null, mfxConnected=true;
-let histBody=null, histPolls=0, histDenied=false, notesSaved=null, profileJobs=0, profilePolls=0;
+let specBody=null, specPolls=0, specRejected=false, histBody=null, histPolls=0, histDenied=false, notesSaved=null, profileJobs=0, profilePolls=0;
 const PROFILES={generated_at:new Date(Date.now()-3*3600000).toISOString(),instruments:{
   XAU:{id:'XAU',label:'XAU/USD',name:'Oro',type:'metal',ccy:['XAU','USD'],broker:{symbol:'GOLD',digits:2,contract_size:100,volume_min:.01,volume_step:.01,swap_long:-50.1,swap_short:20.3},
     costs:{spread_median:.4,spread_p90:.6,spread_now:.35,atr_h1:17.4,cost_pct_atr_h1:2.3},volatility:{atr_d1:98.2,adr_pct_90d:2.35,active_hours_broker:[16,15,17]},
@@ -51,6 +51,17 @@ await page.route('**/*',async route=>{
   if(b.action==='get_trades')json={ok:true,trades:[]};
   if(b.action==='strategy_registry')json={ok:true,data:registrySnapshot()};
   if(b.action==='profiles_get')json={ok:true,data:PROFILES};
+  if(b.action==='spec_cmd_push'){
+    if(specRejected){await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({ok:false,error:'Target: da 0.2 a 20'})});return;}
+    specBody=b.spec;specPolls=0;json={ok:true,request_id:'spec-1',spec:b.spec};
+  }
+  if(b.action==='backtest_result_get'&&b.request_id==='spec-1'){specPolls++;json=specPolls<2?{ok:true,status:'running'}:{ok:true,status:'done',data:{
+    name:specBody.name,instrument:specBody.instrument,tf:specBody.tf,direction:specBody.direction,verdict:'CANDIDATA DEMO',
+    dataset:{bars:11788,from:'2024-09-24',to:'2026-09-24',symbol:'GOLD',spread:'reale per barra'},trades_per_month:6.1,
+    full:{n:141,pf:1.51,wr:54.6},holdout:{n:30,pf:1.88,wr:56},costs2:{n:141,pf:1.43,wr:52},folds:[{n:28,pf:.97},{n:28,pf:1.0},{n:28,pf:1.32},{n:27,pf:1.88}],
+    net_r:31.2,max_dd_r:7.1,avg_r:.221,dsr:{sr:1.1,p:.31,significant:false},num_trials:1806,equity_r:[1,0,2,3,2,5,8,7,11],
+    gates:[['sample',1],['pf_full',1],['holdout',1],['folds',1],['costs2',1],['recovery',1],['dsr',0]].map(([id,ok])=>({id,label:'criterio '+id,ok:!!ok}))}};}
+  if(b.action==='spec_runs_get')json={ok:true,runs:specBody?[{request_id:'spec-1',status:'done',spec:specBody,summary:{verdict:'CANDIDATA DEMO',n:141,pf:1.51,holdout_pf:1.88,net_r:31.2}}]:[]};
   if(b.action==='save_user_data'&&b.doc_type==='inst_notes')notesSaved=JSON.parse(b.payload);
   if(b.action==='profile_cmd_push'){profileJobs++;profilePolls=0;json={ok:true,request_id:'prof-1'};}
   if(b.action==='backtest_result_get'&&b.request_id==='prof-1'){profilePolls++;json=profilePolls<2?{ok:true,status:'running'}:{ok:true,status:'done',data:{instruments:15}};}
@@ -260,6 +271,28 @@ try {
   await page.waitForFunction(()=>/Operazione riservata/.test(document.querySelector('#lab-hist-job')?.textContent||''));
   assert.equal(await page.locator('#lab-hist-go').isDisabled(),false,'dopo un errore si può riprovare');
   await page.locator('#lab-hist').screenshot({path:'artifacts/lab-history-desktop.png'});
+  // Composer: modello → regole nell'editor, avviso costi per timeframe, validazione sul worker.
+  await page.locator('#lab-comp .lab-comp-tpl summary').click();
+  await page.locator('[data-tpl=cloud]').click();
+  assert.equal(await page.locator('#lab-rules .lab-rule').count(),3,'il modello carica le regole nell’editor');
+  assert.equal(await page.locator('#lab-name').inputValue(),'Pullback nella nuvola · H1');
+  assert.equal(await page.locator('#lab-comp-stop').inputValue(),'donchian');
+  await page.selectOption('#lab-comp-inst','XAU');
+  await page.waitForFunction(()=>/2,3%/.test(document.querySelector('#lab-comp-hint')?.textContent||''));
+  await page.selectOption('#lab-comp-tf','M5');
+  await page.waitForFunction(()=>/8,0%.*ATR M5/.test(document.querySelector('#lab-comp-hint')?.textContent||''));
+  await page.selectOption('#lab-comp-tf','H1');
+  await page.locator('#lab-comp-go').click();
+  await page.waitForFunction(()=>/CANDIDATA DEMO/.test(document.querySelector('#lab-comp-result')?.textContent||''),null,{timeout:15000});
+  assert.deepEqual({i:specBody.instrument,tf:specBody.tf,stop:specBody.exit.stop.type,n:specBody.rules.length},{i:'XAU',tf:'H1',stop:'donchian',n:3});
+  assert.equal(await page.locator('#lab-comp-result .lab-gates li.ok').count(),6);
+  assert.equal(await page.locator('#lab-comp-result .lab-gates li.ko').count(),1);
+  await page.waitForFunction(()=>/CANDIDATA DEMO/.test(document.querySelector('#lab-comp-runlist')?.textContent||''));
+  await page.locator('#lab-comp-result').screenshot({path:'artifacts/lab-composer-result.png'});
+  await page.locator('#lab-comp').screenshot({path:'artifacts/lab-composer-form.png'});
+  specRejected=true;await page.locator('#lab-comp-go').click();
+  await page.waitForFunction(()=>/Target/.test(document.querySelector('#lab-comp-job')?.textContent||''));
+  specRejected=false;
   await page.locator('[data-tab=dash]').click();
   await page.setViewportSize({width:390,height:844});
   await page.locator('#orbit-stage').scrollIntoViewIfNeeded();
@@ -285,5 +318,5 @@ try {
   await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
   assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, instrument card, private system stats, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, MT5 history on demand, instrument card, strategy composer, private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

@@ -89,5 +89,8 @@
   };
   el('save').onclick=()=>{try{if(!el('form').reportValidity())return;localStorage.setItem('tf_lab_draft',JSON.stringify({config:config(),asset:el('asset').value,tf:el('tf').value}));el('save-status').textContent='Bozza salvata su questo browser.';}catch{el('save-status').textContent='Salvataggio locale non disponibile.';}};
   try{const draft=JSON.parse(localStorage.getItem('tf_lab_draft')||'null');if(draft){el('name').value=draft.config.name;for(const key of ['direction','stop','take','cost','quantity'])el(key).value=draft.config[key];el('rules').replaceChildren();draft.config.rules.forEach(rule);el('asset').value=draft.asset;el('tf').value=draft.tf;}}catch{}
+  // Per il composer (lab-composer.js): legge e imposta regole/nome/direzione dell'editor.
+  window.labGetRules=()=>config();
+  window.labSetRules=(rules,name,direction)=>{el('rules').replaceChildren();rules.forEach(rule);if(name)el('name').value=name;if(direction)el('direction').value=direction;};
   renderHistory();
 })();

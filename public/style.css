@@ -1064,3 +1064,14 @@ html,body { font-weight:400;letter-spacing:.005em; }
 .inst-chip b { font-weight:600; margin-left:3px; font-variant-numeric:tabular-nums; }
 .inst-sec textarea { width:100%; box-sizing:border-box; background:#080f19; color:var(--text); border:1px solid var(--desk-line,#2a3446); border-radius:9px; padding:10px; font:inherit; font-size:12px; resize:vertical; }
 @media(max-width:600px){ .inst-card{padding:14px} .inst-head{flex-direction:column} }
+
+/* Composer (2026-09-24) */
+.lab-comp-sess { display:flex; gap:8px; } .lab-comp-sess input { width:50%; }
+.lab-comp-check { flex-direction:row !important; align-items:center; gap:8px !important; color:var(--text) !important; }
+.lab-comp-check input { width:auto !important; }
+.lab-comp-tpl summary { font-size:13px !important; color:var(--g); }
+#lab-comp-templates { display:grid; gap:8px; margin:8px 0 4px; }
+.lab-block .lab-comp-t { display:flex; flex-direction:column; gap:3px; text-align:left; width:100%; }
+.lab-comp-t span { color:var(--dim); font-size:11px; line-height:1.5; }
+.lab-gates { list-style:none; padding:0; margin:12px 0; font-size:13px; line-height:1.9; }
+.lab-gates li.ok { color:var(--green); } .lab-gates li.ko { color:#FF8A8A; }

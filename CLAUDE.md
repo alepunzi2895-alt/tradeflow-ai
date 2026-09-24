@@ -91,6 +91,8 @@ scripts/
   review_diff.py      — pre-commit AI code review (signals.py/mt5-bot.py/risk_guardian.py)
   install_git_hooks.py — setup one-time hook pre-commit
   obsidian_export.py  — export locale → vault Obsidian (secondo cervello): Journal/Genomi/Knowledge/AI-Log come .md con frontmatter + [[wikilink]]. Legge via /api/db (stesso pattern HTTP di mt5-bot.py/daily_maintenance.py, MAI da api/*.js — Vercel è read-only su disco). Score "Genoma" replica gnScore() di backtest-report.js, tenerli allineati. Config: OBSIDIAN_VAULT_PATH + OBSIDIAN_USER_ID in .env locale (mai su Vercel)
+  strategy_spec.py   — COMPOSER: interprete delle specifiche JSON del Laboratorio (stesse formule di public/modules/lab-engine.js, parità in test_strategy_spec.py), costi da spread reale per barra, criteri di promozione (GATES) → PROMUOVIBILE / CANDIDATA DEMO / BOCCIATA. Eseguito dal worker (job kind='spec'); ogni run = 1 trial
+  history_store.py / instrument_profile.py — storici MT5 on-demand (data/history/, gitignored) e schede strumento, usati dal worker
   opt_harness.py     — fitness condivisa per sprint ottimizzazione: evaluate/is_promotable/dsr_check/pbo_check
   research_trials.py — registro cumulativo trial di ricerca (data/research_trials.json) — SEMPRE usarlo per num_trials in dsr_check, mai un numero a mano
   macro-score.js (public/modules/) — punteggio tecnico (RSI+trend, storico Yahoo via api/price.js) per le quotazioni macro non tradate dall'app (VIX/SPX/NDX/RUT/OIL/US10Y/US02Y), click dalla griglia Quotazioni — diverso dallo Score Confidenza MFKK di XAU/XAG/US30, mai confonderli. VIX riusato come proxy di sentiment (non esiste sentiment retail per questi strumenti)

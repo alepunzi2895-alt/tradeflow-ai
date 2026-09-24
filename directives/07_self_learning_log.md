@@ -184,3 +184,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Registro strumenti public/instruments.json (forex major + indici), selettore Altri…, griglia Forex e indici, pannelli MFKK/confidence onesti per i non-core; 3 bug latenti fixati (vedi 06_known_issues.md).
 - Storici MT5 on-demand (Laboratorio → worker → data/history/) + worker avviato automaticamente dal bot, una sola istanza (porta-lucchetto). Vedi 04_bot_operations.md.
 - Scheda strumento (instrument_profile.py sul worker + instrument-card.js): costi reali dal broker, costo/ATR, volatilità/orari, correlazioni, COT CFTC, ricerca, news per valuta, note. Trovato: fattore COT del confidence morto (seed di marzo, chiave sbagliata).
+- Composer di strategie: regole del Laboratorio → specifica JSON → worker (dati MT5, spread reale per barra, uscite strutturate, criteri di promozione con esito). Parità JS/Python verificata. Vedi 05_backtest.md.

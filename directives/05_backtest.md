@@ -281,3 +281,14 @@ Verdetto: il filtro orario porta il reversal da perdita (0.91) a leggermente pos
 
 H1 solo pullback, completo: n=141 (5.9/mese), WR 54.6%, PF 1.54, DD 357, 17/24 mesi, BUY PF 1.76 / SELL PF 1.38; con SL/TP puri come il box del Pine (senza BE/trailing del motore) PF 1.51, fold 0.97/1.00/1.32/1.88. DSR non significativo (1805 trial).
 Verdetto: il reversal Bollinger perde su ogni TF (difetto strutturale, non di costi). Il pullback sulla nuvola migliora salendo di TF perché il costo pesa meno sul rischio; su H1 è una strategia sana ma il vantaggio è concentrato negli ultimi 12 mesi. Non integrato (simile per natura a S16/S00 V3 già attive su H1).
+
+
+## 2026-09-24 — Composer di strategie (Laboratorio → worker)
+
+Le regole dell'editor del Laboratorio diventano una **specifica JSON** (`scripts/strategy_spec.py`, validata anche lato server da `lib/strategy-spec.js`, campi extra scartati) eseguita dal worker (job `kind='spec'`).
+- **Stesse formule del motore del browser** (`lab-engine.js` portato riga per riga): parità verificata da `scripts/test_strategy_spec.py`, 23/23 indicatori, 574 trade identici su 7 combinazioni.
+- **Esecuzione**: segnale sulla candela chiusa, ingresso all'apertura successiva, una posizione alla volta, stop prima del target nella stessa barra, gap oltre lo stop all'apertura. **Costi = spread reale di ogni barra MT5** (campo `s` degli storici `history_store`, dal 2026-09-24) pagato all'ingresso, +50% sugli stop. Stop ATR×, %, o strutturale Donchian ± buffer ATR; target in R; parziale opzionale 50% a 1R + pareggio; uscita a tempo; sessione d'ingresso in ora broker.
+- **Dati**: `data/history/{id}_{tf}.json`, riscaricati in automatico se mancanti, più vecchi di 3 giorni, più corti di circa 2 anni (salvo limite del terminale) o senza spread per barra.
+- **Criteri di promozione** (fissi, mostrati in UI): campione ≥ 100 trade (≥ 25 negli ultimi mesi) · PF ≥ 1,20 · ultimi mesi (20%) PF ≥ 1,10 e in utile · walk-forward ≥ 3/4 periodi PF ≥ 1 · costi ×2 PF ≥ 1,05 · guadagno netto ≥ 2× drawdown massimo (in R) · DSR significativo. Esito: PROMUOVIBILE (tutti) / CANDIDATA DEMO (tutti tranne DSR) / BOCCIATA.
+- **Ogni validazione è un trial** in `research_trials.json` (asset = strumento, strategy_id `LAB:nome`).
+- Primo run reale: modello "Pullback nella nuvola · H1" su XAU (EMA20>EMA50, close incrocia sopra EMA20, MACD>segnale, stop Donchian 20 + 0,3 ATR, 2R, uscita a 30 barre) → PF 1,74, ultimi mesi 1,42, costi ×2 1,70, periodi 29,7 / 2,15 / 1,74 / 1,10, ma **solo 36 trade in 2 anni** → BOCCIATA (campione e DSR).

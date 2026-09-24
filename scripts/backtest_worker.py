@@ -136,9 +136,28 @@ def handle_profile(cmd):
                                   'lease_token': cmd.get('lease_token'), 'result': result}, timeout=30)
 
 
+def handle_spec(cmd):
+    """Composer: valida una specifica (strategy_spec.evaluate) sui dati MT5 con i criteri di promozione."""
+    import strategy_spec
+    spec = cmd.get('params') or {}
+    print(f"[backtest_worker] composer: '{spec.get('name')}' {spec.get('instrument')} {spec.get('tf')} {spec.get('direction')}")
+    try:
+        t0 = time.time()
+        result = strategy_spec.evaluate(spec, mt5_ready())
+        result['computed_in_s'] = round(time.time() - t0, 1)
+        print(f"[backtest_worker] ✓ {result['verdict']} · {result['full']['n']} trade · PF {result['full']['pf']} · "
+              f"holdout PF {result['holdout']['pf']} · {result['computed_in_s']}s")
+    except Exception as e:
+        traceback.print_exc(); result = {'error': str(e)}
+    push('backtest_result_push', {'strategy_id': 'SPEC', 'request_id': cmd.get('request_id'),
+                                  'lease_token': cmd.get('lease_token'), 'result': result}, timeout=30)
+
+
 def handle_command(cmd):
     if cmd.get('kind') == 'history':
         return handle_history(cmd)
+    if cmd.get('kind') == 'spec':
+        return handle_spec(cmd)
     if cmd.get('kind') == 'profile':
         return handle_profile(cmd)
     sid = cmd.get('strategy_id')

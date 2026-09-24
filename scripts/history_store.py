@@ -57,8 +57,10 @@ def resolve_symbol(mt5, inst):
     return None
 
 
-def rates_to_candles(rates, cutoff):
-    """Numpy structured array MT5 → lista dict {t,o,h,l,c,v}, scartando barre prima di cutoff."""
+def rates_to_candles(rates, cutoff, point=None):
+    """Numpy structured array MT5 → lista dict {t,o,h,l,c,v[,s]}, scartando barre prima di cutoff.
+    Con point: 's' = spread della barra in prezzo (colonna 'spread' MT5 × point), usato dal
+    composer (strategy_spec.py) per i costi reali per barra."""
     out = []
     for r in rates:
         if float(r['time']) < cutoff:
@@ -70,12 +72,15 @@ def rates_to_candles(rates, cutoff):
             v = float(r['tick_volume']) or float(r['real_volume'])
         except Exception:
             v = 0.0
-        out.append({'t': int(r['time']), 'o': float(r['open']), 'h': float(r['high']),
-                    'l': float(r['low']), 'c': c, 'v': v})
+        row = {'t': int(r['time']), 'o': float(r['open']), 'h': float(r['high']),
+               'l': float(r['low']), 'c': c, 'v': v}
+        if point:
+            row['s'] = round(float(r['spread']) * point, 10)
+        out.append(row)
     return out
 
 
-def fetch_candles(mt5, symbol, tf, days):
+def fetch_candles(mt5, symbol, tf, days, point=None):
     tf_attr = getattr(mt5, TF_MAP[tf][0]); tf_min = TF_MAP[tf][1]
     date_to = datetime.datetime.now(datetime.timezone.utc)
     date_from = date_to - datetime.timedelta(days=days + 5)       # buffer weekend/festivi
@@ -87,7 +92,7 @@ def fetch_candles(mt5, symbol, tf, days):
         rates = mt5.copy_rates_from_pos(symbol, tf_attr, 0, max_bars)
     if rates is None or len(rates) == 0:
         return []
-    return rates_to_candles(rates, cutoff)
+    return rates_to_candles(rates, cutoff, point)
 
 
 MAX_GAP_DAYS = 4.0          # weekend + festività restano sotto; oltre = buco nei dati
@@ -139,7 +144,7 @@ def download(mt5, instrument_id, tf, days, registry=None):
     # risposte coprono solo poche ore (verificato: EURUSD H1 → 21 barre al primo tentativo).
     candles = []
     for attempt in range(6):
-        candles = fetch_candles(mt5, symbol, tf, days)
+        candles = fetch_candles(mt5, symbol, tf, days, mt5.symbol_info(symbol).point)
         if quality(candles, days)['complete']:
             break
         time.sleep(2 + attempt)

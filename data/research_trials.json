@@ -1,5 +1,5 @@
 {
-  "total": 1805,
+  "total": 1806,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -312,6 +312,14 @@
       "asset": "XAU",
       "strategy_id": "SCALPER_CLOUD",
       "note": "Pine utente su M15/M30/H1: V0/V1/V2 regole identiche (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T18:35:38Z",
+      "n_trials": 1,
+      "cumulative_after": 1806,
+      "asset": "XAU",
+      "strategy_id": "LAB:Pullback nella nuvola · H1",
+      "note": "composer H1 long 3 regole"
     }
   ]
 }

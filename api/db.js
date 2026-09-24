@@ -443,13 +443,15 @@ const ACTIONS = {
   profile_cmd_push:     (db, body) => jobs.enqueueProfile(db, body),
   profiles_push:        (db, body) => jobs.profilesPush(db, body),
   profiles_get:         (db)       => jobs.profilesGet(db),
+  spec_cmd_push:        (db, body) => jobs.enqueueSpec(db, body),
+  spec_runs_get:        (db, body) => jobs.specRuns(db, body),
   hard_blocks_load:     ()         => hardBlocksLoad(),
   hard_blocks_toggle:   (db, body) => hardBlocksToggle(db, body),
 };
 
 const SERVICE_ACTIONS = new Set(['mt5_push','mt5_command_get','s20_paper_push','strat_live_push','backtest_report_push','backtest_cmd_get','backtest_result_push','worker_status_push','profiles_push']);
 const READ_ACTIONS = new Set(['strategy_registry','mt5_get','auto_trade_get','s20_paper_get','strat_live_get','backtest_report_get','hard_blocks_load']);
-const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','profile_cmd_push','patch_db']);
+const OPERATOR_ACTIONS = new Set(['auto_trade_set','score_push','hard_blocks_toggle','backtest_cmd_push','history_cmd_push','profile_cmd_push','spec_cmd_push','patch_db']);
 
 export function createHandler(dbFactory = getDb) {
   return async function handler(req, res) {

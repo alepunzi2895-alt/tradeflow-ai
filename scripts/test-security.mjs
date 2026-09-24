@@ -36,7 +36,7 @@ for(const secret of [undefined,'too-short']){
 }
 process.env.JWT_SECRET=configuredJwt;
 assert.equal((await call(undefined,{},undefined,'GET')).status,200);
-for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','profile_cmd_push','profiles_get','patch_db'])assert.equal((await call(action)).status,401,action);
+for(const action of ['get_trades','save_trade','get_user_data','save_user_data','auto_trade_set','score_push','mt5_get','backtest_cmd_push','history_cmd_push','worker_status_get','profile_cmd_push','profiles_get','spec_cmd_push','spec_runs_get','patch_db'])assert.equal((await call(action)).status,401,action);
 assert.equal((await call('admin_reset',{email:'alice@example.test',password:'attacker'})).status,410);
 assert.equal((await call('mt5_command_push',{command:{direction:'buy'}},'alice')).status,410);
 assert.equal((await call('auto_trade_set',{enabled:true},'bob')).status,403);
@@ -99,5 +99,18 @@ const pc=(await jobs.claim(db)).command;assert.equal(pc.kind,'profile');
 await assert.rejects(jobs.profilesPush(db,{profiles:{}}),/mancanti/);
 await jobs.profilesPush(db,{profiles:{generated_at:'2026-09-24T18:00:00Z',instruments:{XAU:{id:'XAU'}}}});
 assert.equal((await jobs.profilesGet(db)).data.instruments.XAU.id,'XAU');
+// Composer: specifica ripulita (niente campi extra, limiti), in coda come kind='spec'.
+const goodSpec={name:'Pullback',instrument:'xau',tf:'h1',direction:'long',evil:'<script>',
+  rules:[{left:'ema',period:20,op:'crossUp',right:'ema',value:0,rightPeriod:50,hack:1}],
+  exit:{stop:{type:'atr',mult:1.5,period:14},take_r:2,partial:{at_r:1,fraction:.5},time_stop_bars:48}};
+for(const [bad,re] of [[{...goodSpec,tf:'H2'},/Timeframe/],[{...goodSpec,rules:[]},/regole/],[{...goodSpec,rules:[{...goodSpec.rules[0],left:'eval'}]},/Regola/],
+  [{...goodSpec,exit:{...goodSpec.exit,take_r:500}},/Target/],[{...goodSpec,session:{from:14,to:10}},/Sessione/],[{...goodSpec,instrument:'FOO'},/registro/]])
+  await assert.rejects(jobs.enqueueSpec(db,{user_id:'alice',spec:bad}),re);
+const sq=await jobs.enqueueSpec(db,{user_id:'alice',spec:goodSpec});
+assert.equal(sq.spec.evil,undefined);assert.equal(sq.spec.rules[0].hack,undefined);assert.equal(sq.spec.instrument,'XAU');assert.equal(sq.spec.tf,'H1');
+const sc=(await jobs.claim(db)).command;assert.equal(sc.kind,'spec');assert.equal(sc.params.exit.partial.fraction,.5);
+await jobs.complete(db,{...sc,result:{verdict:'BOCCIATA',full:{n:107,pf:.838},holdout:{pf:.63},net_r:-10}});
+const runs=(await jobs.specRuns(db,{user_id:'alice'})).runs;assert.equal(runs[0].summary.verdict,'BOCCIATA');
+assert.equal((await jobs.specRuns(db,{user_id:'bob'})).runs.length,0,'storico per utente');
 assert.equal((await call('strategy_registry',{},'alice')).data.data.strategies.S20_FIB_CONFLUENCE.status,'disabled');
 db.close();try{for(const name of ['test.db','test.db-shm','test.db-wal'])fs.rmSync(path.join(temp,name),{force:true});fs.rmdirSync(temp);}catch(e){if(!['EPERM','EBUSY'].includes(e.code))throw e;}console.log('Security, ownership, import rollback, KB isolation, quotas and atomic jobs: passed');

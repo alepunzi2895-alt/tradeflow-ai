@@ -1,6 +1,7 @@
 import { requireUser } from '../lib/security.js';
 import { vault } from '../lib/mfx-vault.js';
 import { getDb } from './db.js';
+import { instrument } from '../lib/instruments.js';
 // TradeFlow AI — api/myfxbook.js
 // Proxy per le API ufficiali MyFxBook.
 //
@@ -34,7 +35,7 @@ const isErr = d => d?.error === true || d?.error === 'true';
 // già il nome giusto, es. EURUSD).
 export function mfxSymbol(asset) {
   const a = String(asset || 'XAU').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return ({ XAU: 'XAUUSD', XAG: 'XAGUSD', GOLD: 'XAUUSD', SILVER: 'XAGUSD' })[a] || a;
+  return instrument(a)?.mfx || a;       // nome MyFxBook dal registro (public/instruments.json)
 }
 
 // Cache per utente del community outlook (tutti i simboli in una risposta): evita di martellare

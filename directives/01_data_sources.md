@@ -65,3 +65,14 @@ Formato: `NOMECOL|60`
 ## Audit 2026-09-18
 
 Le letture del conto richiedono un operatore o un utente esplicitamente autorizzato in `system_readers`; i comandi restano riservati agli operatori. Identità del servizio separata. KB personale in Turso, routing MyFxBook dedicato, endpoint FX corretto. Vedi 11_audit_and_release.md.
+
+
+## Registro strumenti (2026-09-24)
+
+`public/instruments.json` è la fonte unica degli strumenti: `id`, `label`, `type` (metal/fx/index), `core`, `decimals`, `chart` (widget TradingView), `quotes` (ticker scanner TradingView in ordine di priorità), `yahoo` (candele/indicatori), `mfx` (nome nel community outlook MyFxBook), `mt5` (nomi broker), `ccy`.
+- Server: `lib/instruments.js` → `lib/market-quotes.js` (QUOTE_SYMBOLS = registro + 8 macro), `api/price.js` (candele con decimali dello strumento: prima `toFixed(2)` arrotondava l'FX), `api/analysis.js` (indicatori), `api/myfxbook.js` (nome sentiment).
+- Client: `modules/instruments.js` (core inline + registro completo via `instrumentsReady`), selettore "Altri…" nell'header, griglia "Forex e indici" sotto il pannello del sistema.
+- Asset sconosciuto → 400 esplicito (prima candele/indicatori ricadevano in silenzio sui ticker XAU).
+- Strumenti `core:false`: confidence e MFKK mostrano un avviso invece di punteggi calcolati con soglie dell'oro; `dashContext.confidence=null` per non passarlo all'AI.
+- Ticker verificati il 2026-09-24: OANDA per i forex; per gli indici lo scanner non restituisce i CFD OANDA/FOREXCOM/PEPPERSTONE/CAPITALCOM → `SP:SPX`, `NASDAQ:NDX`, `OANDA:DE30EUR`/`TVC:DEU40`, `TVC:UKX`, `TVC:NI225`. Nomi MT5 XMGlobal: `US500Cash`, `US100Cash`, `GER40Cash`, `UK100Cash`, `JP225Cash`, forex senza suffisso.
+- I nomi MyFxBook degli indici (`SPX500`, `NAS100`, `GER30`, `UK100`, `JPN225`) non sono verificati: se il simbolo non c'è, il pannello lo dice invece di mostrare numeri.

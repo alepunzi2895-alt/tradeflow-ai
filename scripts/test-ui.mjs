@@ -20,7 +20,7 @@ const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({headless:true});
 const errors=[];
 let quoteRequests=0, quoteFailure=false, statsDenied=false;
-const sentimentAssets=[]; let mfxLoginBody=null, mfxConnected=true;
+const sentimentAssets=[], indicatorAssets=[]; let mfxLoginBody=null, mfxConnected=true;
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 page.setDefaultTimeout(8000);
 page.on('pageerror',e=>errors.push(e.message));
@@ -57,13 +57,15 @@ await page.route('**/*',async route=>{
     if(b.action==='logout'){mfxConnected=false;json={ok:true};}
     if(b.action==='accounts')json={ok:true,accounts:[]};
   }
+  if(url.pathname==='/api/indicators'||url.pathname==='/api/candles')indicatorAssets.push(url.searchParams.get('asset'));
   if(url.pathname==='/api/price')json={ok:true,price:4000,changePct:0.2};
   if(url.pathname==='/api/kb')json={ok:true,kb:[],knowledge:[]};
   if(url.pathname==='/api/market')json={ok:true,prices:{},events:[]};
   if(url.pathname==='/api/market' && url.searchParams.get('type')==='prices'){
     quoteRequests++;
     if(quoteFailure){await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({ok:false,error:'offline'})});return;}
-    const values={XAU:4000,XAG:40,US30:42000,DXY:100,EURUSD:1.08456,GBPUSD:1.23,OIL:70,US10Y:4,US02Y:3.8,VIX:16,SPX:5000,NDX:18000,RUT:2000};
+    const values={XAU:4000,XAG:40,US30:42000,DXY:100,EURUSD:1.08456,GBPUSD:1.23,OIL:70,US10Y:4,US02Y:3.8,VIX:16,SPX:5000,NDX:18000,RUT:2000,
+      USDJPY:158.762,USDCHF:.82737,AUDUSD:.70262,USDCAD:1.41346,NZDUSD:.5669,US500:5000,NAS100:18000,GER40:25433,UK100:10680,JP225:65513.77};
     const timestamp=new Date().toISOString();json={ok:true,timestamp,prices:Object.fromEntries(Object.entries(values).map(([key,price])=>[key,{price,change:key==='XAG'?null:.25,_source:'TradingView:'+key,received_at:timestamp}]))};
   }
   await route.fulfill({contentType:'application/json',body:JSON.stringify(json)});
@@ -80,7 +82,10 @@ try {
   await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
   assert.match(await page.locator('#sent-source').innerText(),/MyFxBook ✓ · \d\d:\d\d/);
   await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=XAU] .pc-val')?.textContent.includes('4.000'));
-  assert.equal(await page.locator('.price-strip').count(),1,'only one quote surface');
+  // Regola audit "niente prezzi duplicati": ogni simbolo compare una sola volta (la griglia
+  // forex/indici del registro ha simboli diversi dalla principale, non è un doppione).
+  await page.waitForSelector('#fx-quotes .pc');
+  assert.equal(await page.evaluate(()=>{const s=[...document.querySelectorAll('[data-quote-symbol]')].map(e=>e.dataset.quoteSymbol);return s.length===new Set(s).size;}),true,'each quote symbol rendered once');
   // 10, non più 13: DXY/EURUSD/GBPUSD tolte dalla griglia visibile (2026-09-22, richiesta
   // utente) — restano fetchate lato server per il fattore di correlazione, solo non renderizzate.
   assert.equal(await page.locator('#market-quotes .pc').count(),10);
@@ -103,6 +108,7 @@ try {
   assert.match(await page.locator('#system-status').innerText(),/3 trade chiusi/);
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tf_myfx:test-user')).pass),undefined,'legacy cloud password is not persisted');
   const first=page.locator('.saturn-satellite').nth(1);
+  await page.locator('#orbit-hero').scrollIntoViewIfNeeded();   // l'animazione è in pausa fuori schermo (IntersectionObserver)
   const before=await first.getAttribute('style');
   await page.waitForTimeout(700);
   assert.notEqual(await first.getAttribute('style'),before,'orbits advance');
@@ -124,11 +130,43 @@ try {
   fs.mkdirSync('artifacts',{recursive:true});
   await page.locator('#orbit-hero').screenshot({path:'artifacts/saturn-desktop.png'});
   await page.locator('#market-quotes').screenshot({path:'artifacts/quotes-desktop.png'});
+  await page.locator('#hdr').screenshot({path:'artifacts/header-desktop.png'});
+  await page.locator('#fx-quotes').screenshot({path:'artifacts/fx-quotes-desktop.png'});
   quoteFailure=true;
   await page.evaluate(()=>loadPrices());
   assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'failed refresh retains the last value with a stale label');
   assert.match(await page.locator('.quote-status').innerText(),/Fonte non disponibile/);
   quoteFailure=false;await page.evaluate(()=>loadPrices());
+  // Registro strumenti: griglia forex/indici, menu "Altri…", pannelli MFKK/confidence onesti.
+  const REG=JSON.parse(fs.readFileSync('public/instruments.json','utf8')).instruments;
+  await page.waitForFunction(n=>document.querySelectorAll('#fx-quotes .pc').length===n,REG.filter(i=>!i.core).length);
+  await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=EURUSD] .pc-val')?.textContent==='1,08456');
+  assert.equal(await page.locator('[data-quote-symbol=USDJPY] .pc-val').innerText(),'158,762','decimali dal registro');
+  assert.equal(await page.locator('#market-quotes .pc').count(),10,'griglia principale invariata');
+  const indBefore=indicatorAssets.length;
+  await page.selectOption('#asset-more','EURUSD');
+  assert.match(await page.locator('#lbl-sent-title').innerText(),/EUR\/USD/);
+  await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='35%');
+  assert.equal(await page.locator('#conf-card').evaluate(e=>e.classList.contains('asset-unavailable')),true);
+  assert.match(await page.locator('#conf-card .asset-note').innerText(),/EUR\/USD/);
+  assert.equal(await page.locator('#mfkk-card').evaluate(e=>e.classList.contains('asset-unavailable')),true);
+  await page.waitForTimeout(300);
+  assert.ok(!indicatorAssets.slice(indBefore).includes('EURUSD'),'nessun indicatore MFKK chiesto per uno strumento non core');
+  assert.equal(await page.evaluate(()=>dashContext.confidence),null,'nessun confidence inventato');
+  // Carta della griglia forex → asset attivo; simbolo senza sentiment MyFxBook → messaggio, niente numeri.
+  await page.locator('#fx-quotes [data-quote-symbol=GBPUSD]').click();
+  await page.waitForFunction(()=>/GBPUSD/.test(document.querySelector('#sent-source')?.textContent||''));
+  assert.equal(await page.locator('#sent-long-pct').innerText(),'—');
+  assert.equal(await page.locator('#asset-more').inputValue(),'GBPUSD');
+  // Ritorno all'oro: pannelli attivi e MFKK ricaricato subito per XAU.
+  const indBack=indicatorAssets.length;
+  await page.locator('#asset-seg [data-asset=XAU]').click();
+  assert.equal(await page.locator('#conf-card').evaluate(e=>e.classList.contains('asset-unavailable')),false);
+  await page.waitForFunction(n=>window.__noop||true,indBack);
+  await page.waitForTimeout(300);
+  assert.ok(indicatorAssets.slice(indBack).includes('XAU'),'MFKK ricaricato subito al cambio asset');
+  await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
+
   // MyFxBook: accesso ricordato dal server, logout, nuovo login con "Ricorda l'accesso".
   await page.locator('[data-tab=myfx]').click();
   await page.waitForFunction(()=>/accesso ricordato/.test(document.querySelector('#mfx-content')?.textContent||''));
@@ -144,6 +182,12 @@ try {
   assert.ok(!storedMfx.includes('secret-pw'),'la password non resta nel browser');
   assert.equal(await page.evaluate(()=>typeof mfxSession.pass),'undefined','la password non resta nemmeno in memoria');
   await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
+  // Asset non core salvato: dopo il reload il registro completo riallinea etichette e selettore.
+  await page.evaluate(()=>localStorage.setItem('tf_asset',JSON.stringify('EURUSD')));
+  await page.reload();
+  await page.waitForFunction(()=>/EUR\/USD/.test(document.querySelector('#lbl-sent-title')?.textContent||''));
+  assert.equal(await page.locator('#asset-more').inputValue(),'EURUSD');
+  await page.locator('#asset-seg [data-asset=XAU]').click();
   await page.locator('[data-tab=journal]').click();
   await page.locator('#btn-report-day').click();assert.equal(await page.locator('#elist .ec').count(),1);
   await page.locator('#btn-report-week').click();assert.equal(await page.locator('#elist .ec').count(),2);
@@ -160,6 +204,7 @@ try {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'no horizontal overflow');
   await page.locator('#orbit-hero').screenshot({path:'artifacts/saturn-mobile.png'});
   await page.locator('#market-quotes').screenshot({path:'artifacts/quotes-mobile.png'});
+  await page.locator('#hdr').screenshot({path:'artifacts/header-mobile.png'});
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.saturn-motion').isVisible(),false);
   statsDenied=true;
@@ -178,5 +223,5 @@ try {
   await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
   assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, private system stats, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, forex/index registry + honest non-core panels, private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

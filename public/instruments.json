@@ -1,0 +1,23 @@
+{
+  "version": "2026-09-24.1",
+  "_comment": "Registro strumenti: unica fonte per UI (selettore, grafico, quotazioni, sentiment), API (lib/instruments.js) e script Python (storici MT5). 'core' = strumenti con motore MFKK/confidence dedicato; gli altri mostrano prezzo, grafico, sentiment e (fasi successive) scheda strumento. Ticker 'quotes' verificati sullo scanner TradingView il 2026-09-24; 'mt5' = nomi del broker (XMGlobal) verificati sul terminale.",
+  "instruments": [
+    {"id":"XAU","label":"XAU/USD","name":"Oro","type":"metal","core":true,"decimals":2,"unit":"$","ccy":["XAU","USD"],"chart":"OANDA:XAUUSD","quotes":["OANDA:XAUUSD","FOREXCOM:XAUUSD","TVC:GOLD"],"yahoo":["XAUUSD=X","GC=F"],"mfx":"XAUUSD","mt5":["GOLD","XAUUSD"]},
+    {"id":"XAG","label":"XAG/USD","name":"Argento","type":"metal","core":true,"decimals":3,"unit":"$","ccy":["XAG","USD"],"chart":"OANDA:XAGUSD","quotes":["OANDA:XAGUSD","FOREXCOM:XAGUSD","TVC:SILVER"],"yahoo":["XAGUSD=X","SI=F"],"mfx":"XAGUSD","mt5":["SILVER","XAGUSD"]},
+    {"id":"US30","label":"US30","name":"Dow Jones 30","type":"index","core":true,"decimals":2,"unit":"","ccy":["USD"],"chart":"OANDA:US30USD","quotes":["OANDA:US30USD","TVC:DJI","DJCFD:DJI"],"yahoo":["YM=F","^DJI"],"mfx":"US30","mt5":["US30Cash","US30"]},
+
+    {"id":"EURUSD","label":"EUR/USD","name":"Euro / Dollaro","type":"fx","core":false,"decimals":5,"unit":"","ccy":["EUR","USD"],"chart":"OANDA:EURUSD","quotes":["OANDA:EURUSD","FX:EURUSD"],"yahoo":["EURUSD=X"],"mfx":"EURUSD","mt5":["EURUSD"]},
+    {"id":"GBPUSD","label":"GBP/USD","name":"Sterlina / Dollaro","type":"fx","core":false,"decimals":5,"unit":"","ccy":["GBP","USD"],"chart":"OANDA:GBPUSD","quotes":["OANDA:GBPUSD","FX:GBPUSD"],"yahoo":["GBPUSD=X"],"mfx":"GBPUSD","mt5":["GBPUSD"]},
+    {"id":"USDJPY","label":"USD/JPY","name":"Dollaro / Yen","type":"fx","core":false,"decimals":3,"unit":"","ccy":["USD","JPY"],"chart":"OANDA:USDJPY","quotes":["OANDA:USDJPY","FX:USDJPY"],"yahoo":["JPY=X"],"mfx":"USDJPY","mt5":["USDJPY"]},
+    {"id":"USDCHF","label":"USD/CHF","name":"Dollaro / Franco","type":"fx","core":false,"decimals":5,"unit":"","ccy":["USD","CHF"],"chart":"OANDA:USDCHF","quotes":["OANDA:USDCHF","FX:USDCHF"],"yahoo":["CHF=X"],"mfx":"USDCHF","mt5":["USDCHF"]},
+    {"id":"AUDUSD","label":"AUD/USD","name":"Dollaro australiano / Dollaro","type":"fx","core":false,"decimals":5,"unit":"","ccy":["AUD","USD"],"chart":"OANDA:AUDUSD","quotes":["OANDA:AUDUSD","FX:AUDUSD"],"yahoo":["AUDUSD=X"],"mfx":"AUDUSD","mt5":["AUDUSD"]},
+    {"id":"USDCAD","label":"USD/CAD","name":"Dollaro / Dollaro canadese","type":"fx","core":false,"decimals":5,"unit":"","ccy":["USD","CAD"],"chart":"OANDA:USDCAD","quotes":["OANDA:USDCAD","FX:USDCAD"],"yahoo":["CAD=X"],"mfx":"USDCAD","mt5":["USDCAD"]},
+    {"id":"NZDUSD","label":"NZD/USD","name":"Dollaro neozelandese / Dollaro","type":"fx","core":false,"decimals":5,"unit":"","ccy":["NZD","USD"],"chart":"OANDA:NZDUSD","quotes":["OANDA:NZDUSD","FX:NZDUSD"],"yahoo":["NZDUSD=X"],"mfx":"NZDUSD","mt5":["NZDUSD"]},
+
+    {"id":"US500","label":"US500","name":"S&P 500","type":"index","core":false,"decimals":2,"unit":"","ccy":["USD"],"chart":"SP:SPX","quotes":["SP:SPX"],"yahoo":["^GSPC"],"mfx":"SPX500","mt5":["US500Cash","US500"]},
+    {"id":"NAS100","label":"NAS100","name":"Nasdaq 100","type":"index","core":false,"decimals":2,"unit":"","ccy":["USD"],"chart":"NASDAQ:NDX","quotes":["NASDAQ:NDX"],"yahoo":["^NDX"],"mfx":"NAS100","mt5":["US100Cash","NAS100"]},
+    {"id":"GER40","label":"GER40","name":"DAX 40","type":"index","core":false,"decimals":2,"unit":"","ccy":["EUR"],"chart":"TVC:DEU40","quotes":["OANDA:DE30EUR","TVC:DEU40"],"yahoo":["^GDAXI"],"mfx":"GER30","mt5":["GER40Cash","GER40"]},
+    {"id":"UK100","label":"UK100","name":"FTSE 100","type":"index","core":false,"decimals":2,"unit":"","ccy":["GBP"],"chart":"TVC:UKX","quotes":["TVC:UKX"],"yahoo":["^FTSE"],"mfx":"UK100","mt5":["UK100Cash","UK100"]},
+    {"id":"JP225","label":"JP225","name":"Nikkei 225","type":"index","core":false,"decimals":2,"unit":"","ccy":["JPY"],"chart":"TVC:NI225","quotes":["TVC:NI225"],"yahoo":["^N225"],"mfx":"JPN225","mt5":["JP225Cash","JP225"]}
+  ]
+}

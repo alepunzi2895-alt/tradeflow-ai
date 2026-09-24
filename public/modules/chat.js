@@ -100,10 +100,10 @@ async function send(){
 
 // ── QUICK CHIPS ────────────────────────────────────────
 const QUICK=[
-  {i:'📊',l:'Bias H4',t:() => `Bias ${window.activeAsset||'XAU'}/USD H4 con prezzo live. Struttura + manipulation score.`},
-  {i:'🔗',l:'DXY',t:() => `Analisi correlazione DXY/${window.activeAsset||'XAU'} live. Come impatta il dollaro?`},
-  {i:'🎯',l:'Setup H1',t:() => `Setup ${window.activeAsset||'XAU'}/USD H1 con entry, SL, TP1 1.5R, TP2 3R e manipulation score.`},
-  {i:'📰',l:'News',t:() => `News macro ad alto impatto oggi su ${window.activeAsset||'XAU'}/USD. Orari, previsioni, strategia.`},
+  {i:'📊',l:'Bias H4',t:() => `Bias ${instrumentLabel(window.activeAsset)} H4 con prezzo live. Struttura + manipulation score.`},
+  {i:'🔗',l:'DXY',t:() => `Analisi correlazione DXY/${instrumentLabel(window.activeAsset)} live. Come impatta il dollaro?`},
+  {i:'🎯',l:'Setup H1',t:() => `Setup ${instrumentLabel(window.activeAsset)} H1 con entry, SL, TP1 1.5R, TP2 3R e manipulation score.`},
+  {i:'📰',l:'News',t:() => `News macro ad alto impatto oggi su ${instrumentLabel(window.activeAsset)}. Orari, previsioni, strategia.`},
   {i:'😰',l:'Revenge',t:() => 'Ho preso un SL e voglio rientrare subito. Protocollo anti-revenge.'},
   {i:'🧘',l:'Pre-trade',t:() => 'Protocollo pre-trade 3 minuti per stato mentale ottimale.'},
 ];

@@ -494,7 +494,7 @@ function buildDerivedPrices(prices){
   const active = window.activeAsset || 'XAU';
   const assetKey = active; // Standardized to XAU/XAG
   
-  if(prices[assetKey] && prices.DXY){
+  if(prices[assetKey] && prices.DXY && isCoreAsset(active)){
     const xc=prices[assetKey].change, dc=prices.DXY.change;
     const corr=(xc>0&&dc<0)||(xc<0&&dc>0);
     const volTh = active === 'XAG' ? 0.45 : 0.3; // XAG is more volatile, requires larger divergence
@@ -578,6 +578,8 @@ function updateCorrelation(prices){
 
 function updateConfidence(prices, sentimentData){
   const active = window.activeAsset || 'XAU';
+  // Confidence MFKK tarata su XAU/XAG/US30: per gli altri strumenti niente punteggio inventato.
+  if(!isCoreAsset(active)){dashContext.confidence=null;return;}
   const isXag = active === 'XAG';
   const isUs30 = active === 'US30';   // fattori istituzionali equity invece che metalli (2026-09-03)
   const xRaw=prices?.[active], d=prices?.DXY||dashContext.prices?.DXY, e=prices?.EURUSD||dashContext.prices?.EURUSD, g=prices?.GBPUSD||dashContext.prices?.GBPUSD;
@@ -1303,7 +1305,7 @@ document.getElementById('btn-chart-analyze')?.addEventListener('click', async()=
   const errEl=document.getElementById('chart-analyze-err');
   if(errEl) errEl.style.display='none';
   const asset=window.activeAsset||'XAU';
-  const promptText=`Analizza questo grafico ${asset}/USD live: struttura, setup, confluenze, manipulation score 1-10, entry/SL/TP1/TP2 se c'è un setup valido.`;
+  const promptText=`Analizza questo grafico ${instrumentLabel(asset)} live: struttura, setup, confluenze, manipulation score 1-10, entry/SL/TP1/TP2 se c'è un setup valido.`;
   if(!navigator.mediaDevices?.getDisplayMedia){
     document.getElementById('minput').value=promptText;
     switchTab('analysis');

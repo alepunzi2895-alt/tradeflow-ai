@@ -84,6 +84,7 @@
               <button type="button" data-asset="XAU" role="tab">XAU</button>
               <button type="button" data-asset="XAG" role="tab">XAG</button>
               <button type="button" data-asset="US30" role="tab">US30</button>
+              <select id="asset-more" aria-label="Altri strumenti: forex e indici"><option value="">Altri…</option></select>
             </div>
             <span id="lsub-name" style="color:var(--dim);font-size:9px;margin-left:6px"></span>
           </div>
@@ -630,21 +631,22 @@
   </div>
 
   <!-- Core utilities (storage, API, compression) -->
-  <script src="/modules/core.js?v=quotes2"></script>
+  <script src="/modules/instruments.js?v=inst1"></script>
+  <script src="/modules/core.js?v=inst1"></script>
   <script src="/modules/nebula-sky.js?v=sky1"></script>
   <script src="/modules/saturn.js?v=sky1"></script>
   <!-- Dashboard: prices, confidence, sentiment, macro -->
-  <script src="/modules/dashboard.js?v=quotes2"></script>
+  <script src="/modules/dashboard.js?v=inst1"></script>
   <!-- Chat: AI analysis, image upload -->
-  <script src="/modules/chat.js?v=audit1"></script>
+  <script src="/modules/chat.js?v=inst1"></script>
   <!-- Journal: trade log, coaching, reports -->
-  <script src="/modules/journal.js?v=audit1"></script>
+  <script src="/modules/journal.js?v=inst1"></script>
   <!-- MyFxBook: account sync, import -->
-  <script src="/modules/myfxbook.js?v=audit1"></script>
+  <script src="/modules/myfxbook.js?v=inst1"></script>
   <!-- Knowledge Base: upload, search -->
-  <script src="/modules/kb.js?v=audit1"></script>
+  <script src="/modules/kb.js?v=inst1"></script>
   <!-- MFKK: strategy score, indicators -->
-  <script src="/modules/mfkk.js?v=audit1"></script>
+  <script src="/modules/mfkk.js?v=inst1"></script>
   <!-- Strategy Engine: indicator helpers + signal functions -->
   <script src="/modules/se-signals.js?v=audit1"></script>
   <!-- Strategy Engine: SE config, seRefresh(), main loop -->
@@ -660,7 +662,7 @@
   <script src="/modules/lab-engine.js?v=audit1"></script>
   <script src="/modules/laboratory.js?v=lab2"></script>
   <script src="/modules/macro-score.js?v=quotes2"></script>
-  <script src="/modules/market-watch.js?v=quotes2"></script>
-  <script src="/app.js?v=quotes2"></script>
+  <script src="/modules/market-watch.js?v=inst1"></script>
+  <script src="/app.js?v=inst1"></script>
 </body>
 </html>

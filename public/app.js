@@ -7,12 +7,38 @@ window.activeAsset = (function () {
 
 // Evidenzia il pill attivo nel segmented control + wire dei click (una volta, a DOM pronto)
 function _syncAssetSeg() {
+  const a = window.activeAsset;
   document.querySelectorAll('#asset-seg button').forEach(b => {
-    b.classList.toggle('on', b.dataset.asset === window.activeAsset);
+    b.classList.toggle('on', b.dataset.asset === a);
   });
-  const label=window.activeAsset==='US30'?'US30':window.activeAsset+'/USD';
+  const more = document.getElementById('asset-more');
+  if (more) { more.value = isCoreAsset(a) ? '' : a; more.classList.toggle('on', !isCoreAsset(a)); }
+  const label = instrumentLabel(a);
   document.getElementById('lbl-sent-title').textContent='RETAIL SENTIMENT · '+label;
   document.getElementById('lbl-mfkk-title').textContent='MFKK STRATEGY SCORE · '+label+' H1';
+  // Confidence e MFKK sono tarati su XAU/XAG/US30: per gli altri strumenti un avviso
+  // esplicito al posto di numeri calcolati con soglie dell'oro.
+  ['conf-card','mfkk-card'].forEach(id => {
+    const card = document.getElementById(id); if (!card) return;
+    let note = card.querySelector(':scope > .asset-note');
+    if (!note) { note = document.createElement('div'); note.className = 'asset-note'; card.prepend(note); }
+    const off = !isCoreAsset(a);
+    card.classList.toggle('asset-unavailable', off);
+    note.textContent = off ? `${id==='conf-card'?'Confidence score':'MFKK strategy score'} disponibile per XAU, XAG e US30 · per ${label} il punteggio non è ancora tarato` : '';
+  });
+}
+function _renderAssetMore() {
+  const more = document.getElementById('asset-more'); if (!more) return;
+  const groups = { fx: 'Forex', index: 'Indici', metal: 'Metalli' };
+  const extra = instrumentList().filter(i => !i.core);
+  more.replaceChildren(new Option('Altri…', ''));
+  for (const [type, title] of Object.entries(groups)) {
+    const items = extra.filter(i => i.type === type); if (!items.length) continue;
+    const og = document.createElement('optgroup'); og.label = title;
+    items.forEach(i => og.append(new Option(i.label, i.id)));
+    more.append(og);
+  }
+  _syncAssetSeg();
 }
 (function _wireAssetSeg() {
   const seg = document.getElementById('asset-seg');
@@ -20,7 +46,15 @@ function _syncAssetSeg() {
   seg.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => window.switchAsset(b.dataset.asset));
   });
+  document.getElementById('asset-more')?.addEventListener('change', e => { if (e.target.value) window.switchAsset(e.target.value); });
   _syncAssetSeg();
+  // Registro completo arrivato: popola "Altri…" e, se l'asset salvato è uno strumento
+  // non core, riallinea etichette e grafico (all'avvio c'erano solo i 3 core inline).
+  window.instrumentsReady.then(() => {
+    if (!instrumentOf(window.activeAsset)) { window.activeAsset = 'XAU'; }
+    _renderAssetMore();
+    if (!isCoreAsset(window.activeAsset)) { initTVChart(); if (typeof loadSentimentOnly === 'function') loadSentimentOnly(); }
+  });
 })();
 
 // ── TRADINGVIEW CHART WIDGET ─────────────────────────────
@@ -37,7 +71,7 @@ function initTVChart(){
     new TradingView.widget({
       container_id: "tv-chart-widget",
       autosize: true,
-      symbol: `OANDA:${window.activeAsset}USD`,
+      symbol: instrumentOf(window.activeAsset)?.chart || 'OANDA:XAUUSD',
       interval: "60",
       timezone: "Europe/Rome",
       theme: "dark",
@@ -102,7 +136,7 @@ function updateHdr(){
 }
 
 window.switchAsset = function(asset) {
-  if (window.activeAsset === asset) return;
+  if (window.activeAsset === asset || !instrumentOf(asset)) return;
   window.activeAsset = asset;
   try { localStorage.setItem('tf_asset', JSON.stringify(asset)); } catch {}
   _syncAssetSeg();
@@ -116,7 +150,11 @@ window.switchAsset = function(asset) {
   // Reset MFKK inputs and re-fetch if we are on dashboard
   document.querySelectorAll('.mfkk-inp').forEach(i => i.value = '');
   if (typeof calcMfkk === 'function') calcMfkk();
-  if (typeof fetchMfkkData === 'function') fetchMfkkData();
+  // Candele del vecchio asset via subito: prima recalcIndicators() iniettava per ~60s il prezzo
+  // live del nuovo asset nelle candele del precedente (es. candele XAU con prezzo XAG).
+  // (fetchMfkkData non è mai esistita: la guardia typeof la rendeva un no-op.)
+  if (typeof mfkkCandles !== 'undefined') mfkkCandles = [];
+  if (typeof loadIndicators === 'function') loadIndicators();
   
   // Reset sentiment loading state
   document.getElementById('sent-long-bar').style.width = '50%';

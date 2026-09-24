@@ -67,6 +67,8 @@ python scripts/obsidian_export.py             # scrive/aggiorna le note
 ## Architettura Rapida
 
 ```
+public/instruments.json — REGISTRO STRUMENTI (XAU/XAG/US30 core + forex major + indici): unica fonte per UI (modules/instruments.js), API (lib/instruments.js: quotazioni, candele, indicatori, nome MyFxBook) e script Python. Aggiungere uno strumento = una voce qui (ticker 'quotes' da verificare sullo scanner TradingView, 'mt5' sul terminale). core=false → niente MFKK/confidence (avviso esplicito), asset sconosciuto → 400, mai fallback sui ticker dell'oro
+
 public/modules/
   se-signals.js      — indicator helpers + SE_STRATEGY_FNS (browser)
   strategy.js        — SE config, seRefresh(), loop 1s

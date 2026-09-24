@@ -182,6 +182,8 @@ async function fetchFxRates(){
 function convertPrice(usdPrice){
   // Indici (US30): sono punti indice, non un prezzo in USD → niente conversione FX
   if(window.activeAsset==='US30')return{val:parseFloat(usdPrice).toLocaleString('en-US',{maximumFractionDigits:0}),sym:''};
+  // Forex e altri indici: quotazioni/punti, non un prezzo in USD → niente conversione FX
+  if(!isCoreAsset(window.activeAsset||'XAU')){const d=instrumentOf(window.activeAsset)?.decimals??2;return{val:parseFloat(usdPrice).toFixed(d),sym:''};}
   if(!P.currency||P.currency==='USD')return{val:parseFloat(usdPrice).toFixed(2),sym:'$'};
   const rate=fxRates[P.currency];
   if(!rate){
@@ -241,7 +243,7 @@ function buildSys(){
   const e=P.errors?.length?P.errors.join(', '):'nessuno';
   const k=P.knowledge?.length?'\nKNOWLEDGE BASE PERSONALE:\n'+P.knowledge.slice(-3).join('\n---\n'):'';
   const active = window.activeAsset || 'XAU';
-  const news=newsMode?`\nModalità NEWS attiva: includi analisi impatto macro del giorno su ${active}/USD.`:'';
+  const news=newsMode?`\nModalità NEWS attiva: includi analisi impatto macro del giorno su ${instrumentLabel(active)}.`:'';
 
   // ── LIVE MARKET CONTEXT (critico — non ignorare) ───────
   let mktCtx='';
@@ -252,11 +254,11 @@ function buildSys(){
     mktCtx=`
 
 ⚠️ DATI DI MERCATO IN TEMPO REALE — USA QUESTI, NON QUELLI DEL TRAINING:
-• ${active}/USD PREZZO ATTUALE: $${x.price} (${x.change>=0?'+':''}${x.change}% oggi, Max: $${x.high||'N/D'}, Min: $${x.low||'N/D'})
+• ${instrumentLabel(active)} PREZZO ATTUALE: $${x.price} (${x.change>=0?'+':''}${x.change}% oggi, Max: $${x.high||'N/D'}, Min: $${x.low||'N/D'})
 • DXY: ${d?.price||'N/D'} (${d?.change>=0?'+':''}${d?.change||0}%)
 • EUR/USD: ${eu?.price||'N/D'}
 • Correlazione DXY/${active}: ${dashContext.prices.CORRELATION?.status||'N/D'} — ${dashContext.prices.CORRELATION?.signal||''}
-NOTA CRITICA: Il prezzo ${active}/USD è ATTUALMENTE $${x.price}. Se vedi un grafico con prezzi diversi, sono storici. Basa SEMPRE l'analisi sul prezzo live $${x.price}.`;
+NOTA CRITICA: Il prezzo ${instrumentLabel(active)} è ATTUALMENTE $${x.price}. Se vedi un grafico con prezzi diversi, sono storici. Basa SEMPRE l'analisi sul prezzo live $${x.price}.`;
   }
 
   // ── CONFIDENCE SCORE CONTEXT ───────────────────────────
@@ -316,11 +318,11 @@ STRATEGIA PRE-NEWS: riduci size o evita nuove entries 30 min prima di eventi ad 
     mfkkCtx=`\nMFKK STRATEGY SCORE: ${m.score}/100 — ${m.bias} (${m.dir})\nConfluenze: CCI ${m.cciScore}/100 · MACD ${m.macdScore}/100 · ADX ${m.adxScore}/100${m.allThree&&m.strongSignals>=3?' — TUTTI E 3 ALLINEATI':''}\nUsa questo score nella valutazione: score>80=segnale forte, 60-80=buono, <60=attendi.`;
   }
 
-  return `Sei TradeFlow AI, assistente trading istituzionale ${active}/USD e forex. Rispondi SEMPRE in italiano. Brutalmente onesto, operativo.
+  return `Sei TradeFlow AI, assistente trading istituzionale ${instrumentLabel(active)} e forex. Rispondi SEMPRE in italiano. Brutalmente onesto, operativo.
 Profilo: ${P.name} | Rischio: ${P.risk}%/trade | Max DD: ${P.dd}% | TP1: ${P.tp1}R | TP2: ${P.tp2}R | Errori noti: ${e}${mktCtx}${confCtx}${mfkkCtx}${memCtx}${newsCtx}${k}${news}
 
 REGOLE FONDAMENTALI:
-1. PREZZO REALE: ${active}/USD vale ATTUALMENTE $${dashContext.prices?.[active]?.price||'~4400'}. Inizia ogni analisi citando il prezzo live della Dashboard. La verità assoluta è il prezzo live, non quello che vedi negli screenshot (che possono essere vecchi).
+1. PREZZO REALE: ${instrumentLabel(active)} vale ATTUALMENTE $${dashContext.prices?.[active]?.price||'~4400'}. Inizia ogni analisi citando il prezzo live della Dashboard. La verità assoluta è il prezzo live, non quello che vedi negli screenshot (che possono essere vecchi).
 2. ANALISI STORICO (MT4/MT5): Quando analizzi uno screenshot dello storico (Cronologia):
    - Leggi SOLO trade reali (Buy/Sell).
    - IGNORA CATEGORICAMENTE ogni riga con scritto: Deposit, Withdrawal, Balance, Credit, Bonus, SC-CC, Transfer, Interest.

@@ -212,6 +212,8 @@ async function fetchServerIndicators(){
 
 // Main loader: fetches candles + server indicators, populates all MFKK fields
 async function loadIndicatorCandles(){
+  // MFKK (soglie tarate su XAU/XAG/US30) solo per gli strumenti core del registro.
+  if(typeof isCoreAsset==='function' && !isCoreAsset(window.activeAsset||'XAU')) return;
   try{
     mfkkLastFetch = Date.now();
     const telEl = document.getElementById('mfkk-time');
@@ -295,6 +297,7 @@ async function loadIndicatorCandles(){
 // Recalculate CCI_S ogni 5s: inietta prezzo live nell'ultima candela
 // MACD e ADX usano i valori del TV Scanner (aggiornati ogni 60s)
 function recalcIndicators(){
+  if(typeof isCoreAsset==='function' && !isCoreAsset(window.activeAsset||'XAU')) return;
   if(mfkkCandles.length<50) return;
   const asset = window.activeAsset || 'XAU';
   const livePrice = marketData?.[asset]?.price;

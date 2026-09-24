@@ -1,4 +1,5 @@
 import {fetchQuotes} from '../lib/market-quotes.js';
+import {instrument} from '../lib/instruments.js';
 // api/analysis.js — Super-Consolidated Analysis Engine (Restored & Robust)
 // Handles: Market Data (Prices, Correlation, G/S Ratio), Sentiment, Economic Calendar, COT, Indicators (MACD, ADX, CCI)
 
@@ -138,7 +139,11 @@ export default async function handler(req, res) {
 
   // ── BRANCH: INDICATORS ────────────────────────────────────────────────────
   if (type === 'indicators') {
-    const tvTicker = asset === 'XAG' ? 'OANDA:XAGUSD' : asset === 'US30' ? 'OANDA:US30USD' : 'OANDA:XAUUSD';
+    // Ticker dal registro strumenti (public/instruments.json). Prima un asset sconosciuto
+    // ricadeva in silenzio sui ticker dell'oro (dati XAU mostrati sotto un altro nome).
+    const inst = instrument(asset);
+    if (!inst) return res.status(400).json({ ok:false, error:`Strumento non supportato: ${asset}` });
+    const tvTicker = inst.quotes[0];
     const resolution = tf === '1d' ? '' : '|60';
     
     // Initialize defaults to prevent frontend display issues (invisible headers)
@@ -163,7 +168,7 @@ export default async function handler(req, res) {
     let candles = [];
     try {
       // Use GC=F/SI=F for better H1 coverage on Yahoo
-      const yahooSym = asset === 'XAG' ? 'SI=F' : asset === 'US30' ? '^DJI' : 'GC=F';
+      const yahooSym = ({ XAU:'GC=F', XAG:'SI=F', US30:'^DJI' })[inst.id] || inst.yahoo[0];
       response.candle_source='Yahoo · '+yahooSym;
       const url = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=${tf==='1d'?'1d':'1h'}&range=60d`;
       const cr = await fetchT(url, { headers: { "User-Agent": "Mozilla/5.0" } }, 3500);

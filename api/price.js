@@ -1,4 +1,5 @@
 import {fetchQuotes} from '../lib/market-quotes.js';
+import {instrument} from '../lib/instruments.js';
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-cache, max-age=0");
@@ -28,6 +29,8 @@ export default async function handler(req, res) {
     const interval = req.query.interval || '1h';
 
     // Helper: parse Yahoo chart response → candles[]
+    const inst = instrument(asset);
+    const dec = Math.max(2, inst?.decimals ?? 2);   // FX a 5 decimali: prima toFixed(2) → 1.13804 diventava 1.14
     function parseYahooChart(d) {
       const rs = d?.chart?.result?.[0];
       if (!rs?.timestamp) return null;
@@ -37,10 +40,10 @@ export default async function handler(req, res) {
         if (q.close?.[i] != null)
           out.push({
             t: rs.timestamp[i],
-            o: q.open?.[i]  ? +q.open[i].toFixed(2)  : +q.close[i].toFixed(2),
-            h: q.high?.[i]  ? +q.high[i].toFixed(2)  : +q.close[i].toFixed(2),
-            l: q.low?.[i]   ? +q.low[i].toFixed(2)   : +q.close[i].toFixed(2),
-            c: +q.close[i].toFixed(2),
+            o: q.open?.[i]  ? +q.open[i].toFixed(dec)  : +q.close[i].toFixed(dec),
+            h: q.high?.[i]  ? +q.high[i].toFixed(dec)  : +q.close[i].toFixed(dec),
+            l: q.low?.[i]   ? +q.low[i].toFixed(dec)   : +q.close[i].toFixed(dec),
+            c: +q.close[i].toFixed(dec),
             v: q.volume?.[i] || 0
           });
       }
@@ -52,11 +55,12 @@ export default async function handler(req, res) {
     // US02Y su Yahoo, quello resta fuori — la sua card usa lo spread 10Y-2Y dal prezzo live, non history).
     const MACRO_TICKERS = { VIX:'^VIX', SPX:'^GSPC', NDX:'^NDX', RUT:'^RUT', OIL:'CL=F', US10Y:'^TNX' };
     // GC=F / YM=F (futures) accettati come fallback SOLO per candles/indicatori tecnici
+    // Strumenti dal registro (public/instruments.json); un asset sconosciuto ora è un errore
+    // esplicito invece di ricadere in silenzio sui ticker dell'oro.
+    if (!MACRO_TICKERS[asset] && !inst) return res.status(400).json({ ok:false, error:`Strumento non supportato: ${asset}` });
     let symbols = MACRO_TICKERS[asset] ? [MACRO_TICKERS[asset]]
-                  : asset === 'XAG' ? ['XAGUSD=X', 'SI=F']
-                  : (asset === 'US30' || asset === 'DJI') ? ['YM=F', '^DJI']
-                  : ['XAUUSD=X', 'GC=F'];
-    if(req.query.strict === '1')symbols=[asset==='XAG'?'XAGUSD=X':asset==='US30'?'^DJI':'XAUUSD=X'];
+                  : inst.id === 'US30' ? ['YM=F', '^DJI'] : inst.yahoo;
+    if(req.query.strict === '1')symbols=[inst?.id==='US30'?'^DJI':(inst?.yahoo?.[0]||symbols[0])];
     const candleDeadline=Date.now()+7500;
     // Try query1 + query2, v8 + v7 for each symbol to maximise availability
     const yahooHosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
@@ -89,7 +93,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control','no-store');
   const snapshot=await fetchQuotes();
   if(asset==='ALL' || req.url.includes('/api/tvprice'))return res.status(snapshot.ok?200:503).json(snapshot);
-  const key=asset==='SILVER'?'XAG':asset==='DJI'?'US30':asset;
+  const key=instrument(asset)?.id||asset;
   const quote=snapshot.prices?.[key];
   if(!quote)return res.status(503).json({ok:false,error:'Quotazione non disponibile',timestamp:snapshot.timestamp});
   return res.status(200).json({ok:true,...quote,changePct:quote.change,source:quote._source,timestamp:snapshot.timestamp});

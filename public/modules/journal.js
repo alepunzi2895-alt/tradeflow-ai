@@ -37,7 +37,7 @@ function saveEntry(){
     emo:document.getElementById('f-emo').value,
     err:document.getElementById('f-err').value,
     notes:document.getElementById('f-notes').value,
-    symbol:window.activeAsset==='US30'?'US30':(window.activeAsset||'XAU')+'USD',
+    symbol:instrumentPair(window.activeAsset),
   };
   entries.unshift(e);S.set(K.j,entries);
   const w=entries.filter(x=>x.result==='WIN').length;P.winRate=Math.round(w/entries.length*100);S.set(K.p,P);
@@ -368,7 +368,7 @@ async function importMfxToJournal(accountId){
       const closePrice=parseFloat(t.closePrice||t.close_price||t.closeRate||0);
       const pnl=parseFloat(t.profit||t.pnl||0);
       const lots=parseFloat(t.size||t.lots||t.volume||0);
-      const sym=t.symbol||t.instrument||((window.activeAsset||'XAU')+'USD');
+      const sym=t.symbol||t.instrument||instrumentPair(window.activeAsset);
 
       // Compute SL/TP if available
       const sl=parseFloat(t.sl||t.stopLoss||0)||'';
@@ -437,7 +437,7 @@ document.getElementById('btn-analyze').onclick=async()=>{
     const mem=analysisMemory.entries?.slice(0,3).map(e=>`[${e.date?.slice(0,10)}] ${e.text}`).join('\n')||'';
     const memCtx=mem?`\nMEMORIA ANALISI PRECEDENTE:\n${mem}`:'';
     const sum=entries.slice(0,25).map(e=>`${e.date}|${escapeHtml(e.dir)}|E:${escapeHtml(e.entry)} SL:${escapeHtml(e.sl)}|${e.result||'?'}|${escapeHtml(e.pnl)}$|${e.emo}|${e.err}`).join('\n');
-    const reply=await api([{role:'user',content:`Analizza operatività ${window.activeAsset||'XAU'}/USD di ${P.name}:\n${sum}\n${memCtx}\nUsa SOLO i numeri riportati sopra. Statistiche, aree di sviluppo (non errori) con evidenza numerica, 3 azioni concrete e specifiche da applicare da subito, Score Disciplina X/10 motivato.`}],
+    const reply=await api([{role:'user',content:`Analizza operatività ${instrumentLabel(window.activeAsset)} di ${P.name}:\n${sum}\n${memCtx}\nUsa SOLO i numeri riportati sopra. Statistiche, aree di sviluppo (non errori) con evidenza numerica, 3 azioni concrete e specifiche da applicare da subito, Score Disciplina X/10 motivato.`}],
       `Sei TradeFlow AI Coach. Italiano. Tono costruttivo ma diretto. Aree noto sviluppo: ${P.errors.join(',')}.`);
     showAiResult(reply);autoLearn(reply);pushAnalysisMemory(reply);
   }catch(e){showAiError(e.message);}

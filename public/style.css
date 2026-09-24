@@ -95,6 +95,13 @@ html, body {
 .asset-seg button.on { background: var(--g); color: #12151c; }
 .asset-seg button:not(.on):hover { color: var(--text); }
 .asset-seg button:not(.on):active { transform: scale(.95); }
+.asset-seg select { background: none; border: none; color: var(--dim); font-family: inherit; font-size: 10px; font-weight: 700; padding: 3px 4px; border-radius: 6px; cursor: pointer; max-width: 86px; }
+.asset-seg select.on { background: var(--g); color: #12151c; }
+.asset-seg select option, .asset-seg select optgroup { background: var(--bg2); color: var(--text); }
+.asset-note { display: none; }
+@media (max-width: 420px) { #lsub-name { display: none; } }
+.asset-unavailable > .asset-note { display: block; color: var(--dim); font-size: 12px; line-height: 1.6; padding: 6px 2px; }
+.asset-unavailable > :not(.asset-note):not(.mfkk-header):not(.conf-title) { display: none; }
 .hright { display: flex; gap: 6px; align-items: center; }
 .hbadge { font-size: 9px; border-radius: 6px; padding: 3px 7px; font-family: monospace; white-space: nowrap; font-weight: 600; opacity: 0.6; transition: all 0.2s; }
 .hbadge:hover { opacity: 0.8; }

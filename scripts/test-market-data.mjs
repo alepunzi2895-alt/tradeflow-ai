@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import handler from '../api/market.js';
 import analysisHandler from '../api/analysis.js';
@@ -32,6 +33,19 @@ globalThis.fetch=async(url,opts)=>{quoteRequests++;assert.match(url,/scanner.tra
 r=await call('prices');assert.equal(quoteRequests,1);assert.equal(r.body.prices.XAU.price,3897);
 let single;await priceHandler({query:{asset:'XAU'},url:'/api/price',method:'GET'},{setHeader(){},status(){return this},json(body){single=body}});
 assert.equal(single.price,r.body.prices.XAU.price);assert.equal(single.changePct,r.body.prices.XAU.change);
-assert.equal(Object.keys(QUOTE_SYMBOLS).length,13);
+// Registro strumenti (public/instruments.json) + 8 quotazioni macro di contesto.
+const REG=JSON.parse(fs.readFileSync('public/instruments.json','utf8')).instruments;
+assert.equal(Object.keys(QUOTE_SYMBOLS).length,REG.length+8);
+for(const i of REG)assert.deepEqual(QUOTE_SYMBOLS[i.id],i.quotes,'quotazioni dal registro: '+i.id);
+// Asset sconosciuto: errore esplicito, mai i dati dell'oro sotto un altro nome.
+let bad;await priceHandler({query:{asset:'FOOBAR'},url:'/api/candles',method:'GET'},{setHeader(){},status(c){bad={status:c};return this},json(b){bad.body=b}});
+assert.equal(bad.status,400);
+r=await call('indicators',{asset:'FOOBAR'});assert.equal(r.status,400);
+// FX: ticker del registro e precisione a 5 decimali nelle candele.
+globalThis.fetch=async(url,opts)=>{if(url.includes('scanner')){scanned=JSON.parse(opts.body);return {ok:true,json:async()=>({data:[]})};}
+  return {ok:true,json:async()=>({chart:{result:[{timestamp:Array.from({length:40},(_,i)=>1700000000+i*3600),indicators:{quote:[{open:Array(40).fill(1.138041),high:Array(40).fill(1.13901),low:Array(40).fill(1.13701),close:Array(40).fill(1.13804),volume:Array(40).fill(0)}]}}]}})};};
+r=await call('indicators',{asset:'EURUSD'});assert.equal(scanned.symbols.tickers[0],'OANDA:EURUSD');
+let fx;await priceHandler({query:{asset:'EURUSD'},url:'/api/candles',method:'GET'},{setHeader(){},status(c){fx={status:c};return this},json(b){fx.body=b}});
+assert.equal(fx.body.candles[0].c,1.13804,'FX precision preserved in candles');
 globalThis.fetch=async()=>{throw Error('offline')};r=await call('prices');assert.equal(r.status,503);assert.deepEqual(r.body.prices,{});
 console.log('Unified quote batch, provider priority, missing values and endpoint consistency: passed');

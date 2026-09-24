@@ -9,9 +9,9 @@ const BR_NAMES = {
   S10_OB_FVG_SCALP:'S10 · OB+FVG Scalp', S16_GOLDEN_SQUEEZE:'S16 · Golden Squeeze',
   S17_CONVERGENCE_SCALP:'S17 · Convergence', S18_RANGE_REVERSAL:'S18 · Range Reversal',
   S20_FIB_CONFLUENCE:'S20 · Fib Confluence', S31_LAYOUT_SMART:'S31 · Layout Smart',
-  S30_DOW_DIP:'S30 · Dow Dip (US30)',
+  S30_DOW_DIP:'S30 · Dow Dip (US30)', S35_ASIA_BREAK:'S35 · Asia Break',
 };
-const BR_ORDER = ['S30_DOW_DIP','S31_LAYOUT_SMART','S17_CONVERGENCE_SCALP','S20_FIB_CONFLUENCE',
+const BR_ORDER = ['S30_DOW_DIP','S31_LAYOUT_SMART','S35_ASIA_BREAK','S17_CONVERGENCE_SCALP','S20_FIB_CONFLUENCE',
                   'S16_GOLDEN_SQUEEZE','S10_OB_FVG_SCALP','S09_MFKK_SCALPING','S18_RANGE_REVERSAL','S00_MFKK'];
 
 let brData = null;          // ultimo report ricevuto da backtest_report_get
@@ -113,13 +113,21 @@ function brWireHero(){
   window.addEventListener('resize', ()=>{ if(document.getElementById('brsheet')?.classList.contains('on')) brRenderHero(); });
 }
 
+function brIsDisabled(key){
+  const st = strategyState(key);
+  return st==='loading' || st==='unknown' ? (brData.disabled||[]).includes(key) : st!=='active';
+}
+
 // ── Card per singola strategia ───────────────────────────────────────────────
 function brCard(key){
   const info = (brData.shared_pool && brData.shared_pool[key]) || (brData.isolated && brData.isolated[key]);
   if(!info) return '';
-  const disabled = (brData.disabled||[]).includes(key);
+  // Stato dal registro effettivo (strategyState, se-render.js) — brData.disabled è lo stato
+  // congelato al giorno del run e resta solo come fallback se il registro non è arrivato.
+  const st = strategyState(key);
+  const disabled = brIsDisabled(key);
   const good = (info.holdout?.pf||0) >= 1;
-  const badge = disabled ? {t:'⛔ DISATTIVATA', c:'var(--red)', bg:'rgba(255,138,138,.12)'}
+  const badge = disabled ? {t:'⛔ '+(st==='blocked'?'BLOCCATA':'DISATTIVATA'), c:'var(--red)', bg:'rgba(255,138,138,.12)'}
               : good ? {t:'STABILE', c:'var(--green)', bg:'rgba(0,230,118,.12)'}
               : {t:'DECADUTA', c:'var(--red)', bg:'rgba(255,138,138,.12)'};
   return `
@@ -293,6 +301,15 @@ async function brToggleBlock(key, currentlyDisabled){
     const d = await r.json();
     if(!d.ok) throw new Error(d.error||'Errore sconosciuto');
     brData.disabled = Object.keys(d.blocked);
+    // Riflette subito il cambio nel registro locale (badge Hive/Report/card coerenti); il bot
+    // lo applica solo dopo git pull + restart, come dice l'alert qui sotto.
+    const reg = window.strategyRegistry, item = reg?.strategies?.[key];
+    if(item && (mode==='block' || item.status==='blocked')){
+      const snap = {...reg, strategies:{...reg.strategies, [key]: mode==='block'
+        ? {...item, status:'blocked', since:new Date().toISOString().slice(0,10), reason}
+        : {...item, status:'eligible'}}};
+      applyStrategyRegistry(snap, reg.source);
+    }
     brRenderCards();
     alert(`✅ ${name} ${mode==='block'?'bloccata':'riattivata'}. Ricorda: serve git pull + restart del bot sulla VPS per avere effetto.`);
   }catch(e){
@@ -411,7 +428,7 @@ function gnRender(key){
   const eqCurve = brData.equity_curves?.[key] || info.equity_curve;
   const boot = gnBootstrap(eqCurve);
   const periods = gnPeriodCols(eqCurve);
-  const disabled = (brData.disabled||[]).includes(key);
+  const disabled = brIsDisabled(key);
 
   const R1=70, C1=2*Math.PI*R1, off1=(C1*(100-s.score)/100).toFixed(1);
   const R2=45, C2=2*Math.PI*R2, off2=(C2*(1-s.coverage)).toFixed(1);
@@ -506,6 +523,7 @@ document.addEventListener('click', (e)=>{
     openOvl('brsheet');
     if(!brData) brLoad();
     else brRenderAll();
+    if(!window.strategyRegistry) ensureStrategyRegistry().then(()=>{ if(brData) brRenderAll(); });
     return;
   }
   const runBtn = e.target.closest('[data-br-run]');

@@ -74,3 +74,9 @@
 - [ ] Export journal in CSV/PDF
 - [ ] Integrazione COT data automatica settimanale
 - [ ] Fine tuning UI: animazioni transizione tra tab
+
+## 2026-09-24 — Conteggio strategie attive incoerente tra The Hive / Report / tab Strategie (RISOLTO)
+
+- "Attiva" si decide SOLO con `strategyState(id)` (public/modules/se-render.js): registro `data/strategy_registry.json` + `data/hard_blocks.json`, stessa fonte di `strategy_enabled()` nel bot. Mai da `brData.disabled` (snapshot del giorno del backtest) né dal PF di holdout.
+- Ogni nuova strategia tradata va aggiunta anche a `scripts/portfolio_backtest.py` (`run_isolated`/`SHARED_POOL` + `evaluate_one`) e a `BR_NAMES`/`BR_ORDER` di backtest-report.js, altrimenti non compare nel report (S35 mancava).
+- Il pannello regime del tab Strategie mostra le favorite del regime (PLAYBOOK_UI statico), non il totale: il selector del bot valuta tutto il pool in ogni regime.

@@ -82,6 +82,19 @@ def run_shared_pool(active_only=False):
     return out
 
 
+def _eval_s35():
+    """S35_ASIA_BREAK @ M5 — stessa variante del live (mt5-bot.py blocco S35): ASIA_BREAK_ALL
+    (nessun filtro D1) + gestione parziale 1R/pareggio/2R, via research_session_scalps.run.
+    Aggiunta 2026-09-24: prima S35 mancava dal report, quindi da Report Backtest e The Hive."""
+    import research_session_scalps as RSS
+    candles, _ = OH._data_for('M5')
+    trades = RSS.run(candles, RSS.prepare(candles), 'ASIA_BREAK_ALL', partial=True)
+    wf = OH.SE2.walk_forward_report(trades, folds=4, holdout_frac=0.2)
+    return {'full': wf['full'] if wf else OH.SE2.stats(trades), 'folds': wf['folds'] if wf else [],
+            'holdout': wf['holdout'] if wf else None, 'holdout_start': wf['holdout_start'] if wf else None,
+            'trades': trades}
+
+
 def run_isolated(active_only=False):
     """Ri-backtesta i blocchi isolati (non contano in MAX_OPEN_ORDERS)."""
     out = {}
@@ -112,6 +125,14 @@ def run_isolated(active_only=False):
     print(f"  full   : {OH.fmt(ev30['full'])}")
     print(f"  HOLDOUT: {OH.fmt(ev30['holdout'])}  (da {ev30['holdout_start']})")
 
+    # S35_ASIA_BREAK — M5, blocco isolato (parziale 1R + BE, 2R)
+    if not (active_only and 'S35_ASIA_BREAK' in DISABLED_NOW):
+        print("[isolated] S35_ASIA_BREAK @ M5 ...", flush=True)
+        ev35 = _eval_s35()
+        out['S35_ASIA_BREAK'] = {'tf': 'M5', 'ev': ev35}
+        print(f"  full   : {OH.fmt(ev35['full'])}")
+        print(f"  HOLDOUT: {OH.fmt(ev35['holdout'])}  (da {ev35['holdout_start']})")
+
     return out
 
 
@@ -137,6 +158,9 @@ def evaluate_one(strategy_id):
         spec = next(s for s in U30_REGISTRY if s['name'] == 'dow_dip_d1')
         tf = 'H4'
         ev = U30.evaluate(strategy_id, tf, dow_dip_d1, **spec['params'])
+    elif strategy_id == 'S35_ASIA_BREAK':
+        tf = 'M5'
+        ev = _eval_s35()
     else:
         raise ValueError(f"strategy_id sconosciuto: {strategy_id}")
 

@@ -14,6 +14,23 @@ function applyStrategyRegistry(snapshot, source) {
   }
   window.strategyRegistry={...snapshot,source};
 }
+// Stato di UNA strategia dal registro effettivo (strategy_registry.json + hard_blocks.json,
+// la stessa fonte che il bot usa per strategy_enabled()). Unica definizione di "attiva" per
+// The Hive, Report Backtest e tab Strategie — mai dedurla da brData.disabled (snapshot del
+// giorno del backtest) o dal PF di holdout. 'unknown' = registro non ancora arrivato.
+function strategyState(id){
+  const s = SE.strategies[id];
+  if(!s) return 'unknown';
+  if(s.signalOnly) return 'research';
+  if(/RITIRATA/i.test(s.label||'')) return 'retired';
+  const item = window.strategyRegistry?.strategies?.[id];
+  if(!item) return window.strategyRegistry ? 'unknown' : 'loading';
+  return item.status==='eligible' ? 'active' : item.status;   // blocked | disabled | retired
+}
+function ensureStrategyRegistry(){
+  if(window.strategyRegistry) return Promise.resolve();
+  return dbLoad('strategy_registry',{},8000).then(r=>{ if(r?.data) applyStrategyRegistry(r.data,'configurazione'); }).catch(()=>{});
+}
 
 // ── CONFIGURAZIONE TAB (persistita, sopravvive al rebuild di 1s) ────────────────
 // showBlocked: mostra le strategie bloccate/ritirate anche nella griglia principale
@@ -203,7 +220,11 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
       <div style="font-size:9px;color:${rm.col};margin-top:4px">
         Strategie attive: ${(() => {
           const live = (SE.regimePriority[seRegime]||['S00_MFKK']).filter(n=>!BLOCKED_STRATEGIES.includes(n));
-          return live.length ? live.map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ') : '<b>nessuna</b> (tutte bloccate per questo regime)';
+          // Blocchi isolati XAU: girano in ogni regime (fuori da regimePriority), vanno
+          // elencati anche qui o la riga ne mostra meno di quante ne tradi il bot.
+          const always = ['S31_LAYOUT_SMART','S35_ASIA_BREAK','S20_FIB_CONFLUENCE'].filter(n=>strategyState(n)==='active');
+          const pool = live.length ? live.map(n=>`<b>${SE.strategies[n]?.label||n}</b>`).join(' › ') : '<b>nessuna</b> del pool (tutte bloccate per questo regime)';
+          return always.length ? `${pool} · sempre attive: ${always.map(n=>`<b>${SE.strategies[n].label}</b>`).join(', ')}` : pool;
         })()}
       </div>
     </div>
@@ -530,8 +551,9 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">REGIME</div>
         <div style="font-size:11px;font-weight:800;color:${rm.col}">${rm.icon} ${rm.label}</div>
         <div style="color:var(--dim);font-size:10px">→</div>
-        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em">STRATEGIE ATTIVE</div>
+        <div style="font-size:9px;color:var(--dim);letter-spacing:.06em" title="Strategie XAU favorite dal regime corrente. Il totale abilitato sul bot (tutti gli asset) è nel chip accanto e in The Hive">IN PRIMO PIANO</div>
         <div style="font-size:10px;font-weight:800;color:#E5BD6C">${activeList.map(id=>SE.strategies[id]?.label||id).join(' · ')}</div>
+        <div title="Strategie abilitate sul bot secondo il registro (XAU + US30)" style="font-size:8px;color:var(--dim)">${Object.keys(SE.strategies).filter(id=>strategyState(id)==='active').length} attive sul bot</div>
         <div style="margin-left:auto;background:${rm.col}20;border:1px solid ${rm.col}40;border-radius:4px;padding:2px 7px;font-size:8px;font-weight:700;color:${rm.col}">${activeTF}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;font-size:8px" title="Max drawdown storico da backtest (24 mesi) del roster attivo — non è il DD live del conto, i circuit breaker live sono separati (daily/weekly/consecutive losses)">
@@ -595,8 +617,11 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   <div style="display:grid; grid-template-columns:1fr; gap:6px">
     ${Object.entries(SE.strategies).filter(([id]) => SE_UI.showBlocked || !BLOCKED_STRATEGIES.includes(id)).map(([id, s]) => {
       const isBlocked   = BLOCKED_STRATEGIES.includes(id);
-      const isActive    = activeList.includes(id) && !isBlocked;
-      const isPrimary   = isActive;   // tutte le attive ottengono badge ✓ ATTIVA
+      // ✓ ATTIVA = abilitata sul bot secondo il registro (stessa fonte di The Hive/Report
+      // Backtest), non "favorita dal regime corrente": il selector del bot valuta tutto il pool
+      // in ogni regime (il regime pesa sul punteggio, non esclude). Bordo evidenziato = favorita.
+      const isActive    = strategyState(id)==='active';
+      const isPrimary   = activeList.includes(id) && !isBlocked;
       const isSecondary = false;      // rimosso: non più gerarchia primaria/secondaria
       const st = s.stats || {};
       const pnl1col   = (st.pnl_1m||0)>0  ?'var(--green)':'var(--red)';

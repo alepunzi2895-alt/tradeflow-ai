@@ -13,7 +13,7 @@
     "jsonwebtoken": "^9.0.2"
   },
   "scripts": {
-    "test": "node scripts/check-js.mjs && node scripts/test-security.mjs && node scripts/test-lab.mjs && node scripts/test-market-data.mjs",
+    "test": "node scripts/check-js.mjs && node scripts/test-security.mjs && node scripts/test-lab.mjs && node scripts/test-market-data.mjs && node scripts/test-myfxbook.mjs",
     "test:ui": "node scripts/test-ui.mjs"
   },
   "devDependencies": {

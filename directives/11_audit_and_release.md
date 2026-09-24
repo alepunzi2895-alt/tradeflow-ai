@@ -16,7 +16,7 @@ il processo Python sulla VPS.
 | Reset password e ordini manuali | Vecchie azioni remote restituite come 410: permettevano bypass dei controlli |
 | AI | Autenticazione, quota persistente per utente, modello e token limitati dal server, timeout |
 | Journal | Eliminazione con ownership, importazione MyFxBook atomica e idempotente, provenienza conservata, errori di sync visibili |
-| KB/MyFxBook | Routing corretto; KB personale in Turso; password MyFxBook solo in memoria; testo AI e campi importati escapati |
+| KB/MyFxBook | Routing corretto; KB personale in Turso; testo AI e campi importati escapati. **Aggiornato 2026-09-24 (richiesta utente):** password MyFxBook mai nel browser; con "Ricorda l'accesso" salvata cifrata sul server (`lib/mfx-vault.js`, AES-256-GCM, chiave HKDF da `MFX_ENC_KEY` o `JWT_SECRET`), doc `mfx_cred` escluso da `get_user_data`, cancellata da "Disconnetti" |
 | Backtest remoto | Richieste separate con UUID, lease atomica, tre tentativi, risultati associati a utente e richiesta |
 | Bot | Niente riattivazione automatica al boot; stato sconosciuto/scaduto blocca i nuovi ingressi; verifica TLS abilitata |
 | Sizing | Arrotondamento per difetto, rifiuto del minimo fuori budget, conversione del contratto tramite MT5 nella valuta del conto |

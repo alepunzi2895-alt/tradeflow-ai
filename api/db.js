@@ -141,7 +141,9 @@ async function saveUserData(db, body) {
 }
 
 async function getUserData(db, body) {
-  const result = await db.execute({ sql: "SELECT doc_type, payload FROM user_data WHERE user_id=?", args: [body.user_id] });
+  // 'mfx_cred' = credenziali MyFxBook cifrate (lib/mfx-vault.js): solo il server le legge,
+  // non devono mai arrivare al browser.
+  const result = await db.execute({ sql: "SELECT doc_type, payload FROM user_data WHERE user_id=? AND doc_type <> 'mfx_cred'", args: [body.user_id] });
   return { ok: true, data: result.rows };
 }
 

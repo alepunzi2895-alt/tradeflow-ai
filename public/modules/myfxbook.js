@@ -8,7 +8,7 @@ function renderMyfx(){
   if(mfxSession){
     c.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;background:#081408;border:1px solid #62E6A625;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div><div style="color:var(--green);font-size:12px;font-weight:700">✓ Connesso a MyFxBook</div><div style="color:var(--dim);font-size:10px">${escapeHtml(mfxSession.email)}</div></div>
+        <div><div style="color:var(--green);font-size:12px;font-weight:700">✓ Connesso a MyFxBook</div><div style="color:var(--dim);font-size:10px">${escapeHtml(mfxSession.email||'')}${mfxSession.remembered?' · accesso ricordato':''}</div></div>
         <button onclick="mfxLogout()" style="background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:5px 10px;color:#FF8A8A;font-size:11px;cursor:pointer">Disconnetti</button>
       </div>
       <div id="mfx-accounts"></div>`;
@@ -21,6 +21,7 @@ function renderMyfx(){
         <div style="color:var(--g);font-size:11px;font-weight:700;margin-bottom:10px">LOGIN MYFXBOOK</div>
         <div class="ff" style="margin-bottom:8px"><label>EMAIL</label><input id="mfx-email" type="email" placeholder="email@myfxbook.com"></div>
         <div class="ff" style="margin-bottom:10px"><label>PASSWORD</label><input id="mfx-pass" type="password" placeholder="••••••••"></div>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;cursor:pointer"><input type="checkbox" id="mfx-remember" checked style="margin-top:2px">Ricorda l'accesso: la password viene salvata cifrata sul server (AES-256) e usata solo per rinnovare la sessione MyFxBook quando scade. Non torna mai nel browser.</label>
         <button class="bsave" id="btn-mfx-login" style="width:100%">🔗 Connetti</button>
         <div id="mfx-err" style="display:none;margin-top:8px;font-size:11px;color:#FF8A8A;background:#160c0c;border:1px solid #FF8A8A22;border-radius:6px;padding:7px 9px"></div>
       </div>
@@ -32,7 +33,7 @@ function renderMyfx(){
           2. <b>Scarica l'EA</b>: Nella sezione <i>Portfolio > Add Account</i>, seleziona MetaTrader 4/5 (EA) e scarica il plugin.<br>
           3. <b>Configura MT4/MT5</b>: Trascina l'EA sul grafico. Durante i settaggi inserisci l'indirizzo email e la password utilizzati per registrarti a MyFxBook e imposta un intervallo di pubblicazione (es. 5 min).<br>
           4. <b>Collega l'app</b>: Usa la stessa mail e password nel form in alto su TradeFlow AI.<br><br>
-          <i>⚠️ Sicurezza: TradeFlow invia la password solo in una chiamata one-shot alle API ufficiali di MyFxBook per generare un token di sessione. La password NON viene mai salvata sul nostro database (Turso) — rimane solo in memoria durante la sessione corrente. Alla riapertura potrebbe essere necessario riconnettersi.</i>
+          <i>⚠️ Sicurezza: con "Ricorda l'accesso" la password viene salvata sul nostro database (Turso) solo in forma cifrata (AES-256-GCM, chiave sul server) e usata solo per rinnovare la sessione MyFxBook quando scade: non viene mai restituita al browser né salvata sul dispositivo. Senza la spunta viene usata una sola volta per il login e poi dimenticata. "Disconnetti" cancella sessione e credenziali.</i>
         </div>
       </div>
       `;
@@ -43,6 +44,7 @@ function renderMyfx(){
 async function mfxLogin(){
   const email=document.getElementById('mfx-email').value.trim();
   const pass=document.getElementById('mfx-pass').value;
+  const remember=!!document.getElementById('mfx-remember')?.checked;
   const err=document.getElementById('mfx-err');
   if(!email||!pass){
     // Prima usciva senza toccare la UI: un click su un campo vuoto sembrava non fare nulla
@@ -53,55 +55,56 @@ async function mfxLogin(){
   err.style.display='none';
   const btn=document.getElementById('btn-mfx-login');btn.textContent='⏳...';btn.disabled=true;
   try{
-    const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password:pass})});
+    const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password:pass,remember})});
     const d=await r.json();
     if(d.error||!d.session)throw new Error(d.message||'Login fallito');
-    // pass viene salvata SOLO in localStorage (per riautenticarsi in automatico quando la sessione
-    // MyFxBook scade lato loro) — mai inviata al nostro DB Turso, solo session+email lo sono.
-    mfxSession={session:d.session,email,pass};
-    S.set(K.mfx,{session:mfxSession.session,email:mfxSession.email});
-    window.dbSaveUserData && window.dbSaveUserData('mfx', {session:d.session,email});
+    // 2026-09-24: la password non resta nel browser nemmeno in memoria. Sessione e (se scelto)
+    // credenziali cifrate le tiene il server, che rinnova la sessione da solo quando scade.
+    mfxSession={session:d.session,email,remembered:!!d.remembered};
+    S.set(K.mfx,{session:mfxSession.session,email,remembered:mfxSession.remembered});
     renderMyfx();
+    if(typeof loadSentimentOnly==='function')loadSentimentOnly();
   }catch(e){
     document.getElementById('mfx-err').style.display='block';
     document.getElementById('mfx-err').textContent='❌ '+e.message;
     btn.textContent='🔗 Connetti';btn.disabled=false;
   }
 }
-function mfxLogout(){mfxSession=null;S.set(K.mfx,null); window.dbSaveUserData && window.dbSaveUserData('mfx', null); renderMyfx();}
-
-// Riautentica in automatico con le credenziali salvate in locale, quando la sessione MyFxBook
-// (rilasciata dai loro server, scade da sola col tempo) risulta invalida. Ritorna true se riuscita.
-async function mfxRelogin(){
-  if(!mfxSession?.email||!mfxSession?.pass) return false;
-  try{
-    const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email:mfxSession.email,password:mfxSession.pass})});
-    const d=await r.json();
-    if(d.error||!d.session) return false;
-    mfxSession={...mfxSession,session:d.session};
-    S.set(K.mfx,{session:mfxSession.session,email:mfxSession.email});
-    window.dbSaveUserData && window.dbSaveUserData('mfx',{session:mfxSession.session,email:mfxSession.email});
-    return true;
-  }catch(e){return false;}
+async function mfxLogout(){
+  try{await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});}catch(e){}
+  mfxSession=null;S.set(K.mfx,null);renderMyfx();
+  if(typeof loadSentimentOnly==='function')loadSentimentOnly();
 }
 
-// Wrapper per tutte le chiamate autenticate: se la sessione risulta scaduta, prova un relogin
-// silenzioso con le credenziali salvate e ritenta una volta sola prima di arrendersi.
-async function mfxApiCall(action, extra={}, _retried=false){
-  const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,session:mfxSession?.session,...extra})});
+// Stato dal server al caricamento: la sessione (e l'eventuale "ricorda l'accesso") vive sul
+// server per utente, quindi vale su ogni dispositivo senza reinserire la password.
+async function mfxRefreshStatus(){
+  try{
+    const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'status'})});
+    const d=await r.json();
+    if(!d.ok)return;
+    if(d.connected){
+      mfxSession={session:d.session||mfxSession?.session||null,email:d.email||mfxSession?.email||'',remembered:!!d.remembered};
+      S.set(K.mfx,mfxSession);
+    }else if(mfxSession){mfxSession=null;S.set(K.mfx,null);}
+  }catch(e){}
+}
+window.mfxRefreshStatus=mfxRefreshStatus;
+
+// Wrapper per tutte le chiamate autenticate: il server rinnova da solo la sessione scaduta
+// (relogin con le credenziali cifrate, se l'utente ha scelto "Ricorda l'accesso") e, quando lo
+// fa, restituisce la nuova sessione. needsLogin = serve reinserire le credenziali.
+async function mfxApiCall(action, extra={}){
+  const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...extra})});
   const d=await r.json();
-  if(d.error && !_retried){
-    const ok=await mfxRelogin();
-    if(ok) return mfxApiCall(action, extra, true);
-  }
+  if(d.session&&mfxSession){mfxSession.session=d.session;S.set(K.mfx,mfxSession);}
   return d;
 }
 
 function mfxShowExpired(wrap, msg){
-  const hasSavedPass=!!mfxSession?.pass;
-  const hint=hasSavedPass
-    ? 'Il rinnovo automatico ha provato e non è riuscito (password salvata probabilmente cambiata su MyFxBook).'
-    : 'Riconnettiti a MyFxBook. La password viene conservata solo durante questa sessione.';
+  const hint=mfxSession?.remembered
+    ? 'Il rinnovo automatico ha provato e non è riuscito (password probabilmente cambiata su MyFxBook).'
+    : 'Riconnettiti a MyFxBook e spunta "Ricorda l’accesso" per non doverlo rifare.';
   wrap.innerHTML=`<div style="color:#FF8A8A;font-size:12px;background:#160c0c;border:1px solid #FF8A8A22;border-radius:8px;padding:10px 12px;margin-bottom:8px">⚠️ ${escapeHtml(msg||'Sessione MyFxBook scaduta.')}<br><span style="color:var(--dim);font-weight:400">${hint}</span></div>
     <button onclick="mfxLogout()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:8px;color:var(--g);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Riconnetti (reinserisci email/password)</button>`;
 }

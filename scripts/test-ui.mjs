@@ -20,6 +20,7 @@ const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({headless:true});
 const errors=[];
 let quoteRequests=0, quoteFailure=false, statsDenied=false;
+const sentimentAssets=[]; let mfxLoginBody=null, mfxConnected=true;
 const page=await browser.newPage({viewport:{width:1440,height:1100}});
 page.setDefaultTimeout(8000);
 page.on('pageerror',e=>errors.push(e.message));
@@ -42,6 +43,20 @@ await page.route('**/*',async route=>{
     if(statsDenied){await route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({ok:false,error:'Accesso non abilitato'})});return;}
     json={ok:true,data:{account:{equity:10000,balance:9900,currency:'USD'},positions:[],trades:[{profit:10},{profit:-5},{profit:15}],bot_status:{running:true,pnl_today:25,registry:registrySnapshot()},synced_at:new Date().toISOString()}};
   }
+  if(url.pathname==='/api/myfxbook'){
+    const SENT={XAU:[62,38],XAG:[70,30],EURUSD:[35,65]};
+    if(b.action==='status')json=mfxConnected?{ok:true,connected:true,email:'test@example.test',session:'fixture-session',remembered:true}:{ok:true,connected:false,remembered:false};
+    if(b.action==='sentiment'){
+      sentimentAssets.push(b.asset);
+      await new Promise(r=>setTimeout(r,150));   // latenza: rende osservabili i cambi asset durante una richiesta
+      json=!mfxConnected?{ok:false,needsLogin:true,error:'Collega MyFxBook (tab MyFxBook) per il sentiment retail'}
+        :SENT[b.asset]?{ok:true,symbol:b.asset,longPct:SENT[b.asset][0],shortPct:SENT[b.asset][1],updatedAt:new Date().toISOString()}
+        :{ok:false,error:`MyFxBook non pubblica il sentiment per ${b.asset}`};
+    }
+    if(b.action==='login'){mfxLoginBody=b;mfxConnected=true;json={ok:true,session:'new-session',email:b.email,remembered:!!b.remember};}
+    if(b.action==='logout'){mfxConnected=false;json={ok:true};}
+    if(b.action==='accounts')json={ok:true,accounts:[]};
+  }
   if(url.pathname==='/api/price')json={ok:true,price:4000,changePct:0.2};
   if(url.pathname==='/api/kb')json={ok:true,kb:[],knowledge:[]};
   if(url.pathname==='/api/market')json={ok:true,prices:{},events:[]};
@@ -59,7 +74,11 @@ try {
   // 5, non più 3: S00_MFKK/S16_GOLDEN_SQUEEZE riattivate in data/hard_blocks.json (2026-09-22,
   // decisione utente su conto demo) — registrySnapshot() le legge da lì, un roster più grande
   // è il comportamento corretto, non una regressione.
-  assert.equal(await page.locator('.saturn-satellite').count(),5);
+  // 6: + S35_ASIA_BREAK (blocco isolato M5, eligible dal 2026-09-24).
+  assert.equal(await page.locator('.saturn-satellite').count(),6);
+  // Sentiment MyFxBook dalla sessione lato server, aggiornato al caricamento.
+  await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
+  assert.match(await page.locator('#sent-source').innerText(),/MyFxBook ✓ · \d\d:\d\d/);
   await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=XAU] .pc-val')?.textContent.includes('4.000'));
   assert.equal(await page.locator('.price-strip').count(),1,'only one quote surface');
   // 10, non più 13: DXY/EURUSD/GBPUSD tolte dalla griglia visibile (2026-09-22, richiesta
@@ -70,6 +89,13 @@ try {
   const xauBefore=await page.locator('[data-quote-symbol=XAU] .pc-val').innerText();
   await page.locator('#asset-seg [data-asset=US30]').click();
   assert.match(await page.locator('#lbl-sent-title').innerText(),/US30/);
+  await page.waitForFunction(()=>/US30/.test(document.querySelector('#sent-source')?.textContent||''));
+  assert.equal(await page.locator('#sent-long-pct').innerText(),'—','nessun numero inventato per un simbolo non coperto');
+  // Cambi rapidi durante una richiesta in corso: deve vincere l'ultimo asset scelto.
+  await page.locator('#asset-seg [data-asset=XAG]').click();
+  await page.locator('#asset-seg [data-asset=XAU]').click();
+  await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
+  assert.equal(sentimentAssets.at(-1),'XAU','il cambio asset durante una richiesta non viene perso');
   assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'asset selection never replaces the gold quote');
   assert.equal(await page.locator('[data-quote-symbol=US30] .pc-val').innerText(),'42.000,00');
   assert.equal(await page.locator('#system-winrate').innerText(),'66,7%');
@@ -103,6 +129,21 @@ try {
   assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'failed refresh retains the last value with a stale label');
   assert.match(await page.locator('.quote-status').innerText(),/Fonte non disponibile/);
   quoteFailure=false;await page.evaluate(()=>loadPrices());
+  // MyFxBook: accesso ricordato dal server, logout, nuovo login con "Ricorda l'accesso".
+  await page.locator('[data-tab=myfx]').click();
+  await page.waitForFunction(()=>/accesso ricordato/.test(document.querySelector('#mfx-content')?.textContent||''));
+  await page.locator('#mfx-content button',{hasText:'Disconnetti'}).click();
+  await page.waitForSelector('#mfx-remember');
+  assert.equal(await page.locator('#mfx-remember').isChecked(),true,'ricorda accesso attivo di default');
+  await page.waitForFunction(()=>/Collega MyFxBook/.test(document.querySelector('#sent-source')?.textContent||''));
+  await page.fill('#mfx-email','test@example.test');await page.fill('#mfx-pass','secret-pw');
+  await page.locator('#btn-mfx-login').click();
+  await page.waitForFunction(()=>/Connesso a MyFxBook/.test(document.querySelector('#mfx-content')?.textContent||''));
+  assert.equal(mfxLoginBody.remember,true);
+  const storedMfx=await page.evaluate(()=>localStorage.getItem('tf_myfx:test-user'));
+  assert.ok(!storedMfx.includes('secret-pw'),'la password non resta nel browser');
+  assert.equal(await page.evaluate(()=>typeof mfxSession.pass),'undefined','la password non resta nemmeno in memoria');
+  await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
   await page.locator('[data-tab=journal]').click();
   await page.locator('#btn-report-day').click();assert.equal(await page.locator('#elist .ec').count(),1);
   await page.locator('#btn-report-week').click();assert.equal(await page.locator('#elist .ec').count(),2);
@@ -137,5 +178,5 @@ try {
   await page.evaluate(()=>Promise.all([loadPrices(),loadPrices(),loadPrices()]));
   assert.equal(quoteRequests,requestCount+1,'concurrent refreshes share one market request');
   assert.deepEqual(errors,[]);
-  console.log('Desktop/mobile Saturn, unified quotes, private system stats, journal filters/progress, worker backtest: passed');
+  console.log('Desktop/mobile Saturn, unified quotes, MyFxBook session + sentiment per asset, private system stats, journal filters/progress, worker backtest: passed');
 } catch(e){fs.mkdirSync('artifacts',{recursive:true});await page.screenshot({path:'artifacts/ui-failure.png',fullPage:true});console.log('UI errors',errors);throw e;} finally {await browser.close();await new Promise(r=>server.close(r));}

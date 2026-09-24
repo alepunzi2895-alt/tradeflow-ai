@@ -180,3 +180,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - ASIA_BREAK (rottura range asiatico nella direzione D1, M5/M15): PF 1.8 train, 2.1 holdout, 1.8 su M15 24m, regge costi ×2. Primo candidato scalp credibile; DSR non significativo.
 - Combo C (roster + ASIA_BREAK_ALL con parziale 1R+BE): circa 1.2 trade/giorno XAU, PF 1.83, DD 565 < roster da solo (739). Vedi `05_backtest.md`.
 - S35_ASIA_BREAK integrata nel bot come blocco isolato M5 (lotto 0.03, demo). Parità verificata: 41/41 ingressi del bot = backtest. Serve git pull + riavvio VPS.
+- MyFxBook: sessione lato server + credenziali cifrate opzionali ("Ricorda l'accesso"), relogin automatico, sentiment per qualunque simbolo; vedi `06_known_issues.md` 2026-09-24.

@@ -126,11 +126,9 @@ async function syncStateFromCloud() {
         if (row.doc_type === 'chat') { history = payload; S.set(K.chat, history); }
         if (row.doc_type === 'kb') { kb = payload; S.set(K.kb, kb); }
         if (row.doc_type === 'mfx') {
-          // Credentials are memory-only, including legacy payload migrations.
-          const inMemoryPass=mfxSession?.pass;
+          // Solo sessione + email: la password (se "Ricorda l'accesso") resta cifrata sul server.
           mfxSession = payload ? {session:payload.session,email:payload.email} : null;
           S.set(K.mfx, mfxSession);
-          if(mfxSession && inMemoryPass)mfxSession.pass=inMemoryPass;
         }
         if (row.doc_type === 'amem') { analysisMemory = payload; S.set(K.amem, analysisMemory); }
         if (row.doc_type === 'mem') { tradeMemory = payload; S.set(K.mem, tradeMemory); }
@@ -139,6 +137,9 @@ async function syncStateFromCloud() {
     // rebuild knowledge
     if(kb.length>0){ P.knowledge=kb.map(k=>`[${k.name}]\n${k.summary}`).slice(-6); S.set(K.p,P); }
   }
+  // Stato MyFxBook dal server (vale su ogni dispositivo) → poi sentiment dell'asset attivo.
+  if (typeof mfxRefreshStatus === 'function') await mfxRefreshStatus();
+  if (typeof loadSentimentOnly === 'function') loadSentimentOnly();
 }
 window.syncStateFromCloud = syncStateFromCloud;
 

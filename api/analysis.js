@@ -43,15 +43,6 @@ export default async function handler(req, res) {
     } catch(e) { return null; }
   }
 
-  function buildSentiment(lp, sp) {
-    return {
-      longPct: lp, shortPct: sp,
-      signal: lp > 60 ? "RETAIL_LONG_HEAVY" : sp > 60 ? "RETAIL_SHORT_HEAVY" : "MIXED",
-      contrarian: lp > 65 ? "BEARISH_BIAS" : sp > 65 ? "BULLISH_BIAS" : "NEUTRAL",
-      note: lp > 65 ? `⚠️ Retail ${Math.round(lp)}% long — smart money probab. SHORT` :
-            sp > 65 ? `⚠️ Retail ${Math.round(sp)}% short — possibile squeeze` : "Sentiment neutro o bilanciato"
-    };
-  }
 
   if(type==='fx'){
     const symbols={EUR:'EURUSD=X',GBP:'GBPUSD=X',CHF:'CHF=X',JPY:'JPY=X'};
@@ -72,47 +63,10 @@ export default async function handler(req, res) {
       return res.status(snapshot.ok?200:503).json(snapshot);
     }
 
-    // ── SENTIMENT ──
+    // ── SENTIMENT ── spostato in api/myfxbook.js (action 'sentiment', 2026-09-24): la sessione
+    // MyFxBook vive sul server per utente con rinnovo automatico, e non passa più nell'URL.
     if (type === "sentiment") {
-      const mfxSession = req.query.session || "";
-      // Prima era hardcoded a XAUUSD — ignorava l'asset attivo (XAU/XAG/US30) selezionato in UI.
-      const symbol = (req.query.symbol || "XAUUSD").toUpperCase();
-      let sentimentData = null;
-      let source = 'myfxbook';
-      let mfxError = null;
-      if (mfxSession) {
-        try {
-          const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${encodeURIComponent(mfxSession)}&symbols=${encodeURIComponent(symbol)}`;
-          // Era 3500ms: community-outlook restituisce TUTTI i simboli ed è spesso più lento → timeout
-          // silenziosi ad ogni refresh e pannello bloccato su "—". 7000ms resta sotto il limite Vercel 10s.
-          const r = await fetchT(mfxUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, 7000);
-          if (r.ok) {
-            const d = await r.json();
-            // MyFxBook risponde 200 anche con sessione invalida: {error:true, message:"Invalid session"}
-            if (d.error === true || d.error === 'true') mfxError = d.message || 'errore MyFxBook';
-            const sym = d.symbols?.find(s => s.name === symbol || (symbol === "XAUUSD" && s.name === "GOLD"));
-            if (sym) sentimentData = buildSentiment(parseFloat(sym.longPercentage), parseFloat(sym.shortPercentage));
-          } else mfxError = `HTTP ${r.status}`;
-        } catch(e) { mfxError = e.name === 'AbortError' ? 'timeout MyFxBook' : e.message; }
-      }
-
-      if (!sentimentData || !Number.isFinite(sentimentData.longPct) || !Number.isFinite(sentimentData.shortPct)) {
-        const expired = !!mfxError && /session/i.test(mfxError);
-        const error = !mfxSession ? 'Collega MyFxBook per il sentiment retail'
-          : expired ? 'Sessione MyFxBook scaduta — riconnetti dal tab MyFxBook'
-          : mfxError ? `MyFxBook non disponibile (${mfxError})`
-          : `Nessun dato MyFxBook per ${symbol}`;
-        return res.status(200).json({ok:false, error, expired, source:'myfxbook'});
-      }
-      // Shape allineata a quella già usata da api/myfxbook.js (action:'outlook') e attesa dal client
-      // (dashboard.js::loadSlowData legge sd.outlook.symbols) — prima la chiave era 'xauusd' e il
-      // client non la trovava mai, quindi il ramo "server" non scattava mai.
-      return res.status(200).json({
-        ok: true,
-        outlook: { symbols: [{ name: symbol, longPercentage: sentimentData.longPct, shortPercentage: sentimentData.shortPct }] },
-        source,
-        timestamp: new Date().toISOString(),
-      });
+      return res.status(410).json({ok:false, error:'Usa /api/myfxbook action sentiment'});
     }
 
     // ── CALENDAR ──

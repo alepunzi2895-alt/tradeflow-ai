@@ -249,31 +249,38 @@ async function loadPrices(){
   return priceRequest;
 }
 
-// Sentiment-only refresh — uses server-side proxy to avoid CORS
-let sentimentBusy = false;
+// Sentiment retail MyFxBook per l'asset attivo (qualunque simbolo: XAU/XAG/coppie forex).
+// 2026-09-24: passa da /api/myfxbook action 'sentiment' — la sessione MyFxBook vive sul server
+// per utente e viene rinnovata da sola quando scade (credenziali cifrate, se "Ricorda l'accesso"),
+// quindi il pannello non resta più fermo su "—" dopo la scadenza.
+let sentimentBusy = false, sentimentPending = false;
 async function loadSentimentOnly(){
-  if(sentimentBusy) return;
+  if(sentimentBusy){sentimentPending=true;return;}   // prima un cambio asset durante una richiesta veniva perso
   sentimentBusy=true;
   const asset=window.activeAsset||'XAU';
-  const symbol=asset==='US30'?'US30':asset+'USD';
   try {
-    const fetchSent=()=>fetchJSON('/api/market?type=sentiment&symbol='+encodeURIComponent(symbol)+'&session='+encodeURIComponent(mfxSession?.session||''),9000);
-    let sd=await fetchSent();
-    // La sessione MyFxBook scade lato loro: prima il pannello restava su "—" per sempre.
-    // Relogin silenzioso (riesce solo se la password è ancora in memoria da questo caricamento pagina).
-    if(sd?.expired && typeof mfxRelogin==='function' && await mfxRelogin()) sd=await fetchSent();
+    let sd=null;
+    try{
+      const r=await authFetch('/api/myfxbook',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'sentiment',asset}),signal:AbortSignal.timeout(9000)});
+      sd=await r.json();
+    }catch(e){sd={ok:false,error:'MyFxBook non raggiungibile'};}
     if(asset!==(window.activeAsset||'XAU'))return;
-    const sym=sd?.outlook?.symbols?.find(s=>s.name===symbol);
-    const lp=Number(sym?.longPercentage),sp=Number(sym?.shortPercentage);
-    if(sd?.ok && sym && Number.isFinite(lp) && Number.isFinite(sp) && !sd.synthetic){
+    if(sd?.session&&typeof mfxSession!=='undefined'&&mfxSession){mfxSession.session=sd.session;S.set(K.mfx,mfxSession);}
+    const lp=Number(sd?.longPct),sp=Number(sd?.shortPct);
+    if(sd?.ok && Number.isFinite(lp) && Number.isFinite(sp)){
       const sent={longPct:lp,shortPct:sp,signal:lp>60?'RETAIL_LONG_HEAVY':sp>60?'RETAIL_SHORT_HEAVY':'MIXED',contrarian:lp>65?'BEARISH_BIAS':sp>65?'BULLISH_BIAS':'NEUTRAL',note:''};
-      dashContext.sentiment=sent;updateSentiment(sent,sd.source);
+      dashContext.sentiment=sent;updateSentiment(sent,'myfxbook',sd.updatedAt);
       if(marketData)updateConfidence(marketData,sent);
     }else{
       dashContext.sentiment=null;updateSentiment(null);
-      document.getElementById('sent-source').textContent=sd?.error||'Fonte non disponibile';
+      const src=document.getElementById('sent-source');
+      if(src){src.textContent=sd?.error||'Fonte non disponibile';src.style.color='var(--dim)';}
     }
-  }finally{sentimentBusy=false;}
+  }finally{
+    sentimentBusy=false;
+    if(sentimentPending){sentimentPending=false;loadSentimentOnly();}
+  }
 }
 async function loadSlowData(){
   loadSentimentOnly();
@@ -1079,7 +1086,7 @@ window.closeIndicatorInfo = function(){
 };
 window.showIndicatorInfo = showIndicatorInfo;
 
-function updateSentiment(s, source){
+function updateSentiment(s, source, updatedAt){
   const srcEl=document.getElementById('sent-source');
   if(!s||s.longPct==null){
     document.getElementById('sent-note').style.display='none';
@@ -1093,7 +1100,7 @@ function updateSentiment(s, source){
   }
   // Show data source
   if(srcEl){
-    if(source==='myfxbook_auth'||source==='myfxbook') srcEl.textContent='MyFxBook ✓ · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    if(source==='myfxbook_auth'||source==='myfxbook') srcEl.textContent='MyFxBook ✓ · '+new Date(updatedAt||Date.now()).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     else if(s.synthetic) srcEl.textContent='⚡ Stimato';
     else srcEl.textContent='';
     srcEl.style.color=source?.includes('myfxbook')?'var(--green)':'var(--yellow)';

@@ -66,7 +66,7 @@ TF_FILES = {
 # di check_trade_silence()), quindi il disallineamento non aveva mai avuto
 # effetto — ora che viene letto va tenuto sincronizzato con BASELINE_STATS.
 STRATEGY_OPTIMAL_TF = {
-    'S00_MFKK':              'M30',
+    'S00_MFKK':              'H1',   # V3 pullback solo H1 dal 2026-09-24
     'S05_MFKK_INTRADAY':     'H1',
     'S09_MFKK_SCALPING':     'M30',
     'S10_OB_FVG_SCALP':      'M30',
@@ -77,7 +77,7 @@ STRATEGY_OPTIMAL_TF = {
 # Baseline backtest completo (fonte di verità, aggiornato dopo ogni campagna)
 # Fonte: adaptive.by_strategy bt_*_v6final — 2026-04-30
 BASELINE_STATS = {
-    'S00_MFKK':              {'pf': 1.628, 'wr': 0.494, 'tf': 'M30'},
+    'S00_MFKK':              {'pf': 2.061, 'wr': 0.429, 'tf': 'H1'},   # V3, research_s00_v3_entries.py 2026-09-24
     'S05_MFKK_INTRADAY':     {'pf': 1.046, 'wr': 0.253, 'tf': 'H1'},
     'S09_MFKK_SCALPING':     {'pf': 1.761, 'wr': 0.302, 'tf': 'M30'},
     'S10_OB_FVG_SCALP':      {'pf': 2.130, 'wr': 0.519, 'tf': 'M30'},
@@ -97,7 +97,7 @@ VERCEL_URL = os.getenv("VERCEL_URL", "https://tradeflow-ai-delta.vercel.app")
 
 # Mapping strategy_id → nome funzione segnale in signals.py (per raccolta contesto AI)
 STRATEGY_SIGNAL_FN = {
-    'S00_MFKK':              'signal_mfkk_score',
+    'S00_MFKK':              'signal_mfkk_v3_pull',
     'S05_MFKK_INTRADAY':     'signal_mfkk_intraday',
     'S09_MFKK_SCALPING':     'signal_mfkk_scalping',
     'S10_OB_FVG_SCALP':      'signal_ob_fvg_scalp',
@@ -113,7 +113,7 @@ STRATEGY_SIGNAL_FN = {
 # del 2026-07-07 (quality_gate RSI>75, 2.5 mesi di silenzio) sarebbe stato
 # flaggato entro la prima settimana.
 STRATEGY_SILENCE_THRESHOLD_DAYS = {
-    'S00_MFKK':              7,
+    'S00_MFKK':              30,   # V3 ≈ 2 trade/mese in backtest
     'S05_MFKK_INTRADAY':     10,
     'S09_MFKK_SCALPING':     7,
     'S10_OB_FVG_SCALP':      7,

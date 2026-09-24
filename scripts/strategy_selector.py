@@ -24,15 +24,13 @@ log = logging.getLogger('tf-bot')
 STRATEGIES_CONFIG = [
     {
         "id": "S00_MFKK",
-        "name": "MFKK Score",
-        "signal_function": "signal_mfkk_score",
+        "name": "MFKK V3 Pullback",
+        "signal_function": "signal_mfkk_v3_pull",
         "performance_by_tf": {
-            # bt_h1_adaptive 2026-07-07: 1070 trade, WR 48.9%, PF 1.594, +$3896/24m, DD$264 — BEST TF
-            # bt_h4_adaptive 2026-07-07: 208 trade, WR 52.4%, PF 1.835, +$992/24m (meno segnali)
-            # bt_m30_adaptive 2026-07-07: 575 trade, WR 43.8%, PF 1.300, +$1164/13m
-            "H1":  {"wr": 0.489, "pf": 1.594, "daily_pnl": 17.4, "dd": 264},
-            "H4":  {"wr": 0.524, "pf": 1.835, "daily_pnl": 10.9, "dd": 124},
-            "M30": {"wr": 0.438, "pf": 1.300, "daily_pnl": 8.0,  "dd": 244},
+            # 2026-09-24 V3 regole utente, SOLO H1 (scripts/research_s00_v3_entries.py, 24m, cost model):
+            # 56 trade, WR 42.9%, PF 2.06, +$555, DD $314. Holdout n=11 PF 1.34. M30/H4 rimossi:
+            # la funzione restituisce None fuori da H1 (su M30 la regola perde).
+            "H1":  {"wr": 0.429, "pf": 2.061, "daily_pnl": 1.1, "dd": 314},
         },
         "optimal_regimes": ["TREND_UP", "TREND_DOWN", "WEAK"],
         "base_params": {"tp_atr_mult": 3.5, "sl_atr_mult": 1.5},  # allineato a risk_guardian.STRATEGY_ATR_PARAMS["S00_MFKK"] (era 1.0, outlier — stessa classe di bug fixata 2026-04-30 per S05/S09/S10/S17)

@@ -197,6 +197,43 @@ def signal_mfkk_score(ind, i, h1_trend=None, hour=None, tf=None):
     return None
 
 
+def signal_mfkk_v3_pull(ind, i, h1_trend=None, hour=None, tf=None):
+    """
+    S00_MFKK V3 (live dal 2026-09-24, SOLO H1) — regole esplicite dell'utente, lettura "pullback".
+      - ADX >= 25
+      - DI dominante con spread >= 10 e in crescita vs 2 barre prima (DI che si allontanano)
+      - MACD: incrocio nella direzione del trade nelle ultime 2 barre, oppure istogramma
+        ancora contrario ma in contrazione da 2 barre ("sta per girare")
+      - CCI (stoch-CCI 0-100, come V2): BUY se <= 40 in una delle ultime 3 barre, SELL se >= 60
+      - Orari come V2: BUY 7-22, SELL 7-20
+    Backtest (scripts/research_s00_v3_entries.py, 24m H1): 56 trade, PF 2.06, DD 314, 4/4 fold;
+    holdout n=11 PF 1.34 — campione piccolo, NON supera is_promotable/DSR: scelta utente su demo.
+    tf diverso da H1 → None (su M30 la stessa regola perde, holdout PF 0.28).
+    La V2 a punteggio resta in signal_mfkk_score per la ricerca.
+    """
+    if tf is not None and tf != 'H1': return None
+    if i < 100: return None
+    a, dp, dm = ind['adx'][i], ind['dip'][i], ind['dim'][i]
+    dp2, dm2 = ind['dip'][i - 2], ind['dim'][i - 2]
+    if None in (a, dp, dm, dp2, dm2) or a < 25: return None
+    d = 'buy' if dp > dm else 'sell'
+    if hour is not None and not (7 <= hour < (22 if d == 'buy' else 20)): return None
+    spread, spread_prev = abs(dp - dm), abs(dp2 - dm2)
+    if spread < 10 or spread <= spread_prev or (dp2 > dm2) != (dp > dm): return None
+
+    m, s, h = _get(ind, 'ml', 'macd'), _get(ind, 'ms', 'macd_sig'), _get(ind, 'mh', 'macd_hist')
+    if m is None or s is None or h is None: return None
+    if None in (m[i], s[i], h[i], m[i - 2], s[i - 2], h[i - 1], h[i - 2]): return None
+    sgn = 1 if d == 'buy' else -1
+    crossed = any((m[k - 1] - s[k - 1]) * sgn <= 0 < (m[k] - s[k]) * sgn for k in (i - 1, i))
+    about_to_flip = h[i] * sgn < 0 and abs(h[i]) < abs(h[i - 1]) < abs(h[i - 2])
+    if not (crossed or about_to_flip): return None
+
+    cci = [x if x is not None else 50.0 for x in ind['cci'][i - 2:i + 1]]
+    ok = min(cci) <= 40 if d == 'buy' else max(cci) >= 60
+    return d if ok else None
+
+
 def signal_mfkk_intraday(ind, i, h1_trend=None, hour=None, ai_score=0):
     """S05_MFKK_INTRADAY V6 ultra-select — OBV T-Channel + RSI + MACD + Mom + ADX + EMA200 + ST.
     V4 (2026-04-28): ST alignment filter.

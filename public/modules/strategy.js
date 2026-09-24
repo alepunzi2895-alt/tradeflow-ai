@@ -12,7 +12,8 @@ const SE = {
     // + re-tuning parametri (nessun cambiamento adottato, config attuale confermata già ottima su IS/OOS).
     // Sistema adattivo H1: 1332 trade · WR 40.2% · PF 1.277 · +$33.28/gg · DD $4417.5 · 18/24 mesi+
     // P&L da adaptive_rm.by_strategy (bt_{h1,m30,h4}_2026-07-17.json) · eq = curva equità mensile cumulata
-    'S00_MFKK': { label: 'MFKK Core [H1] V2', pf: 1.211, wr: '38.3%', tp: 'ATR×3.5', sl: 'ATR×1.5',
+    // S00 V3 pullback solo H1 dal 2026-09-24 (research_s00_v3_entries.py): pf/wr aggiornati, stats sotto ancora della V2
+    'S00_MFKK': { label: 'MFKK V3 Pullback [H1]', pf: 2.061, wr: '42.9%', tp: 'ATR×3.5', sl: 'ATR×1.5',
       stats: {
         pnl_1m: 1034.7, td_1m: 1.87, pnl_6m: 419.1, td_6m: 1.69,
         pnl_12m: 2588.7, td_12m: 1.62, pnl_24m: 5330.3, td_24m: 4.77,

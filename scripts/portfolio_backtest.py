@@ -53,7 +53,7 @@ DISABLED_NOW = {key for key,item in SNAPSHOT['strategies'].items() if item['stat
 # Strategia → (tf live, funzione segnale) per il pool condiviso XAU (StrategySelector,
 # soggetto a MAX_OPEN_ORDERS). TF = best_tf storico in STRATEGIES_CONFIG.
 SHARED_POOL = {
-    'S00_MFKK':              ('H1',  SIG.signal_mfkk_score),
+    'S00_MFKK':              ('H1',  SIG.signal_mfkk_v3_pull),   # V3 dal 2026-09-24
     'S09_MFKK_SCALPING':     ('M30', SIG.signal_mfkk_scalping),
     'S10_OB_FVG_SCALP':      ('M30', SIG.signal_ob_fvg_scalp),
     'S16_GOLDEN_SQUEEZE':    ('H1',  SIG.signal_golden_squeeze),

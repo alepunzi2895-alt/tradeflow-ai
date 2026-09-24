@@ -92,7 +92,7 @@ STRATEGY_ATR_PARAMS = {
 
 # Estimated trade durations by strategy+TF (minutes) for early-exit detection
 TRADE_DURATIONS = {
-    ("S00_MFKK",             "M30"): 60,
+    ("S00_MFKK",             "H1"):  180,  # V3 solo H1 dal 2026-09-24
     ("S05_MFKK_INTRADAY",    "H1"):  180,
     ("S05_MFKK_INTRADAY",    "M30"): 90,
     ("S09_MFKK_SCALPING",    "M5"):  20,

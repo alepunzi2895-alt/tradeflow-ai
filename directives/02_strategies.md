@@ -1263,3 +1263,9 @@ git push origin main
 
 Logica JS mantenuta in `public/modules/se-signals.js`, non mostrate in UI:
 S00_MFKK_HWR, S01_OBV_MACD, S02_ULTIMATE_RSI, S03_MOMENTUM, S04_ICT_ORDERFLOW, S04_BB_SQUEEZE, S05_V3_Sell_Exhaust, S01_EXHAUSTION, S06_ORDERBLOCK, S12_WPR_KELTNER, S13_STRUC_BREAK, S14_KEY_LEVELS
+
+## 2026-09-24 — S00_MFKK diventa V3 pullback, solo H1 (scelta utente)
+
+`signal_mfkk_v3_pull` in `signals.py`: ADX ≥ 25; DI dominante con spread ≥ 10 e in crescita rispetto a 2 barre prima; MACD con incrocio nelle ultime 2 barre oppure istogramma contrario in contrazione da 2 barre; stoch-CCI ≤ 40 (BUY) o ≥ 60 (SELL) in una delle ultime 3 barre; orari BUY 7-22, SELL 7-20; TP 3.5 / SL 1.5 ATR. Restituisce `None` se `tf` non è H1.
+Nel bot è secondaria H1 in ogni regime (`REGIME_MULTI_STRATEGIES`, dopo S16), quindi viene valutata a ogni barra H1 chiusa anche quando il selector sceglie S16. Rimossa da tutte le liste M30. Selector, daily_maintenance, portfolio_backtest, risk_guardian (durata H1 180 min), performance_tracker e UI allineati.
+Backtest 24m H1: 56 trade (circa 2 al mese), PF 2.06, DD 314, 4/4 fold; holdout n=11 PF 1.34. **Non supera is_promotable/DSR**: messa live su conto DEMO per decisione dell'utente, per raccogliere evidenza forward. La V2 a punteggio resta in `signal_mfkk_score` solo per la ricerca. Verificato: il `compute_indicators` del bot dà gli stessi segnali di `compute_all` (15/15 sulle ultime 3000 barre H1).

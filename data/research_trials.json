@@ -1,5 +1,5 @@
 {
-  "total": 1756,
+  "total": 1764,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -224,6 +224,14 @@
       "asset": "XAU",
       "strategy_id": "S00_MFKK",
       "note": "fallback S00 in TREND_DOWN/UP accanto a S16 H1 (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T14:04:35Z",
+      "n_trials": 8,
+      "cumulative_after": 1764,
+      "asset": "XAU",
+      "strategy_id": "S00_MFKK",
+      "note": "S00 V3 regole utente ADX25/DI widening/MACD cross-preflip/CCI 40-60 (2026-09-24)"
     }
   ]
 }

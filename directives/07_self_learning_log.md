@@ -173,3 +173,4 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Nessuna modifica alla logica di trading: il comportamento è coerente col codice. Eventuale fallback S00 in TREND_DOWN è una decisione di strategia da validare in backtest prima.
 - Nota diagnostica: `last_logs` nel payload è pieno di righe "MT5 history"/"Sync" ogni 20s; le righe utili ("Nessun segnale primario H1") ne vengono spinte fuori.
 - Seguito (stesso giorno): testato S00 come riserva di S16 in TREND_DOWN, vedi `05_backtest.md` 2026-09-24. Su 24 mesi perde (PF 0.93, DD ×4), positivo solo nel holdout 2026. Non promosso, bot invariato.
+- Seguito: S00 V3 con le regole dell'utente (ADX 25, DI che si allargano, MACD cross/pre-flip, CCI 40/60), vedi `05_backtest.md`. Nessuna variante promuovibile; PULL@H1 pulita ma circa 2 trade/mese.

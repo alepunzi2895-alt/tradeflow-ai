@@ -175,3 +175,18 @@ Dati MT5 H1 freschi (24 mesi, fino al 2026-09-24), holdout da 2026-04-02, trade 
 
 Fold B: 0.95 / 0.90 / 1.47 / 1.01. DSR sui trade aggiunti: non significativo.
 Verdetto: **non promuovibile**. Su 24 mesi i SELL di S00 in TREND_DOWN perdono (PF 0.93) e quadruplicano il drawdown; il guadagno è concentrato negli ultimi 6 mesi. Nessuna modifica al bot.
+
+## 2026-09-24 — S00 V3, ingressi a regole dell'utente (`scripts/research_s00_v3_entries.py`)
+
+Regole: ADX ≥ 25; DI dominante con spread ≥ 10 (o 15) e in crescita rispetto a 2 barre prima; MACD con incrocio nelle ultime 2 barre oppure istogramma contrario in contrazione da 2 barre; CCI (stoch-CCI) a 40/60 in due letture: PULL (pullback: BUY se ≤ 40 nelle ultime 3 barre) e MOM (momentum: BUY se ≥ 60). Orari, TP 3.5 / SL 1.5 ATR e motore invariati. 8 trial registrati (1764 cumulativi).
+
+| @H1 | Full | Holdout | TREND_DOWN |
+|---|---|---|---|
+| BASE S00 attuale | n=1315 PF 1.29 DD 1941, 4/4 fold | n=267 PF 1.52 | n=471 PF 1.07 |
+| PULL di10 | n=56 PF 2.06 DD 314, 4/4 fold | n=11 PF 1.34 | n=15 PF 1.83 |
+| PULL di15 | n=35 PF 2.66 DD 95, 3/4 | n=5 PF 1.34 | n=7 |
+| MOM di10 | n=113 PF 1.00 | n=21 PF 0.66 | n=41 PF 0.25 |
+| MOM di15 | n=78 PF 0.78 | n=14 PF 1.61 | n=33 PF 0.26 |
+
+M30: PULL in perdita (holdout PF 0.28-0.59), MOM full PF 1.6-1.8 ma holdout < 1; PBO M30 0.67.
+Verdetto: nessuna variante promuovibile (holdout sotto BASE, DSR n/d o non significativo). La lettura MOM su H1 è da scartare. PULL su H1 è la più pulita (DD ÷6) ma fa circa 2 trade al mese: campione troppo piccolo per validarla e non risolve la scarsità di trade. Il comportamento opposto tra H1 e M30 indica fragilità. `signals.py` invariato.

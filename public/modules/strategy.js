@@ -88,6 +88,19 @@ const SE = {
         best_regime: 'Trend pulito (EMA200 slope) · H1 only · break trendline LuxAlgo → retest zona di confluenza (≥2 livelli: Fib pivot / PDH-PDL-PWH-PWL / H-L sessioni / prev-4H / EMA200) → rifiuto · holdout PF 1.86 · walk-forward 3/4 fold+ · PBO 0.33 (non overfit) · buy+sell entrambi positivi · ~2.4 trade/mese',
         eq: [8.7,18.2,30.3,36.7,56.7,63.0,16.6,-21.7,-41.2,-28.6,-20.4,51.8,186.8,194.5,219.9,338.2,386.0,441.3,412.3,310.8,526.9,515.7]
       } },
+    // ── Scalp M5 · rottura range asiatico · blocco isolato dal 2026-09-24 (demo, lotto fisso 0.03) ──
+    // Ricerca: scripts/research_session_scalps.py (ASIA_BREAK_ALL + parziale 1R/BE) · M5 17 mesi @0.01 · cost model ON
+    'S35_ASIA_BREAK': { label: 'Asia Break [M5]', pf: 1.61, wr: '55.5%', tp: '1R parz. + 2R', sl: 'metà range asiatico',
+      rosterLive: null,   // riempito da strat_live_get {key:'S35'}
+      rosterNote: 'M5 · lotto fisso 0.03 · isolata (fuori da Strategy Selector / RiskGuardian / MAX_OPEN_ORDERS) · pausa news rispettata',
+      rosterEmptyNote: 'nessun trade S35 ancora — apre solo tra le 10 e le 14 (ora broker) sulla rottura del range asiatico, ~11/mese',
+      stats: {
+        pnl_1m: 103.6, td_1m: 0.73, pnl_6m: 617.3, td_6m: 0.56,
+        pnl_12m: 1162.7, td_12m: 0.53, pnl_24m: 1192.2, td_24m: 0.54,
+        maxdd: 259.3, maxdd_pct: '21.8%', trades_12m: 139,
+        best_regime: 'Range asiatico 02-10 broker → chiusura M5 oltre il range tra 10 e 14 (apertura Londra) · SL a metà range · metà a 1R + stop a pareggio · runner a 2R · time-stop 24h · 1 trade per lato al giorno · 17 mesi: fold 1.19/1.31/1.73/1.86, holdout PF 1.68 · DSR non significativo → test demo',
+        eq: [-29.9,19.9,67.9,27.2,51.1,5.3,77.0,45.5,-69.6,313.2,407.8,574.9,611.0,830.7,976.4,1030.8,1111.9,1192.2]
+      } },
     // ── US30 · mean-reversion azionaria (Connors RSI(2)) · blocco isolato su 2° simbolo dal 2026-09-03 ──
     // P&L in $ al lotto live 0.10 (US30Cash: 1 pt indice ≈ $0.10 @ 0.10 lot). Ricerca: scripts/us30_harness.py
     'S30_DOW_DIP': { label: 'Dow Dip [H4] · US30', pf: 1.63, wr: '76.2%', tp: 'ATR×1.2', sl: 'ATR×2.6',
@@ -350,7 +363,7 @@ async function seRefresh() {
     }
   }
 
-  // Riepilogo live per-strategia (blocchi con lifecycle propria): S20 / S30 / S31 · ogni 60s
+  // Riepilogo live per-strategia (blocchi con lifecycle propria): S20 / S30 / S31 / S35 · ogni 60s
   if (nowTs - (window._stratLiveFetch||0) > 60000) {
     window._stratLiveFetch = nowTs;
     const pull = (key, id) => authFetch('/api/db', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -359,6 +372,7 @@ async function seRefresh() {
       .then(j=>{ if (j && j.ok && SE.strategies[id]) SE.strategies[id].rosterLive = j.data || SE.strategies[id].rosterLive || null; })
       .catch(()=>{});
     pull('S31', 'S31_LAYOUT_SMART');
+    pull('S35', 'S35_ASIA_BREAK');
     pull('S30', 'S30_DOW_DIP');
     pull('S20', 'S20_FIB_CONFLUENCE');
     // fallback S20: il vecchio path s20_paper_get finché il bot non pusha anche su strat_live

@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-18.1",
+  "version": "2026-09-24.1",
   "strategies": {
     "S00_MFKK": {"symbol":"XAUUSD","tf":"H1","status":"eligible"},
     "S05_MFKK_INTRADAY": {"symbol":"XAUUSD","tf":"M30","status":"retired","reason":"Ritirata dal roster live"},
@@ -11,6 +11,7 @@
     "S20_FIB_CONFLUENCE": {"symbol":"XAUUSD","tf":"M5","status":"disabled","reason":"Holdout PF inferiore alla soglia di promozione (1.2), S20_ENABLED=False in mt5-bot.py. Riverificato 2026-09-23 (portfolio_backtest.py, dati MT5 freschi): full PF 1.718 (n=106, WR 57.5%, 10/18 mesi profittevoli), holdout PF 0.870 (n=16, WR 50%, 2/4 mesi) — sotto soglia, resta disabilitata."},
     "S30_DOW_DIP": {"symbol":"US30","tf":"H4","status":"eligible"},
     "S31_LAYOUT_SMART": {"symbol":"XAUUSD","tf":"H1","status":"eligible"},
+    "S35_ASIA_BREAK": {"symbol":"XAUUSD","tf":"M5","status":"eligible"},
     "S32_ORDERFLOW_SCALP": {"symbol":"XAUUSD","tf":"M15","status":"research"},
     "S33_TREND_MOMENTUM": {"symbol":"XAUUSD","tf":"M30","status":"research"},
     "S34_VOLUME_AUCTION": {"symbol":"XAUUSD","tf":"H1","status":"research"}

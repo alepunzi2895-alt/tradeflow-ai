@@ -1990,3 +1990,46 @@ def s34_status(ind, i, state, in_position=False, P=None):
         out['phase'] = 'at_edge'; out['score'] = 45
         out['note'] = f'{out["zone"]} · manca ' + (' '.join(x for x, ok in (('CVD-div', div), ('rvol', vol_ok)) if not ok))
     return out
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# S35_ASIA_BREAK — rottura del range asiatico, M5 (2026-09-24)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ricerca: scripts/research_session_scalps.py (variante ASIA_BREAK_ALL + gestione parziale).
+# Orari in ora BROKER (il 't' delle candele MT5 è ora broker etichettata come UTC, stessa
+# convenzione di tutto il progetto): range asiatico 02:00-10:00, ingresso 10:00-14:00.
+# M5 17 mesi, cost model: n=200, WR 55.5%, PF 1.61, fold 1.19/1.31/1.73/1.86, holdout PF 1.68.
+ASIA_RANGE_MIN = (120, 600)    # 02:00-10:00 broker
+ASIA_ENTRY_MIN = (600, 840)    # 10:00-14:00 broker
+
+
+def asia_break_scan(candles, i):
+    """Setup S35 sulla candela CHIUSA i. Ritorna {'dir','sl','hi','lo','day'} o None.
+    BUY se chiude sopra il massimo asiatico del giorno, SELL se chiude sotto il minimo.
+    SL = metà del range asiatico (strutturale). TP 2R e parziale 1R gestiti da chi esegue.
+    Il limite "un trade per lato al giorno" è di chi esegue (serve stato)."""
+    import datetime as _dt
+    t = _dt.datetime.fromtimestamp(candles[i]['t'], _dt.timezone.utc)
+    m = t.hour * 60 + t.minute
+    if not (ASIA_ENTRY_MIN[0] <= m < ASIA_ENTRY_MIN[1]):
+        return None
+    day = t.date()
+    hi = lo = None
+    k = i - 1
+    while k >= 0:
+        tk = _dt.datetime.fromtimestamp(candles[k]['t'], _dt.timezone.utc)
+        if tk.date() != day:
+            break
+        mk = tk.hour * 60 + tk.minute
+        if ASIA_RANGE_MIN[0] <= mk < ASIA_RANGE_MIN[1]:
+            hi = candles[k]['h'] if hi is None else max(hi, candles[k]['h'])
+            lo = candles[k]['l'] if lo is None else min(lo, candles[k]['l'])
+        k -= 1
+    if hi is None:
+        return None
+    c = candles[i]['c']; mid = (hi + lo) / 2
+    if c > hi:
+        return {'dir': 'buy', 'sl': mid, 'hi': hi, 'lo': lo, 'day': day.isoformat()}
+    if c < lo:
+        return {'dir': 'sell', 'sl': mid, 'hi': hi, 'lo': lo, 'day': day.isoformat()}
+    return None

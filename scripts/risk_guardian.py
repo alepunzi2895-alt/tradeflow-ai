@@ -520,9 +520,9 @@ class RiskGuardian:
         for pos in positions:
             if pos.magic != magic:
                 continue
-            # S20_FIB_CONFLUENCE e S31_LAYOUT_SMART sono gestite interamente dai propri blocchi
-            # in mt5-bot.py (SL strutturale + parziale + BE + trailing). RiskGuardian non le tocca.
-            if pos.comment and ('S20' in pos.comment or 'S31' in pos.comment):
+            # S20_FIB_CONFLUENCE, S31_LAYOUT_SMART e S35_ASIA_BREAK sono gestite interamente dai
+            # propri blocchi in mt5-bot.py (SL strutturale + parziale + BE). RiskGuardian non le tocca.
+            if pos.comment and ('S20' in pos.comment or 'S31' in pos.comment or 'S35' in pos.comment):
                 continue
             open_tickets.add(pos.ticket)
 

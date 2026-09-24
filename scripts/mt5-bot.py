@@ -29,7 +29,7 @@ from signals import (
     signal_mfkk_score, signal_mfkk_v3_pull, signal_mfkk_intraday, signal_golden_squeeze,
     signal_mfkk_scalping, signal_ob_fvg_scalp, signal_convergence_scalp,
     signal_range_reversal,
-    signal_fib_confluence, fib_confluence_trade_levels,
+    signal_fib_confluence, fib_confluence_trade_levels, asia_break_scan,
     signal_dow_dip, DOW_DIP_TP_ATR, DOW_DIP_SL_ATR, DOW_DIP_MAX_BARS,
     ls_scan, ls_manage_step, ls_status, LS_PARAMS,
     s32_status, s33_status, s34_status,
@@ -162,6 +162,25 @@ S20_STATE_FILE  = os.path.join(os.path.dirname(__file__), '..', 'data', 's20_liv
 _s20_state: dict = {}       # {ticket(str): {dir, entry, risk, tp1, tp2, be_done}}
 _s20_last_bar = None
 _s20_last_entry_ts = 0.0
+
+# ── S35_ASIA_BREAK — rottura range asiatico, M5, blocco ISOLATO (2026-09-24) ──
+# Ricerca: scripts/research_session_scalps.py (ASIA_BREAK_ALL, gestione parziale) —
+# M5 17 mesi: WR 55.5%, PF 1.61, 4/4 fold, holdout PF 1.68; combo con il roster
+# (research_combo.py): ~1.2 trade/giorno XAU, PF 1.83, DD più basso del roster da solo.
+# NON supera il gate DSR → test su conto DEMO per scelta utente, lotto fisso.
+# Isolata come nel backtest: fuori da StrategySelector/RiskGuardian/compounding, non conta
+# in MAX_OPEN_ORDERS, non tocca i cooldown condivisi né DailyState. Rispetta la pausa news.
+# Gestione: SL a metà range asiatico, TP 2R; a 1R chiude S35_PARTIAL_LOT e porta lo SL a
+# pareggio; time-stop 24h (= lookahead 288 barre M5 del backtest). 1 trade per lato al giorno.
+S35_ENABLED      = strategy_enabled('S35_ASIA_BREAK')
+S35_TAG          = 'S35_ASIA_BREAK'
+S35_LOT          = 0.03       # lotto fisso (scelta utente 2026-09-24)
+S35_PARTIAL_LOT  = 0.02       # chiuso a 1R (backtest: metà; con 0.03 il minimo è 2/3 o 1/3)
+S35_MAX_HOURS    = 24
+S35_STATE_FILE   = os.path.join(os.path.dirname(__file__), '..', 'data', 's35_live_state.json')
+_s35_state: dict = {}         # {ticket: {dir, entry, risk, tp1, be_done, open_ts}}
+_s35_used: dict = {}          # {'YYYY-MM-DD': ['buy', ...]}  — 1 trade per lato al giorno
+_s35_last_bar = None
 
 # ── S30_DOW_DIP — US30 mean-reversion, blocco ISOLATO su 2° simbolo (2026-09-03) ──
 # Connors RSI(2) long-only su H4 (ricerca: scripts/us30_harness.py — full PF 1.63 /
@@ -1292,6 +1311,172 @@ def s20_check_entry(news_paused, auto_ok, weekly_dd_pct=0.0, news_risk_mult=1.0,
     _s20_last_entry_ts = time.time()
     _s20_save_state()
 
+# ── S35_ASIA_BREAK — M5, blocco isolato (entry + parziale 1R/BE + time-stop) ──
+def _s35_load_state():
+    global _s35_state, _s35_used
+    try:
+        if os.path.exists(S35_STATE_FILE):
+            with open(S35_STATE_FILE, encoding='utf-8') as f:
+                d = json.load(f)
+            _s35_state = {int(k): v for k, v in d.get('positions', {}).items()}
+            _s35_used = d.get('used', {})
+    except Exception as e:
+        log.warning(f"[S35] load state: {e}")
+
+def _s35_save_state():
+    try:
+        today = datetime.date.today()
+        keep = {k: v for k, v in _s35_used.items() if (today - datetime.date.fromisoformat(k)).days <= 3}
+        with open(S35_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump({'positions': {str(k): v for k, v in _s35_state.items()}, 'used': keep}, f, indent=2)
+    except Exception as e:
+        log.warning(f"[S35] save state: {e}")
+
+def s35_rebuild_from_open():
+    """Al riavvio: riadotta posizioni S35 aperte non tracciate (parziale già fatto se volume < lotto)."""
+    if not S35_ENABLED:
+        return
+    for p in (mt5.positions_get(symbol=SYMBOL) or []):
+        if p.magic != MAGIC or not (p.comment and 'S35' in p.comment) or p.ticket in _s35_state:
+            continue
+        d = 'buy' if p.type == 0 else 'sell'
+        risk = abs(p.price_open - p.sl) if p.sl else None
+        done = p.volume < S35_LOT or (p.sl and abs(p.sl - p.price_open) < 0.01)
+        _s35_state[p.ticket] = {'dir': d, 'entry': p.price_open, 'risk': risk,
+                                'tp1': (p.price_open + risk if d == 'buy' else p.price_open - risk) if risk else None,
+                                # p.time è ora broker, non epoch vero: il time-stop riparte dal riavvio
+                                'be_done': bool(done), 'open_ts': time.time()}
+        log.info(f"[S35] posizione riadottata al riavvio: #{p.ticket} {d} @ {p.price_open}")
+    if _s35_state:
+        _s35_save_state()
+
+def _s35_close(p, vol, comment):
+    tick = mt5.symbol_info_tick(SYMBOL)
+    if tick is None:
+        return None
+    return mt5.order_send({"action": mt5.TRADE_ACTION_DEAL, "symbol": SYMBOL, "volume": vol,
+                           "type": mt5.ORDER_TYPE_SELL if p.type == 0 else mt5.ORDER_TYPE_BUY,
+                           "position": p.ticket, "price": tick.bid if p.type == 0 else tick.ask,
+                           "deviation": 20, "magic": MAGIC, "comment": comment,
+                           "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC})
+
+def s35_manage():
+    """Posizioni S35 aperte: a 1R chiude S35_PARTIAL_LOT + SL a pareggio; dopo 24h chiude tutto."""
+    if not S35_ENABLED or not _s35_state:
+        return
+    open_pos = {p.ticket: p for p in (mt5.positions_get(symbol=SYMBOL) or []) if p.magic == MAGIC}
+    tick = mt5.symbol_info_tick(SYMBOL)
+    for ticket in list(_s35_state.keys()):
+        st = _s35_state[ticket]
+        p = open_pos.get(ticket)
+        if p is None:                                   # chiusa da MT5 (TP / SL / BE)
+            _s35_state.pop(ticket, None); _s35_save_state()
+            log.info(f"[S35] posizione #{ticket} chiusa")
+            continue
+        if st.get('open_ts') and time.time() - st['open_ts'] > S35_MAX_HOURS * 3600:
+            if DRY_RUN:
+                log.info(f"[S35][DRY] time-stop 24h #{ticket}")
+                _s35_state.pop(ticket, None); _s35_save_state(); continue
+            r = _s35_close(p, p.volume, "TF-AI S35 timestop")
+            if r and r.retcode == mt5.TRADE_RETCODE_DONE:
+                log.info(f"[S35] time-stop 24h: chiusa #{ticket}")
+                _s35_state.pop(ticket, None); _s35_save_state()
+            continue
+        if st.get('be_done') or not st.get('risk') or st.get('tp1') is None or tick is None:
+            continue
+        px = tick.bid if st['dir'] == 'buy' else tick.ask
+        if not ((st['dir'] == 'buy' and px >= st['tp1']) or (st['dir'] == 'sell' and px <= st['tp1'])):
+            continue
+        vol = round(min(S35_PARTIAL_LOT, max(p.volume - 0.01, 0.0)), 2)
+        if DRY_RUN or vol < 0.01:
+            log.info(f"[S35]{'[DRY]' if DRY_RUN else ''} 1R raggiunto #{ticket} (parziale {vol})")
+            st['be_done'] = True; _s35_save_state(); continue
+        r1 = _s35_close(p, vol, "TF-AI S35 partial")
+        if not r1 or r1.retcode != mt5.TRADE_RETCODE_DONE:
+            log.warning(f"[S35] parziale fallito #{ticket}: {r1.comment if r1 else 'err'}")
+            continue
+        mt5.order_send({"action": mt5.TRADE_ACTION_SLTP, "symbol": SYMBOL, "position": ticket,
+                        "sl": round(st['entry'], 2), "tp": p.tp})
+        st['be_done'] = True
+        _s35_save_state()
+        log.info(f"[S35] ✓ parziale {vol} lot a 1R + SL a pareggio  #{ticket}")
+
+def s35_check_entry(news_paused, auto_ok):
+    """Ogni barra M5 chiusa: setup asia_break_scan (signals.py) → ordine a lotto fisso.
+    Isolata come nel backtest: niente RiskGuardian, MAX_OPEN_ORDERS o cooldown condivisi."""
+    global _s35_last_bar
+    if not S35_ENABLED or not auto_ok:
+        return
+    candles_m5 = get_candles_tf('M5', 200)
+    if not candles_m5 or len(candles_m5) < 150:
+        return
+    bar_t = candles_m5[-2]['t']
+    if bar_t == _s35_last_bar:
+        return
+    _s35_last_bar = bar_t
+    if _s35_state or news_paused:                        # 1 posizione S35 alla volta / pausa news
+        return
+    setup = asia_break_scan(candles_m5, len(candles_m5) - 2)
+    if not setup or setup['dir'] in _s35_used.get(setup['day'], []):
+        return
+    direction = setup['dir']
+    tick = mt5.symbol_info_tick(SYMBOL)
+    if tick is None:
+        return
+    entry = tick.ask if direction == 'buy' else tick.bid
+    risk = (entry - setup['sl']) if direction == 'buy' else (setup['sl'] - entry)
+    if risk <= 0:
+        log.info(f"[S35] setup {direction} scartato: prezzo già oltre la metà del range")
+        return
+    log.info(f"★ SEGNALE S35 (M5): {direction.upper()} | rottura range asiatico "
+             f"{setup['lo']:.2f}-{setup['hi']:.2f} | 1R=${risk:.2f} TP=${2*risk:.2f} | lot={S35_LOT}")
+    result = place_order(direction, round(2 * risk, 2), round(risk, 2), S35_TAG, lot_size=S35_LOT)
+    if not result:
+        return
+    ticket = getattr(result, 'order', 0)
+    _s35_used.setdefault(setup['day'], []).append(direction)
+    _s35_state[ticket] = {'dir': direction, 'entry': round(entry, 2), 'risk': round(risk, 2),
+                          'tp1': round(entry + risk if direction == 'buy' else entry - risk, 2),
+                          'be_done': False, 'open_ts': time.time()}
+    _s35_save_state()
+
+def s35_push_stats(trades):
+    """Aggrega i trade S35 reali e li POSTa per la card nel tab Strategie (key 'S35')."""
+    if not SYNC_ENABLED or not VERCEL_URL:
+        return
+    rows = [t for t in (trades or []) if str(t.get('strategy', '')).startswith('S35')]
+    def agg(rr):
+        if not rr:
+            return None
+        n = len(rr); wins = [r for r in rr if r['profit'] > 0]
+        gw = sum(r['profit'] for r in wins)
+        gl = abs(sum(r['profit'] for r in rr if r['profit'] <= 0)) or 1e-9
+        return {'n': n, 'wr': round(100 * len(wins) / n, 1), 'pf': round(gw / gl, 3),
+                'pnl': round(sum(r['profit'] for r in rr), 2)}
+    cum = 0.0; eq = []
+    for r in sorted(rows, key=lambda x: x['time']):
+        cum += r['profit']; eq.append({'t': r['time'][:10], 'cum': round(cum, 2)})
+    summary = {
+        'mode': 'live', 'lot': f'fisso {S35_LOT}',
+        'config': 'M5 · range asiatico 02-10 broker · ingresso 10-14 · SL metà range · 1R parziale + pareggio · TP 2R · isolata',
+        'n_total': len(rows), 'n_open': len(_s35_state),
+        'overall': agg(rows),
+        'buy':  agg([r for r in rows if r['direction'] == 'buy']),
+        'sell': agg([r for r in rows if r['direction'] == 'sell']),
+        'equity': eq[-60:],
+        'recent': [{'bar_utc': r['time'], 'dir': r['direction'],
+                    'resolution': r.get('close_reason', ''), 'pnl': r['profit']}
+                   for r in sorted(rows, key=lambda x: x['time'])[-8:]],
+    }
+    try:
+        req = urllib.request.Request(
+            f"{VERCEL_URL}/api/db",
+            data=json.dumps({'action': 'strat_live_push', 'secret': MT5_SECRET, 'key': 'S35', 'summary': summary}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=8, context=_SSL_CTX).read()
+    except Exception as e:
+        log.debug(f"[S35] push stats: {e}")
+
 # ── S31_LAYOUT_SMART — H1, break→retest→confluenza (2026-09-10) ──────────────
 def _ls_load_state():
     global _ls_state
@@ -2165,6 +2350,13 @@ def run():
         log.info(f"S20_FIB_CONFLUENCE attiva — M5 · sizing RiskGuardian ×{S20_LOT_MULT} · "
                  f"cooldown SL condivisi · {len(_s20_state)} posizioni in gestione")
 
+    # S35_ASIA_BREAK (blocco isolato M5): ripristina stato + riadotta posizioni aperte
+    if S35_ENABLED:
+        _s35_load_state()
+        s35_rebuild_from_open()
+        log.info(f"S35_ASIA_BREAK attiva — M5 rottura range asiatico · lotto fisso {S35_LOT} · "
+                 f"isolata (no RiskGuardian/MAX_OPEN_ORDERS) · {len(_s35_state)} posizioni in gestione")
+
     # S31_LAYOUT_SMART (strategia reale nel roster): ripristina stato + riadotta posizioni aperte
     if LS_ENABLED:
         _ls_load_state()
@@ -2425,6 +2617,8 @@ def run():
                     s20_push_stats(trades_data)
                 if LS_ENABLED:
                     ls_push_stats(trades_data)
+                if S35_ENABLED:
+                    s35_push_stats(trades_data)
                 if US30_ENABLED:
                     us30_push_stats(trades_data)
                 if LAYOUT_SCORE_ENABLED:
@@ -3461,6 +3655,14 @@ def run():
                                      pnl_today=pnl_today_real)
                 except Exception as _s20_err:
                     log.warning(f"[S20] errore ciclo: {_s20_err}")
+
+            # ── S35_ASIA_BREAK — segnale M5 proprio, blocco isolato ──
+            if S35_ENABLED:
+                try:
+                    s35_manage()
+                    s35_check_entry(current_news_risk.get('paused', False), auto_trade_enabled)
+                except Exception as _s35_err:
+                    log.warning(f"[S35] errore ciclo: {_s35_err}")
 
             # ── S31_LAYOUT_SMART — segnale H1 proprio (break→retest→confluenza) ──
             if LS_ENABLED:

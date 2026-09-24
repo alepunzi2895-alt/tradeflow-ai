@@ -246,6 +246,8 @@ class RiskManager:
         for pos in positions:
             if pos.magic != magic:
                 continue
+            if pos.comment and 'S35' in pos.comment:   # gestita dal blocco S35 in mt5-bot.py
+                continue
 
             ticket  = pos.ticket
             entry   = pos.price_open

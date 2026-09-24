@@ -125,6 +125,16 @@ Prima strategia su un asset diverso da XAU. Mean-reversion azionaria (Connors RS
 
 **Per disattivare**: `US30_ENABLED = False` in `mt5-bot.py`. Le posizioni aperte restano gestite da MT5 (SL/TP). **Serve `US30Cash` visibile in Market Watch** sul terminal della VPS (il bot lo attiva via `symbol_select`, ma il terminal deve avere accesso al simbolo).
 
+## S35_ASIA_BREAK — scalp M5 rottura range asiatico, blocco isolato (2026-09-24 →)
+
+- **Regole** (`signals.asia_break_scan`, orari broker): range asiatico 02:00-10:00; tra 10:00 e 14:00 una candela M5 chiusa oltre il massimo (BUY) o il minimo (SELL). SL a metà range, TP 2R. Un trade per lato al giorno, una posizione S35 alla volta.
+- **Gestione** (`s35_manage`): a 1R chiude `S35_PARTIAL_LOT` 0.02 su 0.03 e porta lo SL a pareggio; time-stop 24h. Il backtest chiudeva metà: con 0.03 lot il minimo possibile è 2/3.
+- **Isolata**, come nel backtest: lotto fisso `S35_LOT` 0.03, fuori da StrategySelector/RiskGuardian/compounding, non conta in `MAX_OPEN_ORDERS`, niente cooldown condivisi né `DailyState`. Rispetta la pausa news. Esclusa dalla gestione generica di `risk_guardian.manage_positions` e `risk_manager.manage_positions` (commento contiene "S35").
+- **Stato**: `data/s35_live_state.json` (gitignored), posizioni riadottate al riavvio (il time-stop riparte dal riavvio: `p.time` MT5 è ora broker).
+- **Card**: `strat_live_push` key `S35`, scheda "Asia Break [M5]" nel tab Strategie.
+- **Verifiche**: `asia_break_scan` = setup della ricerca su 3934/3934 barre; replay del blocco del bot su 20000 barre M5 = 41/41 ingressi identici al backtest.
+- **Disattivare**: `"status"` di `S35_ASIA_BREAK` in `data/strategy_registry.json` diverso da `eligible`, oppure voce in `data/hard_blocks.json`.
+
 ## S20_FIB_CONFLUENCE — integrata nel flusso normale (2026-09-01 →)
 
 S20 (config di principio, OOS PF 1.72) girava dal 2026-08-28 **live sul bot ma isolata** a

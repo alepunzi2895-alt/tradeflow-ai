@@ -486,7 +486,7 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
   // regime/PLAYBOOK_UI — senza questo il pannello più visibile del tab (e il badge ATTIVA
   // sulle loro card più sotto) non le mostra mai come vive (audit 2026-09-18). S30 tradea
   // US30, un asset diverso da questo pannello XAU-specifico, e resta volutamente fuori.
-  ['S20_FIB_CONFLUENCE','S31_LAYOUT_SMART'].forEach(id=>{
+  ['S20_FIB_CONFLUENCE','S31_LAYOUT_SMART','S35_ASIA_BREAK'].forEach(id=>{
     if(SE.strategies[id] && !BLOCKED_STRATEGIES.includes(id) && !activeList.includes(id)) activeList.push(id);
   });
   const DD_BUDGET = 30.0;   // soglia DD sistema — solo per gauge visuale
@@ -629,6 +629,8 @@ function seRender(mt5Data,pending,snap,isExtreme,inSession,hour){
         ? 'US30 · mean-reversion Connors RSI(2)<15 + 2 chiusure H4 in calo, LONG-ONLY dentro un uptrend (close>EMA50 & EMA233, EMA50 in salita, entro 8% dal max50) · TP 1.2×ATR / SL 2.6×ATR, no trailing, time-stop 18 barre · blocco isolato su US30Cash'
         : id==='S31_LAYOUT_SMART'
         ? 'Layout TradingView (Trendlines with Breaks LuxAlgo + Pivot Fibonacci + Key Levels SpacemanBTC + EMA200) · SOLO in trend pulito (EMA200 in pendenza) · break trendline → attesa RETEST su una ZONA DI CONFLUENZA (≥2 livelli tra Fib pivot / PDH-PDL-PWH-PWL / H-L sessioni / prev-4H / EMA200) → candela di rifiuto · SL strutturale oltre la zona · TP1 1.5R parziale + BE, trailing dietro la trendline, runner a TP2 · H1 only, sessione 7-21 UTC'
+        : id==='S35_ASIA_BREAK'
+        ? 'Scalp M5 · range asiatico 02-10 (ora broker) → chiusura oltre il massimo/minimo tra le 10 e le 14 (apertura Londra) · SL a metà range · 2/3 chiusi a 1R + stop a pareggio, runner a 2R · time-stop 24h · 1 trade per lato al giorno · blocco isolato, lotto fisso 0.03 (demo)'
         : id==='S05_V3_Sell_Exhaust'
         ? 'OBV T-Channel bear + RSI>60 + ADX≥25 + MOM<0 · Sell exhaustion TREND_UP H1'
         : id==='S01_EXHAUSTION'

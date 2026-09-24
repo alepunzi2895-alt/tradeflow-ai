@@ -1,5 +1,5 @@
 {
-  "total": 1782,
+  "total": 1788,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -264,6 +264,22 @@
       "asset": "XAU",
       "strategy_id": "SCALPER_CLOUD",
       "note": "round3 filtro direzione D1 (idea utente) (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T14:44:53Z",
+      "n_trials": 4,
+      "cumulative_after": 1786,
+      "asset": "XAU",
+      "strategy_id": "SESSION_SCALPS",
+      "note": "scalp struttura sessioni M5: ASIA_SWEEP/ASIA_BREAK/PDH_SWEEP/NY_ORB (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T14:45:26Z",
+      "n_trials": 2,
+      "cumulative_after": 1788,
+      "asset": "XAU",
+      "strategy_id": "ASIA_BREAK",
+      "note": "robustezza: stesso setup su M15 (24m) + variante senza filtro D1 (2026-09-24)"
     }
   ]
 }

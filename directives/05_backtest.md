@@ -222,3 +222,22 @@ Verdetto: **nessun edge**. Il reversal Bollinger è la parte in perdita; il pull
 Il filtro D1 alza di poco il trend-only, ma la migliore sul TRAIN crolla sull'holdout (PF 1.15 → 0.86), PBO 0.80, DSR non significativo. La versione EMA20 è stabile ma in pareggio (~1.05, circa +$0.5 a trade dopo i costi). Non salva i reversal. Nessun edge, nulla integrato.
 
 **Stagionalità oraria XAU M15 (esplorativa, 2026-09-24)**: rendimento medio per ora broker (UTC+3), primo anno contro secondo anno. **Nessuna ora ha una direzione stabile e significativa in entrambi gli anni** (|t| > 2 in entrambi: zero). Le ore asiatiche 00-03 broker sono positive in tutti e due gli anni ma deboli, coerenti col trend rialzista di fondo dell'oro, non con un effetto orario sfruttabile.
+
+## 2026-09-24 — Scalp di struttura delle sessioni M5 (`scripts/research_session_scalps.py`)
+
+4 ipotesi fissate a priori con stop strutturale (orari broker UTC+3/+2, allineati a Londra):
+
+| Ipotesi | TRAIN | HOLDOUT |
+|---|---|---|
+| ASIA_SWEEP (falsa rottura del range asiatico, fade) | PF 0.66 | PF 0.30 |
+| **ASIA_BREAK** (chiusura oltre il range asiatico 02-10, tra 10 e 14, nella direzione D1; SL a metà range, TP 2R) | **PF 1.80** n=76 | **PF 2.13** n=18 |
+| PDH_SWEEP (falsa rottura del massimo/minimo di ieri) | PF 1.04 | PF 0.40 |
+| NY_ORB (range 16:30-17:00) | PF 1.01 | PF 0.84 |
+
+Robustezza di ASIA_BREAK, nessun parametro cambiato (`--robust`):
+- M15 su 24 mesi: n=133, PF 1.81, 15/24 mesi positivi. Periodo mai visto su M5 (set 2024 - apr 2025): n=43, PF 0.99 (pari).
+- SELL PF 3.1-3.3 contro BUY PF 1.1-1.2: il vantaggio non è il trend rialzista dell'oro.
+- Costi ×2: PF 1.74-1.80 (stop larghi, circa $24, quindi i costi pesano poco).
+- Senza filtro D1: circa il doppio dei trade, PF 1.50 (M5) / 1.66 (M15).
+- Contro: fold M5 instabili (0.81 / 0.58 / 1.44 / 11.6), DSR non significativo (1788 trial cumulativi), circa 5 trade al mese.
+Verdetto: miglior candidato scalp mai trovato nel progetto; non promuovibile per il gate DSR, candidabile a test demo isolato.

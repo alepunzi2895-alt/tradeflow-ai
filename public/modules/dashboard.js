@@ -257,8 +257,11 @@ async function loadSentimentOnly(){
   const asset=window.activeAsset||'XAU';
   const symbol=asset==='US30'?'US30':asset+'USD';
   try {
-    const session=mfxSession?.session||'';
-    const sd=await fetchJSON('/api/market?type=sentiment&symbol='+encodeURIComponent(symbol)+'&session='+encodeURIComponent(session),9000);
+    const fetchSent=()=>fetchJSON('/api/market?type=sentiment&symbol='+encodeURIComponent(symbol)+'&session='+encodeURIComponent(mfxSession?.session||''),9000);
+    let sd=await fetchSent();
+    // La sessione MyFxBook scade lato loro: prima il pannello restava su "—" per sempre.
+    // Relogin silenzioso (riesce solo se la password è ancora in memoria da questo caricamento pagina).
+    if(sd?.expired && typeof mfxRelogin==='function' && await mfxRelogin()) sd=await fetchSent();
     if(asset!==(window.activeAsset||'XAU'))return;
     const sym=sd?.outlook?.symbols?.find(s=>s.name===symbol);
     const lp=Number(sym?.longPercentage),sp=Number(sym?.shortPercentage);
@@ -1090,7 +1093,7 @@ function updateSentiment(s, source){
   }
   // Show data source
   if(srcEl){
-    if(source==='myfxbook_auth'||source==='myfxbook') srcEl.textContent='MyFxBook ✓';
+    if(source==='myfxbook_auth'||source==='myfxbook') srcEl.textContent='MyFxBook ✓ · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     else if(s.synthetic) srcEl.textContent='⚡ Stimato';
     else srcEl.textContent='';
     srcEl.style.color=source?.includes('myfxbook')?'var(--green)':'var(--yellow)';

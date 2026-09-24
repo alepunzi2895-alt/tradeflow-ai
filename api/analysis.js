@@ -79,18 +79,30 @@ export default async function handler(req, res) {
       const symbol = (req.query.symbol || "XAUUSD").toUpperCase();
       let sentimentData = null;
       let source = 'myfxbook';
-      try {
-        const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${encodeURIComponent(mfxSession)}&symbols=${encodeURIComponent(symbol)}`;
-        const r = await fetchT(mfxUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, 3500);
-        if (r.ok) {
-          const d = await r.json();
-          const sym = d.symbols?.find(s => s.name === symbol || (symbol === "XAUUSD" && s.name === "GOLD"));
-          if (sym) sentimentData = buildSentiment(parseFloat(sym.longPercentage), parseFloat(sym.shortPercentage));
-        }
-      } catch(e) {}
+      let mfxError = null;
+      if (mfxSession) {
+        try {
+          const mfxUrl = `https://www.myfxbook.com/api/get-community-outlook.json?session=${encodeURIComponent(mfxSession)}&symbols=${encodeURIComponent(symbol)}`;
+          // Era 3500ms: community-outlook restituisce TUTTI i simboli ed è spesso più lento → timeout
+          // silenziosi ad ogni refresh e pannello bloccato su "—". 7000ms resta sotto il limite Vercel 10s.
+          const r = await fetchT(mfxUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, 7000);
+          if (r.ok) {
+            const d = await r.json();
+            // MyFxBook risponde 200 anche con sessione invalida: {error:true, message:"Invalid session"}
+            if (d.error === true || d.error === 'true') mfxError = d.message || 'errore MyFxBook';
+            const sym = d.symbols?.find(s => s.name === symbol || (symbol === "XAUUSD" && s.name === "GOLD"));
+            if (sym) sentimentData = buildSentiment(parseFloat(sym.longPercentage), parseFloat(sym.shortPercentage));
+          } else mfxError = `HTTP ${r.status}`;
+        } catch(e) { mfxError = e.name === 'AbortError' ? 'timeout MyFxBook' : e.message; }
+      }
 
       if (!sentimentData || !Number.isFinite(sentimentData.longPct) || !Number.isFinite(sentimentData.shortPct)) {
-        return res.status(200).json({ok:false, error: mfxSession ? 'Sentiment non disponibile per questo simbolo o sessione scaduta' : 'Collega MyFxBook per il sentiment retail', source:'myfxbook'});
+        const expired = !!mfxError && /session/i.test(mfxError);
+        const error = !mfxSession ? 'Collega MyFxBook per il sentiment retail'
+          : expired ? 'Sessione MyFxBook scaduta — riconnetti dal tab MyFxBook'
+          : mfxError ? `MyFxBook non disponibile (${mfxError})`
+          : `Nessun dato MyFxBook per ${symbol}`;
+        return res.status(200).json({ok:false, error, expired, source:'myfxbook'});
       }
       // Shape allineata a quella già usata da api/myfxbook.js (action:'outlook') e attesa dal client
       // (dashboard.js::loadSlowData legge sd.outlook.symbols) — prima la chiave era 'xauusd' e il

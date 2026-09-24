@@ -164,3 +164,11 @@ Tema nero/oro e JetBrains Mono estesi al corpo e ai controlli. Dashboard raggrup
 - Con S10 bloccata e S20 disabilitata dal 17/09, restavano attive solo S17 (H4, poche entrate e penalizzata con ATR basso), S31 (circa 2 trade al mese) e S30 (US30, rara), quindi di fatto nessun trade.
 - Fix: rimosso il ramo di compatibilità; `hard_blocks.json` riletto a ogni chiamata. Verificato su file temporanei: la voce legacy S00 viene rimossa e lo sblocco di S16 ha effetto senza riavvio; `test_execution_safety.py` passa (11/11).
 - Serve sulla VPS: `git pull` + riavvio del bot. Alla prima barra H1 `strategy_overrides.json` viene riscritto senza S00/S16.
+
+## 2026-09-24 (pomeriggio) — Perché il bot non apre ancora dopo il fix hard-block
+
+- Stato live (Turso `mt5_live`, 13:45 UTC): bot running, non dry-run, regime TREND_DOWN, selector → S16@H1 score 100 (il fix 080d185 è attivo sulla VPS), nessun circuit breaker/news pause/cooldown. Ultimo trade 16/09.
+- Replay H1 dal 16/09 su dati MT5 live (stesso `compute_indicators` + `signal_golden_squeeze` + `quality_gate` del bot): S16 ha dato solo 2 segnali BUY (18/09 08:00 e 09:00), entrambi nel periodo in cui era hard-blocked (17→22/09). Dopo lo sblocco del 22/09: zero segnali. Barre scartate: fuori orario 7-18 (78), ADX<25 (48), OBV/EMA233/candela (17), spread DI (4), SELL vietato perché H4 non rialzista (4).
+- Punto strutturale: in TREND_DOWN S16 può vendere solo come contro-trend dentro un H4 rialzista (filtro V4). Con H1 e H4 entrambi ribassisti, come ora, S16 di fatto non può vendere. S00 ha dato SELL il 23/09 (16-19) e il 24/09 13:00, ma in TREND_DOWN il selector sceglie una sola strategia H1 (S16), quindi S00 non viene valutata.
+- Nessuna modifica alla logica di trading: il comportamento è coerente col codice. Eventuale fallback S00 in TREND_DOWN è una decisione di strategia da validare in backtest prima.
+- Nota diagnostica: `last_logs` nel payload è pieno di righe "MT5 history"/"Sync" ogni 20s; le righe utili ("Nessun segnale primario H1") ne vengono spinte fuori.

@@ -270,3 +270,14 @@ S30 (US30, a parte): 91 trade nel periodo, PF 1.19. ASIA_BREAK aggiunge frequenz
 - Solo pullback: una sola ora (08), 11 trade in holdout, non valutabile.
 - Solo reversal: ore 03/07/13/14/16. Filtro a posteriori TRAIN 1.25 / HOLDOUT 1.27, ma con il filtro applicato davvero all'ingresso (`--verify`): full PF 1.11, TRAIN 1.08, holdout 1.23, fold 0.77/0.94/1.02/1.39, 3.9 trade/giorno, **costi ×2 → PF 1.01**, ora 14 in perdita, DSR non significativo.
 Verdetto: il filtro orario porta il reversal da perdita (0.91) a leggermente positivo, ma il margine sta tutto nell'ultimo periodo e sparisce con costi realistici un po' peggiori (rischio medio solo $9 a trade). Non integrato.
+
+**Scalper Cloud su timeframe più alti (9 trial, regole identiche, 24 mesi)**:
+
+| TF | Pine completo | Solo pullback | Solo reversal |
+|---|---|---|---|
+| M15 | TRAIN 1.04 / HOLD 1.14, costi ×2 1.01 | TRAIN 1.24 / HOLD 1.09, costi ×2 1.17 | 0.85 / 0.98 |
+| M30 | 0.85 / 0.90 | TRAIN 1.12 / HOLD 1.49, fold 4/4 > 1, costi ×2 1.18 (ma SELL PF 0.93) | 0.93 / 0.92 |
+| **H1** | 0.99 / 0.83 | **TRAIN 1.46 / HOLD 1.77, costi ×2 1.51** | 0.73 / 0.73 |
+
+H1 solo pullback, completo: n=141 (5.9/mese), WR 54.6%, PF 1.54, DD 357, 17/24 mesi, BUY PF 1.76 / SELL PF 1.38; con SL/TP puri come il box del Pine (senza BE/trailing del motore) PF 1.51, fold 0.97/1.00/1.32/1.88. DSR non significativo (1805 trial).
+Verdetto: il reversal Bollinger perde su ogni TF (difetto strutturale, non di costi). Il pullback sulla nuvola migliora salendo di TF perché il costo pesa meno sul rischio; su H1 è una strategia sana ma il vantaggio è concentrato negli ultimi 12 mesi. Non integrato (simile per natura a S16/S00 V3 già attive su H1).

@@ -1,5 +1,5 @@
 {
-  "total": 1796,
+  "total": 1805,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -304,6 +304,14 @@
       "asset": "XAU",
       "strategy_id": "SCALPER_CLOUD",
       "note": "filtro orario scelto sul TRAIN (PF>=1.2, n>=30) per V0/V1/V2 (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T16:38:26Z",
+      "n_trials": 9,
+      "cumulative_after": 1805,
+      "asset": "XAU",
+      "strategy_id": "SCALPER_CLOUD",
+      "note": "Pine utente su M15/M30/H1: V0/V1/V2 regole identiche (2026-09-24)"
     }
   ]
 }

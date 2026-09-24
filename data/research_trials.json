@@ -1,5 +1,5 @@
 {
-  "total": 1788,
+  "total": 1791,
   "log": [
     {
       "ts": "2026-09-07T11:09:33Z",
@@ -280,6 +280,14 @@
       "asset": "XAU",
       "strategy_id": "ASIA_BREAK",
       "note": "robustezza: stesso setup su M15 (24m) + variante senza filtro D1 (2026-09-24)"
+    },
+    {
+      "ts": "2026-09-24T15:05:06Z",
+      "n_trials": 3,
+      "cumulative_after": 1791,
+      "asset": "XAU",
+      "strategy_id": "HIGH_WR_DEMO",
+      "note": "dimostrazione schema alto win rate (TP piccolo/SL largo) M5 RSI2_TREND (2026-09-24)"
     }
   ]
 }

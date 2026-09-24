@@ -241,3 +241,5 @@ Robustezza di ASIA_BREAK, nessun parametro cambiato (`--robust`):
 - Senza filtro D1: circa il doppio dei trade, PF 1.50 (M5) / 1.66 (M15).
 - Contro: fold M5 instabili (0.81 / 0.58 / 1.44 / 11.6), DSR non significativo (1788 trial cumulativi), circa 5 trade al mese.
 Verdetto: miglior candidato scalp mai trovato nel progetto; non promuovibile per il gate DSR, candidabile a test demo isolato.
+
+**Schema "win rate > 90%" (richiesta utente, dimostrazione, 3 trial)**: ingressi RSI2_TREND M5, TP piccolo e SL largo, cost model ON. TP 0.3 / SL 3 ATR: WR 89.7%, PF 0.67. TP 0.5 / SL 3: WR 86.1%, PF 0.85. TP 0.3 / SL 5: **WR 94.4%, PF 0.80**. Vincita media circa $1.2 contro perdita media $16-26: spread e slippage (circa $0.45 a trade) si mangiano gran parte di ogni piccola vincita, e le poche perdite cancellano tutto. Win rate alto ≠ profitto.

@@ -5,20 +5,31 @@
 // leggono ancora da marketData per il fattore di correlazione — qui è solo la lista di cosa
 // si RENDERIZZA, non cosa si fetcha.
 (function(){
-  const SWITCHABLE=new Set(['XAU','XAG','US30']);   // + gli strumenti del registro (forex/indici), aggiunti sotto
-  const instruments=[
-    ['XAU','XAU/USD',2,'$'],['XAG','XAG/USD',3,'$'],['US30','US30',2,''],
-    ['OIL','OIL',2,'$'],['US10Y','US 10Y',3,'%'],['US02Y','US 2Y',3,'%'],
-    ['VIX','VIX',2,''],['SPX','S&P 500',2,''],['NDX','NASDAQ 100',2,''],['RUT','RUSSELL 2000',2,'']
-  ];
+  // 2026-09-24 (richiesta utente): un'unica sezione "Quotazioni" divisa per gruppo. Gli strumenti
+  // tradabili vengono dal registro (public/instruments.json) e diventano l'asset attivo al click;
+  // le quotazioni di contesto (petrolio, Russell, VIX, rendimenti) aprono il punteggio macro.
+  // S&P 500 e Nasdaq 100 non sono più doppioni: sono US500 e NAS100 del registro.
+  const SWITCHABLE=new Set(['XAU','XAG','US30']);
+  const GROUPS=[['commodities','Materie prime'],['indices','Indici e tassi'],['fx','Forex']];
+  const MACRO={commodities:[['OIL','OIL',2,'$']],
+    indices:[['RUT','RUSSELL 2000',2,''],['VIX','VIX',2,''],['US10Y','US 10Y',3,'%'],['US02Y','US 2Y',3,'%']],fx:[]};
+  const CORE={commodities:[['XAU','XAU/USD',2,'$'],['XAG','XAG/USD',3,'$']],indices:[['US30','US30',2,'']],fx:[]};
+  const groupOf=i=>i.type==='fx'?'fx':i.type==='index'?'indices':'commodities';
   const section=document.getElementById('market-quotes');
-  const grid=section.querySelector('.price-strip'),status=section.querySelector('.quote-status');
+  const status=section.querySelector('.quote-status');
+  const holder=section.querySelector('.price-strip');
+  const wrap=document.createElement('div');wrap.className='quote-groups';
+  const grids={};
+  for(const [key,title] of GROUPS){
+    const g=document.createElement('div');g.className='quote-group';g.dataset.group=key;
+    const h=document.createElement('h3');h.className='quote-group-title';h.textContent=title;
+    const grid=document.createElement('div');grid.className='price-strip quote-grid';
+    g.append(h,grid);wrap.append(g);grids[key]=grid;
+  }
+  holder.replaceWith(wrap);
   const cells=new Map();
-  // Tutte le quotazioni sono cliccabili: le 3 scambiabili passano l'asset attivo (switchAsset,
-  // stesso meccanismo dei tab #asset-seg), le altre aprono il loro punteggio macro dedicato
-  // (macro-score.js) — nessun handler duplicato, solo due azioni diverse sullo stesso pattern.
-  const mainCount=instruments.length;
-  function addCell(target,symbol,label,decimals,unit){
+  function addCell(target,symbol,label,decimals,unit,before=null){
+    if(cells.has(symbol))return;
     const switchable=SWITCHABLE.has(symbol);
     const cell=document.createElement('article');cell.className='pc pc-clickable';cell.dataset.quoteSymbol=symbol;
     cell.tabIndex=0;cell.setAttribute('role','button');
@@ -28,24 +39,19 @@
     const price=document.createElement('div');price.className='pc-val';price.textContent='—';
     const change=document.createElement('div');change.className='pc-chg';change.textContent='—';
     const source=document.createElement('div');source.className='pc-source';source.textContent='In attesa';
-    cell.append(name,price,change,source);target.append(cell);
+    cell.append(name,price,change,source);target.insertBefore(cell,before);
     cells.set(symbol,{cell,price,change,source,decimals,unit,last:null});
   }
-  for(const [symbol,label,decimals,unit] of instruments)addCell(grid,symbol,label,decimals,unit);
-  // Seconda griglia (2026-09-24): forex major e indici dal registro strumenti, tutti
-  // selezionabili come asset attivo. Stesso snapshot quotazioni, nessuna richiesta in più.
+  for(const [key] of GROUPS){
+    for(const c of CORE[key])addCell(grids[key],...c);
+    for(const c of MACRO[key])addCell(grids[key],...c);
+  }
+  // Strumenti non core del registro: dopo i core, prima delle quotazioni di contesto del gruppo.
   window.instrumentsReady?.then(list=>{
-    const extra=list.filter(i=>!i.core);
-    if(!extra.length||document.getElementById('fx-quotes'))return;
-    const sec=document.createElement('section');sec.className='desk-section';sec.id='fx-quotes';
-    sec.setAttribute('aria-labelledby','fx-quotes-title');
-    sec.innerHTML='<header class="workspace-heading"><h2 id="fx-quotes-title">Forex e indici</h2><p>Clicca uno strumento per renderlo l’asset attivo (grafico e sentiment)</p></header><div class="price-strip quote-grid"></div>';
-    // Sotto il pannello del sistema (orbite): la parte alta della dashboard resta invariata.
-    (document.getElementById('orbit-hero')||section).after(sec);
-    const g2=sec.querySelector('.price-strip');
-    g2.addEventListener('click',e=>{ const cell=e.target.closest('.pc-clickable'); if(cell) activate(cell); });
-    g2.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ')return; const cell=e.target.closest('.pc-clickable'); if(!cell)return; e.preventDefault(); activate(cell); });
-    for(const i of extra){SWITCHABLE.add(i.id);addCell(g2,i.id,i.label,i.decimals,i.unit||'');}
+    for(const i of list.filter(x=>!x.core)){
+      const key=groupOf(i),firstMacro=MACRO[key][0]?cells.get(MACRO[key][0][0])?.cell:null;
+      SWITCHABLE.add(i.id);addCell(grids[key],i.id,i.label,i.decimals,i.unit||'',firstMacro||null);
+    }
     if(typeof marketData!=='undefined'&&marketData)window.updatePriceStrip(marketData,{});
   });
   function activate(cell){
@@ -53,8 +59,8 @@
     if(SWITCHABLE.has(symbol)){ if(typeof window.switchAsset==='function') window.switchAsset(symbol); }
     else if(typeof window.openMacroScore==='function') window.openMacroScore(symbol, cell.querySelector('.pc-sym').textContent);
   }
-  grid.addEventListener('click',e=>{ const cell=e.target.closest('.pc-clickable'); if(cell) activate(cell); });
-  grid.addEventListener('keydown',e=>{
+  wrap.addEventListener('click',e=>{ const cell=e.target.closest('.pc-clickable'); if(cell) activate(cell); });
+  wrap.addEventListener('keydown',e=>{
     if(e.key!=='Enter' && e.key!==' ')return;
     const cell=e.target.closest('.pc-clickable');
     if(!cell)return;
@@ -67,7 +73,7 @@
     for(const [symbol,ui] of cells){
       const fresh=prices[symbol];
       const valid=typeof fresh?.price==='number' && Number.isFinite(fresh.price) && fresh.price>0;
-      if(valid){ui.last=fresh;if(grid.contains(ui.cell))available++;}
+      if(valid){ui.last=fresh;available++;}
       const quote=valid?fresh:ui.last;
       ui.cell.classList.toggle('main',symbol===(window.activeAsset||'XAU'));
       ui.cell.classList.toggle('quote-stale',!valid);
@@ -93,7 +99,7 @@
     }
     const time=lastSnapshot?new Date(lastSnapshot).toLocaleTimeString('it-IT'):'—';
     status.textContent=meta.error?'Fonte non disponibile · ultimi valori ricevuti alle '+time:
-      'Aggiornamento ogni 5 s · ricevuto alle '+time+(available<mainCount?' · '+available+'/'+mainCount+' simboli aggiornati':'')+' · possibile ritardo della fonte';
+      'Aggiornamento ogni 5 s · ricevuto alle '+time+(available<cells.size?' · '+available+'/'+cells.size+' simboli aggiornati':'')+' · possibile ritardo della fonte';
     status.classList.toggle('quote-error',!!meta.error);
   };
 })();

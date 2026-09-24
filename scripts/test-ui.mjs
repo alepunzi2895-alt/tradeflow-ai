@@ -101,7 +101,8 @@ await page.route('**/*',async route=>{
     if(b.action==='logout'){mfxConnected=false;json={ok:true};}
     if(b.action==='accounts')json={ok:true,accounts:[]};
   }
-  if(url.pathname==='/api/indicators'||url.pathname==='/api/candles')indicatorAssets.push(url.searchParams.get('asset'));
+  if(url.pathname==='/api/indicators'||url.pathname==='/api/candles')indicatorAssets.push(url.pathname.slice(5)+':'+url.searchParams.get('asset'));
+  if(url.pathname==='/api/indicators'&&url.searchParams.get('asset')==='EURUSD'){await route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,macd:{macd:-.0007,signal:-.0009,histogram:.0002,cross:'above'},adx:{adx:34.3,di_plus:15.8,di_minus:23.9,trending:true}})});return;}
   if(url.pathname==='/api/price')json={ok:true,price:4000,changePct:0.2};
   if(url.pathname==='/api/kb')json={ok:true,kb:[],knowledge:[]};
   if(url.pathname==='/api/market')json={ok:true,prices:{},events:[]};
@@ -128,11 +129,16 @@ try {
   await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=XAU] .pc-val')?.textContent.includes('4.000'));
   // Regola audit "niente prezzi duplicati": ogni simbolo compare una sola volta (la griglia
   // forex/indici del registro ha simboli diversi dalla principale, non è un doppione).
-  await page.waitForSelector('#fx-quotes .pc');
+  await page.waitForSelector('[data-group=fx] .pc');
   assert.equal(await page.evaluate(()=>{const s=[...document.querySelectorAll('[data-quote-symbol]')].map(e=>e.dataset.quoteSymbol);return s.length===new Set(s).size;}),true,'each quote symbol rendered once');
-  // 10, non più 13: DXY/EURUSD/GBPUSD tolte dalla griglia visibile (2026-09-22, richiesta
-  // utente) — restano fetchate lato server per il fattore di correlazione, solo non renderizzate.
-  assert.equal(await page.locator('#market-quotes .pc').count(),10);
+  // Un'unica sezione Quotazioni in tre gruppi (2026-09-24): materie prime, indici e tassi, forex.
+  // SPX/NDX non più doppioni di US500/NAS100.
+  const REG0=JSON.parse(fs.readFileSync('public/instruments.json','utf8')).instruments;
+  await page.waitForFunction(n=>document.querySelectorAll('#market-quotes .pc').length===n,REG0.length+5);
+  assert.deepEqual(await page.locator('.quote-group-title').allInnerTexts(),['MATERIE PRIME','INDICI E TASSI','FOREX']);
+  assert.equal(await page.locator('[data-group=fx] .pc').count(),REG0.filter(i=>i.type==='fx').length);
+  assert.equal(await page.locator('[data-quote-symbol=SPX],[data-quote-symbol=NDX],#fx-quotes').count(),0,'niente doppioni né seconda sezione');
+  assert.deepEqual(await page.locator('[data-group=commodities] .pc-sym').allInnerTexts(),['XAU/USD','XAG/USD','OIL']);
   assert.equal(await page.locator('.market-watch,#hdr #bxau,#hdr #bxag').count(),0,'no duplicated price areas');
   assert.equal(await page.locator('[data-quote-symbol=XAG] .pc-chg').innerText(),'—');
   const xauBefore=await page.locator('[data-quote-symbol=XAU] .pc-val').innerText();
@@ -175,7 +181,7 @@ try {
   await page.locator('#orbit-hero').screenshot({path:'artifacts/saturn-desktop.png'});
   await page.locator('#market-quotes').screenshot({path:'artifacts/quotes-desktop.png'});
   await page.locator('#hdr').screenshot({path:'artifacts/header-desktop.png'});
-  await page.locator('#fx-quotes').screenshot({path:'artifacts/fx-quotes-desktop.png'});
+
   quoteFailure=true;
   await page.evaluate(()=>loadPrices());
   assert.equal(await page.locator('[data-quote-symbol=XAU] .pc-val').innerText(),xauBefore,'failed refresh retains the last value with a stale label');
@@ -201,25 +207,34 @@ try {
 
   // Registro strumenti: griglia forex/indici, menu "Altri…", pannelli MFKK/confidence onesti.
   const REG=JSON.parse(fs.readFileSync('public/instruments.json','utf8')).instruments;
-  await page.waitForFunction(n=>document.querySelectorAll('#fx-quotes .pc').length===n,REG.filter(i=>!i.core).length);
+
   await page.waitForFunction(()=>document.querySelector('[data-quote-symbol=EURUSD] .pc-val')?.textContent==='1,08456');
   assert.equal(await page.locator('[data-quote-symbol=USDJPY] .pc-val').innerText(),'158,762','decimali dal registro');
-  assert.equal(await page.locator('#market-quotes .pc').count(),10,'griglia principale invariata');
+
   const indBefore=indicatorAssets.length;
   await page.selectOption('#asset-more','EURUSD');
   assert.match(await page.locator('#lbl-sent-title').innerText(),/EUR\/USD/);
   await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='35%');
-  assert.equal(await page.locator('#conf-card').evaluate(e=>e.classList.contains('asset-unavailable')),true);
-  assert.match(await page.locator('#conf-card .asset-note').innerText(),/EUR\/USD/);
+  // AI score con il modello generico sulle proprietà di EUR/USD (non più "non disponibile").
+  assert.equal(await page.locator('#conf-card').evaluate(e=>e.classList.contains('asset-unavailable')),false);
+  await page.waitForFunction(()=>/Modello generico per EUR\/USD/.test(document.querySelector('#conf-quality')?.textContent||''));
+  await page.waitForFunction(()=>/Trend H1/.test(document.querySelector('#conf-factors')?.textContent||'')&&!/in caricamento/.test(document.querySelector('#conf-factors')?.textContent||''));
+  assert.equal(await page.locator('#conf-factors .cf').count(),8);
+  assert.match(await page.locator('#conf-factors').textContent(),/USD è la valuta quotata/);
+  assert.match(await page.locator('#conf-factors').textContent(),/Retail 35% long/);
+  assert.match(await page.locator('#conf-factors').textContent(),/speculatori|COT neutro/);
   await page.waitForFunction(()=>/EUR\/USD/.test(document.querySelector('#inst-title')?.textContent||''));
   assert.match(await page.locator('#inst-card').innerText(),/12,3%/);
   assert.match(await page.locator('#inst-card').innerText(),/scalp solo con target ampi/);
   assert.equal(await page.locator('#mfkk-card').evaluate(e=>e.classList.contains('asset-unavailable')),true);
   await page.waitForTimeout(300);
-  assert.ok(!indicatorAssets.slice(indBefore).includes('EURUSD'),'nessun indicatore MFKK chiesto per uno strumento non core');
-  assert.equal(await page.evaluate(()=>dashContext.confidence),null,'nessun confidence inventato');
+  assert.ok(!indicatorAssets.slice(indBefore).includes('candles:EURUSD'),'nessuna candela MFKK chiesta per uno strumento non core');
+  assert.ok(indicatorAssets.slice(indBefore).includes('indicators:EURUSD'),'indicatori dello strumento per il modello generico');
+  const cf=await page.evaluate(()=>dashContext.confidence);
+  assert.equal(cf.model,'generico');assert.ok(cf.score>=0&&cf.score<=100);assert.ok(cf.factors.momentum&&cf.factors.dxy&&cf.factors.session&&cf.factors.sentiment,'campi letti dal contesto AI');
+  await page.locator('#conf-card').screenshot({path:'artifacts/confidence-generic-eurusd.png'});
   // Carta della griglia forex → asset attivo; simbolo senza sentiment MyFxBook → messaggio, niente numeri.
-  await page.locator('#fx-quotes [data-quote-symbol=GBPUSD]').click();
+  await page.locator('#market-quotes [data-quote-symbol=GBPUSD]').click();
   await page.waitForFunction(()=>/GBPUSD/.test(document.querySelector('#sent-source')?.textContent||''));
   assert.equal(await page.locator('#sent-long-pct').innerText(),'—');
   assert.equal(await page.locator('#asset-more').inputValue(),'GBPUSD');
@@ -229,7 +244,7 @@ try {
   assert.equal(await page.locator('#conf-card').evaluate(e=>e.classList.contains('asset-unavailable')),false);
   await page.waitForFunction(n=>window.__noop||true,indBack);
   await page.waitForTimeout(300);
-  assert.ok(indicatorAssets.slice(indBack).includes('XAU'),'MFKK ricaricato subito al cambio asset');
+  assert.ok(indicatorAssets.slice(indBack).some(x=>x.endsWith(':XAU')),'MFKK ricaricato subito al cambio asset');
   await page.waitForFunction(()=>document.querySelector('#sent-long-pct')?.textContent==='62%');
 
   // MyFxBook: accesso ricordato dal server, logout, nuovo login con "Ricorda l'accesso".

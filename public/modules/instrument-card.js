@@ -17,7 +17,8 @@
   async function load(force){
     if(!force&&profiles&&Date.now()-loadedAt<600000)return;
     const d=await dbLoad('profiles_get',{},8000);
-    if(d?.ok){profiles=d.data;loadedAt=Date.now();}
+    if(d?.ok){profiles=d.data;loadedAt=Date.now();window._instProfiles=profiles;
+      if(typeof updateConfidence==='function'&&!isCoreAsset(window.activeAsset||'XAU'))updateConfidence(dashContext.prices||{},dashContext.sentiment);}
   }
   function costVerdict(pct){
     if(pct==null)return ['—','var(--dim)'];

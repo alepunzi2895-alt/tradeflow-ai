@@ -47,6 +47,14 @@ ALL_IDS = ['S00_MFKK', 'S09_MFKK_SCALPING', 'S10_OB_FVG_SCALP', 'S16_GOLDEN_SQUE
 
 
 WORKER_LOCK_PORT = int(os.getenv('WORKER_LOCK_PORT', '47391'))
+ERRORS = {}          # ultimi errori per area, pubblicati nell'heartbeat (diagnosi da remoto)
+
+
+def note_error(area, e):
+    import datetime as _dt
+    ERRORS[area] = {'at': _dt.datetime.now(_dt.timezone.utc).isoformat(timespec='seconds'),
+                    'error': f'{type(e).__name__}: {e}'[:300]}
+    print(f"[backtest_worker] ✗ {area}: {ERRORS[area]['error']}")
 HEARTBEAT_S = 60
 _mt5 = None
 
@@ -77,7 +85,8 @@ def mt5_ready():
 
 def push_status():
     import history_store
-    push('worker_status_push', {'host': socket.gethostname(), 'history': history_store.load_index()}, timeout=15)
+    push('worker_status_push', {'host': socket.gethostname(), 'history': history_store.load_index(),
+                                'errors': ERRORS, 'python': sys.version.split()[0]}, timeout=15)
 
 
 def handle_history(cmd):
@@ -123,8 +132,10 @@ def maybe_refresh_profiles():
     if age is None or age >= PROFILE_MAX_AGE_H:
         try:
             refresh_profiles('giornaliero' if age is not None else 'primo avvio')
+            ERRORS.pop('schede', None)
         except Exception as e:
-            print(f"[backtest_worker] schede strumento non aggiornate: {e}")
+            traceback.print_exc()
+            note_error('schede', e)
 
 
 def handle_profile(cmd):

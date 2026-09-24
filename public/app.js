@@ -18,7 +18,10 @@ function _syncAssetSeg() {
   document.getElementById('lbl-mfkk-title').textContent='MFKK STRATEGY SCORE · '+label+' H1';
   // Confidence e MFKK sono tarati su XAU/XAG/US30: per gli altri strumenti un avviso
   // esplicito al posto di numeri calcolati con soglie dell'oro.
-  ['conf-card','mfkk-card'].forEach(id => {
+  // Il confidence ha un modello generico per forex/indici (confidence-generic.js): avviso solo sull'MFKK.
+  const confNote = document.querySelector('#conf-card > .asset-note');
+  if (confNote) { confNote.textContent = ''; document.getElementById('conf-card').classList.remove('asset-unavailable'); }
+  ['mfkk-card'].forEach(id => {
     const card = document.getElementById(id); if (!card) return;
     let note = card.querySelector(':scope > .asset-note');
     if (!note) { note = document.createElement('div'); note.className = 'asset-note'; card.prepend(note); }

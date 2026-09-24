@@ -161,7 +161,8 @@ export default async function handler(req, res) {
       const item = d.data?.[0]?.d;
       if (item && Number.isFinite(item[1]) && Number.isFinite(item[2])) {
         response.last_close = item[0];
-        response.macd = { macd: +item[1].toFixed(4), signal: +item[2].toFixed(4), histogram: +(item[1]-item[2]).toFixed(4), cross: item[1] > item[2] ? 'above':'below' };
+        // toPrecision: sul forex MACD e istogramma sono dell'ordine di 1e-4 (toFixed(4) li azzerava)
+        response.macd = { macd: +item[1].toPrecision(6), signal: +item[2].toPrecision(6), histogram: +(item[1]-item[2]).toPrecision(6), cross: item[1] > item[2] ? 'above':'below' };
       }
     } catch(e) {}
 

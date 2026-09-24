@@ -1082,3 +1082,7 @@ html,body { font-weight:400;letter-spacing:.005em; }
 .lab-bot-item { border-top:1px solid var(--desk-line); padding:10px 0; display:grid; gap:4px; font-size:12px; line-height:1.6; color:var(--text); }
 .lab-bot-actions { display:flex; gap:8px; }
 .lab-block .lab-bot-actions button { padding:5px 10px; font-size:12px; }
+
+/* Quotazioni per gruppo (2026-09-24) */
+.quote-groups { display:grid; gap:14px; }
+.quote-group-title { margin:0 0 8px; font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--dim); }

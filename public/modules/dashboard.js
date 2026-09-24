@@ -580,7 +580,8 @@ function updateCorrelation(prices){
 function updateConfidence(prices, sentimentData){
   const active = window.activeAsset || 'XAU';
   // Confidence MFKK tarata su XAU/XAG/US30: per gli altri strumenti niente punteggio inventato.
-  if(!isCoreAsset(active)){dashContext.confidence=null;return;}
+  // Forex e indici: modello generico sulle proprietà dello strumento (confidence-generic.js).
+  if(!isCoreAsset(active)){if(typeof updateConfidenceGeneric==='function')updateConfidenceGeneric(active,prices);else dashContext.confidence=null;return;}
   const isXag = active === 'XAG';
   const isUs30 = active === 'US30';   // fattori istituzionali equity invece che metalli (2026-09-03)
   const xRaw=prices?.[active], d=prices?.DXY||dashContext.prices?.DXY, e=prices?.EURUSD||dashContext.prices?.EURUSD, g=prices?.GBPUSD||dashContext.prices?.GBPUSD;

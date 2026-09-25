@@ -193,6 +193,9 @@ def handle_command(cmd):
         print(f"[backtest_worker] ✗ {sid} fallito: {e}")
 
 
+IDLE_POLL_S = 60   # poll a riposo: una richiesta arriva al massimo con 1 min di ritardo
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--interval', type=int, default=15, help='Secondi tra un poll e il successivo')
@@ -204,6 +207,7 @@ def main():
     print(f"[backtest_worker] avviato — polling ogni {args.interval}s. Ctrl+C per fermare.")
     last_beat = 0.0
     last_profile_check = 0.0
+    last_job = time.time()
     while True:
         if time.time() - last_profile_check >= 3600:      # controllo orario, ricalcolo se > 24h
             last_profile_check = time.time()
@@ -223,7 +227,11 @@ def main():
         cmd = (d or {}).get('command')
         if cmd:
             handle_command(cmd)
-        time.sleep(args.interval)
+            last_job = time.time()
+        # Backoff a riposo (2026-09-25): ogni poll costa letture Turso; il poll fisso a 15s 24/7
+        # ha contribuito a esaurire il piano. Reattivo per 10 min dopo un job, poi ogni IDLE_POLL_S.
+        idle = time.time() - last_job > 600
+        time.sleep(max(args.interval, IDLE_POLL_S) if idle else args.interval)
 
 
 if __name__ == '__main__':
